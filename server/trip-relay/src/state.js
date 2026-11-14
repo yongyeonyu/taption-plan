@@ -32,6 +32,13 @@ export const LIMITS = {
   refreshRotateMs: DAY_MS,
   refreshGraceMs: MINUTE_MS,
   lockMs: MINUTE_MS,
+  // AI 일 목록(AIX1114A01 P2): 한 사람 100개, 가져간 지 30분 넘으면 대기로, 3번 넘기면 실패, 7일 지나면 만료·삭제.
+  tasks: 100,
+  taskGone: 300,
+  taskClaimMs: 30 * MINUTE_MS,
+  taskAttempts: 3,
+  taskLifeMs: 7 * DAY_MS,
+  taskClaimBatch: 20,
   commandsPerDay: 100,
   queue: 50,
   bubblesPerDay: 48,
@@ -95,7 +102,132 @@ function chargeBudget(budget, entry, now) {
   return { budget: next };
 }
 
+const TASK_OPEN = new Set(["waiting", "processing", "asked"]);
+const TASK_PRIORITY = ["payment_text", "receipt_text", "payment_rule"];
+const taskRank = (kind) => { const i = TASK_PRIORITY.indexOf(kind); return i < 0 ? TASK_PRIORITY.length : i; };
+
+// 시간이 지난 일을 정리하고 남은 것을 돌려준다. 가져간 지 오래된 것은 대기로, 여러 번 넘긴 것은 실패로,
+// 오래 열려 있던 것은 만료로(원문을 지운다), 끝난 지 오래된 것은 지운다.
+async function sweepTasks(s, now) {
+  const rows = [];
+  for (const [name, t] of await values(s, "task:")) {
+    if (TASK_OPEN.has(t.status)) {
+      if (now - t.createdAt >= LIMITS.taskLifeMs) {
+        Object.assign(t, { status: "expired", sealed: null, updatedAt: now, claimedBy: null });
+        await s.put(name, t);
+      } else if (t.status === "processing" && now - t.updatedAt >= LIMITS.taskClaimMs) {
+        const attempts = (t.attempts ?? 1);
+        if (attempts >= LIMITS.taskAttempts) Object.assign(t, { status: "failed", code: "timeout", sealed: null, updatedAt: now, claimedBy: null });
+        else Object.assign(t, { status: "waiting", claimedBy: null });
+        await s.put(name, t);
+      }
+    } else if (now - t.updatedAt >= LIMITS.taskLifeMs) {
+      await s.delete(name);
+      continue;
+    }
+    rows.push(t);
+  }
+  return rows.sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+}
+
 const OPS = {
+  // MARK: AI 일 목록 (AIX1114A01 P2). 본문(글·맥락·결과)은 Worker가 봉인해 `sealed`로 넘긴다.
+
+  async taskAdd(s, { items, now }) {
+    const rows = await sweepTasks(s, now);
+    const meta = (await s.get("tasksMeta")) ?? { gone: [] };
+    const known = new Set([...rows.map((t) => t.id), ...meta.gone]);
+    let added = 0;
+    for (const item of items) {
+      if (known.has(item.id)) continue;
+      const row = { id: item.id, kind: item.kind, ...(item.date ? { date: item.date } : {}), status: "waiting", attempts: 0, createdAt: now, updatedAt: now, sealed: item.sealed };
+      await s.put("task:" + item.id, row);
+      rows.push(row);
+      known.add(item.id);
+      added++;
+    }
+    // 넘치면 끝난 것부터, 그다음 오래된 것부터 버린다.
+    while (rows.length > LIMITS.tasks) {
+      const index = rows.findIndex((t) => !TASK_OPEN.has(t.status));
+      const [gone] = rows.splice(index >= 0 ? index : 0, 1);
+      await s.delete("task:" + gone.id);
+    }
+    return { added };
+  },
+
+  async taskList(s, { now }) {
+    return { tasks: await sweepTasks(s, now) };
+  },
+
+  // 대기 중인 것과 이 연결이 맡은 것을 준다. 급한 종류부터, 그다음 오래된 것부터. claim이면 맡았다고 적는다.
+  async taskClaim(s, { keyId, now, limit, claim = true }) {
+    const rows = await sweepTasks(s, now);
+    const mine = rows.filter((t) => t.status === "waiting" || (t.status === "processing" && (!t.claimedBy || t.claimedBy === keyId)))
+      .sort((a, b) => taskRank(a.kind) - taskRank(b.kind) || a.createdAt - b.createdAt)
+      .slice(0, Math.max(1, Math.min(limit ?? LIMITS.taskClaimBatch, LIMITS.taskClaimBatch)));
+    if (claim) {
+      for (const t of mine) {
+        if (t.status === "processing" && t.claimedBy === keyId) continue;
+        Object.assign(t, { status: "processing", claimedBy: keyId, attempts: (t.attempts ?? 0) + 1, updatedAt: now });
+        await s.put("task:" + t.id, t);
+      }
+    }
+    return { tasks: mine };
+  },
+
+  // 맡은 연결만 끝낼 수 있다(다른 연결이 맡고 있으면 not_claimer). askedId가 있으면 사용자 답을 기다리는 상태가 된다.
+  async taskFinish(s, { id, keyId, status, sealed, askedId, now }) {
+    await sweepTasks(s, now);
+    const t = await s.get("task:" + id);
+    if (!t) return { ok: false, error: "no_task" };
+    if (t.status === "processing" && t.claimedBy && t.claimedBy !== keyId) return { ok: false, error: "not_claimer" };
+    Object.assign(t, { status: askedId ? "asked" : status, sealed, updatedAt: now, ...(askedId ? { askedId } : {}) });
+    delete t.code;
+    await s.put("task:" + id, t);
+    return { ok: true, id, status: t.status };
+  },
+
+  // 사용자가 답한 질문을 기다리던 일은 다시 대기로 돌아간다.
+  async taskAnswered(s, { ids, now }) {
+    const answered = new Set(ids);
+    let woken = 0;
+    for (const [name, t] of await values(s, "task:")) {
+      if (t.status !== "asked" || !answered.has(t.askedId)) continue;
+      Object.assign(t, { status: "waiting", claimedBy: null, updatedAt: now });
+      await s.put(name, t);
+      woken++;
+    }
+    return { woken };
+  },
+
+  // 앱이 끝난 것을 지운다. 지운 id는 기억해 같은 id가 다시 와도 되살리지 않는다(AIU1114A01).
+  async taskRemoveFinished(s) {
+    const meta = (await s.get("tasksMeta")) ?? { gone: [] };
+    let removed = 0;
+    for (const [name, t] of await values(s, "task:")) {
+      if (TASK_OPEN.has(t.status)) continue;
+      await s.delete(name);
+      meta.gone.push(t.id);
+      removed++;
+    }
+    if (removed > 0) await s.put("tasksMeta", { ...meta, gone: meta.gone.slice(-LIMITS.taskGone) });
+    return { removed };
+  },
+
+  // 예전 KV 문서(`tasks:<주인>`)를 한 번 옮긴다.
+  async taskImport(s, { items, gone, now }) {
+    const meta = (await s.get("tasksMeta")) ?? { gone: [] };
+    if (meta.imported) return { imported: 0 };
+    let imported = 0;
+    for (const item of items) {
+      if (await s.get("task:" + item.id)) continue;
+      await s.put("task:" + item.id, item);
+      imported++;
+    }
+    await s.put("tasksMeta", { gone: [...meta.gone, ...gone].slice(-LIMITS.taskGone), imported: now });
+    return { imported };
+  },
+
   // MARK: 등록·입장
 
   async register(s, { purpose, now }) {

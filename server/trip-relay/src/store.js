@@ -6,7 +6,7 @@ import { registry } from "./actions.js";
 import { nameKey, openJson, sealJson, tagOf } from "./crypto.js";
 import { json, stored, tooMany } from "./http.js";
 import { chargeWrites } from "./state.js";
-import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isAnswerList, cleanAnswers, isAppState, cleanAppState, isCommand, isCommandResults, isDate, isPolishList, isTaskResult, isTaskUpload, isTripPlan, TASK_LIMIT } from "./validate.js";
+import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isAnswerList, cleanAnswers, isAppState, cleanAppState, isCommand, isCommandResults, isDate, isPolishList, isTaskResult, isTaskUpload, isTripPlan, cleanTaskOutcome } from "./validate.js";
 
 const DAY = 24 * 60 * 60;
 const DAY_MS = DAY * 1000;
@@ -103,6 +103,9 @@ export async function saveAnswers(ctx, value) {
   if (!charge.ok) return overBudget(charge);
   const answers = cleanAnswers(value);
   await ctx.store.put(answersName(ctx), JSON.stringify({ format: "bokki-answers", version: 1, answers }), { expirationTtl: POLISH_TTL_SECONDS });
+  // 답이 온 질문을 기다리던 AI 일은 다시 대기로 돌린다(AIX1114A01 P2).
+  const settled = answers.filter((answer) => answer.status !== "waiting").map((answer) => answer.id);
+  if (settled.length) await ctx.state.call("taskAnswered", { ids: settled, now: ctx.now });
   return json({ ok: true, count: answers.length, expiresInSeconds: POLISH_TTL_SECONDS }, 201);
 }
 
@@ -139,102 +142,114 @@ export async function deleteAppState(ctx) {
   return json(null, 204);
 }
 
-// MARK: AI 확인 목록 (AIQ1111A01)
+// MARK: AI 확인 목록 (AIQ1111A01, AIX1114A01 P2)
 
 // 앱(주인)이 올리고, AI가 가져가면 처리중, 결과를 내면 완료·실패. 끝난 항목은 원문을 지운다(대표 결정: 처리되면 지움, 길어도 7일).
+// 목록은 Durable Object에 일 하나씩 둔다: 쓰기가 차례로 일어나 동시에 끝내도 서로 덮어쓰지 않는다(AIR1114A01).
+// 글·맥락·결과는 Worker가 봉인해 넘긴다. 예전 KV 문서(`tasks:<주인>`)는 처음 닿을 때 한 번 옮긴다.
 const tasksName = (ctx) => "tasks:" + ctx.master;
 export const TASKS_TTL_SECONDS = 7 * DAY;
-// 앱이 지운 끝난 일의 id(`gone`)를 함께 둔다. 앱이 같은 id를 다시 올려도 되살리지 않는다(AIU1114A01).
-export const TASK_GONE_LIMIT = 300;
-const loadTasks = async (ctx) => {
-  const doc = parse(await ctx.store.get(tasksName(ctx)), null);
-  ctx.tasksGone = Array.isArray(doc?.gone) ? doc.gone : [];
-  return doc?.tasks ?? [];
-};
-async function storeTasks(ctx, tasks) {
-  const gone = (ctx.tasksGone ?? []).slice(-TASK_GONE_LIMIT);
-  if (tasks.length === 0 && gone.length === 0) {
-    if ((await ctx.kv.get(tasksName(ctx))) != null) await ctx.kv.delete(tasksName(ctx));
-    return;
-  }
-  await ctx.store.put(tasksName(ctx), JSON.stringify({ format: "bokki-tasks", version: 1, tasks, ...(gone.length ? { gone } : {}) }), { expirationTtl: TASKS_TTL_SECONDS });
-}
+export const TASK_CLAIM_MS = 30 * 60_000;
+const taskAad = (ctx, id) => `task|${ctx.master}|${id}`;
+const sealTask = async (ctx, id, body) => sealJson(await ctx.ring.dek(), taskAad(ctx, id), body);
 const tasksReply = (tasks) => (tasks.length ? json({ format: "bokki-tasks", version: 1, tasks }) : json(null, 204));
-const isOpen = (task) => task.status === "waiting" || task.status === "processing";
+// 예전 앱(338까지)은 새 상태를 모르면 목록 전체를 못 읽는다. `?v=2`가 아니면 아는 상태로 바꿔 준다.
+const LEGACY_STATUS = { asked: "processing", expired: "failed" };
+
+async function ensureTasks(ctx) {
+  if (ctx.tasksReady) return;
+  ctx.tasksReady = true;
+  const text = await ctx.store.get(tasksName(ctx));
+  if (text === null) return;
+  const doc = parse(text, null);
+  const items = [];
+  for (const t of Array.isArray(doc?.tasks) ? doc.tasks : []) {
+    if (typeof t?.id !== "string") continue;
+    const { text: body, context, result, reason } = t;
+    const created = Date.parse(t.createdAt) || ctx.now, updated = Date.parse(t.updatedAt) || ctx.now;
+    items.push({
+      id: t.id, kind: t.kind, ...(t.date ? { date: t.date } : {}), status: t.status, attempts: t.status === "waiting" ? 0 : 1,
+      ...(t.claimedBy ? { claimedBy: t.claimedBy } : {}), createdAt: created, updatedAt: updated,
+      sealed: await sealTask(ctx, t.id, { ...(body ? { text: body } : {}), ...(context ? { context } : {}), ...(result ? { result } : {}), ...(reason ? { reason } : {}) }),
+    });
+  }
+  await ctx.state.call("taskImport", { items, gone: Array.isArray(doc?.gone) ? doc.gone : [], now: ctx.now });
+  await ctx.kv.delete(tasksName(ctx));
+}
+
+// DO의 줄을 밖으로 내는 모양으로. 봉인을 풀어 글·맥락·결과를 붙인다.
+async function openTask(ctx, row) {
+  const body = row.sealed ? await openJson(await ctx.ring.dek(), taskAad(ctx, row.id), row.sealed) : {};
+  return {
+    id: row.id, kind: row.kind, ...(body?.text ? { text: body.text } : {}), ...(row.date ? { date: row.date } : {}),
+    ...(body?.context ? { context: body.context } : {}), status: row.status, createdAt: iso(row.createdAt), updatedAt: iso(row.updatedAt),
+    ...(row.claimedBy ? { claimedBy: row.claimedBy } : {}), ...(row.attempts ? { attempts: row.attempts } : {}),
+    ...(body?.result ? { result: body.result } : {}),
+    ...(body?.reason ? { reason: body.reason } : row.code === "timeout" ? { reason: "timeout" } : row.status === "expired" ? { reason: "expired" } : {}),
+    ...(body?.outcome ? { outcome: body.outcome } : {}),
+  };
+}
 
 export async function saveTasks(ctx, value) {
   if (!isTaskUpload(value)) return json({ error: "not_task_list" }, 422);
-  const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
-  if (!charge.ok) return overBudget(charge);
-  const tasks = await loadTasks(ctx);
-  const known = new Set([...tasks.map((task) => task.id), ...ctx.tasksGone]);
-  let added = 0;
+  await ensureTasks(ctx);
+  const items = [];
   for (const { id, kind, text, date, context } of value.tasks) {
-    if (known.has(id)) continue;
     // 337 앱이 지난 기록 전체의 노선 확인을 올린다(RDX1114A01). 사흘 넘은 날짜의 것은 받지 않는다.
     if (kind === "route_check" && context?.moveId && date && ctx.now - Date.parse(date + "T00:00:00Z") > 3 * DAY_MS) continue;
-    tasks.push({ id, kind, text, ...(date ? { date } : {}), ...(context ? { context } : {}), status: "waiting", createdAt: iso(ctx.now), updatedAt: iso(ctx.now) });
-    added += 1;
+    items.push({ id, kind, ...(date ? { date } : {}), sealed: await sealTask(ctx, id, { text, ...(context ? { context } : {}) }) });
   }
-  // 넘치면 끝난 것부터, 그다음 오래된 것부터 버린다.
-  while (tasks.length > TASK_LIMIT) {
-    const index = tasks.findIndex((task) => !isOpen(task));
-    tasks.splice(index >= 0 ? index : 0, 1);
-  }
-  await storeTasks(ctx, tasks);
+  const { added } = items.length ? await ctx.state.call("taskAdd", { items, now: ctx.now }) : { added: 0 };
   return json({ ok: true, added, expiresInSeconds: TASKS_TTL_SECONDS }, 201);
 }
 
-export async function readTasks(ctx) {
-  return tasksReply(await loadTasks(ctx));
+export async function readTasks(ctx, request) {
+  await ensureTasks(ctx);
+  const { tasks } = await ctx.state.call("taskList", { now: ctx.now });
+  const modern = request ? new URL(request.url).searchParams.get("v") === "2" : false;
+  const out = [];
+  for (const row of tasks) {
+    const task = await openTask(ctx, row);
+    if (!modern) {
+      task.status = LEGACY_STATUS[task.status] ?? task.status;
+      delete task.outcome;
+      delete task.attempts;
+    }
+    out.push(task);
+  }
+  return tasksReply(out);
 }
 
-// AI가 가져간다. 대기 중인 것을 처리중으로 바꾸고 이 연결이 맡은 것만 돌려준다.
-// 연결이 여럿이면 먼저 가져간 연결의 일은 다른 연결에게 주지 않는다(AIM1114A01). 30분 넘게 끝내지 않으면 다른 연결이 넘겨받는다.
-export const TASK_CLAIM_MS = 30 * 60_000;
-
-export async function claimTasks(ctx) {
-  const tasks = await loadTasks(ctx);
-  const me = ctx.auth?.keyId ?? null;
-  const stale = (task) => ctx.now - Date.parse(task.updatedAt) >= TASK_CLAIM_MS;
-  const mine = tasks.filter((task) => task.status === "waiting"
-    || (task.status === "processing" && (!task.claimedBy || task.claimedBy === me || stale(task))));
-  // 내가 맡은 지 오래된 것도 다시 가져가면 시각을 새로 적는다(그 사이 다른 연결이 넘겨받지 않게).
-  const taken = mine.filter((task) => task.status === "waiting" || task.claimedBy !== me || stale(task));
-  if (taken.length > 0) {
-    const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
-    if (!charge.ok) return overBudget(charge);
-    for (const task of taken) { task.status = "processing"; task.claimedBy = me; task.updatedAt = iso(ctx.now); }
-    await storeTasks(ctx, tasks);
+// AI가 가져간다. 대기 중인 것을 처리중으로 바꾸고 이 연결이 맡은 것만 돌려준다(AIM1114A01). 한 번에 `limit`개까지.
+export async function claimTasks(ctx, limit) {
+  await ensureTasks(ctx);
+  const { tasks } = await ctx.state.call("taskClaim", { keyId: ctx.auth?.keyId ?? null, now: ctx.now, ...(Number.isInteger(limit) ? { limit } : {}) });
+  const out = [];
+  for (const row of tasks) {
+    const { id, kind, text, date, context, status, attempts } = await openTask(ctx, row);
+    out.push({ id, kind, text, ...(date ? { date } : {}), ...(context ? { context } : {}), status, ...(attempts > 1 ? { attempts } : {}) });
   }
-  return tasksReply(mine.map(({ id, kind, text, date, context, status }) => ({ id, kind, text, ...(date ? { date } : {}), ...(context ? { context } : {}), status })));
+  return tasksReply(out);
 }
 
 export async function finishTask(ctx, value) {
   if (!isTaskResult(value)) return json({ error: "not_task_result" }, 422);
-  const tasks = await loadTasks(ctx);
-  const task = tasks.find((item) => item.id === value.id);
-  if (!task) return json({ error: "no_task" }, 404);
-  const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
-  if (!charge.ok) return overBudget(charge);
-  task.status = value.status;
-  task.updatedAt = iso(ctx.now);
-  delete task.text;
-  delete task.context;
-  if (value.result) task.result = value.result; else delete task.result;
-  if (value.reason) task.reason = value.reason; else delete task.reason;
-  await storeTasks(ctx, tasks);
-  return json({ ok: true, id: task.id, status: task.status });
+  await ensureTasks(ctx);
+  const outcome = cleanTaskOutcome(value.outcome);
+  const body = { ...(value.result ? { result: value.result } : {}), ...(value.reason ? { reason: value.reason } : {}), ...(outcome ? { outcome } : {}) };
+  const result = await ctx.state.call("taskFinish", {
+    id: value.id, keyId: ctx.auth?.keyId ?? null, status: value.status, sealed: await sealTask(ctx, value.id, body), now: ctx.now,
+    ...(value.status === "done" && outcome?.askedQuestionId ? { askedId: outcome.askedQuestionId } : {}),
+  });
+  if (result.error === "no_task") return json({ error: "no_task" }, 404);
+  if (result.error === "not_claimer") return json({ error: "not_claimer" }, 409);
+  return json({ ok: true, id: result.id, status: result.status });
 }
 
-// 앱이 끝난 항목(완료·실패)을 지운다.
+// 앱이 끝난 항목(완료·실패·만료)을 지운다.
 export async function deleteFinishedTasks(ctx) {
-  const tasks = await loadTasks(ctx);
-  const open = tasks.filter(isOpen);
-  if (open.length !== tasks.length) {
-    ctx.tasksGone = [...ctx.tasksGone, ...tasks.filter((task) => !isOpen(task)).map((task) => task.id)];
-    await storeTasks(ctx, open);
-  }
+  await ensureTasks(ctx);
+  await ctx.state.call("taskRemoveFinished", {});
   return json(null, 204);
 }
 

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { handle } from "../src/index.js";
 import { makeEnv } from "./fakes.mjs";
+import { importDek, masterDekBytes, seal, sha256Hex } from "../src/crypto.js";
 
 const ORIGIN = "https://relay.example.com";
 const PIN = "135790";
@@ -152,4 +153,102 @@ test("tasks: ride line checks for days long past are not taken (RDX1114A01)", as
   const reply = await (await send(env, "/tasks", "POST", upload([old, fresh]), master)).json();
   assert.equal(reply.added, 1);
   assert.deepEqual((await (await send(env, "/tasks", "GET", undefined, master)).json()).tasks.map((t) => t.id), [B]);
+});
+
+// AIX1114A01 P2: 일 목록은 Durable Object에서 차례로 쓴다.
+const writeKey = async (env, master) => {
+  const token = randomKey();
+  assert.equal((await send(env, "/keys", "POST", { keys: [{ token, scope: "write", expiresAt: null }], pin: PIN }, master)).status, 201);
+  return token;
+};
+const listV2 = async (env, master) => (await (await send(env, "/tasks?v=2", "GET", undefined, master)).json()).tasks;
+
+test("tasks: five results sent at once all land (AIR1114A01)", async () => {
+  const { env, master, ai } = await setup();
+  const ids = [0, 1, 2, 3, 4].map((i) => `T${i}B2C3D4-E5F6-4789-9ABC-DEF012345678`);
+  assert.equal((await send(env, "/tasks", "POST", upload(ids.map((id) => ({ id, kind: "other", text: "do " + id }))), master)).status, 201);
+  await send(env, "/tasks/claim", "POST", undefined, ai);
+  const replies = await Promise.all(ids.map((id) => send(env, "/tasks/result", "POST", { id, status: "done", result: "ok" }, ai)));
+  assert.deepEqual(replies.map((r) => r.status), [200, 200, 200, 200, 200]);
+  assert.deepEqual((await listV2(env, master)).map((t) => t.status), ["done", "done", "done", "done", "done"]);
+});
+
+test("tasks: only the connection that took a task can finish it; outcome is kept; old apps get known statuses", async () => {
+  const { env, master, ai } = await setup();
+  const other = await writeKey(env, master);
+  assert.equal((await send(env, "/tasks", "POST", upload([{ id: A, kind: "payment_text", text: "shop 1,000", context: { entryId: "E1" } }]), master)).status, 201);
+  await send(env, "/tasks/claim", "POST", undefined, ai);
+  assert.equal((await send(env, "/tasks/result", "POST", { id: A, status: "done", result: "x" }, other)).status, 409, "not the claimer");
+  assert.equal((await send(env, "/tasks/result", "POST", { id: A, status: "done", outcome: { commandIds: ["bad id"] } }, ai)).status, 422);
+  const done = await send(env, "/tasks/result", "POST", { id: A, status: "done", result: "asked", outcome: { commandIds: ["c1"], askedQuestionId: "q1", needsUser: false } }, ai);
+  assert.deepEqual(await done.json(), { ok: true, id: A, status: "asked" });
+  const [modern] = await listV2(env, master);
+  assert.deepEqual([modern.status, modern.outcome, modern.text], ["asked", { commandIds: ["c1"], askedQuestionId: "q1" }, undefined]);
+  const [legacy] = (await (await send(env, "/tasks", "GET", undefined, master)).json()).tasks;
+  assert.deepEqual([legacy.status, legacy.outcome], ["processing", undefined], "a 338 app would fail on an unknown status");
+  // 답이 올라오면 다시 대기로 돌아가 다음에 가져갈 수 있다.
+  const answers = { format: "bokki-answers", version: 1, answers: [{ id: "q1", question: "Which bus?", status: "answered", choices: ["80"] }] };
+  assert.equal((await send(env, "/answers", "POST", answers, master)).status, 201);
+  assert.equal((await listV2(env, master))[0].status, "waiting");
+});
+
+test("tasks: a task left unfinished goes back to waiting, fails after three tries, and old ones expire", async () => {
+  const { env, master, ai } = await setup();
+  assert.equal((await send(env, "/tasks", "POST", upload([{ id: A, kind: "other", text: "slow" }]), master)).status, 201);
+  const start = env.NOW();
+  let now = start;
+  env.NOW = () => now;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const taken = await (await send(env, "/tasks/claim", "POST", undefined, ai)).json();
+    assert.deepEqual(taken.tasks.map((t) => [t.id, t.attempts ?? 1]), [[A, attempt]]);
+    now += 31 * 60_000;
+  }
+  const [failed] = await listV2(env, master);
+  assert.deepEqual([failed.status, failed.reason, failed.text], ["failed", "timeout", undefined]);
+  assert.equal((await send(env, "/tasks/claim", "POST", undefined, ai)).status, 204);
+
+  assert.equal((await send(env, "/tasks", "POST", upload([{ id: B, kind: "other", text: "never taken" }]), master)).status, 201);
+  now += 7 * 86_400_000 + 1;
+  const left = await listV2(env, master);
+  assert.deepEqual(left.map((t) => [t.id, t.status, t.text]), [[B, "expired", undefined]], "the failed one is gone after a week, the open one expired");
+});
+
+test("tasks: claim takes urgent kinds first and at most the asked number", async () => {
+  const { env, master, ai } = await setup();
+  const C = "C1B2C3D4-E5F6-4789-9ABC-DEF012345678";
+  assert.equal((await send(env, "/tasks", "POST", upload([
+    { id: A, kind: "route_check", text: "route" }, { id: B, kind: "receipt_text", text: "receipt 5,000" }, { id: C, kind: "payment_text", text: "shop 1,000" },
+  ]), master)).status, 201);
+  const first = await mcp(env, ai, "get_ai_tasks", { limit: 2 });
+  assert.match(JSON.stringify(await first.json()), new RegExp(`${C}.*${B}`), "payment text, then receipt");
+  const rest = await (await send(env, "/tasks/claim", "POST", undefined, ai)).json();
+  assert.deepEqual(rest.tasks.map((t) => t.id).sort(), [A, B, C].sort(), "the claimer sees its own plus the remaining one");
+});
+
+test("tasks: the old KV list is moved once and keeps working", async () => {
+  const { env, master, ai } = await setup();
+  // 예전 서버가 쓰던 문서(v2 봉인)를 KV에 직접 둔다.
+  const m = await sha256Hex(master);
+  const dek = await importDek(await masterDekBytes(master));
+  const name = "tasks:" + m;
+  const doc = { format: "bokki-tasks", version: 1, gone: [B], tasks: [
+    { id: A, kind: "payment_text", text: "old text 1,000", context: { entryId: "E1" }, status: "waiting", createdAt: "2026-11-10T01:00:00.000Z", updatedAt: "2026-11-10T01:00:00.000Z" },
+    { id: "D1B2C3D4-E5F6-4789-9ABC-DEF012345678", kind: "other", status: "done", result: "did it", createdAt: "2026-11-10T01:00:00.000Z", updatedAt: "2026-11-10T02:00:00.000Z" },
+  ] };
+  env.PLANS.map.set(name, await seal(dek, name, JSON.stringify(doc), 2));
+  const listed = await listV2(env, master);
+  assert.deepEqual(listed.map((t) => [t.status, t.text ?? t.result]), [["waiting", "old text 1,000"], ["done", "did it"]]);
+  assert.equal(env.PLANS.map.has(name), false, "the KV list is gone after the move");
+  assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, ai)).json()).tasks.map((t) => [t.id, t.context]), [[A, { entryId: "E1" }]]);
+  assert.equal((await (await send(env, "/tasks", "POST", upload([{ id: B, kind: "other", text: "deleted before" }]), master)).json()).added, 0, "ids deleted before the move stay gone");
+});
+
+test("commands keep a taskId so the app can tie edits to the task", async () => {
+  const { env, master } = await setup();
+  const writer = await writeKey(env, master);
+  const body = { format: "bokki-command", version: 1, id: "c-1", action: "addMemo", text: "memo", taskId: A };
+  assert.equal((await send(env, "/command", "POST", body, writer)).status, 201);
+  assert.equal((await send(env, "/command", "POST", { ...body, id: "c-2", taskId: "bad id" }, writer)).status, 201);
+  const { commands } = await (await send(env, "/command", "GET", undefined, master)).json();
+  assert.deepEqual(commands.map((c) => c.taskId), [A, undefined]);
 });

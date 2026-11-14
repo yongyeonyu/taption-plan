@@ -197,7 +197,7 @@ const ROUTES = {
     DELETE: ["master", (request, ctx) => store.deleteAppState(ctx)],
   },
   "/tasks": {
-    GET: ["read", (request, ctx) => store.readTasks(ctx)],
+    GET: ["read", (request, ctx) => store.readTasks(ctx, request)],
     POST: ["master", withBody(store.saveTasks)],
     DELETE: ["master", (request, ctx) => store.deleteFinishedTasks(ctx)],
   },

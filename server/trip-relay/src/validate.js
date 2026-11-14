@@ -320,6 +320,8 @@ export function cleanCommand(value) {
   if (!fields) return null;
   const out = { format: value.format, version: value.version, id: value.id, action: value.action };
   for (const name of fields) if (value[name] !== undefined) out[name] = value[name];
+  // 어느 AI 일 때문에 보낸 명령인지(AIX1114A01 P2). 모양이 맞을 때만 남긴다.
+  if (commandID(value.taskId)) out.taskId = value.taskId;
   if (out.action === "setBubble") out.text = bubbleText(out.text).text;
   return out;
 }
@@ -492,7 +494,7 @@ export function isCommandResults(value) {
 
 // AI 확인 목록(AIQ1111A01). 앱이 처리하지 못했거나 불분명한 것을 올리고, AI가 가져가 처리한 뒤 완료·실패를 남긴다.
 export const TASK_KINDS = ["payment_text", "receipt_text", "payment_rule", "memo_polish", "route_check", "fare_check", "merge_review", "stay_place", "other"];
-export const TASK_STATUSES = ["waiting", "processing", "done", "failed"];
+export const TASK_STATUSES = ["waiting", "processing", "asked", "done", "failed", "expired"];
 export const TASK_LIMIT = 100;
 const contextOK = (v) => !given(v) || (typeof v === "object" && !Array.isArray(v) && JSON.stringify(v).length <= 2000);
 export function isTaskUpload(value) {
@@ -505,7 +507,23 @@ export function isTaskUpload(value) {
 export function isTaskResult(value) {
   return targetID(value?.id) && ["done", "failed"].includes(value?.status)
     && optional(value.result, (v) => typeof v === "string" && codePoints(v) <= 300)
-    && optional(value.reason, (v) => typeof v === "string" && codePoints(v) <= 200);
+    && optional(value.reason, (v) => typeof v === "string" && codePoints(v) <= 200)
+    && optional(value.outcome, isTaskOutcome);
+}
+// 일의 결과를 앱이 쓸 수 있는 모양으로(AIX1114A01 P2): 그 일로 보낸 명령·바뀐 가계부 기록·만든 규칙,
+// 사용자에게 물은 질문(그 명령의 id), 사용자가 봐야 하는지.
+const idList = (v) => Array.isArray(v) && v.length <= 20 && v.every((x) => commandID(x));
+export function isTaskOutcome(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value)
+    && optional(value.commandIds, idList) && optional(value.entryIds, idList) && optional(value.ruleIds, idList)
+    && optional(value.askedQuestionId, (v) => commandID(v)) && optional(value.needsUser, (v) => typeof v === "boolean");
+}
+export function cleanTaskOutcome(value) {
+  const out = {};
+  for (const name of ["commandIds", "entryIds", "ruleIds"]) if (given(value?.[name]) && value[name].length) out[name] = value[name];
+  if (given(value?.askedQuestionId)) out.askedQuestionId = value.askedQuestionId;
+  if (value?.needsUser === true) out.needsUser = true;
+  return Object.keys(out).length ? out : undefined;
 }
 
 // 앱 상태(ACX1112A01). 앱이 통째로 올리고 AI는 읽기만 한다: 설정, 가계부(이 달 합계·예산·최근 기록), 확인 필요,
