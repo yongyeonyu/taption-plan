@@ -698,6 +698,20 @@ final class AITaskQueueTests: XCTestCase {
         XCTAssertEqual(AITaskQueue.pendingUploads(defaults).map(\.text), ["카드 *********0123 결제"])
     }
 
+    func testAcknowledgedTasksLeaveTheQueueAndAreNotSentAgain() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "AITaskQueueTests-\(UUID())"))
+        defaults.set(["key": "피클"], forKey: AssistantKeyLabels.labelsKey)
+        XCTAssertTrue(AITaskQueue.enqueue(.other, text: "first", defaults: defaults))
+        XCTAssertTrue(AITaskQueue.enqueue(.other, text: "second", defaults: defaults))
+        let ids = AITaskQueue.pendingUploads(defaults).map(\.id)
+        AITaskQueue.acknowledge([ids[0], "server-only"], defaults: defaults)
+        XCTAssertEqual(AITaskQueue.pendingUploads(defaults).map(\.text), ["second"])
+        XCTAssertEqual(AITaskQueue.unsent(defaults).map(\.text), ["second"])
+        // 응답을 못 받아 큐에 남아 있던 일도, 서버가 받은 id면 다시 올리지 않는다.
+        defaults.set([ids[1]], forKey: AITaskQueue.ackedKey)
+        XCTAssertTrue(AITaskQueue.unsent(defaults).isEmpty)
+    }
+
     func testServerTaskListDecodes() throws {
         let json = #"{"format":"bokki-tasks","version":1,"tasks":[{"id":"a","kind":"payment_text","status":"done","result":"스타벅스 12,000원","createdAt":"2026-11-11T05:00:00.123Z","updatedAt":"2026-11-11T05:01:00.000Z"},{"id":"b","kind":"fare_check","text":"교대→마곡나루","status":"processing"}]}"#
         struct Envelope: Decodable { var tasks: [AITaskQueue.Task] }

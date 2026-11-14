@@ -143,13 +143,20 @@ export async function deleteAppState(ctx) {
 // 앱(주인)이 올리고, AI가 가져가면 처리중, 결과를 내면 완료·실패. 끝난 항목은 원문을 지운다(대표 결정: 처리되면 지움, 길어도 7일).
 const tasksName = (ctx) => "tasks:" + ctx.master;
 export const TASKS_TTL_SECONDS = 7 * DAY;
-const loadTasks = async (ctx) => parse(await ctx.store.get(tasksName(ctx)), null)?.tasks ?? [];
+// 앱이 지운 끝난 일의 id(`gone`)를 함께 둔다. 앱이 같은 id를 다시 올려도 되살리지 않는다(AIU1114A01).
+export const TASK_GONE_LIMIT = 300;
+const loadTasks = async (ctx) => {
+  const doc = parse(await ctx.store.get(tasksName(ctx)), null);
+  ctx.tasksGone = Array.isArray(doc?.gone) ? doc.gone : [];
+  return doc?.tasks ?? [];
+};
 async function storeTasks(ctx, tasks) {
-  if (tasks.length === 0) {
+  const gone = (ctx.tasksGone ?? []).slice(-TASK_GONE_LIMIT);
+  if (tasks.length === 0 && gone.length === 0) {
     if ((await ctx.kv.get(tasksName(ctx))) != null) await ctx.kv.delete(tasksName(ctx));
     return;
   }
-  await ctx.store.put(tasksName(ctx), JSON.stringify({ format: "bokki-tasks", version: 1, tasks }), { expirationTtl: TASKS_TTL_SECONDS });
+  await ctx.store.put(tasksName(ctx), JSON.stringify({ format: "bokki-tasks", version: 1, tasks, ...(gone.length ? { gone } : {}) }), { expirationTtl: TASKS_TTL_SECONDS });
 }
 const tasksReply = (tasks) => (tasks.length ? json({ format: "bokki-tasks", version: 1, tasks }) : json(null, 204));
 const isOpen = (task) => task.status === "waiting" || task.status === "processing";
@@ -159,7 +166,7 @@ export async function saveTasks(ctx, value) {
   const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
   if (!charge.ok) return overBudget(charge);
   const tasks = await loadTasks(ctx);
-  const known = new Set(tasks.map((task) => task.id));
+  const known = new Set([...tasks.map((task) => task.id), ...ctx.tasksGone]);
   let added = 0;
   for (const { id, kind, text, date, context } of value.tasks) {
     if (known.has(id)) continue;
@@ -221,7 +228,10 @@ export async function finishTask(ctx, value) {
 export async function deleteFinishedTasks(ctx) {
   const tasks = await loadTasks(ctx);
   const open = tasks.filter(isOpen);
-  if (open.length !== tasks.length) await storeTasks(ctx, open);
+  if (open.length !== tasks.length) {
+    ctx.tasksGone = [...ctx.tasksGone, ...tasks.filter((task) => !isOpen(task)).map((task) => task.id)];
+    await storeTasks(ctx, open);
+  }
   return json(null, 204);
 }
 

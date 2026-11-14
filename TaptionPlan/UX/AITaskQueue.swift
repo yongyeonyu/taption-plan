@@ -48,6 +48,30 @@ enum AITaskQueue {
     static let cacheKey = "aiTaskCache"
     static let uploadLimit = 20
 
+    /// 서버가 이미 받은 일의 id(AIU1114A01). 응답을 못 받아 큐에 남은 일을 다시 올려 끝난 일을 되살리지 않게 한다.
+    static let ackedKey = "aiTaskAcked"
+    static let ackedLimit = 300
+
+    static func acknowledge(_ ids: [String], defaults: UserDefaults = .standard) {
+        guard !ids.isEmpty else { return }
+        var acked = defaults.stringArray(forKey: ackedKey) ?? []
+        let known = Set(acked)
+        let fresh = ids.filter { !known.contains($0) }
+        if !fresh.isEmpty {
+            acked.append(contentsOf: fresh)
+            defaults.set(Array(acked.suffix(ackedLimit)), forKey: ackedKey)
+        }
+        let done = Set(ids)
+        let pending = pendingUploads(defaults)
+        if pending.contains(where: { done.contains($0.id) }) { save(pending.filter { !done.contains($0.id) }, defaults) }
+    }
+
+    /// 아직 서버가 받지 않은 일만.
+    static func unsent(_ defaults: UserDefaults = .standard) -> [Upload] {
+        let acked = Set(defaults.stringArray(forKey: ackedKey) ?? [])
+        return pendingUploads(defaults).filter { !acked.contains($0.id) }
+    }
+
     static func pendingUploads(_ defaults: UserDefaults = .standard) -> [Upload] {
         defaults.data(forKey: uploadsKey).flatMap { try? JSONDecoder().decode([Upload].self, from: $0) } ?? []
     }
@@ -74,7 +98,7 @@ enum AITaskQueue {
 
     /// 못 올린 항목을 `POST /tasks`로 올린다. 실패하면 다음에 다시.
     static func upload(env: AssistantRegistration.Environment = .live) async {
-        let list = pendingUploads(env.defaults)
+        let list = unsent(env.defaults)
         guard !list.isEmpty, let master = env.secrets.read(.master) else { return }
         let tasks: [[String: Any]] = list.map { item in
             var task: [String: Any] = ["id": item.id, "kind": item.kind.rawValue, "text": item.text]
@@ -85,8 +109,7 @@ enum AITaskQueue {
         let body = try? JSONSerialization.data(withJSONObject: ["format": "bokki-tasks", "version": 1, "tasks": tasks] as [String: Any])
         let request = body.flatMap { TripRelay.relayRequest("/tasks", method: "POST", body: $0, token: master, host: env.host) }
         guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return }
-        let sent = Set(list.map(\.id))
-        save(pendingUploads(env.defaults).filter { !sent.contains($0.id) }, env.defaults)
+        acknowledge(list.map(\.id), defaults: env.defaults)
     }
 
     /// 서버 목록을 받아 둔다. 없으면 빈 목록.
@@ -103,6 +126,8 @@ enum AITaskQueue {
         default: return nil
         }
         if let data = try? encoder.encode(tasks) { env.defaults.set(data, forKey: cacheKey) }
+        // 서버 목록에 있는 일은 상태와 상관없이 이미 받은 것이다. 큐에 남아 있으면 지운다.
+        acknowledge(tasks.map(\.id), defaults: env.defaults)
         return tasks
     }
 

@@ -130,3 +130,15 @@ test("tasks: a task claimed by one connection is not handed to another until it 
   assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, other)).json()).tasks.map((t) => t.id).sort(), [A, B], "a stale claim is taken over");
   assert.equal((await send(env, "/tasks/claim", "POST", undefined, ai)).status, 204);
 });
+
+test("tasks: a finished task the app deleted is not revived by a re-upload of the same id (AIU1114A01)", async () => {
+  const { env, master, ai } = await setup();
+  assert.equal((await send(env, "/tasks", "POST", upload([{ id: A, kind: "payment_text", text: "shop 1,000" }]), master)).status, 201);
+  await send(env, "/tasks/claim", "POST", undefined, ai);
+  assert.equal((await send(env, "/tasks/result", "POST", { id: A, status: "done", result: "added" }, ai)).status, 200);
+  assert.equal((await (await send(env, "/tasks", "POST", upload([{ id: A, kind: "payment_text", text: "shop 1,000" }]), master)).json()).added, 0, "done but still listed");
+  assert.equal((await send(env, "/tasks", "DELETE", undefined, master)).status, 204);
+  const again = await (await send(env, "/tasks", "POST", upload([{ id: A, kind: "payment_text", text: "shop 1,000" }, { id: B, kind: "payment_text", text: "shop 2,000" }]), master)).json();
+  assert.equal(again.added, 1, "only the new one is added");
+  assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, ai)).json()).tasks.map((t) => t.id), [B]);
+});
