@@ -7,6 +7,11 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## STV1114A01 · 저장소 시험 실패 원인 (2026-11-14 오후)
+
+- `TaptionStoreV2Tests.testRawEventTableIsPlainSQLAndSurvivesReopen`가 시뮬레이터(BOKKI-STL)에서 계속 죽던 원인: 시험이 쓰는 SQLite에 `json_extract` 함수가 없음(`no such function: json_extract`). 값이 nil인데 강제로 풀어 시험 실행기가 죽었다. 앱 코드는 `json_extract`를 쓰지 않는다(주석에만 있음).
+- 고침: 본문 글을 그대로 꺼내 시험에서 JSON으로 풀고, 값이 없어도 죽지 않고 실패로 남게 함. `TaptionStoreV2Tests` 15건 통과·실패 0(`build/validation/AIX1114A01/sim-store-3.xcresult`).
+
 ## TFB1114A340 · TestFlight 340 (2026-11-14 오후)
 
 - `bash scripts/testflight/release.sh --yes --request-id TFB1114A340` 종료 코드 0. 기준 커밋 `95780f36`.

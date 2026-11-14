@@ -168,13 +168,18 @@ final class TaptionStoreV2Tests: XCTestCase {
         var statement: OpaquePointer?
         XCTAssertEqual(sqlite3_prepare_v2(
             handle,
-            "SELECT json_extract(payload, '$.kind'), origin, ts FROM raw_events WHERE kind = 'device-envelope'",
+            // 본문은 그대로 읽히는 JSON 글이어야 한다. 시험 환경의 SQLite에 json_extract가 없을 수 있어(시뮬레이터) 글을 꺼내 여기서 푼다.
+            "SELECT payload, origin, ts FROM raw_events WHERE kind = 'device-envelope'",
             -1, &statement, nil
         ), SQLITE_OK)
         defer { sqlite3_finalize(statement) }
-        XCTAssertEqual(sqlite3_step(statement), SQLITE_ROW)
-        XCTAssertEqual(String(cString: sqlite3_column_text(statement, 0)), "location")
-        XCTAssertEqual(String(cString: sqlite3_column_text(statement, 1)), "auto")
+        let stepped = sqlite3_step(statement)
+        XCTAssertEqual(stepped, SQLITE_ROW, String(cString: sqlite3_errmsg(handle)))
+        // 줄이 없거나 값이 비면 시험 실행기가 죽지 않고 실패로 남게 한다.
+        func text(_ column: Int32) -> String? { sqlite3_column_text(statement, column).map { String(cString: $0) } }
+        let payload = text(0).flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: String] }
+        XCTAssertEqual(payload?["kind"], "location")
+        XCTAssertEqual(text(1), "auto")
         XCTAssertEqual(sqlite3_column_double(statement, 2), base.timeIntervalSince1970)
         let reopened = try TaptionStoreV2(url: storeURL, calendar: calendar)
         let count = try await reopened.rawEventCount(kind: "device-envelope")
