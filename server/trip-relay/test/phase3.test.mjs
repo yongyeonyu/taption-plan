@@ -160,6 +160,9 @@ test("revoking a key drops its queued commands; the tombstone is permanent", asy
 test("concurrent writes are serialized by the Durable Object: exact 24 h cap, no lost keys", async () => {
   const { env, master } = await setup();
   const writer = await addKey(env, master);
+  // 한도 100 가운데 70을 주인 키로 먼저 채우고(연결의 분당 60건과 겹치지 않게), 나머지를 동시에 다툰다.
+  for (let i = 0; i < 70; i++) assert.equal((await send(env, "/command", "POST", memo(`p${i}`), master)).status, 201);
+  assert.equal((await send(env, "/command", "DELETE", undefined, master)).status, 204);
   const replies = await Promise.all(Array.from({ length: 40 }, (_, i) => send(env, "/command", "POST", memo(`c${i}`), writer.token)));
   const statuses = replies.map((r) => r.status);
   assert.equal(statuses.filter((s) => s === 201).length, 30);
@@ -582,7 +585,7 @@ test("legacy data on the live server stays readable and moves lazily: v1/v2 days
   assert.equal((await send(env, "/plan", "GET", undefined, orphan)).status, 401);
   // 24시간 한도는 예전 큐의 받은 시각도 센다(1 + orphan 1).
   const remaining = (await (await send(env, "/command", "POST", memo("new-1"), master)).json()).remainingToday;
-  assert.equal(remaining, 27);
+  assert.equal(remaining, 97);
   // 평문 예외는 2026-11-14까지만.
   clock.now = Date.parse("2026-11-15T00:00:00Z");
   env.PLANS.map.set("cmdres:" + m, JSON.stringify([{ id: "a", status: "applied" }]));
@@ -639,7 +642,7 @@ test("every 429 carries Retry-After and retryAfter", async () => {
     assert.equal(response.headers.get("retry-after"), "60", make().url);
     if ((response.headers.get("content-type") ?? "").includes("json")) assert.equal((await response.json()).retryAfter, 60);
   }
-  for (let i = 0; i < 30; i++) await send(env, "/command", "POST", memo(`c${i}`), writer.token);
+  for (let i = 0; i < 100; i++) await send(env, "/command", "POST", memo(`c${i}`), master);
   const capped = await send(env, "/command", "POST", memo("late"), writer.token);
   assert.equal(capped.status, 429);
   const body = await capped.json();
@@ -691,19 +694,19 @@ test("setBubble: text rules (80 visible, links https only as bare or [label](url
   assert.deepEqual([queued.action, queued.text, queued.evil, queued.keyId, queued.source], ["setBubble", "안녕", undefined, writer.id, "rest"]);
 });
 
-test("setBubble: its own 48 per 24 h cap, separate from the 30-edit cap; MCP set_bubble is not destructive", async () => {
+test("setBubble: its own 48 per 24 h cap, separate from the 100-edit cap; MCP set_bubble is not destructive", async () => {
   const { env, clock, master } = await setup();
   const writer = await addKey(env, master);
   const bubble = (i) => command(`b${i}`, "setBubble", { date: "2026-11-10", start: "09:00", end: "09:30", text: `말풍선 ${i}` });
-  for (let i = 0; i < 30; i++, clock.now += 2000) assert.equal((await send(env, "/command", "POST", memo(`m${i}`), writer.token)).status, 201);
-  assert.equal((await send(env, "/command", "POST", memo("m30"), writer.token)).status, 429, "edits capped");
+  for (let i = 0; i < 100; i++, clock.now += 2000) assert.equal((await send(env, "/command", "POST", memo(`m${i}`), writer.token)).status, 201);
+  assert.equal((await send(env, "/command", "POST", memo("m100"), writer.token)).status, 429, "edits capped");
   for (let i = 0; i < 48; i++, clock.now += 2000) assert.equal((await send(env, "/command", "POST", bubble(i), writer.token)).status, 201, `bubble ${i}`);
   const capped = await send(env, "/command", "POST", bubble(48), writer.token);
   assert.equal(capped.status, 429);
   assert.deepEqual([(await capped.json()).error, Number(capped.headers.get("retry-after")) > 0], ["daily_bubble_limit", true]);
   const { commands } = await (await send(env, "/command", "GET", undefined, master)).json();
   assert.equal(commands.filter((c) => c.action === "setBubble").length, 48);
-  assert.equal(commands.filter((c) => c.action === "addMemo").length, 30, "bubbles never push edits out of the queue");
+  assert.equal(commands.filter((c) => c.action === "addMemo").length, 50, "bubbles never push edits out of the queue (it keeps the newest 50 edits)");
   clock.now += DAY_MS;
   const tool = (await mcp(env, writer.token, rpc("tools/list"))).result.tools.find((t) => t.name === "set_bubble");
   assert.equal(tool.annotations.destructiveHint, false);

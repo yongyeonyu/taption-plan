@@ -32,7 +32,7 @@ export const LIMITS = {
   refreshRotateMs: DAY_MS,
   refreshGraceMs: MINUTE_MS,
   lockMs: MINUTE_MS,
-  commandsPerDay: 30,
+  commandsPerDay: 100,
   queue: 50,
   bubblesPerDay: 48,
   bubbleQueue: 48,

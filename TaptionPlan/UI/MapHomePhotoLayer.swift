@@ -225,18 +225,6 @@ struct MapHomePhotoThumbnail: View {
     @State private var videoDuration: TimeInterval?
     @State private var isReceipt = false
 
-    /// 글자를 읽어 영수증으로 본 사진(대표 지시).
-    private var receiptBadge: some View {
-        Text(verbatim: "OCR")
-            .font(.system(size: 11, weight: .heavy, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(.black.opacity(0.62), in: Capsule())
-            .padding(10)
-            .accessibilityLabel(Text(verbatim: "OCR"))
-    }
-
     var body: some View {
         ZStack {
             Color.tpSurface
@@ -251,7 +239,7 @@ struct MapHomePhotoThumbnail: View {
             if videoDuration != nil { MapHomeVideoBadge(side: side * 0.34) }
         }
         .frame(width: side, height: side)
-        .overlay(alignment: .topLeading) { if isReceipt, side >= 100 { receiptBadge } }
+        .overlay(alignment: .topLeading) { if isReceipt, side >= 100 { MapHomeReceiptBadge() } }
         .clipped()
         .task(id: localIdentifier) {
             if image != nil { image = nil }
@@ -339,6 +327,22 @@ struct MapHomeVideoBadge: View {
     }
 }
 
+/// 글자를 읽어 영수증으로 본 사진의 표시(대표 지시).
+struct MapHomeReceiptBadge: View {
+    var size: CGFloat = 11
+
+    var body: some View {
+        Text(verbatim: "OCR")
+            .font(.system(size: size, weight: .heavy, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, size * 0.55)
+            .padding(.vertical, size * 0.27)
+            .background(.black.opacity(0.62), in: Capsule())
+            .padding(10)
+            .accessibilityLabel(Text(verbatim: "OCR"))
+    }
+}
+
 /// 전체 화면 사진·영상. 정사각 칸에 가두지 않고 화면에 맞춘다. 영상은 누를 때만 재생한다.
 struct MapHomePhotoFullImage: View {
     let localIdentifier: String
@@ -354,6 +358,8 @@ struct MapHomePhotoFullImage: View {
                 VideoPlayer(player: player)
             } else if let image {
                 Image(uiImage: image).resizable().scaledToFit()
+                    // 크게 봐도 읽은 영수증 표시가 사진 왼쪽 위에 남는다(OCF1114A01).
+                    .overlay(alignment: .topLeading) { if ReceiptPhotoMarks.contains(localIdentifier) { MapHomeReceiptBadge(size: 14) } }
                 if isVideo { videoButton }
             } else {
                 ProgressView().tint(.white)

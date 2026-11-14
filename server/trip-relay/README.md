@@ -58,7 +58,7 @@ v2: 값은 사용자 DEK(주인 키에서 HKDF info `dek`로 정해지고 저장
 |---|---|---|
 | `POST`·`GET`·`DELETE /keys` | 주인 | 읽기·쓰기 키 등록(수명 365일 이내 또는 `expiresAt: null` 만료 없음)·목록(`id` = 해시 앞 8자)·폐기. 폐기·만료 키는 401 |
 | `GET /activity/summary?range=week\|month[&end=]` | 읽기 | 저장된 날의 분류별 분·기록 분·걸음·계획 수 합계 |
-| `POST /command` | 쓰기 | 새 동작 `hideRecord`·`mergeRecords`·`updateRecordTime`·`updateSchedule`·`deleteSchedule`·`updateMemo`·`deleteMemo`. 주인 이름마다 24시간 30개(429), 받은 시각은 큐 값에 함께 적어 명령당 KV 쓰기 1번 |
+| `POST /command` | 쓰기 | 새 동작 `hideRecord`·`mergeRecords`·`updateRecordTime`·`updateSchedule`·`deleteSchedule`·`updateMemo`·`deleteMemo`. 주인 이름마다 24시간 100개(429), 받은 시각은 큐 값에 함께 적어 명령당 KV 쓰기 1번 |
 | `POST /mcp` | 읽기(도구마다) | 원격 MCP(JSON-RPC 2.0, `2025-06-18`, `initialize`·`tools/list`·`tools/call`, SSE 없음) |
 | `GET /openapi.json` | 없음 | GPT Actions용 OpenAPI 3.1 |
 
@@ -79,7 +79,7 @@ npx wrangler secret put KAKAO_REST_API_KEY --config wrangler.local.toml
 - `POST /register`: 앱이 만든 키만 등록(서로 다른 글자 20개 미만은 422). 등록하지 않은 키는 모든 경로에서 401.
 - `POST /pin/reset`(REV1110A06): PIN을 잊었을 때 주인 키로만. PIN·잠금을 지우고 모든 연결 키·OAuth 연결·대기 코드를 끊는다. 주인마다 하루 3번.
 - `POST /pin`·`GET /pin`(`{"set","locked","retryAfter"?,"lockedUntil"}`): `{"pin"}`(바꿀 때 `currentPin`도). 서버가 HMAC-SHA256(비밀 `PIN_PEPPER`, salt‖PIN)으로 검증값을 만들어 DEK로 잠가 둔다(SEC1110A03). `POST /keys`에 `"pin"` 필요, 15분에 5번 틀리면 15분 잠금(423). 비밀이 없으면 503.
-- `setBubble`(BUB1110A01): 보이기만 하는 화랑이 말풍선. 80자(링크 빼고), https 링크 3개, 24시간 48개(명령 30개와 따로). 글은 허용 문법 하나로만 받는다(규격 4.2).
+- `setBubble`(BUB1110A01): 보이기만 하는 화랑이 말풍선. 80자(링크 빼고), https 링크 3개, 24시간 48개(명령 100개와 따로). 글은 허용 문법 하나로만 받는다(규격 4.2).
 - 모든 429에 `Retry-After`와 본문 `retryAfter`.
 - Durable Object `UserState`(`src/state.js`, SQLite 저장소): 주인마다 키 목록·영구 폐기 표시·명령 큐·24시간 한도·PIN 시도·요청 예산(주인 키 1분 120·하루 2,000, 연결들은 따로 함께 1분 120·하루 2,000이고 연결마다 1분 60·하루 1,000)·KV 쓰기 하루 600·카카오 하루 500·하루 기록 이름표(62줄까지). 같은 클래스를 `ip:<해시>`(IP마다 하루 등록·검색 수), `code:<해시>`(연결 코드), `global:<이름>`(서버 전체 하루 수)에도 쓴다. 요청은 인스턴스 안에서 차례로 처리합니다.
 - 메타데이터 암호화: 감싼 기록 v3(범위·만료·주인이 암호문 안), 하루 기록 이름은 HMAC(날짜가 보이지 않음).

@@ -11,9 +11,9 @@ const DAY = 24 * 60 * 60;
 const DAY_MS = DAY * 1000;
 export const PLAN_TTL_SECONDS = 3 * DAY;
 export const QUEUE_TTL_SECONDS = 7 * DAY;
-// 주인 이름마다 24시간 동안 받은 명령 30개까지(CLN1110A01). 세는 곳은 DO다.
-export const DAILY_COMMAND_LIMIT = 30;
-// 말풍선은 따로 24시간 48개(BUB1110A01). 30개 한도에 세지 않는다.
+// 주인 이름마다 24시간 동안 받은 명령 100개까지(CLN1110A01, 대표 지시 2026-11-14로 30 → 100). 세는 곳은 DO다.
+export const DAILY_COMMAND_LIMIT = 100;
+// 말풍선은 따로 24시간 48개(BUB1110A01). 명령 한도에 세지 않는다.
 export const DAILY_BUBBLE_LIMIT = 48;
 
 const planName = (ctx) => "plan:" + ctx.master;

@@ -216,21 +216,22 @@ test("a master that only ever reads creates no DEK", async () => {
 
 // MARK: 24h command cap
 
-test("30 commands per master namespace per rolling 24 h, counted in the Durable Object", async () => {
+test("100 commands per master namespace per rolling 24 h, counted in the Durable Object", async () => {
   const { env, clock } = await setup();
   await register(env, standardKeys());
   const start = env.PLANS.writes;
-  for (let i = 0; i < 20; i++) assert.equal((await handle(req("/command", "POST", memo(`w${i}`), writer), env)).status, 201);
+  // 연결마다 분당 60건이라 2초씩 띄운다.
+  for (let i = 0; i < 70; i++, clock.now += 2000) assert.equal((await handle(req("/command", "POST", memo(`w${i}`), writer), env)).status, 201);
   assert.equal(env.PLANS.writes - start, 0, "SEC1110A02: queue and counter live in the Durable Object, no KV writes");
-  clock.now += 3600_000;
+  clock.now += 3600_000 - 140_000;
   await handle(req("/command", "DELETE"), env); // 앱이 큐를 비워도 한도는 남는다.
-  for (let i = 0; i < 10; i++) assert.equal((await handle(req("/command", "POST", memo(`m${i}`)), env)).status, 201);
+  for (let i = 0; i < 30; i++) assert.equal((await handle(req("/command", "POST", memo(`m${i}`)), env)).status, 201);
   const refused = await handle(req("/command", "POST", memo("late"), writer), env);
   assert.equal(refused.status, 429);
   const body = await refused.json();
   assert.equal(body.error, "daily_command_limit");
   assert.equal(Number(refused.headers.get("retry-after")), body.retryAfterSeconds);
-  assert.equal(body.retryAfterSeconds, 23 * 3600, "the first 20 age out 24 h after they arrived");
+  assert.equal(body.retryAfterSeconds, 23 * 3600, "the first 70 age out 24 h after they arrived");
   assert.equal((await handle(req("/command", "POST", memo("late")), env)).status, 429, "master shares the namespace cap");
   clock.now = NOW + DAY_MS + 1;
   assert.equal((await handle(req("/command", "POST", memo("next"), writer), env)).status, 201);
