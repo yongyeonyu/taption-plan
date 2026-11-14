@@ -124,6 +124,32 @@
 - 정할 것: 인터넷 없을 때 편집, 마감 뒤 수정, 공개 개인 지출을 남이 고칠지, 앱 없는 일행의 몫, 예산을 공유·개인으로 나눌지.
 - 이번 계획과의 연결: DO 저장·푸시·`TaptionLedgerCore` 값 타입을 그대로 씀.
 
+## 진행 상태 (2026-11-14 밤, 빌드 343·서버 배포 기준)
+
+| 단계 | 상태 | 요청 ID | 남은 것 |
+|---|---|---|---|
+| P0 가드 | 일부 | AIX1114A01, PKG1114A19 | 번역 추출의 패키지→타깃 지도는 들어감. 패키지에서 번역 조회가 되는지 시험 없음 |
+| P1 서버 등록부 | 끝 | AIX1114A01 | 예전 동작 50개는 아직 `validate.js`에 있음(옮기기는 선택) |
+| P2 일 DO 이전 | 끝 | AIX1114A01, AIP1114A05 | — |
+| P3 규칙 | 끝 | AIX1114A01, ACT1114A09 | `own_account`·`source_switch` 등 종류별 기기 확인 |
+| P4 패키지 이동 | 일부 | PKG1114A10, PKG1114A19 | 아래 「P4의 남은 순서」 |
+| P5 파이프라인(앱) | 끝 | AIP1114A05, ABA1114A15 | 기기 확인 |
+| P6 푸시 | 코드만 | PSH1114A06, PSH1114A12 | App ID에 푸시 켜기, APNs 키·비밀값 3개, `aps-environment` 되살리기, 기기 확인 |
+| P7~P12 동작 묶음 | 끝 | ACT1114A07, ACT1114A09, AIP1114A08, APV1114A16 | 화면에 부를 함수가 없어 뺀 것(장소 종류 바꾸기·지도 활동 색·근처 메모 알림 스위치·장식 벗기기), 일정의 장소·예상 지출을 AI가 읽고 쓰기 |
+| P13 정리 | 안 함 | — | 현장의 334~342가 쓰는 경로라 343 기기 확인 뒤 |
+
+대표 결정으로 넣지 않은 것: 앱 잠금 켜기·끄기, PIN 바꾸기, 전부 지우기, iOS 권한 켜기. 복원은 화면 열기까지만.
+
+### P4의 남은 순서 (PKG1114A19 설계안)
+
+멈춘 이유: 「AI가 한 일」에 저장되는 동작 종류(`AssistantActionKind`)가 앱의 동작 목록을 읽어 복원되므로 등록 순서를 바꾸면 저장 로그 항목이 사라질 수 있고, 적용까지 옮기면 호스트 메서드가 40개를 넘는다.
+
+1. 값 타입 이동: `TripItemStatus`, `AssistantDisplayOption`, `AssistantScreen`, `AssistantSetting`, `AssistantExpenseChange`, `AssistantBubble.Kind`, `LedgerMessageRules.Rule`.
+2. 동작 46개를 읽기 형(패키지)과 적용 extension(앱)으로 가르기 — 문구가 함께 가므로 패키지에서 번역 조회가 되는지 시험이 먼저.
+3. `AssistantCommand`·`AssistantCommandBatch`·명령 읽기 본체.
+4. 좁은 `AssistantCommandHost`(6~8개 메서드) 위에 저널·실행기·기록 파일 입출력.
+5. 적용·되돌리기 본체를 묶음별 호스트로, 마지막에 화면(`TaptionAssistantUI`).
+
 ## 단계 (각 단계는 TestFlight 빌드 하나 이하)
 
 | 단계 | 서버 배포 | 앱 | 시험 | 대표 기기 확인 |

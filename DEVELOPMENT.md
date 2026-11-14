@@ -198,6 +198,24 @@ AI·Siri·단축어
 - UI 다듬기(UIR1111A01): 모서리는 `TaptionCorner` 네 단계(8·12·16·24), 17pt 미만 글자는 굵게 → 반굵게·반굵게 → 보통 굵기입니다. 여행 화면도 같은 규칙입니다(대표 결정 2026-11-13). 17pt 이상 제목·큰 숫자·아이콘 비례 크기와 여권·도장 그림은 예외입니다.
 - 화면 확인용 Debug 인자: `-paymentAlertPreview`(뒤에 `inbox`)는 앱별 알림 화면·받은 글 화면을 바로 엽니다.
 
+## 2026-11-14에 더한 규칙
+
+AI 동작(외부 AI ⇄ 중계 서버 ⇄ 앱, `docs/AI_RELAY_PLAN.md`)
+- 새 동작은 세 곳만 고칩니다: ① 서버 `server/trip-relay/src/actions.js`에 `.add(...)`(검증·MCP 도구·OpenAPI·`list_actions`가 여기서 만들어짐) 후 `npm run actions`로 견본 `test/fixtures/actions.json` 갱신, ② 앱에 `AssistantOperation` 형 하나(`spec`·`init?(fields:)`·`apply(host:)`), ③ `AssistantOperations`의 묶음 배열(`ledger`·`plans`·`records`·`photos`·`catalog`·`system`·`direct`)에 한 줄. 이름·칸 일치는 `AssistantCommandEditTests.testOperationTableMatchesTheServerRegistry`가 봅니다. 토글·안내문·알림 수는 `spec`에서 만들어집니다.
+- `since`는 그 동작을 처음 받는 빌드 번호입니다(`SINCE` 341, `SINCE_DIRECT` 343). 낮은 빌드에는 서버가 `422 app_too_old`로 막습니다. 기존 동작에 더한 값(설정 표 등)에는 빌드 검사가 없습니다.
+- 기본 꺼짐은 `spec.startsOff`, 지우는 일은 `deletes`, 되돌릴 수 없으면 결과에 `cannotUndo`(「AI가 한 일」에 「되돌릴 수 없는 일이에요」). 자료 공유를 넓히거나 보관을 늘리거나 되돌릴 수 없는 동작은 기본 꺼짐으로 둡니다. 앱 잠금·PIN·전부 지우기·iOS 권한 켜기는 동작으로 만들지 않고, 백업 비밀번호가 필요한 일은 화면 열기까지만 합니다(대표 결정).
+- 새 AI 일 종류(`TASK_KINDS`)나 새 동작을 넣은 빌드는 **서버를 먼저 배포**합니다. 서버가 모르는 종류가 든 `POST /tasks` 묶음은 통째로 422가 되어 같은 묶음의 다른 일까지 계속 재시도됩니다(`replan`, PVR1114A13).
+- 규칙 저장소: 규칙 종류는 서버 `src/rules.js`의 `RULE_TYPES`와 앱 `TaptionRules`가 같은 견본 `test/fixtures/rules.json`으로 시험합니다. 앱이 실제로 평가하는 종류는 `AssistantRuleStore.appliedTypes`이고, 나머지는 건너뛰어 ack에 `skipped`로 보고합니다. 우선순위는 사용자 교정·규칙 → AI 규칙 → 코드의 표입니다.
+- 「AI가 한 일」의 전·후 글은 반영할 때 그때의 앱 언어로 저장됩니다. 요약 글은 `AssistantChangeSummary`, 날짜별 묶음은 `AssistantDigest`(바뀐 기록의 날짜 기준)입니다. 되돌리기는 `undoAssistantEntry` 하나만 씁니다.
+- 푸시: 코드는 들어 있지만 권한 파일의 `aps-environment`는 빠져 있습니다(PSH1114A12). App ID에 Push Notifications가 켜지기 전에 넣으면 TestFlight 아카이브 서명이 실패합니다.
+
+일정·여행
+- 일반 일정의 장소·예상 지출(PLB1114A18)은 `PlanRecord`의 선택 칸입니다(`place`·`plannedSpendKRW`, 값이 없으면 키를 쓰지 않음). 스키마·포맷 버전은 그대로이고, 저장 본문에 칸을 더할 때는 이 방식(선택 키 + 옛 본문 재인코딩 바이트 동일 시험 + 예전 DB·백업 왕복 시험)을 따릅니다. `updatePlan`의 `spot`이 nil이면 기존 값을 둡니다. 342 이하 빌드가 그 일정을 고치면 칸이 사라집니다.
+- 도착 카드(ARC1114A14·ARN1114A17): 판정은 순수 함수 `ArrivalDetector`(반경 180m, 정확도·위치 나이·시각 창·일정당 1회), 관찰·기록은 `ArrivalCardManager`, 꺼진 앱용 위치 알림 예약은 `ArrivalAlertScheduler`(`ArrivalAlertPlan`). 감시 지역은 근처 메모(최대 10곳)를 줄이지 않고 남은 자리(8~10곳)만 씁니다. 앱 쪽 알림과 위치 알림은 같은 식별자 `arrival-card-<id>`를 씁니다. 새 권한 창은 띄우지 않습니다.
+- 계획과 실제(PVR1114A13): 차이 계산은 `PlanRealityGap`(순수), 글은 `PlanRealityText`, 화면은 `PlanRealityView`·`PlanRealityMap`. 일반 일정의 쓴 돈은 그 일정을 실제로 한 시간 안의 지출 전부이고(대표 결정) 추정이라 흐리게 표시합니다. AI로 보내는 요약에는 좌표·결제 정보를 싣지 않습니다. Debug 인자 `-planRealityPreview`는 지어낸 하루로 화면을 엽니다.
+- 여행 카드 사진 차례(PHS1114A01·GPH1114A11·AIP1114A08): AI가 넣은 주소(허용 서버 세 곳만) → 위키백과 → 구글 장소 사진 → 위키 공용 → (국내) 관광공사 → 카카오 → Mapillary → Unsplash → Pexels → 주변 보기 → 지도 그림. 키가 필요한 출처는 서버 `/photo/search`가 대신 부르고 키가 없으면 꺼집니다. 웹에서 받은 사진은 기기에 하루만 둡니다.
+- 가계부 목록은 날짜도 같은 날 안도 최신이 위입니다(LDN1114A20).
+
 ## 구글 캘린더 연결
 
 - 프로젝트 `bokki-plan`, 범위 `calendar.readonly`, iOS 클라이언트 하나입니다. 일정은 기기 안에서만 쓰고, 연결 해제 때 토큰을 취소하고 구글 일정을 지웁니다.
@@ -329,6 +347,10 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 - CI는 GitHub의 Xcode 26.6(Swift 6.3)으로 빌드합니다. iOS 27 SDK 전용 형식은 `#if compiler(>=6.4)`로 감싸고, 메인 액터 대리자 준수는 `nonisolated`로 받습니다(CIF1111A01).
 - 같은 폴더에서 다른 세션이 함께 일하면 `git add -A`를 쓰지 않습니다. `project.pbxproj`처럼 둘이 같이 고친 파일은 내 줄만 남긴 내용을 `git hash-object -w`로 만들어 `git update-index --cacheinfo`로 스테이징합니다.
 - `cancellationCheck`에 실제 취소 검사를 넣으면 그 경로의 `preconditionFailure` 4곳이 앱 종료가 됩니다. 그때는 `throw`로 바꿉니다(REV1026A01).
+- `xcodebuild test`가 시뮬레이터 복제본(「Clone 1 of …」)에서 병렬로 돌면 `UserDefaults`·요청 기록을 나눠 쓰는 시험이 드물게 실패합니다(PVR1114A13의 1차). `-parallel-testing-enabled NO`로 돌립니다.
+- 저장 바이트 계약 시험의 견본은 기본값에 기대지 않습니다. 설정 기본값을 바꾸면 `Packages/TaptionPlanStore`의 `swift test`도 돌립니다(지도 기본값 변경 뒤 `TaptionDataSnapshotCompatibilityTests`가 견본 탓에 실패하던 일).
+- 작업 공간 여러 곳에서 번역 파일 끝에 줄을 덧붙이면 합칠 때 12개 파일이 모두 충돌합니다. 새 줄은 관련 기존 키 바로 뒤에 넣습니다. 합친 뒤에는 겹친 키가 없는지 보고 `generate.py`를 다시 돌립니다.
+- `build/` 아래의 `*-archive-dd`·`DerivedData-*`·`dd`는 다시 만들 수 있는 캐시입니다. 디스크가 차면 서명 단계가 「internal error」로 실패하므로 그것들만 지웁니다(로그·`.xcresult`·아카이브는 남김).
 
 ## 문서
 

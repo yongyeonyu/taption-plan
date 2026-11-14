@@ -10,4 +10,4 @@ SwiftUI 앱으로 계획과 실제 활동을 시간표·지도에서 함께 확�
 
 작업 전 [개발 규칙](AGENTS.md)을 따르고, 현재 요청만 `temp.md`와 `test.md`에서 찾아 실제 코드·Git 상태와 대조하세요. 두 기록을 처음부터 끝까지 읽을 필요는 없습니다.
 
-[미완료 요청](temp.md) · [검증 근거](test.md) · [이전 검증 기록](test_ARCHIVE.md) · [TestFlight 배포](docs/TESTFLIGHT.md) · [지원](SUPPORT.md) · [개인정보처리방침](PRIVACY.md)
+[미완료 요청](temp.md) · [남은 일의 순서](docs/NEXT_PLAN.md) · [AI 연결 계획과 진행 상태](docs/AI_RELAY_PLAN.md) · [검증 근거](test.md) · [이전 검증 기록](test_ARCHIVE.md) · [TestFlight 배포](docs/TESTFLIGHT.md) · [지원](SUPPORT.md) · [개인정보처리방침](PRIVACY.md)
