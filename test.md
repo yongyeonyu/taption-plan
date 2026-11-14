@@ -7,6 +7,11 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## PSH1114A06 · 푸시 알림 합침 (2026-11-14 오후, 아직 빌드에 없음)
+
+- 따로 만든 작업 공간에서 구현해 메인에 합침(충돌 없음). 합친 뒤 메인에서: 서버 `npm test` 148건 통과(세 번 연속), 앱 `AssistantRelayTests`·`AssistantPhase3Tests`·`AITaskQueueTests`·`LedgerTests`·`MapHomeKakaoProjectionTests`·`TripItemStatusTests` 116건 통과·실패 0(`build/validation/AIX1114A01/sim-merge-5.xcresult`). 앞선 `sim-merge-4`는 서명 단계의 일시 오류(internal error in Code Signing subsystem)로 빌드 실패 → 같은 명령 재실행으로 통과. 구조 점검 통과, 번역 실패 0.
+- 하지 않은 것: 실제 APNs 전달 전부, 실기기 토큰 등록, 푸시 권한 항목이 든 TestFlight 아카이브의 서명.
+
 ## AIP1114A05·KMP1114A04·PHS1114A01 · 340 뒤에 합친 것 (2026-11-14 오후, 아직 빌드에 없음)
 
 두 작업은 따로 만든 작업 공간에서 구현해 메인에 합쳤다(충돌 없음). 아래는 합친 뒤 메인에서 다시 돌린 결과다. 시뮬레이터(BOKKI-STL), 실기기 확인 없음.

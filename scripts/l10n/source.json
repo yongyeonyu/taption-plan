@@ -61620,6 +61620,22 @@
   },
   {
    "table": "Localizable",
+   "key": "PUSH_AI_NEEDS_YOU",
+   "en": "Your AI needs you to check something",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "PUSH_AI_QUESTION",
+   "en": "Your AI has a question",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "Taption Plan Pro",
    "en": "Taption Plan Pro",
    "targets": [
