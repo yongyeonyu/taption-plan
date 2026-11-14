@@ -571,7 +571,7 @@ enum AssistantAppStateSync {
         guard let master = env.secrets.read(.master) else { return }
         guard AssistantShareLevel.current(defaults) != .off else {
             guard defaults.string(forKey: hashKey) != nil else { return }
-            let reply = await TripRelay.send(TripRelay.relayRequest("/app", method: "DELETE", token: master, host: env.host), session: env.session)
+            let reply = await TripRelay.send(TripRelay.relayRequest("/app", method: "DELETE", token: master, host: env.host, client: env.client()), session: env.session)
             if let reply, (200..<300).contains(reply.status) { defaults.removeObject(forKey: hashKey) }
             return
         }
@@ -584,7 +584,7 @@ enum AssistantAppStateSync {
         guard defaults.string(forKey: hashKey) != tag || !isFresh else { return }
         state.updatedAt = AssistantActivityBuilder.Stamp(calendar: calendar).instant(now)
         guard let payload = body(state),
-              let reply = await TripRelay.send(TripRelay.relayRequest("/app", method: "POST", body: payload, token: master, host: env.host), session: env.session),
+              let reply = await TripRelay.send(TripRelay.relayRequest("/app", method: "POST", body: payload, token: master, host: env.host, client: env.client()), session: env.session),
               reply.status == 201 else { return }
         defaults.set(tag, forKey: hashKey)
         defaults.set(now.timeIntervalSince1970, forKey: sentAtKey)

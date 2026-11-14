@@ -418,7 +418,7 @@ extension TripRelay {
         _ path: String, method: String, query: [URLQueryItem] = [], body: Data? = nil, env: AssistantRegistration.Environment,
         timeout: TimeInterval = 10
     ) -> URLRequest? {
-        env.secrets.read(.master).flatMap { relayRequest(path, method: method, query: query, body: body, token: $0, host: env.host, timeout: timeout) }
+        env.secrets.read(.master).flatMap { relayRequest(path, method: method, query: query, body: body, token: $0, host: env.host, client: env.client(), timeout: timeout) }
     }
 
     static let commandFetchTimeout: TimeInterval = 5

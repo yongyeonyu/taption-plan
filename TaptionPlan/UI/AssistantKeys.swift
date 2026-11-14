@@ -8,7 +8,9 @@ enum AssistantKeyScope: String, Codable, CaseIterable, Identifiable, Sendable {
     case write
 
     var id: String { rawValue }
+}
 
+extension AssistantKeyScope {
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
         case .read: language.text("읽기만", "Read only")
@@ -26,7 +28,9 @@ enum AssistantKeyPeriod: Int, CaseIterable, Identifiable, Codable, Sendable {
 
     var id: Int { rawValue }
     var days: Int? { self == .never ? nil : rawValue }
+}
 
+extension AssistantKeyPeriod {
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
         case .month: language.text("30일", "30 days")
@@ -212,6 +216,11 @@ extension TripRelay {
         .sorted { ($0.expiresAt ?? .distantFuture) > ($1.expiresAt ?? .distantFuture) }
     }
 
+    /// 주 키 바꾸기에서 예전 키로 지울 경로. 순서는 규격대로.
+    static let rotationDeletionPaths = ["/keys", "/activity", "/command", "/plan"]
+}
+
+extension TripRelay {
     enum KeyCreation: Equatable {
         case created(AssistantScopedKey, token: String)
         case refused(AssistantServerRefusal)
@@ -228,7 +237,7 @@ extension TripRelay {
         guard let token = existing ?? randomToken(), let master = env.secrets.read(.master) else { return .failed }
         let expiresAt = expiry(for: period, from: now)
         let body = keysBody(token: token, scope: scope, expiresAt: expiresAt, pin: pin)
-        let request = relayRequest("/keys", method: "POST", body: body, token: master, host: env.host)
+        let request = relayRequest("/keys", method: "POST", body: body, token: master, host: env.host, client: env.client())
         guard let (http, data) = await sendResponse(request, session: env.session) else { return .failed }
         guard (200..<300).contains(http.statusCode) else {
             let refusal = AssistantServerRefusal.parse(status: http.statusCode, data: data, retryAfterHeader: http.value(forHTTPHeaderField: "Retry-After"))
@@ -244,7 +253,7 @@ extension TripRelay {
     @MainActor
     static func scopedKeys(env: AssistantRegistration.Environment = .live) async -> [AssistantScopedKey]? {
         guard let master = env.secrets.read(.master),
-              let reply = await send(relayRequest("/keys", method: "GET", token: master, host: env.host), session: env.session) else { return nil }
+              let reply = await send(relayRequest("/keys", method: "GET", token: master, host: env.host, client: env.client()), session: env.session) else { return nil }
         let keys: [AssistantScopedKey]? = reply.status == 204 ? [] : (reply.status == 200 ? parseKeys(reply.data) : nil)
         // 서버가 아는 연결 수를 적어 둔다. Claude처럼 OAuth로 붙은 연결은 기기에 이름표가 없다(OAC1113A01).
         if let keys {
@@ -255,16 +264,13 @@ extension TripRelay {
     }
 
     static func revokeScopedKey(_ id: String, session: URLSession = .shared) async -> Bool {
-        let reply = await send(relayRequest("/keys", method: "DELETE", query: [URLQueryItem(name: "id", value: id)]), session: session)
+        let reply = await send(relayRequest("/keys", method: "DELETE", query: [URLQueryItem(name: "id", value: id)], client: .live), session: session)
         guard let reply, (200..<300).contains(reply.status) else { return false }
         AssistantKeyStore.remove(id)
         AssistantKeyLabels.remove(id)
         AssistantKeyProviders.remove(id)
         return true
     }
-
-    /// 주 키 바꾸기에서 예전 키로 지울 경로. 순서는 규격대로.
-    static let rotationDeletionPaths = ["/keys", "/activity", "/command", "/plan"]
 
     /// 「새 키로 바꾸기」. 새 주 키를 먼저 등록하고 예전 키로 서버 자료를 지운 뒤 바꾼다(SEC1110A02).
     /// 하나라도 서버에 닿지 못하면 바꾸지 않는다. 실패하면 nil.

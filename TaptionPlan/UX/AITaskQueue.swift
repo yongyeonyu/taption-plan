@@ -110,23 +110,8 @@ enum AITaskQueue {
         defaults.data(forKey: cacheKey).flatMap { try? decoder.decode([Task].self, from: $0) } ?? []
     }
 
-    /// 넣고 올린다. 연결된 AI가 없으면 넣지 않는다(맡길 곳이 없다).
-    @discardableResult
-    static func enqueue(_ kind: Kind, text: String, day: Date? = nil, context: [String: String]? = nil,
-                        id: String = UUID().uuidString, defaults: UserDefaults = .standard) -> Bool {
-        let masked = mask(text).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !masked.isEmpty, MemoPolishQueue.hasConnection(defaults) else { return false }
-        var list = pendingUploads(defaults)
-        list.append(Upload(id: id, kind: kind, text: String(masked.prefix(2_000)), date: day.map(dayText), context: context))
-        if list.count > uploadLimit { list.removeFirst(list.count - uploadLimit) }
-        save(list, defaults)
-        TaptionPlanDiagnosticsLogger.shared.record("ai_task_enqueued", fields: ["kind": kind.rawValue])
-        if defaults === UserDefaults.standard { _Concurrency.Task { await upload() } }
-        return true
-    }
-
     /// 못 올린 항목을 `POST /tasks`로 올린다. 실패하면 다음에 다시.
-    static func upload(env: AssistantRegistration.Environment = .live) async {
+    static func upload(env: AssistantRegistration.Environment) async {
         let list = unsent(env.defaults)
         guard !list.isEmpty, let master = env.secrets.read(.master) else { return }
         let tasks: [[String: Any]] = list.map { item in
@@ -136,32 +121,9 @@ enum AITaskQueue {
             return task
         }
         let body = try? JSONSerialization.data(withJSONObject: ["format": "bokki-tasks", "version": 1, "tasks": tasks] as [String: Any])
-        let request = body.flatMap { TripRelay.relayRequest("/tasks", method: "POST", body: $0, token: master, host: env.host) }
+        let request = body.flatMap { TripRelay.relayRequest("/tasks", method: "POST", body: $0, token: master, host: env.host, client: env.client()) }
         guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return }
         acknowledge(list.map(\.id), defaults: env.defaults)
-    }
-
-    /// 서버 목록을 받아 둔다. 없으면 빈 목록.
-    @discardableResult
-    static func refresh(env: AssistantRegistration.Environment = .live) async -> [Task]? {
-        await upload(env: env)
-        guard let master = env.secrets.read(.master),
-              let reply = await TripRelay.send(TripRelay.relayRequest("/tasks", method: "GET", query: [URLQueryItem(name: "v", value: "2")], token: master, host: env.host), session: env.session)
-        else { return nil }
-        let tasks: [Task]
-        switch reply.status {
-        case 204: tasks = []
-        case 200..<300: tasks = decodeList(reply.data)
-        default: return nil
-        }
-        if let data = try? encoder.encode(tasks) { env.defaults.set(data, forKey: cacheKey) }
-        // 서버 목록에 있는 일은 상태와 상관없이 이미 받은 것이다. 큐에 남아 있으면 지운다.
-        acknowledge(tasks.map(\.id), defaults: env.defaults)
-        ReceiptPhotoMarks.noteReviewed(tasks.filter { $0.status == .done }.map(\.id), defaults: env.defaults)
-        // 지난번 뒤로 끝난 일을 한 번에 묶어 알린다. 시험 저장소는 알리지 않는다.
-        let news = noteFinished(tasks, defaults: env.defaults)
-        if env.defaults === UserDefaults.standard { AITaskNotice.announce(news) }
-        return tasks
     }
 
     /// 서버 목록을 읽는다. 읽지 못한 항목 하나 때문에 나머지를 버리지 않는다.
@@ -194,9 +156,9 @@ enum AITaskQueue {
     }
 
     /// 끝난 항목(완료·실패)을 서버에서 지운다.
-    static func deleteFinished(env: AssistantRegistration.Environment = .live) async -> Bool {
+    static func deleteFinished(env: AssistantRegistration.Environment) async -> Bool {
         guard let master = env.secrets.read(.master),
-              let reply = await TripRelay.send(TripRelay.relayRequest("/tasks", method: "DELETE", token: master, host: env.host), session: env.session),
+              let reply = await TripRelay.send(TripRelay.relayRequest("/tasks", method: "DELETE", token: master, host: env.host, client: env.client()), session: env.session),
               (200..<300).contains(reply.status) else { return false }
         let open = cached(env.defaults).filter { !$0.status.isFinished }
         if let data = try? encoder.encode(open) { env.defaults.set(data, forKey: cacheKey) }
@@ -223,28 +185,73 @@ enum AITaskQueue {
         }
     }
 
-    private static let decoder: JSONDecoder = {
+    static let decoder: JSONDecoder = {
         let value = JSONDecoder()
         value.dateDecodingStrategy = .iso8601withFractionalOrPlain
         return value
     }()
 
-    private static let encoder: JSONEncoder = {
+    static let encoder: JSONEncoder = {
         let value = JSONEncoder()
         value.dateEncodingStrategy = .iso8601
         return value
     }()
 
-    private static func save(_ list: [Upload], _ defaults: UserDefaults) {
+    static func save(_ list: [Upload], _ defaults: UserDefaults) {
         if let data = try? JSONEncoder().encode(list) { defaults.set(data, forKey: uploadsKey) }
     }
 
-    private static func dayText(_ date: Date) -> String {
+    static func dayText(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+}
+
+/// 앱 설정·알림·진단을 쓰는 쪽과 지금 앱의 환경으로 부르는 길(PKG1114A19).
+extension AITaskQueue {
+    static func upload() async { await upload(env: .live) }
+
+    static func deleteFinished() async -> Bool { await deleteFinished(env: .live) }
+
+    /// 넣고 올린다. 연결된 AI가 없으면 넣지 않는다(맡길 곳이 없다).
+    @discardableResult
+    static func enqueue(_ kind: Kind, text: String, day: Date? = nil, context: [String: String]? = nil,
+                        id: String = UUID().uuidString, defaults: UserDefaults = .standard) -> Bool {
+        let masked = mask(text).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !masked.isEmpty, MemoPolishQueue.hasConnection(defaults) else { return false }
+        var list = pendingUploads(defaults)
+        list.append(Upload(id: id, kind: kind, text: String(masked.prefix(2_000)), date: day.map(dayText), context: context))
+        if list.count > uploadLimit { list.removeFirst(list.count - uploadLimit) }
+        save(list, defaults)
+        TaptionPlanDiagnosticsLogger.shared.record("ai_task_enqueued", fields: ["kind": kind.rawValue])
+        if defaults === UserDefaults.standard { _Concurrency.Task { await upload() } }
+        return true
+    }
+
+    /// 서버 목록을 받아 둔다. 없으면 빈 목록.
+    @discardableResult
+    static func refresh(env: AssistantRegistration.Environment = .live) async -> [Task]? {
+        await upload(env: env)
+        guard let master = env.secrets.read(.master),
+              let reply = await TripRelay.send(TripRelay.relayRequest("/tasks", method: "GET", query: [URLQueryItem(name: "v", value: "2")], token: master, host: env.host, client: env.client()), session: env.session)
+        else { return nil }
+        let tasks: [Task]
+        switch reply.status {
+        case 204: tasks = []
+        case 200..<300: tasks = decodeList(reply.data)
+        default: return nil
+        }
+        if let data = try? encoder.encode(tasks) { env.defaults.set(data, forKey: cacheKey) }
+        // 서버 목록에 있는 일은 상태와 상관없이 이미 받은 것이다. 큐에 남아 있으면 지운다.
+        acknowledge(tasks.map(\.id), defaults: env.defaults)
+        ReceiptPhotoMarks.noteReviewed(tasks.filter { $0.status == .done }.map(\.id), defaults: env.defaults)
+        // 지난번 뒤로 끝난 일을 한 번에 묶어 알린다. 시험 저장소는 알리지 않는다.
+        let news = noteFinished(tasks, defaults: env.defaults)
+        if env.defaults === UserDefaults.standard { AITaskNotice.announce(news) }
+        return tasks
     }
 }
 
@@ -349,10 +356,10 @@ final class AssistantQuestionStore {
     }
 
     /// 바뀐 것이 있으면 올린다. 실패하면 다음에 다시 한다.
-    func uploadIfNeeded(env: AssistantRegistration.Environment = .live) async {
+    func uploadIfNeeded(env: AssistantRegistration.Environment) async {
         guard needsUpload, let master = env.secrets.read(.master) else { return }
         let body = uploadBody()
-        let request = TripRelay.relayRequest("/answers", method: body == nil ? "DELETE" : "POST", body: body, token: master, host: env.host)
+        let request = TripRelay.relayRequest("/answers", method: body == nil ? "DELETE" : "POST", body: body, token: master, host: env.host, client: env.client())
         guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return }
         // 올리는 사이 또 바뀌었으면 표시를 남겨 다음에 다시 올린다.
         if uploadBody() == body { defaults.set(false, forKey: Self.dirtyKey) }
@@ -370,6 +377,10 @@ final class AssistantQuestionStore {
         if let data = try? JSONEncoder().encode(items) { defaults.set(data, forKey: Self.key) }
         defaults.set(true, forKey: Self.dirtyKey)
     }
+}
+
+extension AssistantQuestionStore {
+    func uploadIfNeeded() async { await uploadIfNeeded(env: .live) }
 }
 
 /// 승인 요청의 앱 쪽: 값 검사, 카드 문구, 실행. 값 타입은 `TaptionAssistantProtocol`에 있다.
@@ -457,6 +468,12 @@ extension AssistantApproval {
 enum AssistantQuestionNotice {
     static func identifier(_ id: String) -> String { "assistant-question-\(id)" }
 
+    static func clear(_ id: String) {
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier(id)])
+    }
+}
+
+extension AssistantQuestionNotice {
     /// 알림에 실을 제목과 본문. 잠금 중이면 본문은 앱에서 보라는 말뿐이다.
     static func content(_ question: AssistantQuestion, language: MapHomeLanguage, locked: Bool) -> (title: String, body: String) {
         let title = question.approval == nil ? language.text("AI 질문", "AI question") : language.text("AI 승인 요청", "AI approval request")
@@ -478,10 +495,6 @@ enum AssistantQuestionNotice {
             content.sound = .default
             try? await center.add(UNNotificationRequest(identifier: identifier(question.id), content: content, trigger: nil))
         }
-    }
-
-    static func clear(_ id: String) {
-        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier(id)])
     }
 }
 

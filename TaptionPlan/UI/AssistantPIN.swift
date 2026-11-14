@@ -16,12 +16,12 @@ enum AssistantPINStore {
     static func isSet(_ defaults: UserDefaults = .standard) -> Bool { defaults.bool(forKey: setKey) }
 
     /// `POST /pin` `{"pin"}`, 바꿀 때는 `{"pin","currentPin"}`(주 키).
-    static func set(pin: String, current: String?, env: AssistantRegistration.Environment = .live) async -> Change {
+    static func set(pin: String, current: String?, env: AssistantRegistration.Environment) async -> Change {
         guard AssistantPIN.isValid(pin), current.map(AssistantPIN.isValid) ?? true else { return .invalid }
         var body = ["pin": pin]
         if let current { body["currentPin"] = current }
         guard let master = env.secrets.read(.master), let data = try? JSONSerialization.data(withJSONObject: body) else { return .failed }
-        let reply = await TripRelay.send(TripRelay.relayRequest("/pin", method: "POST", body: data, token: master, host: env.host), session: env.session)
+        let reply = await TripRelay.send(TripRelay.relayRequest("/pin", method: "POST", body: data, token: master, host: env.host, client: env.client()), session: env.session)
         guard let reply else { return .failed }
         guard (200..<300).contains(reply.status) else {
             return AssistantServerRefusal.parse(status: reply.status, data: reply.data).map(Change.refused) ?? .failed
@@ -29,7 +29,9 @@ enum AssistantPINStore {
         env.defaults.set(true, forKey: setKey)
         return .saved
     }
+}
 
+extension AssistantPINStore {
     /// 앱 비밀번호를 바꾸면 서버 PIN도 새 값으로 바꾼다(PIN1110A01). 서버에 PIN이 없으면 할 일이 없다.
     /// 실패하면 다음 승인 때 「예전 PIN」으로 옮기거나 초기화한다.
     @discardableResult
@@ -98,7 +100,9 @@ struct AssistantServerRefusal: Equatable, Sendable {
         if status == 429 { return Self(kind: .rateLimited, message: nil, retryAfterSeconds: retry) }
         return nil
     }
+}
 
+extension AssistantServerRefusal {
     func text(_ language: MapHomeLanguage) -> String {
         switch kind {
         case .locked:

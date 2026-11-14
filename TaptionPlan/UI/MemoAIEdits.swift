@@ -108,7 +108,7 @@ enum MemoPolishQueue {
         let list = items(env.defaults)
         let request: URLRequest?
         if list.isEmpty {
-            request = TripRelay.relayRequest("/polish", method: "DELETE", token: master, host: env.host)
+            request = TripRelay.relayRequest("/polish", method: "DELETE", token: master, host: env.host, client: env.client())
         } else {
             let memos: [[String: String]] = list.map { item in
                 var memo = ["id": item.memoID.uuidString, "text": item.text]
@@ -116,7 +116,7 @@ enum MemoPolishQueue {
                 return memo
             }
             let body = try? JSONSerialization.data(withJSONObject: ["format": "bokki-polish", "version": 1, "memos": memos] as [String: Any])
-            request = body.flatMap { TripRelay.relayRequest("/polish", method: "POST", body: $0, token: master, host: env.host) }
+            request = body.flatMap { TripRelay.relayRequest("/polish", method: "POST", body: $0, token: master, host: env.host, client: env.client()) }
         }
         guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return }
         // 올리는 사이 목록이 바뀌었으면 다음에 다시 올린다.

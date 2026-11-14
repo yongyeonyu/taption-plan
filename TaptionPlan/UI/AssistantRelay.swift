@@ -19,7 +19,9 @@ enum AssistantShareLevel: String, CaseIterable, Identifiable, Sendable {
 
     /// 덜 보내는 쪽으로 바꿨는가. 그러면 서버에 남은 더 자세한 날들을 지운다(REV1110A06).
     static func isDowngrade(from old: Self, to new: Self) -> Bool { new.rank < old.rank }
+}
 
+extension AssistantShareLevel {
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
         case .off: language.text("보내지 않음", "Don't send")
@@ -42,13 +44,39 @@ enum AssistantRetention: Int, CaseIterable, Identifiable, Sendable {
     static func current(_ defaults: UserDefaults = .standard) -> Self {
         Self(rawValue: defaults.integer(forKey: defaultsKey)) ?? .week
     }
+}
 
+extension AssistantRetention {
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
         case .oneDay: language.text("1일", "1 day")
         case .week: language.text("7일", "7 days")
         case .month: language.text("30일", "30 days")
         }
+    }
+}
+
+/// 요청 헤더에 싣는 이 기기의 상태. 패키지는 앱 설정·잠금을 모르므로 앱이 넣어 준다(PKG1114A19).
+struct AssistantClientState: Equatable, Sendable {
+    var level: AssistantShareLevel
+    var debug: Bool
+    var locked: Bool
+}
+
+extension AssistantClientState {
+    /// 지금 앱의 값: 공유 수준 설정, 빌드 구성, 사생활 잠금.
+    static var live: Self {
+        Self(level: .current(), debug: TripRelay.isDebugBuild, locked: TaptionExternalPrivacyStore.isLocked)
+    }
+}
+
+extension TripRelay {
+    static var isDebugBuild: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
     }
 }
 
@@ -61,7 +89,7 @@ extension TripRelay {
     /// 기기 이름·사용자 정보는 넣지 않는다. 모양이 맞지 않으면 보내지 않는다.
     static func clientHeader(
         model: String = hardwareModel, build: String? = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
-        level: AssistantShareLevel = .current(), debug: Bool = isDebugBuild, locked: Bool = TaptionExternalPrivacyStore.isLocked
+        level: AssistantShareLevel, debug: Bool, locked: Bool
     ) -> String? {
         let device = String(model.unicodeScalars.filter { $0.isASCII && (CharacterSet.alphanumerics.contains($0) || $0 == ",") }.prefix(24))
         guard let build, let first = device.unicodeScalars.first, CharacterSet.letters.contains(first),
@@ -76,25 +104,17 @@ extension TripRelay {
         return withUnsafeBytes(of: &info.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
     }()
 
-    static var isDebugBuild: Bool {
-        #if DEBUG
-        true
-        #else
-        false
-        #endif
-    }
-
     /// `token`을 주면 그 키로 부른다(키를 바꾸기 전 예전 키로 지울 때, SEC1110A01).
-    /// `host`는 시험에서만 바꾼다(SEC1110A02).
+    /// `host`는 시험에서만 바꾼다(SEC1110A02). `client`는 헤더에 싣는 공유 수준·잠금 여부로, 앱이 넣어 준다.
     static func relayRequest(
         _ path: String, method: String, query: [URLQueryItem] = [], body: Data? = nil, token: String? = nil, host: String? = TripRelay.host,
-        timeout: TimeInterval = 10
+        client: AssistantClientState, timeout: TimeInterval = 10
     ) -> URLRequest? {
         guard let url = url(path, query: query, host: host), let key = token ?? key else { return nil }
         var request = URLRequest(url: url, timeoutInterval: timeout)
         request.httpMethod = method
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        request.setValue(clientHeader(), forHTTPHeaderField: clientHeaderName)
+        request.setValue(clientHeader(level: client.level, debug: client.debug, locked: client.locked), forHTTPHeaderField: clientHeaderName)
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = body

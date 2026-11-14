@@ -355,7 +355,7 @@ enum AssistantPush {
         }
         requested = false
         guard env.defaults.string(forKey: uploadedKey) != nil, let master = env.secrets.read(.master),
-              let reply = await TripRelay.send(TripRelay.relayRequest("/push/token", method: "DELETE", token: master, host: env.host), session: env.session),
+              let reply = await TripRelay.send(TripRelay.relayRequest("/push/token", method: "DELETE", token: master, host: env.host, client: env.client()), session: env.session),
               (200..<300).contains(reply.status) else { return }
         env.defaults.removeObject(forKey: uploadedKey)
         env.defaults.removeObject(forKey: uploadedAtKey)
@@ -376,7 +376,7 @@ enum AssistantPush {
             payload["build"] = build
         }
         let body = try? JSONSerialization.data(withJSONObject: payload)
-        let request = body.flatMap { TripRelay.relayRequest("/push/token", method: "POST", body: $0, token: master, host: env.host) }
+        let request = body.flatMap { TripRelay.relayRequest("/push/token", method: "POST", body: $0, token: master, host: env.host, client: env.client()) }
         guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return }
         env.defaults.set("\(environment):\(token)", forKey: uploadedKey)
         env.defaults.set(Date.now.timeIntervalSince1970, forKey: uploadedAtKey)

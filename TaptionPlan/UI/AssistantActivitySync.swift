@@ -6,6 +6,13 @@ import UIKit
 /// 날마다 마지막으로 올린 내용의 해시(TRP1110A07). 바뀐 날만 다시 올린다.
 enum AssistantActivityUploadGate {
     static let defaultsKey = "assistantActivityHashes"
+
+    static func reset(defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: defaultsKey)
+    }
+}
+
+extension AssistantActivityUploadGate {
     static let dayLimit = 40
 
     /// `updatedAt`은 매번 바뀌므로 빼고 잰다.
@@ -26,10 +33,6 @@ enum AssistantActivityUploadGate {
         for day in days { sent[day.date] = hash(day) }
         let kept = sent.keys.sorted().suffix(dayLimit)
         defaults.set(sent.filter { kept.contains($0.key) }, forKey: defaultsKey)
-    }
-
-    static func reset(defaults: UserDefaults = .standard) {
-        defaults.removeObject(forKey: defaultsKey)
     }
 
     private static func stored(_ defaults: UserDefaults) -> [String: String] {
@@ -85,13 +88,19 @@ enum AssistantActivityUploadGate {
     }
 }
 
+/// 하루 기록 올리기가 기기 설정에 남기는 표시의 키. 주 키를 바꿀 때도 지운다.
+enum AssistantActivityFlags {
+    static let sharedKey = "assistantActivityShared"
+    /// 공유 수준을 낮추거나 보관 기간을 줄여 서버 기록을 지워야 한다는 표시. 지울 때까지 올리지 않는다(REV1110A06).
+    static let pendingClearKey = "assistantActivityPendingClear"
+}
+
 /// 하루 기록을 중계 서버에 올린다. 앱을 열 때·떠날 때·기록이 저장된 뒤(5분에 한 번) 돈다. 실패는 진단 기록만 남긴다.
 @MainActor
 enum AssistantActivitySync {
     static let minimumInterval: TimeInterval = 5 * 60
-    static let sharedKey = "assistantActivityShared"
-    /// 공유 수준을 낮추거나 보관 기간을 줄여 서버 기록을 지워야 한다는 표시. 지울 때까지 올리지 않는다(REV1110A06).
-    static let pendingClearKey = "assistantActivityPendingClear"
+    static let sharedKey = AssistantActivityFlags.sharedKey
+    static let pendingClearKey = AssistantActivityFlags.pendingClearKey
     private static var lastRunAt = Date.distantPast
     private static var trailing: Task<Void, Never>?
     private static var isRunning = false
@@ -143,7 +152,7 @@ enum AssistantActivitySync {
         guard let master = env.secrets.read(.master) else { return }
         var count = 0
         for batch in batches {
-            let request = TripRelay.relayRequest("/activity", method: "POST", body: batch.body, token: master, host: env.host)
+            let request = TripRelay.relayRequest("/activity", method: "POST", body: batch.body, token: master, host: env.host, client: env.client())
             let reply = await TripRelay.send(request, session: env.session)
             guard reply?.status == 201 else {
                 record("assistant_activity_upload_failed", status: reply?.status ?? -1, days: batch.days.count)
@@ -172,7 +181,7 @@ enum AssistantActivitySync {
     /// 서버의 날들을 지운다. 지웠을 때만 true이고, 다음 실행이 새 설정으로 다시 올린다.
     @discardableResult
     static func clearRemote(defaults: UserDefaults = .standard, env: AssistantRegistration.Environment = .live) async -> Bool {
-        let request = env.secrets.read(.master).flatMap { TripRelay.relayRequest("/activity", method: "DELETE", token: $0, host: env.host) }
+        let request = env.secrets.read(.master).flatMap { TripRelay.relayRequest("/activity", method: "DELETE", token: $0, host: env.host, client: env.client()) }
         let reply = await TripRelay.send(request, session: env.session)
         guard let reply, (200..<300).contains(reply.status) else {
             record("assistant_activity_clear_failed", status: reply?.status ?? -1, days: 0)

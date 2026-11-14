@@ -487,7 +487,7 @@ final class AssistantReviewFixTests: XCTestCase {
 
         let env = environment(AssistantMemorySecrets([.master: master]), defaults()) { _ in 429 }
         Phase3RelayStub.retryAfter = "60"
-        let request = TripRelay.relayRequest("/keys", method: "GET", token: master, host: host)
+        let request = TripRelay.relayRequest("/keys", method: "GET", token: master, host: host, client: .live)
         let reply = await TripRelay.send(request, session: env.session)
         XCTAssertEqual(reply?.status, 429)
         XCTAssertEqual(Phase3RelayStub.requests.count, 1)
