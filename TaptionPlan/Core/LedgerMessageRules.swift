@@ -481,6 +481,10 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
         if preferences.isLive, (stored ?? []).contains(where: { AssistantOperations.alarmKeys.contains($0.key) }) {
             await MapHomeAlarmCenter.shared.syncDailyCardSchedule()
         }
+        // 공유 수준·보관 기간이 돌아갔으면 서버의 날들을 지우고 돌아간 설정으로 다시 올리게 한다(APV1114A16).
+        if (stored ?? []).contains(where: { AssistantOperations.sharingKeys.contains($0.key) }) {
+            AssistantActivitySync.requestClear(defaults: preferences.defaults)
+        }
         if let deletedLedgerTrip { await preferences.ledger.saveTrip(deletedLedgerTrip) }
         if let ruleID {
             AssistantRuleStore.setEnabled(ruleID, false, defaults: preferences.defaults)

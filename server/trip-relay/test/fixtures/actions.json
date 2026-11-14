@@ -403,6 +403,70 @@
       "since": 341,
       "fields": [],
       "required": []
+    },
+    {
+      "action": "lowerShareLevel",
+      "tool": "lower_share_level",
+      "destructive": true,
+      "since": 343,
+      "fields": [
+        "level"
+      ],
+      "required": [
+        "level"
+      ]
+    },
+    {
+      "action": "raiseShareLevel",
+      "tool": "raise_share_level",
+      "destructive": true,
+      "since": 343,
+      "fields": [
+        "level"
+      ],
+      "required": [
+        "level"
+      ]
+    },
+    {
+      "action": "shortenRetention",
+      "tool": "shorten_retention",
+      "destructive": true,
+      "since": 343,
+      "fields": [
+        "days"
+      ],
+      "required": [
+        "days"
+      ]
+    },
+    {
+      "action": "extendRetention",
+      "tool": "extend_retention",
+      "destructive": true,
+      "since": 343,
+      "fields": [
+        "days"
+      ],
+      "required": [
+        "days"
+      ]
+    },
+    {
+      "action": "turnOffHealth",
+      "tool": "turn_off_health",
+      "destructive": true,
+      "since": 343,
+      "fields": [],
+      "required": []
+    },
+    {
+      "action": "openBackup",
+      "tool": "open_backup",
+      "destructive": false,
+      "since": 343,
+      "fields": [],
+      "required": []
     }
   ]
 }

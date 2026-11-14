@@ -84,7 +84,9 @@ const refuses = (action, extra) => assert.equal(isCommand(cmd(action, extra)), f
 test("actions: the fixture the app checks against is the registry's manifest", () => {
   const fixture = JSON.parse(readFileSync(new URL("./fixtures/actions.json", import.meta.url), "utf8"));
   assert.deepEqual(fixture, registry.manifest(), "run `npm run actions` after changing src/actions.js");
-  for (const action of fixture.actions) assert.equal(action.since, 341, action.action);
+  const direct = ["lowerShareLevel", "raiseShareLevel", "shortenRetention", "extendRetention", "turnOffHealth", "openBackup"];
+  for (const action of fixture.actions) assert.equal(action.since, direct.includes(action.action) ? 343 : 341, action.action);
+  assert.deepEqual(fixture.actions.filter((a) => a.since === 343).map((a) => a.action), direct);
   assert.equal(registry.needsBuild("setFxRate", "340"), 341);
   assert.equal(registry.needsBuild("setFxRate", "341"), null);
 });
@@ -298,4 +300,33 @@ test("actions batch 6: refresh, tracking, calendars, restore; switching permissi
   const tools = registry.tools();
   assert.deepEqual(tools.find((t) => t.action === "stopTracking").required, []);
   assert.equal(tools.find((t) => t.action === "refreshNow").destructive, false);
+});
+
+test("direct actions for the approval kinds (APV1114A16): shapes, build 343, and what stays approval-only", () => {
+  for (const level of ["off", "summary"]) accepts("lowerShareLevel", { level });
+  for (const level of ["summary", "visits"]) accepts("raiseShareLevel", { level });
+  refuses("lowerShareLevel", { level: "visits" });
+  refuses("raiseShareLevel", { level: "off" });
+  refuses("lowerShareLevel", {});
+  for (const days of [1, 7]) accepts("shortenRetention", { days });
+  for (const days of [7, 30]) accepts("extendRetention", { days });
+  for (const days of [30, 3, "7", 0]) refuses("shortenRetention", { days });
+  for (const days of [1, 14, 365, "30"]) refuses("extendRetention", { days });
+  accepts("turnOffHealth", {});
+  accepts("openBackup", {});
+  assert.equal(cleanCommand(cmd("openBackup", { password: "123456" })).password, undefined, "a backup password never travels with the command");
+  assert.match(registry.spec("openBackup").description, /never ask for it/);
+  const direct = ["lowerShareLevel", "raiseShareLevel", "shortenRetention", "extendRetention", "turnOffHealth", "openBackup"];
+  for (const action of direct) {
+    assert.equal(registry.needsBuild(action, "342"), 343, action);
+    assert.equal(registry.needsBuild(action, "343"), null, action);
+    assert.match(registry.spec(action).description, /rejected with reason disabled.*use request_approval with request (shareLevel|retentionDays|healthOff|backup) instead/, action);
+  }
+  for (const action of ["raiseShareLevel", "extendRetention", "turnOffHealth"]) assert.match(registry.spec(action).description, /switched off until the user turns it on/, action);
+  for (const action of ["lowerShareLevel", "shortenRetention", "openBackup"]) assert.doesNotMatch(registry.spec(action).description, /switched off until/, action);
+  assert.equal(registry.needsBuild("restoreFromBackup", "341"), null, "older actions keep their build");
+  // 승인 흐름은 그대로이고, 전부 지우기·PIN·앱 잠금은 바로 실행에 없다.
+  for (const request of ["shareLevel", "retentionDays"]) accepts("requestApproval", { request, value: request === "shareLevel" ? "visits" : 30 });
+  for (const request of ["healthOff", "eraseAllData", "backup", "restore", "changePin"]) accepts("requestApproval", { request });
+  for (const action of ["eraseAllData", "changePin", "setAppLock", "setShareLevel", "setRetention"]) assert.equal(registry.spec(action), undefined, action);
 });
