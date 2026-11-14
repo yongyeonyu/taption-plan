@@ -278,7 +278,9 @@ enum AssistantActivityBuilder {
         case .car, .taxi: "car"
         case .train: "train"
         case .airplane: "flight"
-        case .cycling, .ship: "other"
+        // ACT1114A07: setTravelMode가 받는 이름 그대로 내보낸다.
+        case .cycling: "cycling"
+        case .ship: "ship"
         }
     }
 

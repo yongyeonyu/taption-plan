@@ -896,6 +896,162 @@ extension AssistantCommandEditTests {
     }
 }
 
+// MARK: - 3묶음 — 기록 (ACT1114A07)
+
+extension AssistantCommandEditTests {
+    private func send(_ model: AppModel, _ action: String, _ extra: [String: Any], store: UserDefaults) async throws -> (reason: String?, entry: AssistantLogEntry?) {
+        let applied = await model.applyAssistantCommands(try batch([command("c-\(UUID().uuidString)", action, extra)]), defaults: store)
+        let outcome = try XCTUnwrap(applied)
+        return (outcome.results.first?.reason, outcome.entries.first)
+    }
+
+    private func seeded(_ seed: TaptionDataSnapshot) async -> AppModel {
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: seed), cloudSyncService: nil)
+        await model.bootstrap()
+        return model
+    }
+
+    func testMoreTravelModesAndMemoTimesParseApplyAndUndo() async throws {
+        let store = defaults()
+        var seed = TaptionDataSnapshot.empty
+        let ride = TravelSegment(mode: .car, span: TimeSpan(start: at(8, 30), end: at(9)), distanceMeters: 8_000, confidence: .medium, evidence: [])
+        seed.travel = [ride]
+        let model = await seeded(seed)
+        XCTAssertEqual(["run", "cycling", "taxi", "ship", "other"].map(AssistantCommandParser.travelMode), [.running, .cycling, .taxi, .ship, nil])
+        XCTAssertEqual([TravelMode.cycling, .ship, .running, .taxi].map(AssistantActivityBuilder.mode), ["cycling", "ship", "walk", "car"])
+        let cycled = try await send(model, "setTravelMode", ["date": "2026-11-10", "moveId": ride.id.uuidString, "mode": "cycling"], store: store)
+        XCTAssertNil(cycled.reason)
+        XCTAssertEqual(model.snapshot.travel.first?.mode, .cycling)
+        let rideBack = await model.undoAssistantEntry(try XCTUnwrap(cycled.entry), preferences: .test(store))
+        XCTAssertTrue(rideBack)
+        XCTAssertEqual(model.snapshot.travel.first?.mode, .car)
+
+        // 메모: 글만, 때만, 둘 다.
+        let local = Calendar.autoupdatingCurrent
+        let written = try XCTUnwrap(local.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 12, minute: 5)))
+        let memoID = try XCTUnwrap(model.addMemo(text: "점심 약속", kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: written))
+        XCTAssertEqual(
+            try batch([command("x", "updateMemo", ["memoId": memoID.uuidString, "time": "08:30"])]).commands.first?.action,
+            .updateMemo(memoID: memoID.uuidString, text: nil, when: .init(minutes: 510))
+        )
+        XCTAssertTrue(try batch([command("x", "updateMemo", ["memoId": memoID.uuidString])]).invalidIDs == ["x"])
+        XCTAssertTrue(try batch([command("x", "updateMemo", ["memoId": memoID.uuidString, "time": "8시"])]).invalidIDs == ["x"])
+        XCTAssertTrue(try batch([command("x", "updateMemo", ["memoId": memoID.uuidString, "date": "2026-13-01"])]).invalidIDs == ["x"])
+
+        let timed = try await send(model, "updateMemo", ["memoId": memoID.uuidString, "time": "08:30"], store: store)
+        XCTAssertNil(timed.reason)
+        var memo = try XCTUnwrap(model.snapshot.memos.first { $0.id == memoID })
+        XCTAssertEqual(memo.text, "점심 약속")
+        XCTAssertEqual(local.dateComponents([.day, .hour, .minute], from: memo.occurredAt), DateComponents(day: 10, hour: 8, minute: 30))
+        let same = try await send(model, "updateMemo", ["memoId": memoID.uuidString, "time": "08:30"], store: store)
+        XCTAssertEqual(same.reason, "no_change")
+        let moved = try await send(model, "updateMemo", ["memoId": memoID.uuidString, "date": "2026-11-12", "text": "저녁 약속"], store: store)
+        XCTAssertNil(moved.reason)
+        memo = try XCTUnwrap(model.snapshot.memos.first { $0.id == memoID })
+        XCTAssertEqual(memo.text, "저녁 약속")
+        XCTAssertEqual(local.dateComponents([.day, .hour, .minute], from: memo.occurredAt), DateComponents(day: 12, hour: 8, minute: 30), "날짜만 주면 시각은 그대로")
+        let movedBack = await model.undoAssistantEntry(try XCTUnwrap(moved.entry), preferences: .test(store))
+        XCTAssertTrue(movedBack)
+        memo = try XCTUnwrap(model.snapshot.memos.first { $0.id == memoID })
+        XCTAssertEqual(memo.text, "점심 약속")
+        XCTAssertEqual(local.component(.day, from: memo.occurredAt), 10)
+    }
+
+    func testManualRecordsAreDeletedAndRecordsLinkToPlans() async throws {
+        let store = defaults()
+        var seed = TaptionDataSnapshot.empty
+        let mine = ActualRecord(planID: nil, title: "산책", categoryID: "activity", startedAt: at(10), endedAt: at(11), source: .manual)
+        let sensed = ActualRecord(planID: nil, title: "업무", categoryID: "work", startedAt: at(13), endedAt: at(15), source: .location)
+        let plan = PlanRecord(title: "보고서", span: TimeSpan(start: at(13), end: at(16)), categoryID: "work")
+        let far = PlanRecord(title: "다음 날 일정", span: TimeSpan(start: at(13, day: 11), end: at(16, day: 11)), categoryID: "work")
+        seed.actuals = [mine, sensed]
+        seed.plans = [plan, far]
+        let model = await seeded(seed)
+
+        XCTAssertTrue(try batch([command("x", "deleteManualRecord", ["recordId": "r1"])]).invalidIDs == ["x"])
+        XCTAssertTrue(try batch([command("x", "linkRecordToPlan", ["recordId": mine.id.uuidString])]).invalidIDs == ["x"])
+        let automatic = try await send(model, "deleteManualRecord", ["recordId": sensed.id.uuidString], store: store)
+        XCTAssertEqual(automatic.reason, "not_editable", "자동 기록은 지우지 않는다")
+        let missing = try await send(model, "deleteManualRecord", ["recordId": UUID().uuidString], store: store)
+        XCTAssertEqual(missing.reason, "no_record")
+        let deleted = try await send(model, "deleteManualRecord", ["recordId": mine.id.uuidString], store: store)
+        XCTAssertNil(deleted.reason)
+        XCTAssertFalse(model.snapshot.actuals.contains { $0.id == mine.id })
+        XCTAssertTrue(model.snapshot.settings.suppressedActualIDs.contains(mine.id))
+        XCTAssertEqual(deleted.entry?.kind, .operation("deleteManualRecord"))
+        let restored = await model.undoAssistantEntry(try XCTUnwrap(deleted.entry), preferences: .test(store))
+        XCTAssertTrue(restored)
+        XCTAssertEqual(model.snapshot.actuals.first { $0.id == mine.id }?.title, "산책")
+        XCTAssertFalse(model.snapshot.settings.suppressedActualIDs.contains(mine.id), "되살린 기록이 다시 가려지지 않는다")
+
+        let noPlan = try await send(model, "linkRecordToPlan", ["recordId": sensed.id.uuidString, "planId": UUID().uuidString], store: store)
+        XCTAssertEqual(noPlan.reason, "no_plan")
+        let apart = try await send(model, "linkRecordToPlan", ["recordId": sensed.id.uuidString, "planId": far.id.uuidString], store: store)
+        XCTAssertEqual(apart.reason, "not_linkable", "시간이 겹치지 않으면 잇지 않는다")
+        XCTAssertNil(model.userFacingError, "실패는 AI 결과로만 알린다")
+        let linked = try await send(model, "linkRecordToPlan", ["recordId": sensed.id.uuidString, "planId": plan.id.uuidString], store: store)
+        XCTAssertNil(linked.reason)
+        XCTAssertEqual(model.snapshot.actuals.first { $0.id == sensed.id }?.planID, plan.id)
+        let twice = try await send(model, "linkRecordToPlan", ["recordId": sensed.id.uuidString, "planId": plan.id.uuidString], store: store)
+        XCTAssertEqual(twice.reason, "no_change")
+        let unlinked = await model.undoAssistantEntry(try XCTUnwrap(linked.entry), preferences: .test(store))
+        XCTAssertTrue(unlinked)
+        XCTAssertNil(model.snapshot.actuals.first { $0.id == sensed.id }?.planID)
+    }
+
+    func testBoardingCandidatesAreSharedWithoutCoordinatesAndResolved() async throws {
+        let store = defaults()
+        var seed = TaptionDataSnapshot.empty
+        let ride = TravelSegment(mode: .car, span: TimeSpan(start: at(8, 30), end: at(9)), distanceMeters: 8_000, confidence: .medium, evidence: [])
+        seed.travel = [ride]
+        let model = await seeded(seed)
+        let candidate = TransitBoardingCandidate(
+            id: "stop-key-1", placeID: "stop-1", name: "시험 정류장", kind: .busStop, point: GeoPoint(latitude: 1.25, longitude: 2.5, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10),
+            span: TimeSpan(start: at(8, 25), end: at(8, 30)), dwellDuration: 300, source: .catalog, travelSegmentIDs: [ride.id]
+        )
+        AssistantBoardingCandidates.current = [candidate]
+        addTeardownBlock { @MainActor in AssistantBoardingCandidates.current = [] }
+        let publicID = AssistantBoardingCandidates.publicID(candidate)
+        XCTAssertEqual(publicID.count, 16)
+        XCTAssertFalse(publicID.contains("stop"))
+
+        // 앱 상태: 장소 이름 공유 수준에서만, 좌표 없이.
+        let preferences = AssistantPreferenceStore.test(store)
+        var input = await AssistantAppStateSync.input(model: model, preferences: preferences, now: at(15), calendar: calendar)
+        input.shareLevel = .summary
+        XCTAssertNil(AssistantAppStateSync.make(input).boarding)
+        input.shareLevel = .visits
+        let state = AssistantAppStateSync.make(input)
+        XCTAssertEqual(state.boarding, [.init(id: publicID, name: "시험 정류장", kind: "busStop", mode: "bus", start: "2026-11-10T08:25+09:00", end: "2026-11-10T08:30+09:00")])
+        let body = String(decoding: try XCTUnwrap(AssistantAppStateSync.body(state)), as: UTF8.self)
+        XCTAssertFalse(body.contains("1.25") || body.contains("stop-1") || body.contains("stop-key-1"))
+
+        XCTAssertTrue(try batch([command("x", "resolveBoarding", ["candidateId": "stop-key-1", "decision": "confirm"])]).invalidIDs == ["x"])
+        XCTAssertTrue(try batch([command("x", "resolveBoarding", ["candidateId": publicID, "decision": "maybe"])]).invalidIDs == ["x"])
+        let unknown = try await send(model, "resolveBoarding", ["candidateId": "0123456789abcdef", "decision": "confirm"], store: store)
+        XCTAssertEqual(unknown.reason, "no_candidate")
+
+        let confirmed = try await send(model, "resolveBoarding", ["candidateId": publicID, "decision": "confirm"], store: store)
+        XCTAssertNil(confirmed.reason)
+        XCTAssertEqual(model.snapshot.travel.first?.mode, .bus)
+        XCTAssertEqual(model.snapshot.settings.transitBoardingDecisions.map(\.candidateKey), ["stop-key-1"])
+        XCTAssertTrue(AssistantBoardingCandidates.current.isEmpty, "답한 후보는 목록에서 빠진다")
+        let undone = await model.undoAssistantEntry(try XCTUnwrap(confirmed.entry), preferences: .test(store))
+        XCTAssertTrue(undone)
+        XCTAssertEqual(model.snapshot.travel.first?.mode, .car)
+        XCTAssertTrue(model.snapshot.settings.transitBoardingDecisions.isEmpty)
+
+        AssistantBoardingCandidates.current = [candidate]
+        let rejected = try await send(model, "resolveBoarding", ["candidateId": publicID, "decision": "reject"], store: store)
+        XCTAssertNil(rejected.reason)
+        XCTAssertEqual(model.snapshot.travel.first?.mode, .car)
+        XCTAssertNil(model.snapshot.settings.transitBoardingDecisions.first?.mode, "거절은 수단 없이 남는다")
+        let back = await model.undoAssistantEntry(try XCTUnwrap(rejected.entry), preferences: .test(store))
+        XCTAssertTrue(back)
+        XCTAssertTrue(model.snapshot.settings.transitBoardingDecisions.isEmpty)
+    }
+}
+
 /// 서버가 뽑아 둔 동작 목록(`server/trip-relay/test/fixtures/actions.json`).
 private struct AssistantActionManifest: Decodable {
     struct Action: Decodable {

@@ -343,7 +343,7 @@ struct AssistantFields: Sendable {
     }
 
     /// 앞뒤 공백을 뗀 1~max자.
-    func text(_ name: String, max: Int) -> String? { AssistantCommandParser.clean(raw(name), max: max) }
+    func string(_ name: String, max: Int) -> String? { AssistantCommandParser.clean(raw(name), max: max) }
 
     func number(_ name: String) -> Double? {
         if case let .number(number)? = values[name], number.isFinite { return number }
@@ -456,7 +456,7 @@ struct AssistantParsedOperation: Equatable, Sendable {
 
 enum AssistantOperations {
     /// 앱이 아는 등록부 동작 전부. 여기 차례가 「AI가 할 수 있는 일」과 안내문의 차례다.
-    static let all: [any AssistantOperation.Type] = ledger + plans
+    static let all: [any AssistantOperation.Type] = ledger + plans + records
 
     private static let byName = Dictionary(all.map { ($0.spec.name, $0) }, uniquingKeysWith: { first, _ in first })
 

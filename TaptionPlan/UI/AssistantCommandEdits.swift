@@ -291,6 +291,8 @@ struct AssistantEditResult: Equatable, Sendable {
     var paymentRuleID: UUID?
     /// 가계부 설정·정리·화면 열기의 전·후(ACX1112A01).
     var appChange: AssistantAppChange?
+    /// 지우면서 「다시 만들지 않기」로 적어 둔 기록(ACT1114A07). 되돌리면 그 표시도 뗀다.
+    var suppressedActualIDs: Set<UUID> = []
 
     static func rejected(_ reason: String) -> Self { Self(reason: reason) }
 }
@@ -415,12 +417,24 @@ extension AppModel {
             await deletePlans([plan.id])
             guard !snapshot.plans.contains(where: { $0.id == plan.id }) else { return .rejected("schedule_failed") }
             return AssistantEditResult(before: AssistantEditText.plan(plan), after: language.text("지움", "Deleted"))
-        case let .updateMemo(memoID, text):
+        case let .updateMemo(memoID, newText, when):
             guard let memo = assistantMemo(memoID) else { return .rejected("no_memo") }
+            let text = newText ?? memo.text
             guard text.count <= TaptionPlanMemoRecord.maximumTextLength else { return .rejected("memo_too_long") }
-            updateMemo(memo.id, text: text, kind: memo.kind)
-            guard snapshot.memos.first(where: { $0.id == memo.id })?.text == text else { return .rejected("memo_failed") }
-            return AssistantEditResult(before: AssistantEditText.memo(memo.text), after: AssistantEditText.memo(text))
+            guard !when.isEmpty else {
+                updateMemo(memo.id, text: text, kind: memo.kind)
+                guard snapshot.memos.first(where: { $0.id == memo.id })?.text == text else { return .rejected("memo_failed") }
+                return AssistantEditResult(before: AssistantEditText.memo(memo.text), after: AssistantEditText.memo(text))
+            }
+            // ACT1114A07: 때를 옮기는 것은 메모 편집 시트와 같은 `updateMapMemo`(그 시각의 일정에 다시 이어진다).
+            let at = when.applied(to: memo.occurredAt)
+            guard at != memo.occurredAt || text != memo.text else { return .rejected("no_change") }
+            guard updateMapMemo(memo.id, text: text, kind: memo.kind, mapPoint: memo.mapPoint, occurredAt: at),
+                  let saved = snapshot.memos.first(where: { $0.id == memo.id }), saved.occurredAt == at, saved.text == text else { return .rejected("memo_failed") }
+            func describe(_ value: ActionMemo) -> String {
+                "\(AssistantDataText.day(value.occurredAt)) \(AssistantEditText.clock(value.occurredAt)) \(AssistantEditText.memo(value.text))"
+            }
+            return AssistantEditResult(before: describe(memo), after: describe(saved))
         case let .deleteMemo(memoID):
             guard let memo = assistantMemo(memoID) else { return .rejected("no_memo") }
             deleteMemo(memo.id)

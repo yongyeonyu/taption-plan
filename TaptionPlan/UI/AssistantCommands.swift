@@ -19,7 +19,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
             extras: AssistantScheduleExtras = .init()
         )
         case deleteSchedule(target: AssistantPlanTarget)
-        case updateMemo(memoID: String, text: String)
+        /// ACT1114A07: `text`가 nil이면 글은 그대로 두고 때만 옮긴다.
+        case updateMemo(memoID: String, text: String?, when: AssistantWhenChange = .init())
         case deleteMemo(memoID: String)
         /// 루틴(상위 계획)·여행 일정·수면·안전한 표시 설정(AIR1110A03). 모두 되돌릴 수 있는 사용자 편집이다.
         case addGoal(title: String, start: Date, end: Date, categoryID: String?)
@@ -180,7 +181,7 @@ enum AssistantCommandParser {
             guard let id = item.id, !id.isEmpty, !id.contains(",") else { continue }
             if let fields = item.values.map({ AssistantFields(values: $0, now: now, calendar: calendar) }),
                let name = fields.name, AssistantOperations.spec(name) != nil {
-                let keyID = fields.text("keyId", max: 64), source = fields.text("source", max: 16), taskID = fields.text("taskId", max: 100)
+                let keyID = fields.string("keyId", max: 64), source = fields.string("source", max: 16), taskID = fields.string("taskId", max: 100)
                 if let parsed = AssistantOperations.parse(fields) {
                     batch.commands.append(AssistantCommand(id: id, action: .operation(parsed), keyID: keyID, source: source, taskID: taskID))
                 } else {
@@ -272,8 +273,10 @@ enum AssistantCommandParser {
         case "deleteSchedule":
             return planTarget(raw, day: day, calendar: calendar).map { .deleteSchedule(target: $0) }
         case "updateMemo":
-            guard let memoID = clean(raw.memoId, max: 100), let text = clean(raw.text, max: 2_000) else { return nil }
-            return .updateMemo(memoID: memoID, text: text)
+            guard let memoID = clean(raw.memoId, max: 100), let when = AssistantWhenChange(date: raw.date, time: raw.time, calendar: calendar) else { return nil }
+            if raw.text != nil, clean(raw.text, max: 2_000) == nil { return nil }
+            guard raw.text != nil || !when.isEmpty else { return nil }
+            return .updateMemo(memoID: memoID, text: clean(raw.text, max: 2_000), when: when)
         case "deleteMemo":
             return clean(raw.memoId, max: 100).map { .deleteMemo(memoID: $0) }
         default:
@@ -538,7 +541,7 @@ extension AppModel {
                 outcome.count(kind)
                 outcome.entries.append(entry)
                 // AI가 고친 메모는 「AI가 수정함」을 붙이고, 맡긴 다듬기 목록에서 뺀다(MEM1110A02).
-                if case let .updateMemo(memoID, _) = command.action, let memo = assistantMemo(memoID) {
+                if case let .updateMemo(memoID, text, _) = command.action, text != nil, let memo = assistantMemo(memoID) {
                     noteAssistantMemoEdit(memo.id, by: entry.connection)
                 }
             }
@@ -558,6 +561,7 @@ extension AppModel {
         delta.ledgerEntryID = result.ledgerEntryID
         delta.ledgerEntry = result.ledgerEntry
         delta.ledgerBefore = result.ledgerBefore
+        if !result.suppressedActualIDs.isEmpty { delta.suppressedActualIDs = result.suppressedActualIDs.sorted { $0.uuidString < $1.uuidString } }
         delta.movement = result.movementBefore.map {
             AssistantMovementChange(before: $0, after: .init(snapshot, ids: Set($0.segments.map(\.id))))
         }

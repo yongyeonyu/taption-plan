@@ -111,6 +111,11 @@ extension AssistantCommandParser {
         case "car": .car
         case "train": .train
         case "flight": .airplane
+        // ACT1114A07: 화면에서 고를 수 있는 나머지 수단.
+        case "run": .running
+        case "cycling": .cycling
+        case "taxi": .taxi
+        case "ship": .ship
         default: nil
         }
     }
@@ -359,6 +364,34 @@ extension AssistantCommandParser {
     }
 }
 
+/// 날짜(`YYYY-MM-DD`)·시각(자정부터의 분)을 따로 옮긴다(ACT1114A07). 날짜만 주면 시각을, 시각만 주면 날짜를 그대로 둔다.
+struct AssistantWhenChange: Equatable, Sendable {
+    var date: String?
+    var minutes: Int?
+
+    var isEmpty: Bool { date == nil && minutes == nil }
+
+    init(date: String? = nil, minutes: Int? = nil) {
+        self.date = date
+        self.minutes = minutes
+    }
+
+    /// 명령의 `date`·`time`에서. 준 칸이 틀리면 nil.
+    init?(date: String?, time: String?, calendar: Calendar) {
+        if let date, AssistantCommandParser.day(date, calendar: calendar) == nil { return nil }
+        let minutes = time.flatMap(AssistantCommandParser.minutes)
+        if time != nil, minutes == nil { return nil }
+        self.init(date: date, minutes: minutes)
+    }
+
+    func applied(to instant: Date, calendar: Calendar = .autoupdatingCurrent) -> Date {
+        guard !isEmpty else { return instant }
+        let day = date.flatMap { AssistantCommandParser.day($0, calendar: calendar) } ?? calendar.startOfDay(for: instant)
+        let clock = minutes ?? calendar.component(.hour, from: instant) * 60 + calendar.component(.minute, from: instant)
+        return calendar.date(bySettingHour: clock / 60, minute: clock % 60, second: 0, of: day) ?? instant
+    }
+}
+
 /// AI가 고치는 가계부 칸(AIQ1111A01). nil인 칸은 그대로 둔다.
 struct AssistantExpenseChange: Equatable, Sendable {
     var delete = false
@@ -389,12 +422,7 @@ struct AssistantExpenseChange: Equatable, Sendable {
         }
         if let shareNames { value.shareNames = shareNames.isEmpty ? nil : shareNames }
         if let note { value.note = note }
-        if date != nil || minutes != nil {
-            // 날짜만 주면 시각을, 시각만 주면 날짜를 그대로 둔다.
-            let day = date.flatMap { AssistantCommandParser.day($0, calendar: calendar) } ?? calendar.startOfDay(for: entry.occurredAt)
-            let clock = minutes ?? calendar.component(.hour, from: entry.occurredAt) * 60 + calendar.component(.minute, from: entry.occurredAt)
-            value.occurredAt = calendar.date(bySettingHour: clock / 60, minute: clock % 60, second: 0, of: day) ?? entry.occurredAt
-        }
+        value.occurredAt = AssistantWhenChange(date: date, minutes: minutes).applied(to: entry.occurredAt, calendar: calendar)
         return value
     }
 

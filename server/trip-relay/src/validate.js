@@ -169,7 +169,8 @@ export const COMMAND_FIELDS = {
   updateRecordTime: ["date", "recordId", "start", "end"],
   updateSchedule: ["planId", "date", "startTime", "title", "start", "end", "note", "categoryId", "important", "parentGoalId"],
   deleteSchedule: ["planId", "date", "startTime"],
-  updateMemo: ["memoId", "text"],
+  // ACT1114A07: date·time으로 메모의 때를 옮긴다(글 없이 때만 옮겨도 된다).
+  updateMemo: ["memoId", "text", "date", "time"],
   deleteMemo: ["memoId"],
   addGoal: ["title", "start", "end", "categoryId"],
   updateGoal: ["goalId", "planId", "title", "start", "end", "categoryId"],
@@ -230,7 +231,8 @@ for (const name of registry.names()) {
   COMMAND_FIELDS[name] = registry.fields(name);
 }
 export const ACTIONS = Object.keys(COMMAND_FIELDS);
-export const TRAVEL_MODES = ["walk", "subway", "bus", "car", "train", "flight"];
+// ACT1114A07: 화면에서 고를 수 있는 나머지 수단(달리기·자전거·택시·배)도 받는다.
+export const TRAVEL_MODES = ["walk", "subway", "bus", "car", "train", "flight", "run", "cycling", "taxi", "ship"];
 export const PAYMENT_RULE_KINDS = ["expense", "income", "ignore"];
 // ACX1112A01
 export const SCREENS = ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings",
@@ -386,7 +388,8 @@ export function isCommand(value) {
     case "deleteSchedule":
       return planTarget(v);
     case "updateMemo":
-      return targetID(v.memoId) && nonEmpty(v.text, 1000);
+      return targetID(v.memoId) && optional(v.text, (t) => nonEmpty(t, 1000)) && optional(v.date, isDate) && optional(v.time, isTime)
+        && [v.text, v.date, v.time].some(given);
     case "deleteMemo":
       return targetID(v.memoId);
     // 목표 = 상위 계획(AIR1110A03). 날짜는 YYYY-MM-DD, end는 선택.
@@ -541,7 +544,9 @@ export function cleanTaskOutcome(value) {
 
 // 앱 상태(ACX1112A01). 앱이 통째로 올리고 AI는 읽기만 한다: 설정, 가계부(이 달 합계·예산·최근 기록), 확인 필요,
 // 받은 결제 문자(번호는 앱이 가린다), 결제 문자 규칙. 서버는 모양·개수만 보고 알려진 칸만 잠가 둔다.
-export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules", "places", "categories", "trips", "placeSuggestion", "carAudio"];
+export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules", "places", "categories", "trips", "placeSuggestion", "carAudio",
+  // ACT1114A07: 답을 기다리는 탑승 후보(역·정류장 이름과 시각, 좌표 없음).
+  "boarding"];
 export const APP_STATE_LIMITS = { entries: 200, review: 50, inbox: 30, rules: 20 };
 const plainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const objectList = (v, max) => Array.isArray(v) && v.length <= max && v.every(plainObject);
@@ -555,7 +560,8 @@ export function isAppState(value) {
     && optional(value.rules, (l) => objectList(l, APP_STATE_LIMITS.rules))
     && optional(value.places, (l) => objectList(l, PLACE_LIMITS.places)) && optional(value.categories, (l) => objectList(l, PLACE_LIMITS.categories))
     && optional(value.trips, (l) => objectList(l, TRIP_LIMITS.trips))
-    && optional(value.placeSuggestion, plainObject) && optional(value.carAudio, plainObject);
+    && optional(value.placeSuggestion, plainObject) && optional(value.carAudio, plainObject)
+    && optional(value.boarding, (l) => objectList(l, 20));
 }
 export function cleanAppState(value) {
   const out = { format: "bokki-app", version: 1 };

@@ -318,6 +318,18 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var registered: [String]
         var pending: [String]
     }
+
+    /// ACT1114A07: 답을 기다리는 탑승 후보(장소 이름 공유 수준에서만). 역·정류장 이름과 시각만, 좌표는 담지 않는다.
+    var boarding: [Boarding]?
+
+    struct Boarding: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var kind: String
+        var mode: String
+        var start: String
+        var end: String
+    }
 }
 
 /// 앱 상태를 중계 서버에 올린다. 하루 기록을 올린 뒤 함께 돌고, 바뀌었을 때만(또는 20시간마다) 보낸다.
@@ -368,6 +380,7 @@ enum AssistantAppStateSync {
         var paymentSources: [PaymentAlertSources.Source] = []
         var skipWords: [String] = []
         var fxRates: [String: Double] = [:]
+        var boarding: [TransitBoardingCandidate] = []
     }
 
     static func make(_ input: Input) -> AssistantAppState {
@@ -448,7 +461,13 @@ enum AssistantAppStateSync {
                 )
             } : nil,
             carAudio: input.registeredCarAudio.isEmpty && input.pendingCarAudio.isEmpty ? nil
-                : .init(registered: input.registeredCarAudio.prefix(20).map { mask($0, 60) }, pending: input.pendingCarAudio.prefix(20).map { mask($0, 60) })
+                : .init(registered: input.registeredCarAudio.prefix(20).map { mask($0, 60) }, pending: input.pendingCarAudio.prefix(20).map { mask($0, 60) }),
+            boarding: input.shareLevel == .visits && !input.boarding.isEmpty ? input.boarding.prefix(AssistantBoardingCandidates.limit).map {
+                .init(
+                    id: AssistantBoardingCandidates.publicID($0), name: mask($0.name, 40), kind: $0.kind.rawValue,
+                    mode: AssistantActivityBuilder.mode($0.mode), start: stamp.instant($0.span.start), end: stamp.instant($0.span.end)
+                )
+            } : nil
         )
     }
 
@@ -504,7 +523,8 @@ enum AssistantAppStateSync {
                 (setting.isModelBacked ? setting.read(model: model) : setting.read(defaults)).map { (setting.rawValue, $0) }
             }),
             paymentSources: PaymentAlertSources.all(defaults), skipWords: PaymentAlertSources.skipWords(defaults),
-            fxRates: (defaults.dictionary(forKey: LedgerBook.manualRatesKey) as? [String: Double]) ?? [:]
+            fxRates: (defaults.dictionary(forKey: LedgerBook.manualRatesKey) as? [String: Double]) ?? [:],
+            boarding: AssistantBoardingCandidates.current
         )
     }
 

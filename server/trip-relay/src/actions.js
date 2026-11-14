@@ -231,3 +231,30 @@ registry
     description: "Delete a timed trip item with its detail items, linked plan and map pin. Only when the user asked. Undoable.",
     fields: { tripId: f.id("Trip id").required_(), itemId: f.id("Item id").required_() },
   });
+
+// 3묶음: 기록.
+registry
+  .add("deleteManualRecord", {
+    tool: "delete_manual_record", title: "Delete a record the user made", since: SINCE,
+    description: "Delete one record the user added by hand (get_activity records with source user). Automatic records cannot be deleted: hide them with "
+      + "hide_record instead. Only when the user asked. Undoable.",
+    fields: { recordId: f.match(UUID, "Record id from get_activity records").required_() },
+  })
+  .add("linkRecordToPlan", {
+    tool: "link_record_to_plan", title: "Link a record to a plan or goal", since: SINCE,
+    description: "Count one record (get_activity records) as time spent on a plan or goal (planId from get_activity plans or goals). The record's time must overlap "
+      + "the plan; repeating segments and calendar events cannot be targets. Undoable.",
+    fields: {
+      recordId: f.match(UUID, "Record id from get_activity records").required_(),
+      planId: f.match(UUID, "Plan or goal id").required_(),
+    },
+  })
+  .add("resolveBoarding", {
+    tool: "resolve_boarding", title: "Confirm or reject a boarding the app detected", since: SINCE,
+    description: "Answer one pending boarding candidate (get_app_state boarding: a station or stop where the app thinks the user got on): confirm sets the "
+      + "ride's mode, reject drops the candidate. Only when the user told you. Undoable.",
+    fields: {
+      candidateId: f.match(/^[0-9a-f]{16}$/, "Candidate id from get_app_state boarding").required_(),
+      decision: f.oneOf(["confirm", "reject"], "confirm or reject").required_(),
+    },
+  });

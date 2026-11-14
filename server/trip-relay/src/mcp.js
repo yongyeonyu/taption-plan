@@ -113,6 +113,7 @@ const TOOLS = [
     + "automation handed over; card, account and phone numbers are masked; for outcome unread, askedAI or review the app could not read the text by itself: when the user asks, work out the layout and send add_payment_rule so the app reads it from then on), rules [{id,name,kind,pattern}] (payment text rules), trips [{id,title,start,end,wishDays,country,region,currency}] (every trip; ids work with update_trip, delete_trip and add_trip_stop), "
     + "placeSuggestion {id,name?,visits} (a place the app suggests registering, at the place-name share level; answer with resolve_place_suggestion), "
     + "carAudio {registered[],pending[]} (car audio device names; answer pending ones with set_car_audio), "
+    + "boarding [{id,name,kind,mode,start,end}] (boardings the app detected and is waiting to have confirmed, at the place-name share level; answer with resolve_boarding), "
     + "categories [{id,name,color,icon,hidden,custom}] (every category; ids work with "
     + "update_category and as categoryId elsewhere) and, at the place-name share level, places [{id,name,kind,radius,autoRecord,located}] "
     + "(registered places, never coordinates; ids work with update_place and delete_place). "
@@ -327,7 +328,8 @@ const TOOLS = [
       parentGoalId: str("Goal id to move the plan under, or \"none\" to take it out of its goal") }),
   commandTool("delete_schedule", "deleteSchedule", "Delete schedule", "Delete a planned activity (undoable). Target by planId or by date + startTime.",
     { planId: str("Plan id from get_activity plans"), date: DATE, startTime: HHMM("Its start") }),
-  commandTool("update_memo", "updateMemo", "Edit memo", "Replace a memo's text.", { memoId: str("Memo id from get_activity"), text: str("1-1000 characters") }, ["memoId", "text"]),
+  commandTool("update_memo", "updateMemo", "Edit memo", "Replace a memo's text and/or move it to another day or time (give text, date, time or any mix).",
+    { memoId: str("Memo id from get_activity"), text: str("1-1000 characters"), date: DATE, time: HHMM("New time") }, ["memoId"]),
   commandTool("delete_memo", "deleteMemo", "Delete memo", "Delete a memo (undoable).", { memoId: str("Memo id from get_activity") }, ["memoId"]),
   // AIR1110A03
   addTool("add_goal", "addGoal", "Add goal", "Add a goal (a parent plan that groups plans) from start to end.",
@@ -475,7 +477,7 @@ const RAW_VALUES = {
   mapStyle: oneOf(...MAP_STYLES),
   shareLevel: oneOf("off", "summary", "visits"),
   actionsOff: oneOf(...ACTIONS),
-  mode: oneOf("walk", "subway", "bus", "car", "train", "flight", "other"),
+  mode: oneOf("walk", "subway", "bus", "car", "train", "flight", "other", "run", "cycling", "taxi", "ship"),
   format: oneOf("bokki-activity", "bokki-command", "bokki-trip", "bokki-polish", "bokki-tasks", "bokki-app", "bokki-answers"),
   action: oneOf(...ACTIONS),
   range: oneOf("week", "month"),

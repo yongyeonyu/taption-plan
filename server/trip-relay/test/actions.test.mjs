@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { f, makeRegistry, registry } from "../src/actions.js";
 import { readFileSync } from "node:fs";
-import { ACTIONS, COMMAND_FIELDS, cleanCommand, isCommand } from "../src/validate.js";
+import { ACTIONS, COMMAND_FIELDS, cleanAppState, cleanCommand, isAppState, isCommand } from "../src/validate.js";
 
 const sample = () => makeRegistry().add("setFxRate", {
   tool: "set_fx_rate", title: "Set an exchange rate", description: "KRW per one unit of a currency.", destructive: false, since: 340,
@@ -173,4 +173,25 @@ test("actions batch 2: schedules take a category, the important mark and a paren
   refuses("updateSchedule", { planId: "p1", parentGoalId: "goal" });
   refuses("updateSchedule", { planId: "p1" });
   assert.equal(cleanCommand(cmd("addSchedule", { ...base, important: true, junk: 1 })).important, true);
+});
+
+test("actions batch 3: records, more travel modes and memo times", () => {
+  accepts("deleteManualRecord", { recordId: UUID });
+  refuses("deleteManualRecord", { recordId: "r1" });
+  accepts("linkRecordToPlan", { recordId: UUID, planId: UUID });
+  refuses("linkRecordToPlan", { recordId: UUID });
+  accepts("resolveBoarding", { candidateId: "0123456789abcdef", decision: "confirm" });
+  refuses("resolveBoarding", { candidateId: "0123456789abcdef", decision: "maybe" });
+  refuses("resolveBoarding", { candidateId: "station-1-29000000", decision: "reject" });
+  for (const mode of ["run", "cycling", "taxi", "ship", "walk"]) accepts("setTravelMode", { date: "2026-11-10", moveId: UUID, mode });
+  refuses("setTravelMode", { date: "2026-11-10", moveId: UUID, mode: "other" });
+  accepts("updateMemo", { memoId: "m1", text: "새 글" });
+  accepts("updateMemo", { memoId: "m1", date: "2026-11-12" });
+  accepts("updateMemo", { memoId: "m1", time: "08:30", text: "새 글" });
+  refuses("updateMemo", { memoId: "m1" });
+  refuses("updateMemo", { memoId: "m1", time: "8:30" });
+  refuses("updateMemo", { memoId: "m1", text: " " });
+  assert.equal(isAppState({ format: "bokki-app", version: 1, retentionDays: 7, settings: {}, boarding: [{ id: "0123456789abcdef", name: "역" }] }), true);
+  assert.equal(isAppState({ format: "bokki-app", version: 1, retentionDays: 7, settings: {}, boarding: "x" }), false);
+  assert.deepEqual(cleanAppState({ format: "bokki-app", version: 1, retentionDays: 7, settings: {}, boarding: [{ id: "a" }], secret: 1 }).boarding, [{ id: "a" }]);
 });

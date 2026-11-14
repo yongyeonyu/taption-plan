@@ -802,7 +802,7 @@ extension AssistantOperations {
 
         init?(fields: AssistantFields) {
             let end = fields.day("end"), members = AssistantOperations.members(fields, count: 1...20)
-            guard let name = fields.text("name", max: 40), let start = fields.day("start"), fields.ok("end", end), fields.ok("members", members),
+            guard let name = fields.string("name", max: 40), let start = fields.day("start"), fields.ok("end", end), fields.ok("members", members),
                   (end ?? start) >= start else { return nil }
             self.name = name
             self.start = start
@@ -847,10 +847,10 @@ extension AssistantOperations {
         let settlementDate: Date?
 
         init?(fields: AssistantFields) {
-            let name = fields.text("name", max: 40), start = fields.day("start"), end = fields.day("end")
+            let name = fields.string("name", max: 40), start = fields.day("start"), end = fields.day("end")
             let members = AssistantOperations.members(fields, count: 0...20), settlement = fields.number("settlementKRW"), auto = fields.flag("autoSettlement")
             let funding = fields.day("fundingDate"), settled = fields.day("settlementDate")
-            guard let tripID = fields.text("tripId", max: 100), fields.ok("name", name), fields.ok("start", start), fields.ok("end", end),
+            guard let tripID = fields.string("tripId", max: 100), fields.ok("name", name), fields.ok("start", start), fields.ok("end", end),
                   fields.ok("members", members), fields.ok("settlementKRW", settlement), fields.ok("fundingDate", funding), fields.ok("settlementDate", settled),
                   !fields.has("autoSettlement") || (auto == true && settlement == nil), settlement.map({ abs($0) <= 1e12 }) ?? true,
                   fields.values.count > 1 else { return nil }
@@ -910,7 +910,7 @@ extension AssistantOperations {
         let tripID: String
 
         init?(fields: AssistantFields) {
-            guard let tripID = fields.text("tripId", max: 100) else { return nil }
+            guard let tripID = fields.string("tripId", max: 100) else { return nil }
             self.tripID = tripID
         }
 

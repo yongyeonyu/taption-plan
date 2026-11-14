@@ -170,6 +170,46 @@
         "tripId",
         "itemId"
       ]
+    },
+    {
+      "action": "deleteManualRecord",
+      "tool": "delete_manual_record",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "recordId"
+      ],
+      "required": [
+        "recordId"
+      ]
+    },
+    {
+      "action": "linkRecordToPlan",
+      "tool": "link_record_to_plan",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "recordId",
+        "planId"
+      ],
+      "required": [
+        "recordId",
+        "planId"
+      ]
+    },
+    {
+      "action": "resolveBoarding",
+      "tool": "resolve_boarding",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "candidateId",
+        "decision"
+      ],
+      "required": [
+        "candidateId",
+        "decision"
+      ]
     }
   ]
 }
