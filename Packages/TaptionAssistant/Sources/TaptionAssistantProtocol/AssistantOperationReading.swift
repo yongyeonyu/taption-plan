@@ -36,6 +36,20 @@ public struct AssistantOperationSpec: Sendable {
     }
 }
 
+extension AssistantOperationSpec.Counter {
+    /// 「AI 비서 요청을 반영했어요」 알림의 한 조각(예: 메모 2개).
+    /// 패키지 안의 문구도 앱 번들의 번역 팩에서 찾는다(앱 시험 `PackageTextLookupTests`).
+    public func noticePart(_ count: Int, _ language: AppLanguagePreference.ResolvedLanguage) -> String {
+        switch self {
+        case .memos: language.text("메모 \(count)개", "\(count) memo(s)")
+        case .schedules: language.text("일정 \(count)개", "\(count) schedule(s)")
+        case .edits: language.text("기록 수정 \(count)개", "\(count) record edit(s)")
+        case .settings: language.text("설정 \(count)개", "\(count) setting(s)")
+        case .ledger: language.text("가계부 \(count)개", "\(count) ledger entr(ies)")
+        }
+    }
+}
+
 /// 등록부 동작의 읽기 쪽. 읽기(`init?`)에서 서버와 같은 규칙으로 다시 본다. 앱 모델을 모른다.
 public protocol AssistantOperationReading: Sendable {
     static var spec: AssistantOperationSpec { get }
