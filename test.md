@@ -7,6 +7,13 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## TFB1114A342 · 서버 배포와 TestFlight 342 (2026-11-14 밤)
+
+- 대표 객관식 답 「배포하고 342 올리기」. 서버를 먼저 배포(새 AI 일 종류 `replan` 수용)한 뒤 342 실행.
+- `release.sh` 종료 코드 0(첫 시도). 처리 상태 VALID, 내부 그룹 「TP Taption Plan 내부 테스트」 연결 확인, 테스터 1명 노출(`build/validation/TFB1114A342/testflight-report.json`). 네 번들 빌드 번호 342 일치는 스크립트가 확인.
+- 342에 든 것(341 뒤): PVR1114A13·ARC1114A14·ABA1114A15. 푸시 권한 항목은 계속 빠져 있음(PSH1114A12).
+- 하지 않은 것: 실기기 설치·확인 전부.
+
 ## PVR1114A13·ARC1114A14·ABA1114A15 · 계획과 실제, 도착 카드, AI 전·후 보기 (2026-11-14 밤, 아직 빌드·서버에 없음)
 
 - 세 기능을 따로 만든 작업 공간에서 구현해 메인에 합침. 충돌: 번역 파일 12개(같은 자리에 덧붙임)와 `project.pbxproj` 4곳 → 양쪽 다 살림. 합치며 겹친 번역 키 `휴식|Rest` 하나를 정리. 번역 실패 0, 구조 점검·import 경계 통과.
