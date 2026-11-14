@@ -57,6 +57,8 @@ struct AITaskPanel: View {
         let shown = Self.tasks(tasks, on: day)
         let done = log.filter { Self.isOn(day, $0.appliedAt) }
         AssistantQuestionList(language: language)
+        // 그날 기록에 AI가 반영한 것이 있으면 전·후 보기로 가는 배너(ABA1114A15).
+        AssistantBeforeAfterBanner(language: language, day: day, log: log) { log = AssistantActionLog.load() }
         if !MemoPolishQueue.hasConnection() {
             note(language.text("AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
                                "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't."))

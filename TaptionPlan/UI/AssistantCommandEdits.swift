@@ -387,7 +387,8 @@ extension AppModel {
             guard !when.isEmpty else {
                 updateMemo(memo.id, text: text, kind: memo.kind)
                 guard snapshot.memos.first(where: { $0.id == memo.id })?.text == text else { return .rejected("memo_failed") }
-                return AssistantEditResult(before: AssistantEditText.memo(memo.text), after: AssistantEditText.memo(text))
+                let summary = AssistantChangeSummary.memoPair(memo.text, text)
+                return AssistantEditResult(before: summary.before, after: summary.after)
             }
             // ACT1114A07: 때를 옮기는 것은 메모 편집 시트와 같은 `updateMapMemo`(그 시각의 일정에 다시 이어진다).
             let at = when.applied(to: memo.occurredAt)
@@ -456,8 +457,8 @@ extension AppModel {
         guard let saved = await saveActivitySectionEdit(request) else { return .rejected("edit_failed") }
         let merged = snapshot.actuals.first { saved.recordIDs.contains($0.id) }
         return AssistantEditResult(
-            before: found.sorted { $0.startedAt < $1.startedAt }.map(AssistantEditText.record).joined(separator: " · "),
-            after: merged.map(AssistantEditText.record) ?? newTitle,
+            before: AssistantChangeSummary.merged(found, language: .current),
+            after: AssistantChangeSummary.mergedInto(merged.map(AssistantEditText.record) ?? newTitle, language: .current),
             actualIDs: Set(found.map(\.id)).union(saved.recordIDs)
         )
     }

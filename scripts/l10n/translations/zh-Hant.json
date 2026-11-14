@@ -5707,6 +5707,20 @@
 "회사에서 업무|Working at the office": "在公司工作",
 "회사에서 휴식|Break at the office": "在公司休息",
 "회의|Meeting": "會議",
-"휴식|Rest": "休息"
+"휴식|Rest": "休息",
+"{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} {1}筆（{2}）",
+"1건으로 합침 · {0}|Merged into one · {0}": "已合併為1筆 · {0}",
+"일상 지출|Everyday spending": "日常支出",
+"여행 지출|Trip spending": "旅行支出",
+"말풍선|Bubbles": "對話泡泡",
+"AI가 정리한 {0}건|{0} tidied by AI": "AI 整理了 {0} 項",
+"되돌릴 수 있는 것 {0}건|{0} can be undone": "可復原 {0} 項",
+"되돌린 것 {0}건|{0} undone": "已復原 {0} 項",
+"되돌릴 수 없는 것 {0}건|{0} can't be undone": "無法復原 {0} 項",
+"전·후 비교 보기|Show before and after": "查看前後對照",
+"AI는 표시와 교정만 바꿔요. 센서가 남긴 원본 기록은 그대로 있어요.|The AI only changes labels and corrections. Original sensor records stay as they were.": "AI 只更改顯示和校正。感測器留下的原始紀錄保持不變。",
+"전|Before": "之前",
+"후|After": "之後",
+"원래대로 되돌리기|Restore original": "恢復原狀"
 }
 }

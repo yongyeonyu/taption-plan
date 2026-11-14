@@ -5707,6 +5707,20 @@
 "회사에서 업무|Working at the office": "Trabajando en la oficina",
 "회사에서 휴식|Break at the office": "Descanso en la oficina",
 "회의|Meeting": "Reunión",
-"휴식|Rest": "Descanso"
+"휴식|Rest": "Descanso",
+"{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
+"1건으로 합침 · {0}|Merged into one · {0}": "Fusionado en uno · {0}",
+"일상 지출|Everyday spending": "Gastos cotidianos",
+"여행 지출|Trip spending": "Gastos de viaje",
+"말풍선|Bubbles": "Globos",
+"AI가 정리한 {0}건|{0} tidied by AI": "{0} ordenados por la IA",
+"되돌릴 수 있는 것 {0}건|{0} can be undone": "{0} se pueden deshacer",
+"되돌린 것 {0}건|{0} undone": "{0} deshechos",
+"되돌릴 수 없는 것 {0}건|{0} can't be undone": "{0} no se pueden deshacer",
+"전·후 비교 보기|Show before and after": "Mostrar antes y después",
+"AI는 표시와 교정만 바꿔요. 센서가 남긴 원본 기록은 그대로 있어요.|The AI only changes labels and corrections. Original sensor records stay as they were.": "La IA solo cambia etiquetas y correcciones. Los registros originales de los sensores siguen igual.",
+"전|Before": "Antes",
+"후|After": "Después",
+"원래대로 되돌리기|Restore original": "Restaurar el original"
 }
 }

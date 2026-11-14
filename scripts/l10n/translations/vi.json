@@ -5707,6 +5707,20 @@
 "회사에서 업무|Working at the office": "Làm việc ở công ty",
 "회사에서 휴식|Break at the office": "Nghỉ ở công ty",
 "회의|Meeting": "Họp",
-"휴식|Rest": "Nghỉ ngơi"
+"휴식|Rest": "Nghỉ ngơi",
+"{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
+"1건으로 합침 · {0}|Merged into one · {0}": "Đã gộp thành một · {0}",
+"일상 지출|Everyday spending": "Chi tiêu hằng ngày",
+"여행 지출|Trip spending": "Chi tiêu chuyến đi",
+"말풍선|Bubbles": "Bong bóng",
+"AI가 정리한 {0}건|{0} tidied by AI": "AI đã sắp xếp {0} mục",
+"되돌릴 수 있는 것 {0}건|{0} can be undone": "{0} mục có thể hoàn tác",
+"되돌린 것 {0}건|{0} undone": "{0} mục đã hoàn tác",
+"되돌릴 수 없는 것 {0}건|{0} can't be undone": "{0} mục không thể hoàn tác",
+"전·후 비교 보기|Show before and after": "Xem trước và sau",
+"AI는 표시와 교정만 바꿔요. 센서가 남긴 원본 기록은 그대로 있어요.|The AI only changes labels and corrections. Original sensor records stay as they were.": "AI chỉ thay đổi nhãn và phần chỉnh sửa. Bản ghi gốc từ cảm biến vẫn được giữ nguyên.",
+"전|Before": "Trước",
+"후|After": "Sau",
+"원래대로 되돌리기|Restore original": "Khôi phục như cũ"
 }
 }

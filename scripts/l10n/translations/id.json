@@ -5707,6 +5707,20 @@
 "회사에서 업무|Working at the office": "Bekerja di kantor",
 "회사에서 휴식|Break at the office": "Istirahat di kantor",
 "회의|Meeting": "Rapat",
-"휴식|Rest": "Istirahat"
+"휴식|Rest": "Istirahat",
+"{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
+"1건으로 합침 · {0}|Merged into one · {0}": "Digabung menjadi satu · {0}",
+"일상 지출|Everyday spending": "Pengeluaran harian",
+"여행 지출|Trip spending": "Pengeluaran perjalanan",
+"말풍선|Bubbles": "Balon",
+"AI가 정리한 {0}건|{0} tidied by AI": "{0} dirapikan AI",
+"되돌릴 수 있는 것 {0}건|{0} can be undone": "{0} bisa dibatalkan",
+"되돌린 것 {0}건|{0} undone": "{0} dibatalkan",
+"되돌릴 수 없는 것 {0}건|{0} can't be undone": "{0} tidak bisa dibatalkan",
+"전·후 비교 보기|Show before and after": "Lihat sebelum dan sesudah",
+"AI는 표시와 교정만 바꿔요. 센서가 남긴 원본 기록은 그대로 있어요.|The AI only changes labels and corrections. Original sensor records stay as they were.": "AI hanya mengubah label dan koreksi. Catatan asli dari sensor tetap seperti semula.",
+"전|Before": "Sebelum",
+"후|After": "Sesudah",
+"원래대로 되돌리기|Restore original": "Kembalikan ke semula"
 }
 }
