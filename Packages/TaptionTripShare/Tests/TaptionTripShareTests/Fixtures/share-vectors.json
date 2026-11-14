@@ -1,0 +1,50 @@
+{
+  "note": "docs/TRIP_SHARE_PROTOCOL.md 3절의 시험 벡터. 지어낸 값이며 실제 방·비밀번호가 아니다.",
+  "iterations": 600000,
+  "vectors": [
+    {
+      "input": {
+        "roomId": "AAECAwQFBgcICQoLDA0ODw",
+        "linkSecretHex": "101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
+        "password": "tiger-4821",
+        "itemId": "QEFCQ0RFRkdISUpLTE1OTw",
+        "kind": "plan",
+        "epoch": 1,
+        "nonceHex": "606162636465666768696a6b",
+        "plaintext": "{\"v\":1,\"title\":\"lunch\"}"
+      },
+      "expected": {
+        "passwordUtf8Hex": "74696765722d34383231",
+        "saltHex": "74617074696f6e2d73686172652d76317c41414543417751464267634943516f4c4441304f44777c101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
+        "rootHex": "b14968ae68a6c2cbf57b84a657d44d76f6fe2f853f6a7b7b663869cf9e9ff0b7",
+        "encKeyHex": "487e9aeef26642b04b735b10f40eb532439fbb5df8aaee15c9dd311f71a1e8dc",
+        "authKeyHex": "3678f81109634479e5aab56b57b0116b3b66913a6b46b675f2e06e76eb635972",
+        "proof": "hGm3ZejzD9Zz4tJwBzOHVRoYiLMVM49XluwgueEnA-A",
+        "aad": "taption-share-v1|AAECAwQFBgcICQoLDA0ODw|QEFCQ0RFRkdISUpLTE1OTw|plan|1",
+        "cipher": "AWBhYmNkZWZnaGlqa8y-BEvmoHOTwbYdGRhFzHJvhkML2LsBanwbpFFVghXhBbASwAaF-w"
+      }
+    },
+    {
+      "input": {
+        "roomId": "oKGio6SlpqeoqaqrrK2urw",
+        "linkSecretHex": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "password": "여행가자2026",
+        "itemId": "member-2",
+        "kind": "member",
+        "epoch": 3,
+        "nonceHex": "f0f1f2f3f4f5f6f7f8f9fafb",
+        "plaintext": "{\"v\":1,\"name\":\"가을\"}"
+      },
+      "expected": {
+        "passwordUtf8Hex": "ec97aced9689eab080ec9e9032303236",
+        "saltHex": "74617074696f6e2d73686172652d76317c6f4b47696f36536c7071656f71617172724b327572777cc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "rootHex": "a6f97e818f06e50e34c64c74fd5638a9d2d99cb8d67d12ccfae39b3285157d3c",
+        "encKeyHex": "a56f9f084565f9abf0b21b3ddc1c165f8bc5666bbf8d847b71d93ef8b28845bd",
+        "authKeyHex": "88f607a2ed00737ff8a6ff893db48e3796ce3ee3e96702d326134a8e259a7b41",
+        "proof": "Qv0edqAvKz2IKCdFp4z_iIbvJviQLGP2HR5DZhlF53M",
+        "aad": "taption-share-v1|oKGio6SlpqeoqaqrrK2urw|member-2|member|3",
+        "cipher": "AfDx8vP09fb3-Pn6-9arOjGq66pjSpI_fC_TACWFBDTmGedV-gIC_HaoL3QsVYccRSyhtA"
+      }
+    }
+  ]
+}
