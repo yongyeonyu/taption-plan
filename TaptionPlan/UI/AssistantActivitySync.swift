@@ -3,15 +3,6 @@ import Foundation
 import TaptionPlanCore
 import UIKit
 
-/// 날마다 마지막으로 올린 내용의 해시(TRP1110A07). 바뀐 날만 다시 올린다.
-enum AssistantActivityUploadGate {
-    static let defaultsKey = "assistantActivityHashes"
-
-    static func reset(defaults: UserDefaults = .standard) {
-        defaults.removeObject(forKey: defaultsKey)
-    }
-}
-
 extension AssistantActivityUploadGate {
     static let dayLimit = 40
 
@@ -86,13 +77,6 @@ extension AssistantActivityUploadGate {
         if let body = encode(current), !current.isEmpty { result.append((current, body)) }
         return result
     }
-}
-
-/// 하루 기록 올리기가 기기 설정에 남기는 표시의 키. 주 키를 바꿀 때도 지운다.
-enum AssistantActivityFlags {
-    static let sharedKey = "assistantActivityShared"
-    /// 공유 수준을 낮추거나 보관 기간을 줄여 서버 기록을 지워야 한다는 표시. 지울 때까지 올리지 않는다(REV1110A06).
-    static let pendingClearKey = "assistantActivityPendingClear"
 }
 
 /// 하루 기록을 중계 서버에 올린다. 앱을 열 때·떠날 때·기록이 저장된 뒤(5분에 한 번) 돈다. 실패는 진단 기록만 남긴다.

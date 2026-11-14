@@ -435,7 +435,7 @@ final class AssistantRelayTests: XCTestCase {
         configuration.protocolClasses = [Phase3RelayStub.self]
         let env = AssistantRegistration.Environment(
             secrets: AssistantMemorySecrets([.master: master]), defaults: store, session: URLSession(configuration: configuration),
-            host: "relay.example.com", clearConnections: {}
+            host: "relay.example.com", clearConnections: {}, client: { .live }
         )
         await AssistantPush.upload(token: token, environment: "sandbox", env: env)
         XCTAssertTrue(Phase3RelayStub.requests.isEmpty, "no AI connection, no upload")

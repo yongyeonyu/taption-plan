@@ -118,17 +118,6 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
     }
 }
 
-/// 연결 키가 어느 AI 것인지 기기에만 둔다(이름·기간과 같은 자리).
-enum AssistantKeyProviders {
-    static let defaultsKey = "assistantKeyProviders"
-
-    static func remove(_ id: String, defaults: UserDefaults = .standard) {
-        var values = defaults.dictionary(forKey: defaultsKey) as? [String: String] ?? [:]
-        values[id] = nil
-        defaults.set(values, forKey: defaultsKey)
-    }
-}
-
 extension AssistantKeyProviders {
     static func provider(_ id: String, defaults: UserDefaults = .standard) -> AssistantAIProvider? {
         ((defaults.dictionary(forKey: defaultsKey) as? [String: String])?[id]).flatMap(AssistantAIProvider.init(rawValue:))

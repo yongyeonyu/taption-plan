@@ -21,6 +21,6 @@ let package = Package(
         // 명령에 실려 오는 값과 그것을 읽는 순수 함수. Foundation만 쓴다.
         .target(name: "TaptionAssistantProtocol"),
         // 중계 서버 전송과 키 보관. 앱 모델·화면을 모른다.
-        .target(name: "TaptionAssistantKit")
+        .target(name: "TaptionAssistantKit", dependencies: ["TaptionAssistantProtocol"])
     ]
 )

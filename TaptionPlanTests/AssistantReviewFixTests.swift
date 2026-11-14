@@ -33,7 +33,7 @@ final class AssistantReviewFixTests: XCTestCase {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [Phase3RelayStub.self]
         return AssistantRegistration.Environment(
-            secrets: secrets, defaults: store, session: URLSession(configuration: configuration), host: host, clearConnections: { cleared?.value += 1 }
+            secrets: secrets, defaults: store, session: URLSession(configuration: configuration), host: host, clearConnections: { cleared?.value += 1 }, client: { .live }
         )
     }
 
