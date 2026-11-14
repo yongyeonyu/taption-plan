@@ -496,6 +496,21 @@ extension AssistantCommandEditTests {
         XCTAssertEqual(guidePrint, Self.pinnedGuidePrint)
     }
 
+    /// RMN1114A25: 패키지의 읽기 형마다 앱에 적용(`apply`)이 달려 있고, 패키지가 이름으로 적어 둔 목록이 앱 화면의 형과 같다.
+    /// 알림 종류·장식 자리·여행 일정 종류·하루 카드 항목을 앱에서 더하면 패키지의 목록도 함께 고쳐야 한다.
+    func testEveryPackageOperationHasAnApplyAndNamedListsMatchTheApp() {
+        for type in AssistantOperations.all { XCTAssertTrue(type is any AssistantOperation.Type, type.spec.name) }
+        XCTAssertEqual(AssistantOperations.alertKinds, MapHomeAlarmKind.allCases.map(\.rawValue))
+        XCTAssertEqual(AssistantOperations.accessoryKinds, MapHomeAccessoryKind.allCases.map(\.rawValue))
+        XCTAssertEqual(AssistantOperations.tripItemKinds, TripImportItem.Kind.allCases.map(\.rawValue))
+        XCTAssertEqual(AssistantOperations.dayCardItems, MapHomeCardMetricOption.all.map(\.id))
+        XCTAssertEqual(AssistantOperations.dayCardItemLimit, MapHomeCardMetricSelection.maximum)
+        XCTAssertEqual(Set(AssistantOperations.PlanQuickAction.actionNames), Set(AssistantOperations.PlanQuickAction.actions.keys))
+        XCTAssertEqual(TravelPhotoLink.hosts, AssistantOperations.photoHosts)
+        XCTAssertEqual(PaymentAlertSources.name("  은행 앱 "), "은행 앱")
+        XCTAssertNil(PaymentAlertSources.name(String(repeating: "a", count: 41)))
+    }
+
     private static let pinnedKindNames = [
         "addMemo", "addSchedule", "updateActivity", "hideRecord", "mergeRecords", "updateRecordTime", "updateSchedule", "deleteSchedule", "updateMemo", "deleteMemo",
         "addGoal", "updateGoal", "deleteGoal", "addTripStop", "updateTripStop", "deleteTripStop", "setTripItemStatus",
