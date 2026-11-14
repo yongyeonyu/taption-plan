@@ -1,17 +1,34 @@
 import SwiftUI
 
+/// 지도 위쪽 알림 자리: 배너와 도착 카드가 함께 뜨면 겹치지 않게 세로로 쌓는다(RMN1114A23).
+struct MapHomeTopNoticeStack<Banner: View, Card: View>: View {
+    @ViewBuilder let banner: Banner
+    @ViewBuilder let card: Card
+
+    var body: some View {
+        VStack(spacing: 8) {
+            banner
+            card
+        }
+        .padding(.top, 70)
+    }
+}
+
 /// 도착 카드는 이 작은 뷰만 지켜본다. 지도 화면 본문은 카드 때문에 다시 계산되지 않는다(ARC1114A14).
-struct ArrivalCardHost: View {
+/// 같은 자리에 뜨는 배너(여행 계획 가져오기)를 받아 카드 위에 둔다.
+struct ArrivalCardHost<Banner: View>: View {
     let model: AppModel
     let language: MapHomeLanguage
+    @ViewBuilder let banner: Banner
     @Environment(\.scenePhase) private var scenePhase
     private var manager: ArrivalCardManager { .shared }
 
     var body: some View {
-        ZStack {
+        MapHomeTopNoticeStack {
+            banner
+        } card: {
             if let card = manager.card {
                 ArrivalCardView(card: card, language: language, checked: manager.checked, onToggle: { manager.toggle($0) }, onClose: { manager.dismiss() })
-                    .padding(.top, 70)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
@@ -135,8 +152,8 @@ struct ArrivalCardSettingRow: View {
                     Text(language.text("일정 장소 도착 카드", "Arrival card for planned places"))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     Text(language.text(
-                        "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.",
-                        "Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan."
+                        "여행 일정의 곳이나 일반 일정에 넣은 장소에 도착하면 메모·예상 지출을 보여요(여행 일정은 세부 계획도). 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.",
+                        "Shows notes and planned spend when you reach a place from a trip plan or a regular plan (trip plans also show sub-plans). With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan."
                     ))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11))))
                     .foregroundStyle(Color.tpSecondary)
@@ -150,3 +167,24 @@ struct ArrivalCardSettingRow: View {
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
+
+#if DEBUG
+/// 화면 모양 확인용(RMN1114A23, Debug 전용): `-arrivalStackPreview`. 배너와 지어낸 도착 카드가 쌓인 모습.
+struct ArrivalStackPreviewHost: View {
+    var body: some View {
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: .now).addingTimeInterval(14 * 3_600)
+        let card = ArrivalCard(
+            id: UUID(), title: "전망대", start: start, end: start.addingTimeInterval(5_400), offsetSeconds: nil, note: "매표소는 2층",
+            checklist: [.init(id: "t|1", title: "사진 찍기", note: nil), .init(id: "t|2", title: "기념품", note: "엽서 두 장")],
+            plannedSpendKRW: 24_000, tripBudgetKRW: 300_000
+        )
+        return Color.tpBackground.ignoresSafeArea().overlay(alignment: .top) {
+            MapHomeTopNoticeStack {
+                TripClipboardBanner(language: .korean, onPaste: { _ in }, onDismiss: {})
+            } card: {
+                ArrivalCardView(card: card, language: .korean, checked: ["t|1"], onToggle: { _ in }, onClose: {})
+            }
+        }
+    }
+}
+#endif

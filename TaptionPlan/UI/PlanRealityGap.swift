@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import TaptionPlanCore
 import TaptionPlanStore
@@ -309,5 +310,53 @@ enum PlanRealityText {
     /// 같은 차이를 두 번 보내지 않게 하는 표식: 날짜와, 15분·5,000원 단위로 뭉친 차이.
     static func signature(_ day: PlanRealityGap.Day, dayStart: Date) -> String {
         "\(Int(dayStart.timeIntervalSince1970))|\(Int(day.delay / 900))|\(Int(max(0, day.overKRW) / 5_000))|\(day.remaining)"
+    }
+}
+
+/// 보는 날(RMN1114A23): 날짜 옮기기, 그날 것만 고르기, 그날 자료가 이 기기에 있는지.
+enum PlanRealityDay {
+    /// 그날 자료를 그대로 믿어도 되나. 없는 자료를 「계획 없음」으로 읽히게 하지 않는다.
+    enum Availability: Equatable, Sendable {
+        case loaded
+        /// 저장소를 아직(또는 끝내) 다 읽지 못했다.
+        case notLoaded
+        /// 백업한 뒤 이 기기에서 정리한 달이다.
+        case offloaded
+    }
+
+    static func availability(isStoreLoaded: Bool, isMonthOffloaded: Bool) -> Availability {
+        guard isStoreLoaded else { return .notLoaded }
+        return isMonthOffloaded ? .offloaded : .loaded
+    }
+
+    /// 그 시각이 든 하루. 서머타임으로 23·25시간인 날도 달력의 하루를 따른다.
+    static func span(containing date: Date, calendar: Calendar = .autoupdatingCurrent) -> TimeSpan {
+        let start = calendar.startOfDay(for: date)
+        return TimeSpan(start: start, end: calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86_400))
+    }
+
+    /// 며칠 앞·뒤 날의 시작.
+    static func start(_ dayStart: Date, movedBy days: Int, calendar: Calendar = .autoupdatingCurrent) -> Date {
+        calendar.startOfDay(for: calendar.date(byAdding: .day, value: days, to: dayStart) ?? dayStart.addingTimeInterval(Double(days) * 86_400))
+    }
+
+    /// 전체 자료에서 그날에 걸친 것만 고른다. 끝나지 않은 기록은 지금까지로 본다.
+    static func input(
+        plans: [PlanRecord], actuals: [ActualRecord], places: [PlaceStay], stops: [TravelPlanStop],
+        tripItems: [TravelTripItem], entries: [LedgerEntry], day: TimeSpan, now: Date
+    ) -> PlanRealityGap.Input {
+        PlanRealityGap.Input(
+            plans: plans.filter { $0.span.intersection(with: day) != nil },
+            actuals: actuals.filter { $0.startedAt < day.end && ($0.endedAt ?? now) >= day.start },
+            places: places.filter { $0.span.intersection(with: day) != nil },
+            stops: stops,
+            tripItems: tripItems.filter { $0.start < day.end && $0.end > day.start },
+            entries: entries.filter { day.contains($0.occurredAt) },
+            day: day, now: now
+        )
+    }
+
+    static func sameRoute(_ lhs: [CLLocationCoordinate2D], _ rhs: [CLLocationCoordinate2D]) -> Bool {
+        lhs.elementsEqual(rhs) { $0.latitude == $1.latitude && $0.longitude == $1.longitude }
     }
 }

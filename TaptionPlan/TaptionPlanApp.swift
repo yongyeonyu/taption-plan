@@ -81,6 +81,8 @@ struct TaptionPlanApp: App {
                 TaptionFontRoot { FirstRunTutorialView(model: AppModel(), mode: .replay, startStep: step ?? .welcome) {} }
             } else if ProcessInfo.processInfo.arguments.contains("-planRealityPreview") {
                 TaptionFontRoot { PlanRealityPreviewHost() }
+            } else if ProcessInfo.processInfo.arguments.contains("-arrivalStackPreview") {
+                TaptionFontRoot { ArrivalStackPreviewHost() }
             } else if ProcessInfo.processInfo.arguments.contains("-aiConnectPreview") {
                 // AI 연결 화면 모양 확인용(AIS1111A01, Debug 전용).
                 TaptionFontRoot {

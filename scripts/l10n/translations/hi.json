@@ -5729,7 +5729,7 @@
 "|You arrived at a planned place": "आप एक नियोजित स्थान पर पहुँच गए हैं",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "आप पहुँच गए हैं। नोट और चेकलिस्ट देखने के लिए टैप करें।",
 "|You're here. Tap to see your notes and checklist.": "आप पहुँच गए हैं। नोट और चेकलिस्ट देखने के लिए टैप करें।",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "जब आप अपनी यात्रा योजना के किसी स्थान पर पहुँचते हैं, तो नोट, विस्तृत योजनाएँ और अनुमानित खर्च दिखाता है। सूचनाएँ और स्थान की अनुमति होने पर, ऐप बंद होने पर भी आज की योजना के स्थानों पर सूचना मिल सकती है, हर योजना के लिए एक बार।",
+"여행 일정의 곳이나 일반 일정에 넣은 장소에 도착하면 메모·예상 지출을 보여요(여행 일정은 세부 계획도). 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes and planned spend when you reach a place from a trip plan or a regular plan (trip plans also show sub-plans). With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "जब आप किसी यात्रा योजना या सामान्य योजना के स्थान पर पहुँचते हैं, तो नोट और अनुमानित खर्च दिखाता है (यात्रा योजना में विस्तृत योजनाएँ भी)। सूचनाएँ और स्थान की अनुमति होने पर, ऐप बंद होने पर भी आज की योजना के स्थानों पर सूचना मिल सकती है, हर योजना के लिए एक बार।",
 "{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
 "1건으로 합침 · {0}|Merged into one · {0}": "एक में मिलाया गया · {0}",
 "일상 지출|Everyday spending": "रोज़मर्रा का खर्च",
@@ -5767,6 +5767,9 @@
 "예산 {0}|Budget {0}": "बजट {0}",
 "이 날은 계획 경로가 없어 실제 경로만 보입니다.|No planned route for this day, so only the actual route is shown.": "इस दिन कोई नियोजित मार्ग नहीं है, इसलिए केवल वास्तविक मार्ग दिखाया गया है।",
 "이 날은 비교할 계획이 없습니다.|No plans to compare on this day.": "इस दिन तुलना के लिए कोई योजना नहीं है।",
+"이 날의 자료를 불러오지 못했습니다.|Couldn't load this day's data.": "इस दिन का डेटा लोड नहीं हो सका।",
+"이 날이 든 달은 백업한 뒤 이 기기에서 정리해서, 남아 있는 것만 보입니다. 백업 목록에서 다시 불러올 수 있습니다.|This day's month was cleared from this device after backup, so only what remains is shown. You can restore it from the backup list.": "इस दिन का महीना बैकअप के बाद इस डिवाइस से हटा दिया गया है, इसलिए केवल बचा हुआ डेटा दिखता है। आप इसे बैकअप सूची से फिर से ला सकते हैं।",
+"이 날의 경로 기록을 다 불러오지 못했습니다.|Couldn't load all of this day's route records.": "इस दिन के मार्ग रिकॉर्ड पूरे लोड नहीं हो सके।",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "केवल कार्यक्रम के समय, अंतर और बजट का अंतर AI कार्य के रूप में भेजे जाते हैं। निर्देशांक या भुगतान जानकारी नहीं भेजी जाती।",
 "지연 {0}|Late {0}": "देरी {0}",
 "진행 중|ongoing": "जारी"

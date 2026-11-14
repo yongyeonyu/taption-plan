@@ -5729,7 +5729,7 @@
 "|You arrived at a planned place": "已到达行程地点",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "已到达。轻点查看备注和清单。",
 "|You're here. Tap to see your notes and checklist.": "已到达。轻点查看备注和清单。",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "到达旅行行程中的地点时，显示备注、详细计划和预计支出。如果已允许通知和位置，即使关闭 App，也可能在当天的行程地点收到通知，每个行程只显示一次。",
+"여행 일정의 곳이나 일반 일정에 넣은 장소에 도착하면 메모·예상 지출을 보여요(여행 일정은 세부 계획도). 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes and planned spend when you reach a place from a trip plan or a regular plan (trip plans also show sub-plans). With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "到达旅行行程中的地点或普通日程中添加的地点时，显示备注和预计支出（旅行行程还会显示详细计划）。如果已允许通知和位置，即使关闭 App，也可能在当天的行程地点收到通知，每个行程只显示一次。",
 "{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} {1}条（{2}）",
 "1건으로 합침 · {0}|Merged into one · {0}": "已合并为1条 · {0}",
 "일상 지출|Everyday spending": "日常支出",
@@ -5767,6 +5767,9 @@
 "예산 {0}|Budget {0}": "预算 {0}",
 "이 날은 계획 경로가 없어 실제 경로만 보입니다.|No planned route for this day, so only the actual route is shown.": "这一天没有计划路线，仅显示实际路线。",
 "이 날은 비교할 계획이 없습니다.|No plans to compare on this day.": "这一天没有可比较的计划。",
+"이 날의 자료를 불러오지 못했습니다.|Couldn't load this day's data.": "无法加载这一天的数据。",
+"이 날이 든 달은 백업한 뒤 이 기기에서 정리해서, 남아 있는 것만 보입니다. 백업 목록에서 다시 불러올 수 있습니다.|This day's month was cleared from this device after backup, so only what remains is shown. You can restore it from the backup list.": "这一天所在的月份已在备份后从此设备清理，因此只显示剩余的内容。可以从备份列表中恢复。",
+"이 날의 경로 기록을 다 불러오지 못했습니다.|Couldn't load all of this day's route records.": "无法加载这一天的全部路线记录。",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "仅将行程时间、差异和预算差异作为 AI 任务发送，不发送坐标和支付信息。",
 "지연 {0}|Late {0}": "延迟 {0}",
 "진행 중|ongoing": "进行中"

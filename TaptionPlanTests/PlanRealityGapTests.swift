@@ -176,4 +176,71 @@ final class PlanRealityGapTests: XCTestCase {
         let stop = TravelPlanStop(id: UUID(), title: "곳", latitude: 10, longitude: 20, day: dayStart, order: 0, planID: nil)
         XCTAssertTrue(PlanRealityRoute.planned([stop]).isEmpty, "한 곳뿐이면 계획 경로가 없다")
     }
+
+    // MARK: 보는 날 옮기기(RMN1114A23)
+
+    func testDayStepsFollowTheCalendarAcrossDaylightSaving() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let noon = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 12)))
+        let fallBack = PlanRealityDay.span(containing: noon, calendar: calendar)
+        XCTAssertEqual(fallBack.duration, 25 * 3_600, "시계를 되돌리는 날은 25시간이다")
+        let next = PlanRealityDay.start(fallBack.start, movedBy: 1, calendar: calendar)
+        XCTAssertEqual(next, fallBack.end)
+        XCTAssertEqual(PlanRealityDay.start(next, movedBy: -1, calendar: calendar), fallBack.start, "앞뒤로 넘기면 같은 날로 돌아온다")
+        XCTAssertEqual(calendar.component(.day, from: PlanRealityDay.start(fallBack.start, movedBy: -1, calendar: calendar)), 31)
+        XCTAssertEqual(PlanRealityDay.start(fallBack.start, movedBy: 0, calendar: calendar), fallBack.start)
+        XCTAssertEqual(PlanRealityDay.span(containing: dayStart.addingTimeInterval(86_399), calendar: utc), day)
+    }
+
+    func testInputKeepsOnlyTheViewedDay() {
+        let yesterday = TimeSpan(start: dayStart.addingTimeInterval(-86_400), end: dayStart)
+        let today = plan("오늘 일정", (10, 0), (11, 0))
+        let old = PlanRecord(id: UUID(), title: "어제 일정", span: TimeSpan(start: at(-14), end: at(-13)), categoryID: "c")
+        let overnight = ActualRecord(planID: nil, title: "밤샘", categoryID: "c", startedAt: at(-1), endedAt: at(1), source: .manual)
+        let ongoing = ActualRecord(planID: today.id, title: "진행", categoryID: "c", startedAt: at(10, 5), endedAt: nil, source: .manual)
+        let oldRecord = ActualRecord(planID: old.id, title: "어제", categoryID: "c", startedAt: at(-14), endedAt: at(-13), source: .manual)
+        let pick = { (span: TimeSpan, now: Date) in
+            PlanRealityDay.input(
+                plans: [today, old], actuals: [overnight, ongoing, oldRecord], places: [], stops: [],
+                tripItems: [self.item("a", (9, 0), (10, 0)), self.item("b", (-5, 0), (-4, 0))],
+                entries: [self.expense(1_000, (12, 0)), self.expense(2_000, (-2, 0))], day: span, now: now
+            )
+        }
+        let now = pick(day, at(11))
+        XCTAssertEqual(now.plans.map(\.title), ["오늘 일정"])
+        XCTAssertEqual(now.actuals.map(\.title), ["밤샘", "진행"], "자정을 넘긴 기록과 끝나지 않은 기록은 든다")
+        XCTAssertEqual(now.tripItems.map(\.itemID), ["a"])
+        XCTAssertEqual(now.entries.map(\.amount), [1_000])
+        let before = pick(yesterday, at(11))
+        XCTAssertEqual(before.plans.map(\.title), ["어제 일정"])
+        XCTAssertEqual(before.actuals.map(\.title), ["밤샘", "어제"], "오늘 시작한 진행 중 기록은 어제에 들지 않는다")
+        XCTAssertEqual(before.tripItems.map(\.itemID), ["b"])
+        XCTAssertEqual(before.entries.map(\.amount), [2_000])
+    }
+
+    func testOnlyTodayCountsDelayAndReplan() {
+        let late = plan("박물관", (10, 0), (11, 0)), rest = plan("저녁", (18, 0), (19, 0))
+        let records = [actual(late.id, (10, 40), (12, 0))]
+        let tomorrowNoon = at(36)
+        let past = PlanRealityGap.day(PlanRealityDay.input(plans: [late, rest], actuals: records, places: [], stops: [], tripItems: [], entries: [], day: day, now: tomorrowNoon))
+        XCTAssertEqual(past.items.count, 2)
+        XCTAssertEqual(past.items[0].startDelta, 40 * 60, "지난 날도 차이는 보인다")
+        XCTAssertEqual(past.delay, 0, "지연은 오늘만 따진다")
+        XCTAssertFalse(past.isDelayed)
+        XCTAssertFalse(past.needsReplan)
+        let future = PlanRealityGap.day(PlanRealityDay.input(plans: [late, rest], actuals: records, places: [], stops: [], tripItems: [], entries: [], day: day, now: at(-20)))
+        XCTAssertEqual(future.remaining, 0)
+        XCTAssertFalse(future.needsReplan)
+    }
+
+    func testAvailabilitySaysWhenTheDayIsNotOnThisDevice() {
+        XCTAssertEqual(PlanRealityDay.availability(isStoreLoaded: true, isMonthOffloaded: false), .loaded)
+        XCTAssertEqual(PlanRealityDay.availability(isStoreLoaded: true, isMonthOffloaded: true), .offloaded)
+        XCTAssertEqual(PlanRealityDay.availability(isStoreLoaded: false, isMonthOffloaded: true), .notLoaded, "읽지 못했으면 정리 여부도 믿지 않는다")
+        let a = CLLocationCoordinate2D(latitude: 1, longitude: 2), b = CLLocationCoordinate2D(latitude: 1, longitude: 3)
+        XCTAssertTrue(PlanRealityDay.sameRoute([a, b], [a, b]))
+        XCTAssertFalse(PlanRealityDay.sameRoute([a, b], [a]))
+        XCTAssertFalse(PlanRealityDay.sameRoute([a], [b]))
+    }
 }

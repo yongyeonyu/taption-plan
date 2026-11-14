@@ -82,7 +82,6 @@ extension MapHomeView {
                 isTripClipboardOfferVisible = false
                 TripClipboardWatch.clear()
             }
-            .padding(.top, 70)
             .transition(.move(edge: .top).combined(with: .opacity))
         }
     }

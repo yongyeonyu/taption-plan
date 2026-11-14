@@ -32,6 +32,12 @@ struct PlanBackupEngineAdapter: Sendable {
         return rows
     }
 
+    /// 그날이 든 달을 백업한 뒤 이 기기에서 정리했는가(다시 불러오면 아니다). 달은 엔진의 달력으로 가른다.
+    func isOffloaded(day: Date) async -> Bool {
+        let month = TaptionBackupMonth(date: day, calendar: await engine.calendar)
+        return (try? await engine.isSealed(month)) ?? false
+    }
+
     func unsupportedFileCount() async -> Int {
         await engine.unsupportedFileCount()
     }
