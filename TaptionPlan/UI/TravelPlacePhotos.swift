@@ -437,13 +437,10 @@ enum TravelPhotoLink {
 
     static let key = "travelItemPhotoLinks"
     /// 사진을 받아도 되는 서버: 자유 이용 사진을 두는 곳만. 서버 `actions.js`의 `PHOTO_HOSTS`와 같다.
-    static let hosts: Set<String> = ["upload.wikimedia.org", "images.unsplash.com", "images.pexels.com"]
+    /// 받는 서버와 주소 검사는 명령 읽기와 같은 것을 쓴다(`TaptionAssistantProtocol`, RMN1114A25).
+    static let hosts = AssistantOperations.photoHosts
 
-    static func allowed(_ text: String) -> URL? {
-        guard text.count <= 500, let url = URL(string: text), url.scheme == "https", url.user == nil, url.port == nil,
-              let host = url.host?.lowercased(), hosts.contains(host) else { return nil }
-        return url
-    }
+    static func allowed(_ text: String) -> URL? { AssistantOperations.allowedPhotoURL(text) }
 
     static func link(_ itemID: String, defaults: UserDefaults = .standard) -> Link? {
         guard let saved = (defaults.dictionary(forKey: key) as? [String: [String: String]])?[itemID], let url = saved["url"].flatMap(allowed) else { return nil }
@@ -451,42 +448,19 @@ enum TravelPhotoLink {
     }
 }
 
-extension AssistantOperations {
-    static let photos: [any AssistantOperation.Type] = [SetTripItemPhoto.self]
-
-    /// 여행 일정 카드에 보일 사진 주소를 정하거나 뗀다. 사진 자체는 서버를 거치지 않는다.
-    struct SetTripItemPhoto: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "setTripItemPhoto", fields: ["itemId", "photoUrl", "credit", "remove"], counter: .schedules,
-            title: { $0.text("여행 일정 사진 정하기", "Set trip item photos") },
-            guide: #""itemId":"<trips[].items[].itemId>","photoUrl":"https://upload.wikimedia.org/...","credit":"Author, CC BY-SA 4.0"} (the photo shown on one trip card; only a direct https image link on upload.wikimedia.org, images.unsplash.com or images.pexels.com that you actually found, never a guessed one; credit names the author and licence; "remove":true goes back to the app's own search)"#
-        )
-
-        let itemID: String
-        let url: URL?
-        let credit: String
-
-        init?(fields: AssistantFields) {
-            let url = fields.raw("photoUrl").flatMap(TravelPhotoLink.allowed), credit = fields.string("credit", max: 120), remove = fields.flag("remove")
-            guard let itemID = fields.string("itemId", max: 100), fields.ok("photoUrl", url), fields.ok("credit", credit), fields.ok("remove", remove),
-                  (remove == true) != (url != nil), remove != false, remove == nil || credit == nil else { return nil }
-            self.itemID = itemID
-            self.url = url
-            self.credit = credit ?? ""
-        }
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
-            let known = host.model.snapshot.settings.travelPlanStops.contains { $0.itemID == itemID }
-                || (host.model.snapshot.settings.travelTripItems ?? []).contains { $0.itemID == itemID }
-            guard known else { return .rejected("no_trip_item") }
-            let key = TravelPhotoLink.key
-            var links = (host.defaults.dictionary(forKey: key) as? [String: [String: String]]) ?? [:]
-            let before = links[itemID]?["url"] ?? ""
-            links[itemID] = url.map { ["url": $0.absoluteString, "credit": credit] }
-            guard let change = host.changing(key, { host.defaults.set(links, forKey: key) }) else { return .rejected("no_change") }
-            var result = AssistantEditResult(before: before, after: url?.absoluteString ?? host.deleted)
-            result.appChange = AssistantAppChange(stored: [change])
-            return result
-        }
+extension AssistantOperations.SetTripItemPhoto: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+        let known = host.model.snapshot.settings.travelPlanStops.contains { $0.itemID == itemID }
+            || (host.model.snapshot.settings.travelTripItems ?? []).contains { $0.itemID == itemID }
+        guard known else { return .rejected("no_trip_item") }
+        let key = TravelPhotoLink.key
+        var links = (host.defaults.dictionary(forKey: key) as? [String: [String: String]]) ?? [:]
+        let before = links[itemID]?["url"] ?? ""
+        links[itemID] = url.map { ["url": $0.absoluteString, "credit": credit] }
+        guard let change = host.changing(key, { host.defaults.set(links, forKey: key) }) else { return .rejected("no_change") }
+        var result = AssistantEditResult(before: before, after: url?.absoluteString ?? host.deleted)
+        result.appChange = AssistantAppChange(stored: [change])
+        return result
     }
 }
+

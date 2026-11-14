@@ -119,10 +119,7 @@ struct AssistantBubbleText: Equatable, Sendable {
 /// BUB1110A02: routine은 기록으로 남아 재생·사이드바 핸들로 그 시각을 보면 다시 보인다.
 /// event는 그날 하루 맨 앞에 보이고, 날이 지나면 기기에서 지운다.
 struct AssistantBubble: Codable, Equatable, Identifiable, Sendable {
-    enum Kind: String, Codable, Sendable {
-        case routine
-        case event
-    }
+    typealias Kind = AssistantBubbleKind
 
     var id = UUID()
     var start: Date

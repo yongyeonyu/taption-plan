@@ -1,3 +1,4 @@
+import CryptoKit
 import XCTest
 import TaptionPlanCore
 @testable import TaptionPlan
@@ -447,6 +448,100 @@ extension AssistantCommandEditTests {
         let again = try JSONDecoder().decode([AssistantLogEntry].self, from: JSONEncoder().encode([unknown]))
         XCTAssertEqual(again.first?.kind, .operation("laterAction"))
     }
+
+    /// RMN1114A25: 동작을 패키지(읽기)와 앱(적용)으로 가르기 전의 모습을 고정한다.
+    /// 종류의 차례(「AI가 할 수 있는 일」·올리는 `actionsOff`), 저장된 「AI가 한 일」의 종류 이름, 동작마다의 칸·수·제목·안내문이 그대로여야 한다.
+    func testStoredLogKindNamesOrderAndSpecsSurviveThePackageSplit() throws {
+        let names = AssistantActionKind.allCases.map(\.rawValue)
+        XCTAssertEqual(names, Self.pinnedKindNames)
+        XCTAssertEqual(AssistantOperations.all.map { $0.spec.name }, Array(Self.pinnedKindNames.dropFirst(49)))
+
+        // 아는 이름과 모르는 이름이 섞인 저장 파일을 읽고 다시 써도 이름이 그대로다.
+        let stored = names + ["laterAction"]
+        let items = stored.enumerated().map { index, kind in
+            #"{"id":"00000000-0000-0000-0000-\#(String(format: "%012d", index))","commandID":"c\#(index)","kind":"\#(kind)","appliedAt":0,"before":"","after":"","delta":{"plans":[],"memos":[],"actuals":[],"corrections":[],"addedSleepSpans":[],"removedSleepSpans":[]}}"#
+        }
+        let entries = try JSONDecoder().decode([AssistantLogEntry].self, from: Data("[\(items.joined(separator: ","))]".utf8))
+        XCTAssertEqual(entries.map(\.kind.rawValue), stored)
+        XCTAssertEqual(entries.dropLast().map(\.kind), AssistantActionKind.allCases)
+        let written = try JSONEncoder().encode(entries)
+        let objects = try XCTUnwrap(JSONSerialization.jsonObject(with: written) as? [[String: Any]])
+        XCTAssertEqual(objects.map { $0["kind"] as? String }, stored)
+        XCTAssertEqual(try JSONDecoder().decode([AssistantLogEntry].self, from: written), entries)
+
+        // 스위치 키와 처음부터 꺼져 있는 동작.
+        XCTAssertEqual(names.map { AssistantActionToggles.key(.init(rawValue: $0)!) }, names.map { "assistantAction.\($0)" })
+        let store = defaults()
+        XCTAssertEqual(
+            AssistantActionKind.allCases.filter { !AssistantActionToggles.isEnabled($0, defaults: store) }.map(\.rawValue),
+            ["restoreFromBackup", "raiseShareLevel", "extendRetention", "turnOffHealth"]
+        )
+
+        // 동작마다의 지문: 칸·세는 곳·지우기·기본 꺼짐·바꾸는 수·제목·안내문.
+        var prints: [String: String] = [:]
+        for spec in AssistantOperations.all.map({ $0.spec }) {
+            let text = [
+                spec.fields.joined(separator: ","), "\(spec.counter)", "\(spec.deletes)", "\(spec.startsOff)", "\(spec.changes)",
+                spec.title(.korean), spec.guide,
+            ].joined(separator: "|")
+            prints[spec.name] = SHA256.hash(data: Data(text.utf8)).prefix(4).map { String(format: "%02x", $0) }.joined()
+        }
+        if prints != Self.pinnedSpecPrints {
+            print("PINNED_SPEC_PRINTS " + prints.sorted { $0.key < $1.key }.map { "\"\($0.key)\": \"\($0.value)\"" }.joined(separator: ", "))
+        }
+        XCTAssertEqual(prints, Self.pinnedSpecPrints)
+        let guide = AssistantOperations.guide(command: "X")
+        let guidePrint = SHA256.hash(data: Data(guide.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
+        if guidePrint != Self.pinnedGuidePrint { print("PINNED_GUIDE_PRINT \(guidePrint)") }
+        XCTAssertEqual(guidePrint, Self.pinnedGuidePrint)
+    }
+
+    /// RMN1114A25: 패키지의 읽기 형마다 앱에 적용(`apply`)이 달려 있고, 패키지가 이름으로 적어 둔 목록이 앱 화면의 형과 같다.
+    /// 알림 종류·장식 자리·여행 일정 종류·하루 카드 항목을 앱에서 더하면 패키지의 목록도 함께 고쳐야 한다.
+    func testEveryPackageOperationHasAnApplyAndNamedListsMatchTheApp() {
+        for type in AssistantOperations.all { XCTAssertTrue(type is any AssistantOperation.Type, type.spec.name) }
+        XCTAssertEqual(AssistantOperations.alertKinds, MapHomeAlarmKind.allCases.map(\.rawValue))
+        XCTAssertEqual(AssistantOperations.accessoryKinds, MapHomeAccessoryKind.allCases.map(\.rawValue))
+        XCTAssertEqual(AssistantOperations.tripItemKinds, TripImportItem.Kind.allCases.map(\.rawValue))
+        XCTAssertEqual(AssistantOperations.dayCardItems, MapHomeCardMetricOption.all.map(\.id))
+        XCTAssertEqual(AssistantOperations.dayCardItemLimit, MapHomeCardMetricSelection.maximum)
+        XCTAssertEqual(Set(AssistantOperations.PlanQuickAction.actionNames), Set(AssistantOperations.PlanQuickAction.actions.keys))
+        XCTAssertEqual(TravelPhotoLink.hosts, AssistantOperations.photoHosts)
+        XCTAssertEqual(PaymentAlertSources.name("  은행 앱 "), "은행 앱")
+        XCTAssertNil(PaymentAlertSources.name(String(repeating: "a", count: 41)))
+    }
+
+    private static let pinnedKindNames = [
+        "addMemo", "addSchedule", "updateActivity", "hideRecord", "mergeRecords", "updateRecordTime", "updateSchedule", "deleteSchedule", "updateMemo", "deleteMemo",
+        "addGoal", "updateGoal", "deleteGoal", "addTripStop", "updateTripStop", "deleteTripStop", "setTripItemStatus",
+        "updateSleep", "setLanguage", "setMapStyle", "setDisplayOption", "setBubble", "addExpense", "updateExpense", "classifyUnconfirmed", "setTravelMode",
+        "addPaymentRule", "setBudget", "addOwnAccount", "removeOwnAccount", "deletePaymentRule", "resolveReview", "deleteInboxItem", "openScreen", "askUser",
+        "addPlace", "updatePlace", "deletePlace", "addCategory", "updateCategory", "addTrip", "updateTrip", "deleteTrip", "setSetting", "requestApproval",
+        "resolvePlaceSuggestion", "setCarAudio", "setCalendarTitleDetail", "setTripBudget",
+        // 등록부 동작: 가계부 · 일정 · 기록 · 사진 · 분류·장소·설정 · 시스템 · 바로 실행.
+        "classifyInboxItem", "setFxRate", "setPaymentSource", "setSkipWords", "addLedgerTrip", "updateLedgerTrip", "deleteLedgerTrip",
+        "planQuickAction", "addTripItem", "updateTripItem", "deleteTripItem",
+        "deleteManualRecord", "linkRecordToPlan", "resolveBoarding",
+        "setTripItemPhoto",
+        "moveCategory", "deleteCategory", "setPlaceFloor", "addMyStop", "updateMyStop", "deleteMyStop",
+        "setDayCardItems", "setDayCardTime", "setAlert", "setCatOutfit", "setPlaceKind", "setMapActivityColor",
+        "refreshNow", "stopTracking", "disconnectCalendar", "restoreFromBackup",
+        "lowerShareLevel", "raiseShareLevel", "shortenRetention", "extendRetention", "turnOffHealth", "openBackup",
+    ]
+
+    /// 가르기 전(커밋 0ad7ffed 위의 값 타입 이동까지) 코드에서 뽑은 값.
+    private static let pinnedSpecPrints: [String: String] = [
+        "addLedgerTrip": "097e9465", "addMyStop": "5ec85368", "addTripItem": "d0baa71d", "classifyInboxItem": "ec44fee2", "deleteCategory": "a2ef8504",
+        "deleteLedgerTrip": "bd70f0ea", "deleteManualRecord": "9db67c89", "deleteMyStop": "414e7552", "deleteTripItem": "69a1100f",
+        "disconnectCalendar": "ca014f72", "extendRetention": "1367f581", "linkRecordToPlan": "4896d45c", "lowerShareLevel": "ae53b08d",
+        "moveCategory": "03a27304", "openBackup": "7a21b93e", "planQuickAction": "86651dcb", "raiseShareLevel": "b322a8ae", "refreshNow": "c1486930",
+        "resolveBoarding": "28b69ea1", "restoreFromBackup": "a2d36827", "setAlert": "46db554f", "setCatOutfit": "98846dc1", "setDayCardItems": "2a2460bc",
+        "setDayCardTime": "96fc6da0", "setFxRate": "92700db4", "setMapActivityColor": "3a2b8c53", "setPaymentSource": "6a4531c1",
+        "setPlaceFloor": "656197df", "setPlaceKind": "76063f6d", "setSkipWords": "f63c20f3", "setTripItemPhoto": "136d8a7b",
+        "shortenRetention": "4aa60173", "stopTracking": "a60657b3", "turnOffHealth": "f3b53880", "updateLedgerTrip": "d36d1e6a",
+        "updateMyStop": "21d82c5f", "updateTripItem": "b8137b48",
+    ]
+    private static let pinnedGuidePrint = "950704ed14cf05ab"
 
     func testOperationsParseWithTheServerRulesAndCarryTheirKind() throws {
         let id = UUID().uuidString

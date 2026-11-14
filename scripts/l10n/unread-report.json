@@ -100,25 +100,25 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 511,
+   "line": 503,
    "ko": "$0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 918,
+   "line": 767,
    "ko": "$0",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 719,
+   "line": 671,
    "ko": "value",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 547,
+   "line": 539,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -130,13 +130,13 @@
   },
   {
    "file": "TaptionPlan/Core/PaymentAlertSources.swift",
-   "line": 246,
+   "line": 242,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/PaymentAlertSources.swift",
-   "line": 246,
+   "line": 242,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
@@ -172,13 +172,13 @@
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 807,
+   "line": 723,
    "ko": "stop.kind.title",
    "en": "stop.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 175,
+   "line": 155,
    "ko": "before.amount",
    "en": "before.currency"
   },
@@ -190,7 +190,7 @@
   },
   {
    "file": "TaptionPlan/UI/AssistantMoreActions.swift",
-   "line": 118,
+   "line": 82,
    "ko": "$0.name",
    "en": "$0.englishName"
   },

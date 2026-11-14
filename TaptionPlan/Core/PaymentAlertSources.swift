@@ -52,11 +52,7 @@ enum PaymentAlertSources {
     }
 
     /// 단축어가 넘긴 앱 이름을 다듬는다: 앞뒤 공백을 떼고 1~40자. 그 밖이면 모르는 앱이다.
-    static func name(_ raw: String?) -> String? {
-        guard let raw else { return nil }
-        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (1...40).contains(name.count) ? name : nil
-    }
+    static func name(_ raw: String?) -> String? { AssistantOperations.paymentSourceName(raw) }
 
     /// 단축어 「BOKKI 결제 알림」이 붙인 첫 줄 「[앱: 이름]」을 떼어 낸다. 없으면 앱을 모르는 글이다.
     static func split(_ text: String) -> (source: String?, body: String) {

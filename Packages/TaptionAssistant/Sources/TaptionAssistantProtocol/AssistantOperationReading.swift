@@ -1,7 +1,7 @@
 import Foundation
 import TaptionWatchSync
 
-// 동작 등록부(ACT1114A07)의 읽기 쪽. 적용(`AssistantOperation.apply`)과 등록부 목록은 앱에 있다.
+// 동작 등록부(ACT1114A07)의 읽기 쪽. 목록은 `AssistantOperations`에 있고, 적용(`AssistantOperation.apply`)은 앱의 extension에 있다.
 
 /// 동작 하나의 이름표. 서버 등록부와 `name`·`fields`가 같아야 한다.
 public struct AssistantOperationSpec: Sendable {

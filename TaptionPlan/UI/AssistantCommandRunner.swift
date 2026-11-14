@@ -206,12 +206,6 @@ extension AssistantCommandRunner {
     }
 }
 
-extension AssistantCommandBatch {
-    func excluding(_ ids: Set<String>) -> Self {
-        Self(commands: commands.filter { !ids.contains($0.id) }, invalidIDs: invalidIDs.filter { !ids.contains($0) }, invalidInfo: invalidInfo)
-    }
-}
-
 /// 확인을 기다리는 큰 묶음과 잠깐 보이는 알림. 지도 화면 본문 상태를 늘리지 않게 따로 둔다(AIR1110A02).
 @MainActor
 @Observable
@@ -363,12 +357,11 @@ enum AssistantPush {
     }
 }
 
-// MARK: 동작 등록부 (ACT1114A07) — 새 파일을 늘리지 않으려고 여기 둔다.
-// 새 동작은 (1) 서버 `server/trip-relay/src/actions.js`에 `.add(...)`, (2) 앱에 `AssistantOperation` 형 하나,
-// (3) 아래 `AssistantOperations.all`에 한 줄. 토글·알림 수·안내문·로그 이름은 `spec`에서 만들어진다.
-// 서버와 이름·칸이 같은지는 `server/trip-relay/test/fixtures/actions.json`으로 시험한다.
+// MARK: 동작 등록부의 적용 쪽 (ACT1114A07) — 새 파일을 늘리지 않으려고 여기 둔다.
+// 읽기 형(`spec`·`init?(fields:)`)과 목록(`AssistantOperations.all`)은 `TaptionAssistantProtocol`에 있고(RMN1114A25),
+// 앱은 형마다 `extension AssistantOperations.<형>: AssistantOperation`으로 `apply`를 단다. 빠진 형은 시험이 잡는다.
 
-/// 등록부 동작 하나. 읽기에 더해 `apply`가 화면이 쓰는 함수를 부른다.
+/// 등록부 동작 하나의 적용. `apply`가 화면이 쓰는 함수를 부른다.
 protocol AssistantOperation: AssistantOperationReading {
     @MainActor func apply(host: AssistantOperationHost) async -> AssistantEditResult
 }
@@ -394,141 +387,64 @@ struct AssistantOperationHost {
     }
 }
 
-enum AssistantOperations {
-    /// 앱이 아는 등록부 동작 전부. 여기 차례가 「AI가 할 수 있는 일」과 안내문의 차례다.
-    static let all: [any AssistantOperation.Type] = ledger + plans + records + photos + catalog + system + direct
+// MARK: 등록부 동작 6묶음 — 시스템 (ACT1114A09). 권한 켜기·앱 잠금·PIN·전부 지우기는 넣지 않는다(대표 결정).
 
-    private static let byName = Dictionary(all.map { ($0.spec.name, $0) }, uniquingKeysWith: { first, _ in first })
-
-    static func spec(_ name: String) -> AssistantOperationSpec? { byName[name]?.spec }
-
-    /// 형식·버전을 보고, 그 동작의 칸만 남겨 읽는다.
-    static func parse(_ fields: AssistantFields) -> AssistantParsedOperation? {
-        guard fields.raw("format") == "bokki-command", fields.values["version"] == .number(1),
-              let name = fields.name, let type = byName[name] else { return nil }
-        var kept = fields
-        kept.values = fields.values.filter { type.spec.fields.contains($0.key) && $0.value != .null }
-        return type.init(fields: kept).map { AssistantParsedOperation(name: name, values: kept.values, operation: $0) }
-    }
-
-    /// 연결 안내에 붙는 줄들.
-    static func guide(command: String) -> String {
-        // 칸이 없는 동작의 안내는 `}`로 시작한다.
-        all.map { "  \(command)\"\($0.spec.name)\"\($0.spec.fields.isEmpty ? "" : ",")\($0.spec.guide)" }.joined(separator: "\n")
+extension AssistantOperations.RefreshNow: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+        let language = host.language
+        var result: AssistantEditResult
+        switch target {
+        case .records:
+            // 시험 저장소로는 기기 자료를 다시 읽지 않는다.
+            if host.preferences.isLive { await host.model.refreshConnectedRecordsNow() }
+            result = AssistantEditResult(after: language.text("기록 새로고침", "Records refreshed"))
+        case .cloud:
+            guard host.model.cloudSyncService != nil else { return .rejected("not_available") }
+            host.model.startManualCloudSync()
+            result = AssistantEditResult(after: language.text("iCloud 동기화 시작", "iCloud sync started"))
+        }
+        result.cannotUndo = true
+        return result
     }
 }
 
-// MARK: 등록부 동작 6묶음 — 시스템 (ACT1114A09). 권한 켜기·앱 잠금·PIN·전부 지우기는 넣지 않는다(대표 결정).
-
-extension AssistantOperations {
-    static let system: [any AssistantOperation.Type] = [RefreshNow.self, StopTracking.self, DisconnectCalendar.self, RestoreFromBackup.self]
-
-    /// 새로고침 단추와 iCloud 「지금 동기화」가 하는 일. 바뀌는 설정이 없어 되돌릴 것도 없다.
-    struct RefreshNow: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "refreshNow", fields: ["target"], counter: .settings, changes: 0,
-            title: { $0.text("새로고침·iCloud 동기화 실행", "Refresh or run the iCloud sync") },
-            guide: #""target":"records|cloud"} (what the refresh buttons do: records re-reads today's connected data, cloud starts an iCloud sync; changes no settings, nothing to undo)"#
-        )
-
-        enum Target: String { case records, cloud }
-        let target: Target
-
-        init?(fields: AssistantFields) {
-            guard let target: Target = fields.choice("target") else { return nil }
-            self.target = target
-        }
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
-            let language = host.language
-            var result: AssistantEditResult
-            switch target {
-            case .records:
-                // 시험 저장소로는 기기 자료를 다시 읽지 않는다.
-                if host.preferences.isLive { await host.model.refreshConnectedRecordsNow() }
-                result = AssistantEditResult(after: language.text("기록 새로고침", "Records refreshed"))
-            case .cloud:
-                guard host.model.cloudSyncService != nil else { return .rejected("not_available") }
-                host.model.startManualCloudSync()
-                result = AssistantEditResult(after: language.text("iCloud 동기화 시작", "iCloud sync started"))
-            }
-            result.cannotUndo = true
-            return result
-        }
+extension AssistantOperations.StopTracking: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+        guard let session = host.model.activeTrackingSession else { return .rejected("no_tracking") }
+        await host.model.stopTracking()
+        guard host.model.activeTrackingSession == nil else { return .rejected("edit_failed") }
+        var result = AssistantEditResult(before: AssistantEditText.clock(session.startedAt), after: host.language.text("추적 끝냄", "Tracking stopped"))
+        result.cannotUndo = true
+        return result
     }
+}
 
-    /// 걷기·달리기 추적 끝내기(설정과 상세 패널의 「종료」와 같은 함수). 끝낸 기록은 남고 되돌릴 수 없다.
-    struct StopTracking: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "stopTracking", fields: [], counter: .edits,
-            title: { $0.text("걷기·달리기 추적 끝내기", "Stop walk or run tracking") },
-            guide: #"} (ends the walk or run I am tracking and saves it as a record; only when I asked; cannot be undone)"#
-        )
-
-        init?(fields: AssistantFields) {}
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
-            guard let session = host.model.activeTrackingSession else { return .rejected("no_tracking") }
-            await host.model.stopTracking()
-            guard host.model.activeTrackingSession == nil else { return .rejected("edit_failed") }
-            var result = AssistantEditResult(before: AssistantEditText.clock(session.startedAt), after: host.language.text("추적 끝냄", "Tracking stopped"))
-            result.cannotUndo = true
-            return result
+extension AssistantOperations.DisconnectCalendar: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+        let language = host.language
+        var result: AssistantEditResult
+        switch source {
+        case .device:
+            guard !host.model.settings.selectedCalendarIDs.isEmpty else { return .rejected("no_change") }
+            await host.model.setCalendarEnabled(false)
+            result = AssistantEditResult(before: language.text("기기 캘린더", "Device calendars"), after: language.text("연결 끊음", "Disconnected"))
+        case .google:
+            // 시험 저장소로는 실제 계정을 건드리지 않는다.
+            guard host.preferences.isLive, GoogleCalendarAccount.shared.isConnected else { return .rejected("no_change") }
+            await host.model.disconnectGoogleCalendar()
+            result = AssistantEditResult(before: language.text("구글 캘린더", "Google Calendar"), after: language.text("연결 끊음", "Disconnected"))
         }
+        result.cannotUndo = true
+        return result
     }
+}
 
-    /// 캘린더 연결 끊기: 기기 캘린더는 설정의 스위치를 끄는 것과, 구글은 「연결 끊기」와 같은 함수. 다시 잇기는 사용자가 한다.
-    struct DisconnectCalendar: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "disconnectCalendar", fields: ["calendar"], counter: .settings, deletes: true,
-            title: { $0.text("캘린더 연결 끊기", "Disconnect calendars") },
-            guide: #""calendar":"device|google"} (stops reading a calendar: device removes every iOS calendar from the app, google signs my Google account out; the events stay in the calendars; connecting again is done by me in the app; only when I asked; cannot be undone)"#
-        )
-
-        enum Source: String { case device, google }
-        let source: Source
-
-        init?(fields: AssistantFields) {
-            guard let source: Source = fields.choice("calendar") else { return nil }
-            self.source = source
-        }
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
-            let language = host.language
-            var result: AssistantEditResult
-            switch source {
-            case .device:
-                guard !host.model.settings.selectedCalendarIDs.isEmpty else { return .rejected("no_change") }
-                await host.model.setCalendarEnabled(false)
-                result = AssistantEditResult(before: language.text("기기 캘린더", "Device calendars"), after: language.text("연결 끊음", "Disconnected"))
-            case .google:
-                // 시험 저장소로는 실제 계정을 건드리지 않는다.
-                guard host.preferences.isLive, GoogleCalendarAccount.shared.isConnected else { return .rejected("no_change") }
-                await host.model.disconnectGoogleCalendar()
-                result = AssistantEditResult(before: language.text("구글 캘린더", "Google Calendar"), after: language.text("연결 끊음", "Disconnected"))
-            }
-            result.cannotUndo = true
-            return result
-        }
-    }
-
-    /// 백업에서 복원(대표 결정 2026-11-14): 백업 비밀번호가 필요하므로 AI는 「데이터 보호」 화면만 열고, 복원은 사용자가 그 화면에서 한다.
-    /// 「지우는 일」 묶음에 있고 사용자가 켜기 전에는 꺼져 있다.
-    struct RestoreFromBackup: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "restoreFromBackup", fields: [], counter: .settings, deletes: true, startsOff: true, changes: 0,
-            title: { $0.text("백업에서 복원 화면 열기", "Open restore from backup") },
-            guide: #"} (opens the data protection screen so I can restore from a backup myself; I type the backup password in the app, never ask me for it; off until I switch it on under what the AI may do)"#
-        )
-
-        init?(fields: AssistantFields) {}
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
-            host.preferences.screens.request(.dataProtection)
-            var result = AssistantEditResult(after: AssistantScreen.dataProtection.title(host.language))
-            result.appChange = AssistantAppChange(screen: .dataProtection)
-            return result
-        }
+extension AssistantOperations.RestoreFromBackup: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+        host.preferences.screens.request(.dataProtection)
+        var result = AssistantEditResult(after: AssistantScreen.dataProtection.title(host.language))
+        result.appChange = AssistantAppChange(screen: .dataProtection)
+        return result
     }
 }
 
@@ -536,19 +452,12 @@ extension AssistantOperations {
 // 자료 공유를 넓히거나 보관을 늘리거나 되돌릴 수 없는 것은 사용자가 켜기 전에는 꺼져 있다. 전부 지우기·PIN 바꾸기는 승인 요청으로만 한다(대표 결정).
 
 extension AssistantOperations {
-    static let direct: [any AssistantOperation.Type] = [
-        LowerShareLevel.self, RaiseShareLevel.self, ShortenRetention.self, ExtendRetention.self, TurnOffHealth.self, OpenBackup.self,
-    ]
-
     /// 되돌리면 서버의 날들도 돌아간 설정으로 다시 맞춰야 하는 값.
     static let sharingKeys: Set<String> = [AssistantShareLevel.defaultsKey, AssistantRetention.defaultsKey]
 
-    private static let ifOff = "if this is rejected as disabled I switched it off, so use requestApproval instead"
-    private static let startsOffNote = "off until I switch it on under what the AI may do"
-
     /// 공유 수준을 한쪽 방향으로만 바꾼다. 낮추면 서버에 올린 날들을 지우게 적어 둔다(설정 화면·승인과 같다).
     @MainActor
-    private static func share(_ level: AssistantShareLevel, lowering: Bool, host: AssistantOperationHost) -> AssistantEditResult {
+    fileprivate static func share(_ level: AssistantShareLevel, lowering: Bool, host: AssistantOperationHost) -> AssistantEditResult {
         let old = AssistantShareLevel.current(host.defaults)
         guard level != old else { return .rejected("no_change") }
         guard AssistantShareLevel.isDowngrade(from: old, to: level) == lowering else { return .rejected(lowering ? "not_lower" : "not_higher") }
@@ -561,7 +470,7 @@ extension AssistantOperations {
 
     /// 보관 기간을 한쪽 방향으로만 바꾼다. 줄이면 서버의 날들을 지우고, 늘리면 새 기간으로 다시 올리게 한다.
     @MainActor
-    private static func retain(_ days: AssistantRetention, shortening: Bool, host: AssistantOperationHost) -> AssistantEditResult {
+    fileprivate static func retain(_ days: AssistantRetention, shortening: Bool, host: AssistantOperationHost) -> AssistantEditResult {
         let old = AssistantRetention.current(host.defaults)
         guard days != old else { return .rejected("no_change") }
         guard (days.rawValue < old.rawValue) == shortening else { return .rejected(shortening ? "not_shorter" : "not_longer") }
@@ -571,112 +480,41 @@ extension AssistantOperations {
         result.appChange = AssistantAppChange(stored: change.map { [$0] } ?? [])
         return result
     }
+}
 
-    struct LowerShareLevel: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "lowerShareLevel", fields: ["level"], counter: .settings,
-            title: { $0.text("AI 공유 수준 낮추기", "Lower AI sharing") },
-            guide: #""level":"off|summary"} (shares less with you right away, no approval card; must be lower than settings.shareLevel; the days the server holds are deleted and sent again at the new level; only when I asked; undoable; \#(ifOff) with request shareLevel)"#
-        )
+extension AssistantOperations.LowerShareLevel: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.share(level, lowering: true, host: host) }
+}
 
-        let level: AssistantShareLevel
+extension AssistantOperations.RaiseShareLevel: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.share(level, lowering: false, host: host) }
+}
 
-        init?(fields: AssistantFields) {
-            guard let level: AssistantShareLevel = fields.choice("level"), level != .visits else { return nil }
-            self.level = level
-        }
+extension AssistantOperations.ShortenRetention: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.retain(days, shortening: true, host: host) }
+}
 
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.share(level, lowering: true, host: host) }
-    }
+extension AssistantOperations.ExtendRetention: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.retain(days, shortening: false, host: host) }
+}
 
-    /// 더 많이 보내게 하는 일이라 사용자가 켜기 전에는 꺼져 있다.
-    struct RaiseShareLevel: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "raiseShareLevel", fields: ["level"], counter: .settings, startsOff: true,
-            title: { $0.text("AI 공유 수준 높이기", "Raise AI sharing") },
-            guide: #""level":"summary|visits"} (shares more with you right away; must be higher than settings.shareLevel; only when I asked; undoable; \#(startsOffNote); \#(ifOff) with request shareLevel)"#
-        )
-
-        let level: AssistantShareLevel
-
-        init?(fields: AssistantFields) {
-            guard let level: AssistantShareLevel = fields.choice("level"), level != .off else { return nil }
-            self.level = level
-        }
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.share(level, lowering: false, host: host) }
-    }
-
-    struct ShortenRetention: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "shortenRetention", fields: ["days"], counter: .settings,
-            title: { $0.text("서버 보관 기간 줄이기", "Shorten server retention") },
-            guide: #""days":7} (keeps my days on the server for a shorter time, 1 or 7; must be shorter than settings.retentionDays; the days the server holds are deleted and sent again; only when I asked; undoable; \#(ifOff) with request retentionDays)"#
-        )
-
-        let days: AssistantRetention
-
-        init?(fields: AssistantFields) {
-            guard let days = fields.integer("days", in: 1...7).flatMap(AssistantRetention.init(rawValue:)) else { return nil }
-            self.days = days
-        }
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.retain(days, shortening: true, host: host) }
-    }
-
-    /// 서버에 더 오래 두는 일이라 사용자가 켜기 전에는 꺼져 있다.
-    struct ExtendRetention: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "extendRetention", fields: ["days"], counter: .settings, startsOff: true,
-            title: { $0.text("서버 보관 기간 늘리기", "Extend server retention") },
-            guide: #""days":30} (keeps my days on the server for a longer time, 7 or 30; must be longer than settings.retentionDays; only when I asked; undoable; \#(startsOffNote); \#(ifOff) with request retentionDays)"#
-        )
-
-        let days: AssistantRetention
-
-        init?(fields: AssistantFields) {
-            guard let days = fields.integer("days", in: 7...30).flatMap(AssistantRetention.init(rawValue:)) else { return nil }
-            self.days = days
-        }
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.retain(days, shortening: false, host: host) }
-    }
-
-    /// 건강 연동 끄기(설정의 스위치와 같은 함수). 가져온 기록이 지워지고 다시 켜기는 사용자가 하므로 되돌릴 수 없다.
-    struct TurnOffHealth: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "turnOffHealth", fields: [], counter: .settings, deletes: true, startsOff: true,
-            title: { $0.text("건강 연동 끄기(가져온 기록 삭제)", "Turn off Health sync (removes imported records)") },
-            guide: #"} (stops the Health sync right away and removes the records brought from Health and Apple Watch from the app; turning it on again is done by me; only when I asked; cannot be undone; \#(startsOffNote); \#(ifOff) with request healthOff)"#
-        )
-
-        init?(fields: AssistantFields) {}
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
-            guard host.model.settings.healthEnabled else { return .rejected("no_change") }
-            await host.model.setHealthEnabled(false)
-            guard !host.model.settings.healthEnabled else { return .rejected("edit_failed") }
-            var result = AssistantEditResult(after: host.language.text("건강 연동 끔", "Health sync off"))
-            result.cannotUndo = true
-            return result
-        }
-    }
-
-    /// 백업은 비밀번호가 필요하므로 AI는 「데이터 보호」 화면만 열고, 백업은 사용자가 그 화면에서 한다.
-    struct OpenBackup: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "openBackup", fields: [], counter: .settings, changes: 0,
-            title: { $0.text("백업 화면 열기", "Open the backup screen") },
-            guide: #"} (opens the data protection screen so I can make a backup myself; I type the backup password in the app, never ask me for it; changes no data; \#(ifOff) with request backup)"#
-        )
-
-        init?(fields: AssistantFields) {}
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
-            host.preferences.screens.request(.dataProtection)
-            var result = AssistantEditResult(after: AssistantScreen.dataProtection.title(host.language))
-            result.appChange = AssistantAppChange(screen: .dataProtection)
-            return result
-        }
+extension AssistantOperations.TurnOffHealth: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+        guard host.model.settings.healthEnabled else { return .rejected("no_change") }
+        await host.model.setHealthEnabled(false)
+        guard !host.model.settings.healthEnabled else { return .rejected("edit_failed") }
+        var result = AssistantEditResult(after: host.language.text("건강 연동 끔", "Health sync off"))
+        result.cannotUndo = true
+        return result
     }
 }
+
+extension AssistantOperations.OpenBackup: AssistantOperation {
+    func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+        host.preferences.screens.request(.dataProtection)
+        var result = AssistantEditResult(after: AssistantScreen.dataProtection.title(host.language))
+        result.appChange = AssistantAppChange(screen: .dataProtection)
+        return result
+    }
+}
+
