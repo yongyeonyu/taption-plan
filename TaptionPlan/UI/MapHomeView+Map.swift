@@ -94,7 +94,8 @@ extension MapHomeView {
         // Apple 스타일이면 기존 MapKit 경로를 유지한다. 경로 재생·마커는 벡터
         // 렌더러도 지원한다(MapHomeVectorRoute/Marker).
         if model.settings.mapDisplayStyle == .kakao, KakaoMapAvailability.isAvailable {
-            kakaoMap
+            // 카카오 지도는 타일만 다르고 위에 얹는 화면 층은 벡터 지도와 같다(KMP1114A04). 밝은 지도라 밝은 스타일 색을 쓴다.
+            vectorMap(style: .contrast, usesKakao: true)
         } else if let vectorStyle = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle {
             vectorMap(style: vectorStyle)
         } else {
@@ -156,17 +157,18 @@ extension MapHomeView {
         .accessibilityLabel(language.text("장소 검색", "Search places"))
     }
 
-    /// Map Home이 실제로 MapLibre 벡터 렌더러로 그려지는지(= Apple 스타일이 아님).
+    /// Map Home이 벡터 지도 방식(MapLibre나 카카오 지도 + 같은 화면 층)으로 그려지는지(= Apple 지도가 아님).
     /// 카메라 이동 명령 경로를 실제 렌더 엔진에 맞춰 고르는 데 쓴다.
     var rendersVectorMap: Bool {
         model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle != nil
+            || (model.settings.mapDisplayStyle == .kakao && KakaoMapAvailability.isAvailable)
     }
 
     var vectorMapContentInsets: UIEdgeInsets {
         .zero
     }
 
-    func vectorMap(style: MapHomeVectorStyle) -> some View {
+    func vectorMap(style: MapHomeVectorStyle, usesKakao: Bool = false) -> some View {
         let cameraRevision = mapCameraRevision
         let waypoints = pawprintWaypoints
         // 재생 분과 무관한 고정 레이어. 내용이 같으면 정렬·색 계산을 다시 하지 않는다(OPT1102A01).
@@ -176,7 +178,8 @@ extension MapHomeView {
         let playback = appleMapPlayback
         let displayedSpeed = displayedSpeedMetersPerSecond
         let activeSegments = vectorActiveRouteSegments
-        return MapHomeVectorMap(
+        let kakaoLabel = language.text("카카오 지도", "Kakao map")
+        return MapHomeViewportEngineMap(usesKakao: usesKakao, kakaoLabel: kakaoLabel, inputs: MapHomeVectorMap(
             style: style,
             cameraPosition: mapPosition,
             cameraRevision: mapCameraRevision,
@@ -213,8 +216,7 @@ extension MapHomeView {
             activeRouteSegments: recordingShows(\.routes) ? activeSegments : [],
             layerPawprints: playbackLayerPawprints(statics),
             languageKey: languageRawValue
-        )
-        .id(style.rawValue)
+        ))
         .overlay {
             if !Self.benchHidden("overlay") {
             MapHomeVectorViewportOverlay(store: vectorMapViewportStore, isLive: playbackDriver != nil) {

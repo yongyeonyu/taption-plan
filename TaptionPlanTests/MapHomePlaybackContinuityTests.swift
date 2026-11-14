@@ -1,6 +1,7 @@
 import XCTest
 import UIKit
 import CoreLocation
+import MapKit
 import StoreKit
 import StoreKitTest
 import TaptionPlanCore
@@ -165,5 +166,97 @@ final class MapHomePlaybackContinuityTests: XCTestCase {
         let events: [(minute: Double, moment: String)] = [(minute: 10, moment: "a"), (minute: 11, moment: "b"), (minute: 30, moment: "c")]
         XCTAssertEqual(MapHomePlaybackMomentsOverlay.passed(events, from: 5, to: 12), ["a", "b"])
         XCTAssertTrue(MapHomePlaybackMomentsOverlay.passed(events, from: 12, to: 5).isEmpty)
+    }
+}
+
+/// KMP1114A04: 카카오 지도의 화면 점 ↔ 좌표 변환(아핀 풀이·방위·카메라 거리).
+final class MapHomeKakaoProjectionTests: XCTestCase {
+    private let size = CGSize(width: 390, height: 800)
+    private let center = CLLocationCoordinate2D(latitude: 37.5, longitude: 127)
+
+    func testWorldCoordinateRoundTrips() {
+        for coordinate in [center, CLLocationCoordinate2D(latitude: -33.9, longitude: 151.2), CLLocationCoordinate2D(latitude: 0, longitude: -179.5)] {
+            let world = MapHomeKakaoProjection.world(coordinate)
+            let back = MapHomeKakaoProjection.coordinate(worldX: world.x, worldY: world.y)
+            XCTAssertEqual(back.latitude, coordinate.latitude, accuracy: 1e-9)
+            XCTAssertEqual(back.longitude, coordinate.longitude, accuracy: 1e-9)
+        }
+    }
+
+    func testCameraProjectionPutsCenterMidScreenAndNorthUp() {
+        let projection = MapHomeKakaoProjection(center: center, cameraDistance: 550, heading: 0, size: size)
+        let middle = projection.point(for: center)
+        XCTAssertEqual(middle.x, 195, accuracy: 1e-6)
+        XCTAssertEqual(middle.y, 400, accuracy: 1e-6)
+        let north = projection.point(for: CLLocationCoordinate2D(latitude: 37.501, longitude: 127))
+        XCTAssertEqual(north.x, 195, accuracy: 1e-6)
+        XCTAssertLessThan(north.y, 400)
+        XCTAssertGreaterThan(projection.point(for: CLLocationCoordinate2D(latitude: 37.5, longitude: 127.001)).x, 195)
+        XCTAssertEqual(projection.heading, 0, accuracy: 1e-9)
+        XCTAssertEqual(projection.cameraDistance, 550, accuracy: 1e-6)
+    }
+
+    func testHeadingIsClockwiseLikeTheVectorMap() {
+        // 방위 90°: 화면 위쪽이 동쪽이다.
+        let projection = MapHomeKakaoProjection(center: center, cameraDistance: 550, heading: 90, size: size)
+        let east = projection.point(for: CLLocationCoordinate2D(latitude: 37.5, longitude: 127.001))
+        XCTAssertEqual(east.x, 195, accuracy: 1e-6)
+        XCTAssertLessThan(east.y, 400)
+        // 북쪽은 화면 왼쪽으로 간다.
+        XCTAssertLessThan(projection.point(for: CLLocationCoordinate2D(latitude: 37.501, longitude: 127)).x, 195)
+        XCTAssertEqual(projection.heading, 90, accuracy: 1e-9)
+    }
+
+    func testThreeScreenSamplesRecoverTheSameProjection() throws {
+        let truth = MapHomeKakaoProjection(center: center, cameraDistance: 1_800, heading: 217, size: size)
+        let screen = MapHomeKakaoProjection.samplePoints(in: size)
+        let solved = try XCTUnwrap(MapHomeKakaoProjection(screen: screen, coordinates: screen.map(truth.coordinate(at:)), size: size))
+        XCTAssertEqual(solved.heading, 217, accuracy: 1e-6)
+        XCTAssertEqual(solved.cameraDistance, 1_800, accuracy: 1e-3)
+        XCTAssertFalse(solved.differs(from: truth))
+        let marker = CLLocationCoordinate2D(latitude: 37.503, longitude: 126.996)
+        XCTAssertEqual(solved.point(for: marker).x, truth.point(for: marker).x, accuracy: 1e-4)
+        XCTAssertEqual(solved.point(for: marker).y, truth.point(for: marker).y, accuracy: 1e-4)
+        // 화면 점 → 좌표 → 화면 점.
+        let back = solved.point(for: solved.coordinate(at: CGPoint(x: 31, y: 702)))
+        XCTAssertEqual(back.x, 31, accuracy: 1e-6)
+        XCTAssertEqual(back.y, 702, accuracy: 1e-6)
+    }
+
+    func testUnusableSamplesGiveNoProjection() {
+        let line = [CGPoint(x: 0, y: 0), CGPoint(x: 100, y: 0), CGPoint(x: 200, y: 0)]
+        XCTAssertNil(MapHomeKakaoProjection(screen: line, coordinates: [center, center, center], size: size))
+        // 엔진이 준비되기 전에는 세 점이 같은 좌표로 온다.
+        XCTAssertNil(MapHomeKakaoProjection(screen: MapHomeKakaoProjection.samplePoints(in: size), coordinates: [center, center, center], size: size))
+        XCTAssertNil(MapHomeKakaoProjection(screen: MapHomeKakaoProjection.samplePoints(in: .zero), coordinates: [center, center, center], size: .zero))
+    }
+
+    func testCameraDistanceMatchesTheVisibleSpan() {
+        let projection = MapHomeKakaoProjection(center: center, cameraDistance: 550, heading: 0, size: size)
+        // 화면 층은 위도 폭으로 1pt의 거리를 구한다. 카메라 거리와 같은 값을 가리켜야 한다.
+        let metersPerPoint = projection.span.latitudeDelta * 111_320 / 800
+        XCTAssertEqual(metersPerPoint, projection.metersPerPoint, accuracy: projection.metersPerPoint * 0.005)
+        XCTAssertEqual(projection.metersPerPoint * 800 * MapHomeKakaoProjection.distancePerVisibleMeter, 550, accuracy: 1e-6)
+        XCTAssertEqual(projection.center.latitude, center.latitude, accuracy: 1e-9)
+        XCTAssertEqual(projection.center.longitude, center.longitude, accuracy: 1e-9)
+    }
+
+    func testRegionFitShowsTheWholeRegion() {
+        let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.010))
+        let distance = MapHomeKakaoProjection.cameraDistance(fitting: region, size: size)
+        let span = MapHomeKakaoProjection(center: center, cameraDistance: distance, heading: 0, size: size).span
+        XCTAssertGreaterThanOrEqual(span.latitudeDelta, 0.008 * 0.995)
+        XCTAssertGreaterThanOrEqual(span.longitudeDelta, 0.010 * 0.995)
+        // 꼭 맞는 쪽은 남기지 않는다.
+        XCTAssertLessThan(min(span.latitudeDelta / 0.008, span.longitudeDelta / 0.010), 1.01)
+    }
+
+    func testStillMapIsNotReportedAsMoved() {
+        let projection = MapHomeKakaoProjection(center: center, cameraDistance: 550, heading: 30, size: size)
+        let nudged = MapHomeKakaoProjection(center: CLLocationCoordinate2D(latitude: 37.5 + 1e-10, longitude: 127), cameraDistance: 550, heading: 30, size: size)
+        XCTAssertFalse(projection.differs(from: nudged))
+        let moved = MapHomeKakaoProjection(center: CLLocationCoordinate2D(latitude: 37.5001, longitude: 127), cameraDistance: 550, heading: 30, size: size)
+        XCTAssertTrue(projection.differs(from: moved))
+        XCTAssertTrue(projection.differs(from: MapHomeKakaoProjection(center: center, cameraDistance: 550, heading: 31, size: size)))
     }
 }
