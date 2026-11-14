@@ -21,6 +21,7 @@ final class MapHomeViewWork {
     var routeProjectionLastMS = 0.0
     var expectedRouteRefreshTask: Task<Void, Never>?
     var expectedRouteRefreshGeneration: UInt64 = 0
+    var expectedRouteRefreshGate = MapHomeExpectedRouteRefreshGate<MapHomeExpectedRouteBuildSignature>()
     var liveRouteProjectionRefreshTask: Task<Void, Never>?
     var playbackIntroTask: Task<Void, Never>?
     var dayPlaybackTask: Task<Void, Never>?

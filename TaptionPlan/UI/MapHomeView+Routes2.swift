@@ -257,6 +257,48 @@ extension MapHomeView {
         let playbackReadings = currentDayReadings
         let day = TimeSpan(start: selectedDay, end: dayEnd)
         let gpsLoggingInterval = model.settings.gpsLoggingPreferences.interval
+        let buildSignature = MapHomeExpectedRouteBuildSignature(
+            selectedDay: selectedDay,
+            dayEnd: dayEnd,
+            isPreview: dayDataIsPreview,
+            travel: travel,
+            places: dayData?.places ?? [],
+            actuals: dayData?.actuals ?? [],
+            normalizedReadings: normalizedReadings,
+            playbackReadings: playbackReadings,
+            sleepSessions: model.sleepSessions,
+            confirmedSleepSpans: model.settings.confirmedSleepSpans,
+            gpsLoggingInterval: gpsLoggingInterval
+        )
+        // 처음이면 "first", 화면이 지워져 같은 입력으로 다시 만들면 "none".
+        let inputChanges = work.expectedRouteRefreshGate.lastBegun.map {
+            let changed = buildSignature.changedFields(from: $0)
+            return changed.isEmpty ? "none" : changed.joined(separator: ",")
+        } ?? "first"
+        // 머문 곳의 ID만 새로 매겨졌으면 예상 경로는 그대로 두고 재생 투영(머문 구간 ID)만 맞춘다.
+        let placeIDsChanged = work.expectedRouteRefreshGate.completed.map { $0.places != buildSignature.places } ?? false
+        guard work.expectedRouteRefreshGate.begin(
+            buildSignature,
+            isDisplayed: wbsExpectedRouteRequestsInputKey != nil
+        ) else {
+            // 내용이 같으니 만들어 둔 요청·경로가 새 세대에도 맞다. 재생 투영이 요청을 다시 계산하지 않게 열쇠만 맞춘다.
+            if wbsExpectedRouteRequestsInputKey != inputKey {
+                wbsExpectedRouteRequestsInputKey = inputKey
+            }
+            if placeIDsChanged {
+                work.expectedRouteRefreshGate.complete(buildSignature)
+                requestWBSPlaybackProjectionRefresh()
+            }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "expected_route_refresh_skipped",
+                metrics: [
+                    "built": Double(work.expectedRouteRefreshGate.builtCount),
+                    "skipped": Double(work.expectedRouteRefreshGate.skippedCount),
+                    "projection_refreshed": placeIDsChanged ? 1 : 0,
+                ]
+            )
+            return
+        }
         let worker = Task.detached(priority: .utility) {
             try Task.checkCancellation()
             var overlayOperationCount = 0
@@ -329,7 +371,7 @@ extension MapHomeView {
                 dayEnd: dayEnd,
                 operationCount: batch.overlayOperationCount,
                 playbackOperationCount: batch.playbackOperationCount
-            )
+            ).merging(["input_changed": inputChanges], uniquingKeysWith: { first, _ in first })
         )
         if expectedRouteCache.count > 128 {
             expectedRouteCache.removeAll(keepingCapacity: true)
@@ -394,6 +436,8 @@ extension MapHomeView {
             )
         }
 
+        // 길 찾기가 실패해 직선으로 둔 것이 있으면 다음 갱신에서 다시 찾는다.
+        var allRoutesResolved = true
         var resolvedExpected: [MapHomeExpectedRouteOverlay] = []
         for request in limitedRequests {
             guard isCurrentExpectedRouteRefresh(
@@ -413,6 +457,7 @@ extension MapHomeView {
                     expectedRouteCache[request] = resolved
                     coordinates = resolved
                 } else {
+                    allRoutesResolved = false
                     coordinates = [
                         CLLocationCoordinate2D(
                             latitude: request.start.latitude,
@@ -493,6 +538,8 @@ extension MapHomeView {
                     coordinates: coordinates
                 )
                 networkResolvedCount += 1
+            } else {
+                allRoutesResolved = false
             }
         }
         TaptionPlanDiagnosticsLogger.shared.record(
@@ -525,6 +572,9 @@ extension MapHomeView {
             )
         )
         guard didApply else { return }
+        if allRoutesResolved {
+            work.expectedRouteRefreshGate.complete(buildSignature)
+        }
         applyInitialMapFocusIfNeeded()
         // 현재 위치를 따라가는 중에는 예상 경로가 갱신돼도 "경로 전체 보기"로 카메라를 끌어가지 않는다.
         // 갱신이 끝날 때마다 전체 보기와 현재 위치 따라가기가 번갈아 카메라를 옮겨 화면이 왔다 갔다 했다(대표 영상, ARC1030A02).
@@ -933,6 +983,7 @@ extension MapHomeView {
                 ), reason: item.reason
             )
         }
+        work.expectedRouteRefreshGate.invalidate()
         expectedRouteOverlays = (payload.expected ?? []).compactMap { overlay in
             guard let mode = TravelMode(rawValue: overlay.modeRawValue)
             else { return nil }

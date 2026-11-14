@@ -279,6 +279,77 @@ struct MapHomeExpectedRouteInputKey: Equatable, Sendable {
     let latestRouteInputSignature: String
 }
 
+/// 예상 경로를 만드는 데 쓰는 입력의 내용(LAG1107A01). 세대 번호·준비 ID는 내용이 같아도 바뀌므로 넣지 않는다.
+/// 배열은 같은 저장소를 가리키면 바로 같다고 판정되고, 아니면 값으로 견준다.
+/// 머문 곳의 `id`는 하루를 다시 판정할 때마다 새로 매겨지고 예상 경로 ID(요청·이동 구간)에는 들어가지 않으므로 빼고 견준다.
+struct MapHomeExpectedRouteBuildSignature: Equatable {
+    let selectedDay: Date
+    let dayEnd: Date
+    let isPreview: Bool
+    let travel: [TravelSegment]
+    let places: [PlaceStay]
+    let actuals: [ActualRecord]
+    let normalizedReadings: [SensorReading]
+    let playbackReadings: [SensorReading]
+    let sleepSessions: [SleepSession]
+    let confirmedSleepSpans: [TimeSpan]
+    let gpsLoggingInterval: TimeInterval
+
+    /// 앞 입력과 달라진 항목 이름. 진단 로그가 무엇 때문에 다시 만들었는지 적는다.
+    func changedFields(from old: Self) -> [String] {
+        let checks: [(String, Bool)] = [
+            ("day", selectedDay != old.selectedDay || dayEnd != old.dayEnd),
+            ("preview", isPreview != old.isPreview),
+            ("travel", travel != old.travel),
+            ("places", !samePlacesIgnoringID(as: old)),
+            ("actuals", actuals != old.actuals),
+            ("normalized_readings", normalizedReadings != old.normalizedReadings),
+            ("playback_readings", playbackReadings != old.playbackReadings),
+            ("sleep", sleepSessions != old.sleepSessions || confirmedSleepSpans != old.confirmedSleepSpans),
+            ("gps_interval", gpsLoggingInterval != old.gpsLoggingInterval),
+        ]
+        return checks.filter(\.1).map(\.0)
+    }
+
+    func samePlacesIgnoringID(as old: Self) -> Bool {
+        places == old.places || (places.count == old.places.count && zip(places, old.places).allSatisfy { place, other in
+            var place = place
+            place.id = other.id
+            return place == other
+        })
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.changedFields(from: rhs).isEmpty }
+}
+
+/// 같은 입력으로 끝까지 만든 예상 경로는 다시 만들지 않는다(LAG1107A01).
+/// 만든 횟수·건너뛴 횟수를 세어 진단 로그와 시험이 읽는다.
+struct MapHomeExpectedRouteRefreshGate<Signature: Equatable> {
+    private(set) var completed: Signature?
+    /// 가장 최근에 만들기 시작한 입력. 다음 입력과 견줘 무엇이 달라졌는지 본다.
+    private(set) var lastBegun: Signature?
+    private(set) var builtCount = 0
+    private(set) var skippedCount = 0
+
+    /// 다시 만들어야 하면 true. `isDisplayed`는 그 결과가 지금 화면에 남아 있는지다.
+    mutating func begin(_ signature: Signature, isDisplayed: Bool) -> Bool {
+        if isDisplayed, completed == signature {
+            skippedCount += 1
+            return false
+        }
+        // 만드는 도중 끊기면 화면이 어느 입력의 것인지 모른다. 끝까지 간 것만 기억한다.
+        completed = nil
+        lastBegun = signature
+        builtCount += 1
+        return true
+    }
+
+    mutating func complete(_ signature: Signature) { completed = signature }
+
+    /// 화면의 예상 경로를 지웠거나 다른 곳에서 바꿨을 때.
+    mutating func invalidate() { completed = nil }
+}
+
 struct MapHomeForecastRouteState {
     let expected: [MapHomeExpectedRouteOverlay]
     let generated: [MapHomeWBSGeneratedRouteOverlay]
