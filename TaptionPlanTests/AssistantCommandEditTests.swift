@@ -365,7 +365,10 @@ final class AssistantCommandEditTests: XCTestCase {
             registeredNames: [:], now: at(23), plans: [other, plan]
         )
         let day = try XCTUnwrap(AssistantActivityBuilder.make(input, level: .summary))
-        XCTAssertEqual(day.plans, [.init(id: plan.id.uuidString, title: "치과", start: "2026-11-10T15:00+09:00", end: "2026-11-10T16:00+09:00")])
+        // ACT1114A07: 분류와 상태도 함께 나간다(중요·상위 루틴은 있을 때만).
+        XCTAssertEqual(day.plans, [.init(
+            id: plan.id.uuidString, title: "치과", start: "2026-11-10T15:00+09:00", end: "2026-11-10T16:00+09:00", categoryId: "activity", status: "planned"
+        )])
         XCTAssertEqual(day.records.map(\.id), [cover.id.uuidString], "records under a merge cover are not repeated")
         XCTAssertFalse(day.memos.first?.id.isEmpty ?? true)
     }
@@ -725,6 +728,171 @@ extension AssistantCommandEditTests {
         let skipUndone = await model.undoAssistantEntry(logEntry(skip, skipped), preferences: preferences)
         XCTAssertTrue(skipUndone)
         XCTAssertNotNil(PaymentInbox.items(store).first { $0.id == items[1].id })
+    }
+}
+
+// MARK: - 2묶음 — 일정 (ACT1114A07)
+
+extension AssistantCommandEditTests {
+    private func run(_ model: AppModel, _ action: String, _ extra: [String: Any], store: UserDefaults) async throws -> (reason: String?, entry: AssistantLogEntry?) {
+        let applied = await model.applyAssistantCommands(try batch([command("c-\(UUID().uuidString)", action, extra)]), defaults: store)
+        let outcome = try XCTUnwrap(applied)
+        return (outcome.results.first?.reason, outcome.entries.first)
+    }
+
+    private func bareModel() async -> AppModel {
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        await model.bootstrap()
+        return model
+    }
+
+    func testSchedulesTakeCategoryImportantAndParentGoal() async throws {
+        let store = defaults()
+        let model = await bareModel()
+        let goalStart = at(0, day: 9), goalEnd = at(0, day: 20)
+        let goalID = try XCTUnwrap(model.addPlan(title: GoalRecordPolicy.displayTitle("운동"), categoryID: "activity", startAt: goalStart, duration: goalEnd.timeIntervalSince(goalStart)))
+        XCTAssertNotNil(model.assistantParentGoal(goalID.uuidString))
+
+        XCTAssertTrue(try batch([command("x", "addSchedule", ["title": "달리기", "start": "2026-11-12T07:00+09:00", "parentGoalId": "none"])]).invalidIDs == ["x"])
+        XCTAssertTrue(try batch([command("x", "updateSchedule", ["planId": planID, "parentGoalId": "goal"])]).invalidIDs == ["x"])
+        XCTAssertEqual(
+            try batch([command("x", "updateSchedule", ["planId": planID, "important": true])]).commands.first?.action,
+            .updateSchedule(target: .init(planID: planID, startTime: nil), title: nil, start: nil, end: nil, note: nil, extras: .init(important: true))
+        )
+
+        let unknown = try await run(model, "addSchedule", ["title": "달리기", "start": "2026-11-12T07:00+09:00", "categoryId": "nope"], store: store)
+        XCTAssertEqual(unknown.reason, "unknown_category")
+        let outside = try await run(model, "addSchedule", ["title": "달리기", "start": "2026-11-25T07:00+09:00", "parentGoalId": goalID.uuidString], store: store)
+        XCTAssertEqual(outside.reason, "outside_goal")
+        let noGoal = try await run(model, "addSchedule", ["title": "달리기", "start": "2026-11-12T07:00+09:00", "parentGoalId": UUID().uuidString], store: store)
+        XCTAssertEqual(noGoal.reason, "no_goal")
+
+        let added = try await run(model, "addSchedule", [
+            "title": "달리기", "start": "2026-11-12T07:00+09:00", "end": "2026-11-12T08:00+09:00", "categoryId": "activity", "important": true, "parentGoalId": goalID.uuidString,
+        ], store: store)
+        XCTAssertNil(added.reason)
+        let plan = try XCTUnwrap(model.snapshot.plans.first { $0.title == "달리기" })
+        XCTAssertEqual(plan.parentID, goalID)
+        XCTAssertTrue(plan.isImportant)
+        XCTAssertEqual(plan.span.start, at(7, day: 12))
+
+        let edited = try await run(model, "updateSchedule", ["planId": plan.id.uuidString, "important": false, "parentGoalId": "none"], store: store)
+        XCTAssertNil(edited.reason)
+        let detached = try XCTUnwrap(model.snapshot.plans.first { $0.id == plan.id })
+        XCTAssertNil(detached.parentID)
+        XCTAssertFalse(detached.isImportant)
+        XCTAssertEqual(detached.span, plan.span, "시각은 그대로")
+        let bad = try await run(model, "updateSchedule", ["planId": plan.id.uuidString, "categoryId": "nope"], store: store)
+        XCTAssertEqual(bad.reason, "unknown_category")
+
+        let undone = await model.undoAssistantEntry(try XCTUnwrap(edited.entry), preferences: .test(store))
+        XCTAssertTrue(undone)
+        let back = try XCTUnwrap(model.snapshot.plans.first { $0.id == plan.id })
+        XCTAssertEqual(back.parentID, goalID)
+        XCTAssertTrue(back.isImportant)
+        let removed = await model.undoAssistantEntry(try XCTUnwrap(added.entry), preferences: .test(store))
+        XCTAssertTrue(removed)
+        XCTAssertFalse(model.snapshot.plans.contains { $0.title == "달리기" })
+    }
+
+    func testPlanQuickActionsCompletePostponeAndUndo() async throws {
+        let store = defaults()
+        let model = await bareModel()
+        let start = Date.now.addingTimeInterval(2 * 3_600)
+        let id = try XCTUnwrap(model.addPlan(title: "회의 준비", categoryID: "activity", startAt: start, duration: 1_800))
+        let before = try XCTUnwrap(model.snapshot.plans.first { $0.id == id })
+
+        XCTAssertTrue(try batch([command("x", "planQuickAction", ["planId": id.uuidString, "quickAction": "skip"])]).invalidIDs == ["x"])
+        let missing = try await run(model, "planQuickAction", ["planId": UUID().uuidString, "quickAction": "complete"], store: store)
+        XCTAssertEqual(missing.reason, "no_plan")
+        let idle = try await run(model, "planQuickAction", ["planId": id.uuidString, "quickAction": "stop"], store: store)
+        XCTAssertEqual(idle.reason, "not_running")
+
+        let later = try await run(model, "planQuickAction", ["planId": id.uuidString, "quickAction": "postpone30"], store: store)
+        XCTAssertNil(later.reason)
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == id }?.span.start, before.span.start.addingTimeInterval(1_800))
+        let moved = await model.undoAssistantEntry(try XCTUnwrap(later.entry), preferences: .test(store))
+        XCTAssertTrue(moved)
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == id }?.span, before.span)
+
+        let done = try await run(model, "planQuickAction", ["planId": id.uuidString, "quickAction": "complete"], store: store)
+        XCTAssertNil(done.reason)
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == id }?.status, .completed)
+        XCTAssertEqual(model.snapshot.actuals.filter { $0.planID == id }.count, 1, "계획한 시간만큼 한 것으로 남는다")
+        let twice = try await run(model, "planQuickAction", ["planId": id.uuidString, "quickAction": "complete"], store: store)
+        XCTAssertEqual(twice.reason, "no_change")
+        let reopened = await model.undoAssistantEntry(try XCTUnwrap(done.entry), preferences: .test(store))
+        XCTAssertTrue(reopened)
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == id }?.status, .planned)
+        XCTAssertTrue(model.snapshot.actuals.filter { $0.planID == id }.isEmpty)
+
+        // 캘린더 고정 일정은 미루지 않는다.
+        var fixed = PlanRecord(title: "고정", span: TimeSpan(start: start, end: start.addingTimeInterval(1_800)), categoryID: "activity")
+        fixed.isFixed = true
+        model.snapshot.plans.append(fixed)
+        let refused = try await run(model, "planQuickAction", ["planId": fixed.id.uuidString, "quickAction": "moveToNextFree"], store: store)
+        XCTAssertEqual(refused.reason, "not_editable")
+    }
+
+    func testTimedTripItemsAreAddedEditedDeletedAndUndone() async throws {
+        let store = defaults()
+        let model = await bareModel()
+        let saved = await model.saveTravelTrip(TravelTrip(id: "trip-1", title: "여행", startDay: "2026-12-01", endDay: "2026-12-03"))
+        XCTAssertTrue(saved)
+        func items() -> [TravelTripItem] { model.snapshot.settings.travelTripItems ?? [] }
+        let stamp = { (text: String) in AssistantCommandParser.instant(text) }
+
+        XCTAssertTrue(try batch([command("x", "addTripItem", ["tripId": "trip-1", "title": "저녁", "start": "2026-12-01T19:00+09:00", "end": "2026-12-01T18:00+09:00"])]).invalidIDs == ["x"])
+        XCTAssertTrue(try batch([command("x", "addTripItem", ["tripId": "trip-1", "title": "저녁", "start": "2026-12-01T19:00+09:00", "end": "2026-12-01T20:00+09:00", "kind": "party"])]).invalidIDs == ["x"])
+        XCTAssertTrue(try batch([command("x", "updateTripItem", ["tripId": "trip-1", "itemId": "m-1"])]).invalidIDs == ["x"])
+        XCTAssertEqual(AssistantOperations.offsetSeconds("2026-12-01T19:00+09:00"), 32_400)
+        XCTAssertEqual(AssistantOperations.offsetSeconds("2026-12-01T19:00:00Z"), 0)
+        XCTAssertEqual(AssistantOperations.offsetSeconds("2026-12-01T19:00-03:30"), -12_600)
+
+        let noTrip = try await run(model, "addTripItem", ["tripId": "nope", "title": "저녁", "start": "2026-12-01T19:00+09:00", "end": "2026-12-01T20:00+09:00"], store: store)
+        XCTAssertEqual(noTrip.reason, "no_trip")
+        let added = try await run(model, "addTripItem", [
+            "tripId": "trip-1", "title": "저녁", "start": "2026-12-01T19:00+09:00", "end": "2026-12-01T20:00+09:00", "kind": "meal", "note": "창가 자리",
+        ], store: store)
+        XCTAssertNil(added.reason)
+        let item = try XCTUnwrap(items().first)
+        XCTAssertEqual([item.tripID, item.title, item.kind, item.note ?? ""], ["trip-1", "저녁", "meal", "창가 자리"])
+        XCTAssertEqual([item.start, item.end], [stamp("2026-12-01T19:00+09:00"), stamp("2026-12-01T20:00+09:00")])
+        XCTAssertEqual(item.startOffsetSeconds, 32_400)
+        let linked = try XCTUnwrap(item.planID)
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == linked }?.title, "저녁", "일상 쪽 계획이 함께 생긴다")
+
+        let missing = try await run(model, "updateTripItem", ["tripId": "trip-1", "itemId": "nope", "title": "x"], store: store)
+        XCTAssertEqual(missing.reason, "no_trip_item")
+        let same = try await run(model, "updateTripItem", ["tripId": "trip-1", "itemId": item.itemID, "title": "저녁"], store: store)
+        XCTAssertEqual(same.reason, "no_change")
+        let moved = try await run(model, "updateTripItem", ["tripId": "trip-1", "itemId": item.itemID, "title": "늦은 저녁", "start": "2026-12-01T20:30+09:00"], store: store)
+        XCTAssertNil(moved.reason)
+        let later = try XCTUnwrap(items().first)
+        XCTAssertEqual(later.title, "늦은 저녁")
+        XCTAssertEqual([later.start, later.end], [stamp("2026-12-01T20:30+09:00"), stamp("2026-12-01T21:30+09:00")], "시작만 옮기면 길이를 지킨다")
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == linked }?.span.start, later.start)
+        let movedBack = await model.undoAssistantEntry(try XCTUnwrap(moved.entry), preferences: .test(store))
+        XCTAssertTrue(movedBack)
+        XCTAssertEqual(items().first?.start, item.start)
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == linked }?.title, "저녁")
+
+        let deleted = try await run(model, "deleteTripItem", ["tripId": "trip-1", "itemId": item.itemID], store: store)
+        XCTAssertNil(deleted.reason)
+        XCTAssertTrue(items().isEmpty)
+        XCTAssertFalse(model.snapshot.plans.contains { $0.title == "저녁" })
+        let gone = try await run(model, "deleteTripItem", ["tripId": "trip-1", "itemId": item.itemID], store: store)
+        XCTAssertEqual(gone.reason, "no_trip_item")
+        let revived = await model.undoAssistantEntry(try XCTUnwrap(deleted.entry), preferences: .test(store))
+        XCTAssertTrue(revived)
+        let again = try XCTUnwrap(items().first)
+        XCTAssertEqual([again.itemID, again.title], [item.itemID, "저녁"])
+        XCTAssertEqual(again.planID.flatMap { id in model.snapshot.plans.first { $0.id == id } }?.title, "저녁", "되살린 계획에 다시 이어진다")
+
+        AssistantActionToggles.set(.operation("deleteTripItem"), enabled: false, defaults: store)
+        let off = try await run(model, "deleteTripItem", ["tripId": "trip-1", "itemId": item.itemID], store: store)
+        XCTAssertEqual(off.reason, "disabled")
+        XCTAssertEqual(items().count, 1)
     }
 }
 

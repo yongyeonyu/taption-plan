@@ -118,6 +118,8 @@ const command = {
     payer: { type: "string", maxLength: 30, description: "addExpense: who paid, when not me" },
     entryId: { type: "string", maxLength: 100, description: "updateExpense: ledger entry id" },
     delete: { type: "boolean", description: "updateExpense: true deletes the entry" },
+    important: { type: "boolean", description: "addSchedule, updateSchedule: mark the plan as important" },
+    parentGoalId: { type: "string", description: "addSchedule, updateSchedule: goal id to put the plan under (updateSchedule: \"none\" takes it out)" },
     shareNames: { type: "array", items: { type: "string", maxLength: 30 }, maxItems: 20, description: "addExpense, updateExpense: who shares a trip expense (\"@me\" is the user; [] or left out: everyone)" },
   },
 };

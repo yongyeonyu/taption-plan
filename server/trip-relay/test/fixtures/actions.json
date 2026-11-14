@@ -103,6 +103,73 @@
       "required": [
         "tripId"
       ]
+    },
+    {
+      "action": "planQuickAction",
+      "tool": "plan_quick_action",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "planId",
+        "quickAction"
+      ],
+      "required": [
+        "planId",
+        "quickAction"
+      ]
+    },
+    {
+      "action": "addTripItem",
+      "tool": "add_trip_item",
+      "destructive": false,
+      "since": 341,
+      "fields": [
+        "tripId",
+        "title",
+        "start",
+        "end",
+        "kind",
+        "note"
+      ],
+      "required": [
+        "tripId",
+        "title",
+        "start",
+        "end"
+      ]
+    },
+    {
+      "action": "updateTripItem",
+      "tool": "update_trip_item",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "tripId",
+        "itemId",
+        "title",
+        "start",
+        "end",
+        "kind",
+        "note"
+      ],
+      "required": [
+        "tripId",
+        "itemId"
+      ]
+    },
+    {
+      "action": "deleteTripItem",
+      "tool": "delete_trip_item",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "tripId",
+        "itemId"
+      ],
+      "required": [
+        "tripId",
+        "itemId"
+      ]
     }
   ]
 }

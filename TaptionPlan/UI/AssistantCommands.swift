@@ -5,7 +5,7 @@ import TaptionPlanCore
 struct AssistantCommand: Identifiable, Equatable, Sendable {
     enum Action: Equatable, Sendable {
         case addMemo(text: String, at: Date)
-        case addSchedule(title: String, start: Date, end: Date?, note: String?)
+        case addSchedule(title: String, start: Date, end: Date?, note: String?, extras: AssistantScheduleExtras = .init())
         /// 하루 안의 기록 하나를 고친다. id가 없으면 `startTime`을 덮는 기록을 찾는다.
         case updateActivity(day: Date, recordID: String?, startTime: Date?, title: String?, categoryID: String?)
         /// 자동 기록을 미확인(유령)으로 교정해 가린다. 원본 행은 남는다(CLN1110A01).
@@ -14,7 +14,10 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case mergeRecords(day: Date, recordIDs: [String], title: String?, categoryID: String?)
         /// 표시 시간만 교정표로 바꾼다. 시각은 그날의 HH:mm(CLN1110A01).
         case updateRecordTime(day: Date, recordID: String, start: Date?, end: Date?)
-        case updateSchedule(target: AssistantPlanTarget, title: String?, start: AssistantScheduleTime?, end: AssistantScheduleTime?, note: String?)
+        case updateSchedule(
+            target: AssistantPlanTarget, title: String?, start: AssistantScheduleTime?, end: AssistantScheduleTime?, note: String?,
+            extras: AssistantScheduleExtras = .init()
+        )
         case deleteSchedule(target: AssistantPlanTarget)
         case updateMemo(memoID: String, text: String)
         case deleteMemo(memoID: String)
@@ -165,6 +168,8 @@ enum AssistantCommandParser {
         let taskId: String?
         // ACT1114A07: addExpense·updateExpense의 몫을 나누는 사람.
         let shareNames: [String]?
+        // ACT1114A07: addSchedule·updateSchedule의 중요·상위 루틴.
+        let important: Bool?, parentGoalId: String?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -209,7 +214,8 @@ enum AssistantCommandParser {
             let end = raw.end.flatMap(instant)
             if raw.end != nil, end.map({ $0 > start }) != true { return nil }
             if let note = raw.note, note.count > 2_000 { return nil }
-            return .addSchedule(title: title, start: start, end: end, note: clean(raw.note, max: 2_000))
+            guard let extras = scheduleExtras(raw, allowsDetach: false) else { return nil }
+            return .addSchedule(title: title, start: start, end: end, note: clean(raw.note, max: 2_000), extras: extras)
         case "updateActivity":
             guard let date = raw.date, let day = self.day(date, calendar: calendar) else { return nil }
             let title = clean(raw.title, max: 100), categoryID = clean(raw.categoryId, max: 100)
@@ -260,8 +266,9 @@ enum AssistantCommandParser {
             if raw.title != nil, clean(raw.title, max: 200) == nil { return nil }
             if let note = raw.note, note.count > 2_000 { return nil }
             let title = clean(raw.title, max: 200), note = clean(raw.note, max: 2_000)
-            guard title != nil || start != nil || end != nil || note != nil else { return nil }
-            return .updateSchedule(target: target, title: title, start: start ?? nil, end: end ?? nil, note: note)
+            guard let extras = scheduleExtras(raw, allowsDetach: true) else { return nil }
+            guard title != nil || start != nil || end != nil || note != nil || !extras.isEmpty else { return nil }
+            return .updateSchedule(target: target, title: title, start: start ?? nil, end: end ?? nil, note: note, extras: extras)
         case "deleteSchedule":
             return planTarget(raw, day: day, calendar: calendar).map { .deleteSchedule(target: $0) }
         case "updateMemo":
@@ -272,6 +279,16 @@ enum AssistantCommandParser {
         default:
             return dataAction(raw, day: day, calendar: calendar)
         }
+    }
+
+    /// 일정의 분류·중요·상위 루틴(ACT1114A07). 틀린 칸이 있으면 nil. `parentGoalId` "none"은 고칠 때만 받는다.
+    private static func scheduleExtras(_ raw: Raw, allowsDetach: Bool) -> AssistantScheduleExtras? {
+        if raw.categoryId != nil, clean(raw.categoryId, max: 100) == nil { return nil }
+        var parent: String?
+        if let text = raw.parentGoalId {
+            if allowsDetach, text == "none" { parent = "" } else if UUID(uuidString: text) != nil { parent = text } else { return nil }
+        }
+        return AssistantScheduleExtras(categoryID: clean(raw.categoryId, max: 100), important: raw.important, parentGoalID: parent)
     }
 
     /// `planId`, 없으면 `date`+`startTime`으로 일정을 고른다.

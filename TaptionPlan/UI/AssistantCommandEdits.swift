@@ -149,6 +149,15 @@ struct AssistantPlanTarget: Equatable, Sendable {
     var startTime: Date?
 }
 
+/// 일정의 분류·중요·상위 루틴(ACT1114A07). nil인 칸은 그대로 둔다. `parentGoalID`가 빈 글이면 루틴에서 뗀다.
+struct AssistantScheduleExtras: Equatable, Sendable {
+    var categoryID: String?
+    var important: Bool?
+    var parentGoalID: String?
+
+    var isEmpty: Bool { self == Self() }
+}
+
 /// 일정의 새 시각. ISO 시각이거나, 그 일정 날의 HH:mm.
 enum AssistantScheduleTime: Equatable, Sendable {
     case instant(Date)
@@ -345,11 +354,29 @@ extension AppModel {
                 result.ledgerEntry = entry
             }
             return result
-        case let .addSchedule(title, start, end, note):
-            // 분류를 알 수 없으니 일반 활동에 둔다.
+        case let .addSchedule(title, start, end, note, extras):
+            // 분류를 주지 않으면 일반 활동에 둔다.
             if let note, note.count > TaptionPlanMemoRecord.maximumTextLength { return .rejected("note_too_long") }
-            guard let planID = addPlan(title: title, categoryID: "activity", startAt: start, duration: end.map { $0.timeIntervalSince(start) } ?? 3_600)
-            else { return .rejected("schedule_failed") }
+            if let categoryID = extras.categoryID, !isAssistantCategory(categoryID) { return .rejected("unknown_category") }
+            let duration = end.map { $0.timeIntervalSince(start) } ?? 3_600
+            var parentID: UUID?
+            if let goalID = extras.parentGoalID {
+                guard let goal = assistantParentGoal(goalID) else { return .rejected("no_goal") }
+                // 화면은 루틴 안으로 시각을 당겨 넣지만, AI에게는 맞는 시각을 다시 보내게 한다.
+                guard start >= goal.span.start, start.addingTimeInterval(duration) <= goal.span.end else { return .rejected("outside_goal") }
+                parentID = goal.id
+            }
+            let errorBefore = userFacingError
+            guard let planID = addPlan(title: title, categoryID: extras.categoryID ?? "activity", startAt: start, duration: duration, parentID: parentID) else {
+                userFacingError = errorBefore
+                return .rejected("schedule_failed")
+            }
+            if extras.important == true, let plan = snapshot.plans.first(where: { $0.id == planID }) {
+                updatePlan(
+                    plan.id, title: plan.title, categoryID: plan.categoryID, middleCategoryName: plan.middleCategoryName,
+                    subCategoryName: plan.subCategoryName, span: plan.span, parentID: plan.parentID, isImportant: true, repeatRules: plan.repeatRules
+                )
+            }
             if let note { addMemo(text: note, kind: .idea, to: planID) }
             return AssistantEditResult(after: snapshot.plans.first { $0.id == planID }.map(AssistantEditText.plan) ?? title)
         case let .updateActivity(day, recordID, startTime, title, categoryID):
@@ -376,8 +403,8 @@ extension AppModel {
             return await mergeAssistantRecords(day: day, recordIDs: recordIDs, title: title, categoryID: categoryID)
         case let .updateRecordTime(_, recordID, start, end):
             return await retimeAssistantRecord(recordID, start: start, end: end)
-        case let .updateSchedule(target, title, start, end, note):
-            return updateAssistantSchedule(target, title: title, start: start, end: end, note: note)
+        case let .updateSchedule(target, title, start, end, note, extras):
+            return updateAssistantSchedule(target, title: title, start: start, end: end, note: note, extras: extras)
         case let .deleteSchedule(target):
             guard let plan = AssistantPlanLookup.plan(target, in: snapshot.plans) else { return .rejected("no_plan") }
             guard AssistantPlanLookup.isEditable(plan) else { return .rejected("not_editable") }
@@ -418,6 +445,11 @@ extension AppModel {
             before: AssistantEditText.record(actual), after: after.map(AssistantEditText.record) ?? "",
             actualIDs: [actual.id]
         )
+    }
+
+    /// 일정을 아래에 둘 루틴. 캘린더 고정 일정은 받지 않는다.
+    func assistantParentGoal(_ id: String) -> PlanRecord? {
+        UUID(uuidString: id).flatMap { uuid in snapshot.plans.first { $0.id == uuid && GoalRecordPolicy.isGoal($0) && !$0.isFixed } }
     }
 
     func assistantMemo(_ memoID: String) -> ActionMemo? {
@@ -468,7 +500,8 @@ extension AppModel {
     }
 
     private func updateAssistantSchedule(
-        _ target: AssistantPlanTarget, title: String?, start: AssistantScheduleTime?, end: AssistantScheduleTime?, note: String?
+        _ target: AssistantPlanTarget, title: String?, start: AssistantScheduleTime?, end: AssistantScheduleTime?, note: String?,
+        extras: AssistantScheduleExtras = .init()
     ) -> AssistantEditResult {
         guard let plan = AssistantPlanLookup.plan(target, in: snapshot.plans) else { return .rejected("no_plan") }
         guard AssistantPlanLookup.isEditable(plan) else { return .rejected("not_editable") }
@@ -482,14 +515,26 @@ extension AppModel {
         else { return .rejected("invalid_time") }
         let span = TimeSpan(start: newStart, end: newEnd)
         let newTitle = title ?? plan.title
-        if newTitle != plan.title || span != plan.span {
+        // ACT1114A07: 분류·중요·상위 루틴. 분류를 바꾸면 예전 분류의 중·소분류 이름은 뗀다.
+        if let categoryID = extras.categoryID, !isAssistantCategory(categoryID) { return .rejected("unknown_category") }
+        let newCategory = extras.categoryID ?? plan.categoryID, important = extras.important ?? plan.isImportant
+        var parentID = plan.parentID
+        if let goalID = extras.parentGoalID {
+            if goalID.isEmpty { parentID = nil } else {
+                guard let goal = assistantParentGoal(goalID), goal.id != plan.id else { return .rejected("no_goal") }
+                parentID = goal.id
+            }
+        }
+        let keepsNames = newCategory == plan.categoryID
+        if newTitle != plan.title || span != plan.span || newCategory != plan.categoryID || important != plan.isImportant || parentID != plan.parentID {
             let errorBefore = userFacingError
             updatePlan(
-                plan.id, title: newTitle, categoryID: plan.categoryID,
-                middleCategoryName: plan.middleCategoryName, subCategoryName: plan.subCategoryName,
-                span: span, parentID: plan.parentID, isImportant: plan.isImportant, repeatRules: plan.repeatRules
+                plan.id, title: newTitle, categoryID: newCategory,
+                middleCategoryName: keepsNames ? plan.middleCategoryName : nil, subCategoryName: keepsNames ? plan.subCategoryName : nil,
+                span: span, parentID: parentID, isImportant: important, repeatRules: plan.repeatRules
             )
-            guard let updated = snapshot.plans.first(where: { $0.id == plan.id }), updated.title == newTitle, updated.span == span else {
+            guard let updated = snapshot.plans.first(where: { $0.id == plan.id }), updated.title == newTitle, updated.span == span,
+                  updated.categoryID == newCategory, updated.isImportant == important, updated.parentID == parentID else {
                 // 상위 일정 범위 밖 같은 실패는 AI 결과로만 알린다.
                 userFacingError = errorBefore
                 return .rejected("schedule_failed")

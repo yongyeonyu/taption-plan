@@ -139,3 +139,38 @@ test("actions batch 1: expenses take a trip, sharers, a note and (when edited) a
   refuses("updateExpense", { entryId: "e1" });
   assert.deepEqual(cleanCommand(cmd("updateExpense", { entryId: "e1", shareNames: ["@me"], date: "2026-11-13" })).shareNames, ["@me"]);
 });
+
+test("actions batch 2: plans and timed trip items", () => {
+  accepts("planQuickAction", { planId: UUID, quickAction: "postpone30" });
+  refuses("planQuickAction", { planId: UUID, quickAction: "skip" });
+  refuses("planQuickAction", { planId: "p1", quickAction: "complete" });
+  const item = { tripId: "trip-1", title: "Dinner", start: "2026-12-01T18:00+09:00", end: "2026-12-01T19:30+09:00" };
+  accepts("addTripItem", item);
+  accepts("addTripItem", { ...item, kind: "meal", note: "window seat" });
+  refuses("addTripItem", { ...item, end: "2026-12-01T18:00+09:00" });
+  refuses("addTripItem", { ...item, start: "2026-12-01 18:00" });
+  refuses("addTripItem", { ...item, kind: "party" });
+  refuses("addTripItem", { ...item, tripId: undefined });
+  accepts("updateTripItem", { tripId: "trip-1", itemId: "m-1a2b3c4d", start: "2026-12-01T19:00+09:00" });
+  accepts("updateTripItem", { tripId: "trip-1", itemId: "m-1a2b3c4d", note: "moved" });
+  refuses("updateTripItem", { tripId: "trip-1", itemId: "m-1a2b3c4d" });
+  refuses("updateTripItem", { tripId: "trip-1", itemId: "m-1a2b3c4d", start: "2026-12-01T19:00+09:00", end: "2026-12-01T18:00+09:00" });
+  accepts("deleteTripItem", { tripId: "trip-1", itemId: "m-1a2b3c4d" });
+  refuses("deleteTripItem", { tripId: "trip-1" });
+  assert.equal(f.instant().check("2026-12-01T18:00:30Z"), true);
+  assert.equal(f.instant().check("2026-12-01T18:00"), false);
+});
+
+test("actions batch 2: schedules take a category, the important mark and a parent goal", () => {
+  const base = { title: "Dentist", start: "2026-11-20T15:00+09:00" };
+  accepts("addSchedule", { ...base, categoryId: "health", important: true, parentGoalId: UUID });
+  refuses("addSchedule", { ...base, important: "yes" });
+  refuses("addSchedule", { ...base, parentGoalId: "none" });
+  accepts("updateSchedule", { planId: "p1", important: false });
+  accepts("updateSchedule", { planId: "p1", categoryId: "work" });
+  accepts("updateSchedule", { planId: "p1", parentGoalId: "none" });
+  accepts("updateSchedule", { date: "2026-11-20", startTime: "15:00", parentGoalId: UUID });
+  refuses("updateSchedule", { planId: "p1", parentGoalId: "goal" });
+  refuses("updateSchedule", { planId: "p1" });
+  assert.equal(cleanCommand(cmd("addSchedule", { ...base, important: true, junk: 1 })).important, true);
+});

@@ -161,12 +161,13 @@ export function bubbleText(value) {
 // 동작마다 받는 칸. 다른 칸은 큐에 넣기 전에 버린다(finding 14).
 export const COMMAND_FIELDS = {
   addMemo: ["text", "date", "time"],
-  addSchedule: ["title", "start", "end", "note"],
+  // ACT1114A07: categoryId(분류)·important(중요)·parentGoalId(루틴 아래에 두기).
+  addSchedule: ["title", "start", "end", "note", "categoryId", "important", "parentGoalId"],
   updateActivity: ["date", "recordId", "startTime", "title", "categoryId"],
   hideRecord: ["date", "recordId", "startTime"],
   mergeRecords: ["date", "recordIds", "title", "categoryId"],
   updateRecordTime: ["date", "recordId", "start", "end"],
-  updateSchedule: ["planId", "date", "startTime", "title", "start", "end", "note"],
+  updateSchedule: ["planId", "date", "startTime", "title", "start", "end", "note", "categoryId", "important", "parentGoalId"],
   deleteSchedule: ["planId", "date", "startTime"],
   updateMemo: ["memoId", "text"],
   deleteMemo: ["memoId"],
@@ -364,7 +365,8 @@ export function isCommand(value) {
         && (v.delete === true || EXPENSE_CHANGES.some((k) => given(v[k])));
     case "addSchedule":
       return nonEmpty(v.title, 200) && isInstant(v.start)
-        && optional(v.end, (e) => isInstant(e) && Date.parse(e) > Date.parse(v.start)) && optional(v.note, note);
+        && optional(v.end, (e) => isInstant(e) && Date.parse(e) > Date.parse(v.start)) && optional(v.note, note)
+        && optional(v.categoryId, targetID) && optional(v.important, isBoolean) && optional(v.parentGoalId, uuid);
     case "updateActivity":
       return recordTarget(v) && optional(v.title, title(100)) && optional(v.categoryId, targetID)
         && (given(v.title) || given(v.categoryId));
@@ -377,7 +379,9 @@ export function isCommand(value) {
         && (given(v.start) || given(v.end)) && !(given(v.start) && v.start === v.end);
     case "updateSchedule":
       return planTarget(v) && optional(v.title, title(200)) && optional(v.start, isClock) && optional(v.end, isClock)
-        && optional(v.note, note) && [v.title, v.start, v.end, v.note].some(given)
+        && optional(v.note, note) && [v.title, v.start, v.end, v.note, v.categoryId, v.important, v.parentGoalId].some(given)
+        // parentGoalId "none"은 루틴에서 떼어 낸다.
+        && optional(v.categoryId, targetID) && optional(v.important, isBoolean) && optional(v.parentGoalId, (p) => p === "none" || uuid(p))
         && !(isInstant(v.start) && isInstant(v.end) && Date.parse(v.end) <= Date.parse(v.start));
     case "deleteSchedule":
       return planTarget(v);

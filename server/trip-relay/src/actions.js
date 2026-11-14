@@ -20,6 +20,10 @@ export const f = {
   time: (description = "HH:mm (24h)") => field(
     (v) => typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
     described({ type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }, description)),
+  /** 오프셋이 붙은 ISO 시각(초는 없어도 된다). */
+  instant: (description = "ISO 8601 with offset, e.g. 2026-11-12T15:00+09:00") => field(
+    (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?(Z|[+-]\d{2}:\d{2})$/.test(v) && !Number.isNaN(Date.parse(v)),
+    described({ type: "string" }, description)),
   amount: (max, description) => field(
     (v) => typeof v === "number" && Number.isFinite(v) && v > 0 && v <= max,
     described({ type: "number", exclusiveMinimum: 0, maximum: max }, description)),
@@ -178,4 +182,52 @@ registry
     tool: "delete_ledger_trip", title: "Delete a trip ledger", since: SINCE,
     description: "Delete a trip ledger. Its budget and settlement transfers go too; the entries inside stay and return to the daily ledger. Only when the user asked. Undoable.",
     fields: { tripId: f.id("Trip ledger id from get_app_state ledger.trips").required_() },
+  });
+
+// 2묶음: 일정.
+const TRIP_ITEM_KINDS = ["flight", "lodging", "meal", "cafe", "sight", "photo", "shopping", "activity", "rest", "sleep", "transfer", "other"];
+const after = (start, end) => !given(start) || !given(end) || Date.parse(end) > Date.parse(start);
+registry
+  .add("planQuickAction", {
+    tool: "plan_quick_action", title: "Complete, postpone, move or stop a plan", since: SINCE,
+    description: "The quick actions of the app's widget on one plan (planId from get_activity plans): complete marks it done now, postpone30 moves it 30 minutes later, "
+      + "moveToNextFree moves it to the next free time, stop ends it while it is running. Undoable.",
+    fields: {
+      planId: f.match(UUID, "Plan id from get_activity plans").required_(),
+      quickAction: f.oneOf(["complete", "postpone30", "moveToNextFree", "stop"], "What to do").required_(),
+    },
+  })
+  .add("addTripItem", {
+    tool: "add_trip_item", title: "Add a timed trip item", destructive: false, since: SINCE,
+    description: "Add one timed item (a flight, a meal, a sight) to a trip's plan (tripId from get_app_state trips). A plan for the same time is created with it. "
+      + "The new itemId shows up in get_activity trips[].items[]. Undoable.",
+    fields: {
+      tripId: f.id("Trip id").required_(),
+      title: f.text(200, "Item name").required_(),
+      start: f.instant("Start, ISO 8601 with the local offset of the place").required_(),
+      end: f.instant("End, after start").required_(),
+      kind: f.oneOf(TRIP_ITEM_KINDS, "Kind of item, default activity"),
+      note: f.text(500, "Note"),
+    },
+    check: (v) => after(v.start, v.end),
+  })
+  .add("updateTripItem", {
+    tool: "update_trip_item", title: "Edit a timed trip item", since: SINCE,
+    description: "Change a timed trip item (tripId and itemId from get_activity trips[].items[]): title, kind, start, end or note. Moving start alone keeps the length. "
+      + "Its linked plan and map pin follow. Give at least one field. Undoable.",
+    fields: {
+      tripId: f.id("Trip id").required_(),
+      itemId: f.id("Item id").required_(),
+      title: f.text(200, "New name"),
+      start: f.instant("New start"),
+      end: f.instant("New end"),
+      kind: f.oneOf(TRIP_ITEM_KINDS, "New kind"),
+      note: f.text(500, "New note"),
+    },
+    check: (v) => anyOf(v, ["title", "start", "end", "kind", "note"]) && after(v.start, v.end),
+  })
+  .add("deleteTripItem", {
+    tool: "delete_trip_item", title: "Delete a timed trip item", since: SINCE,
+    description: "Delete a timed trip item with its detail items, linked plan and map pin. Only when the user asked. Undoable.",
+    fields: { tripId: f.id("Trip id").required_(), itemId: f.id("Item id").required_() },
   });

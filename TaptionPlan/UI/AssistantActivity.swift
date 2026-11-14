@@ -43,6 +43,11 @@ struct AssistantActivityDay: Codable, Equatable, Sendable {
         var title: String
         var start: String
         var end: String
+        /// ACT1114A07: 분류, 상태(planned|running|completed|skipped), 중요(참일 때만), 상위 루틴.
+        var categoryId: String?
+        var status: String?
+        var important: Bool?
+        var goalId: String?
     }
 
     struct Visit: Codable, Equatable, Sendable {
@@ -226,7 +231,8 @@ enum AssistantActivityBuilder {
             .map { plan in
                 AssistantActivityDay.Plan(
                     id: plan.id.uuidString, title: String(plan.title.prefix(200)),
-                    start: stamp.instant(plan.span.start), end: stamp.instant(plan.span.end)
+                    start: stamp.instant(plan.span.start), end: stamp.instant(plan.span.end),
+                    categoryId: plan.categoryID, status: plan.status.rawValue, important: plan.isImportant ? true : nil, goalId: plan.parentID?.uuidString
                 )
             }
     }

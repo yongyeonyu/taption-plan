@@ -222,7 +222,7 @@ final class AssistantRelayTests: XCTestCase {
         XCTAssertEqual(batch.commands[0].action, .addMemo(text: "우유 사기", at: at(18, 30)))
         let tomorrowNoon = calendar.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 12))!
         XCTAssertEqual(batch.commands[1].action, .addMemo(text: "내일 메모", at: tomorrowNoon))
-        guard case let .addSchedule(_, start, end, note) = batch.commands[2].action else { return XCTFail() }
+        guard case let .addSchedule(_, start, end, note, _) = batch.commands[2].action else { return XCTFail() }
         XCTAssertEqual(start, calendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 15)))
         XCTAssertNil(end)
         XCTAssertEqual(note, "검진")
