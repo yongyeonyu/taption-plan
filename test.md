@@ -3236,3 +3236,12 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - UI 시험(`TaptionPlanUITests`, 51건) 1차(`ui-1.log`): 통과 14, 실패 30, 건너뜀 7. 밤에 뜨는 「미확인 시간이 있어요」 질문이 홈을 가려 메뉴·날짜 배지를 못 누른 것이 다수(스크린샷 `home-now.png`).
 - Debug 전용 인자 `-noLaunchPrompts`와 `launchWithoutPrompts()`를 넣고 2차(`ui-2.log`): 통과 30, 실패 14, 건너뜀 7. 남은 실패: 첫 실행 튜토리얼 5(새 설치 상태에서만 통과 — 11월 초 기록과 같은 사유), 클립 롤 4·편집기 도구 2(편집기는 열리나 시험이 기다리는 제목 글자 「클립 편집」이 11-05쯤 화면에서 빠짐), 할 일 목록 1·덮어쓰기 1·용돈 1(원인 확인 중). 이번 작업의 회귀로 확인된 것은 없다. 낡은 시험 수정은 따로 진행 중이며 결과는 이어서 적는다.
 - 실기기 확인 없음.
+
+## TSH1114A26 · 여행 공유 앱 0단계 합친 뒤 (2026-11-15 아침, 시뮬레이터)
+
+- 시험 러너 멈춤(「The test runner hung before establishing connection」)은 간헐 증상이었다. 01:54의 탐침은 18건 통과했고, 그 뒤 대기는 내가 죽인 셸이 남긴 빌드 잠금 때문이었다(잠금 제거). 원인은 특정하지 못함 — 다시 나면 한 번 더 돌린다.
+- 0단계 가지를 main에 합침(fast-forward). 구조 지표 기준선·import 경계 통과.
+- 전체 단위 시험(`-only-testing:TaptionPlanTests`, 병렬 끔): 2,890건, 건너뜀 25, 실패 1. 로그 `build/validation/TSH1114A26/stage0-full-unit.log`.
+  - 실패 1건은 `TripShareFoundationTests.testStoreOpensARoomOnTheFakeServerAndForgetsIt` — 시험이 세션이 `live`가 되기 전에 써서 `readOnly(.notStarted)`. 앱 코드가 아니라 시험 결함이라 `live`를 기다리게 고침.
+  - 고친 뒤 `TripShareFoundationTests` 14건 통과(`stage0-foundation-2.log`). 전체 묶음은 고친 뒤 다시 돌리지 않음(세 묶음 합친 뒤 돌릴 예정).
+- 실기기 확인 없음.

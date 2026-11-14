@@ -303,7 +303,7 @@ final class TripShareFoundationTests: XCTestCase {
 
         let opened = await store.open(tripID: "t1")
         let session = try XCTUnwrap(opened)
-        try await session.catchUp()
+        for _ in 0..<1_000 where await session.view().status != .live { try await Task.sleep(for: .milliseconds(5)) }
         _ = try await session.publish(card: ShareMemberCard(name: "가을", color: "#112233"))
         _ = try await session.publish(meta: TripShareMapping.meta(TravelTrip(id: "t1", title: "여행", startDay: "2031-10-01", endDay: "2031-10-02"), budget: 500_000))
         await store.refresh(tripID: "t1")
