@@ -28,7 +28,7 @@ enum AssistantRuleStore {
     static let mirroredKey = "assistantRuleMirroredPaymentRules"
     /// 이 빌드가 실제로 판단에 쓰는 종류. 나머지는 읽을 수는 있어도 쓰지 않으므로 서버에 「건너뜀」으로 알린다.
     nonisolated static let appliedTypes: Set<RuleType> = [.paymentText, .skipWord, .textIgnore, .internalTransfer, .ownAccount, .sourceSwitch,
-                                              .merchantCategory, .receiptHint, .calendarTitle, .rideLine]
+                                              .merchantCategory, .receiptHint, .calendarTitle, .rideLine, .placePairMode]
 
     static func stored(_ defaults: UserDefaults = .standard) -> RuleSet {
         defaults.data(forKey: setKey).flatMap { try? JSONDecoder().decode(RuleSet.self, from: $0) } ?? RuleSet()

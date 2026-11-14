@@ -90,10 +90,11 @@ final class LedgerTests: XCTestCase {
         let edited = AssistantRuleStore.applying([.init(op: "disable", id: "r1"), .init(op: "delete", id: "r3"), .init(op: "enable", id: "r1")], to: set)
         XCTAssertEqual(edited.rules.map(\.id), ["r1", "r2"])
         XCTAssertEqual(edited.rules.first?.enabled, true)
-        // 읽을 수는 있어도 이 빌드가 판단에 쓰지 않는 종류는 「건너뜀」으로 알린다.
-        let parts = AssistantRuleStore.split(edited)
-        XCTAssertEqual(parts.rules.map(\.id), ["r1"])
-        XCTAssertEqual(parts.skipped, ["r2"])
+        // 장소 쌍 규칙도 이 빌드가 쓴다(ACT1114A09). 모르는 종류만 「건너뜀」으로 알린다.
+        let unknown = Rule(id: "r9", type: "later_type", match: ["word": .text("x")], source: .init(by: "ai"))
+        let parts = AssistantRuleStore.split(RuleSet(version: 4, rules: edited.rules + [unknown]))
+        XCTAssertEqual(Set(parts.rules.map(\.id)), ["r1", "r2"])
+        XCTAssertEqual(parts.skipped, ["r9"])
         XCTAssertEqual(AssistantRuleStore.stableID("광고"), AssistantRuleStore.stableID("광고"))
         XCTAssertNotEqual(AssistantRuleStore.stableID("광고"), AssistantRuleStore.stableID("이벤트"))
 

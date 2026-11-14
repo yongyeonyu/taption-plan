@@ -118,6 +118,8 @@ enum SensorTravelDerivation {
         var boardingDecisions: [TransitBoardingDecision]
         var maximumGap: TimeInterval
         var registeredCarAudioNames: Set<String>
+        /// AI 규칙 사본(ACT1114A09). 장소 쌍 → 수단을 사용자 교정이 없을 때만 본다.
+        var rules: [TaptionRules.Rule] = []
     }
 
     struct Generated: Sendable {
@@ -140,7 +142,8 @@ enum SensorTravelDerivation {
                     input.corrections,
                     to: ClassifierAdapter.resolvingTravelModes(input.inferredTravel, timeline: input.timeline),
                     places: input.basePlaces,
-                    readings: input.readings
+                    readings: input.readings,
+                    rules: input.rules
                 ),
                 activities: input.motionActivities,
                 readings: input.readings

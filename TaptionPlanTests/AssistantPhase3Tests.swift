@@ -2415,4 +2415,47 @@ extension AssistantPhase3Tests {
         XCTAssertEqual(AssistantScreenRequest(defaults: store).take(), .dataProtection)
         XCTAssertFalse(AssistantOperations.all.contains { ["setAppLock", "changePin", "eraseAllData"].contains($0.spec.name) }, "잠금·PIN·전부 지우기는 넣지 않는다")
     }
+
+    /// 장소 쌍 규칙은 사용자 교정이 없는 구간에서만 수단을 정하고, 확정으로 올리지 않는다.
+    func testPlacePairRuleSetsTheModeOnlyWithoutAUserCorrection() throws {
+        let start = at(9), hour: TimeInterval = 3_600
+        let places = [
+            PlaceStay(placeKey: "a", displayName: "집", span: TimeSpan(start: start.addingTimeInterval(-hour), end: start), confidence: .high),
+            PlaceStay(placeKey: "b", displayName: "회사", span: TimeSpan(start: start.addingTimeInterval(hour), end: start.addingTimeInterval(2 * hour)), confidence: .high),
+        ]
+        let segment = TravelSegment(
+            fromPlaceID: places[0].id, toPlaceID: places[1].id, mode: .car,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)), distanceMeters: 9_000, confidence: .low, evidence: ["센서 판정"]
+        )
+        let bus = Rule(id: "r1", type: "place_pair_mode", match: ["from": .text("집"), "to": .text("회사")], result: ["mode": .text("bus")], source: .init(by: "ai"))
+        XCTAssertTrue(AssistantRuleStore.appliedTypes.contains(.placePairMode))
+
+        let ruled = try XCTUnwrap(MovementCorrectionEngine.applying([], to: [segment], places: places, rules: [bus]).first)
+        XCTAssertEqual(ruled.mode, .bus)
+        XCTAssertFalse(ruled.isConfirmed)
+        XCTAssertEqual(ruled.confidence, .low)
+        XCTAssertTrue(ruled.evidence.contains(MovementCorrectionEngine.ruleEvidence))
+        XCTAssertEqual(MovementCorrectionEngine.applying([], to: [segment], places: places).first, segment, "규칙이 없으면 그대로다")
+
+        // 반대 방향·다른 장소에는 쓰지 않는다.
+        var back = segment
+        back.fromPlaceID = places[1].id
+        back.toPlaceID = places[0].id
+        XCTAssertEqual(MovementCorrectionEngine.applying([], to: [back], places: places, rules: [bus]).first?.mode, .car)
+
+        // 사용자 교정이 있으면 규칙을 보지 않는다.
+        let corrections = MovementCorrectionEngine.recording(mode: .cycling, for: segment, places: places, existing: [])
+        let corrected = try XCTUnwrap(MovementCorrectionEngine.applying(corrections, to: [segment], places: places, rules: [bus]).first)
+        XCTAssertEqual(corrected.mode, .cycling)
+        XCTAssertTrue(corrected.isConfirmed)
+
+        // 지하철은 유효한 노선이 있어야 한다(다른 날 기억과 같은 조건).
+        let subway = Rule(id: "r2", type: "place_pair_mode", match: ["from": .text("집"), "to": .text("회사")], result: ["mode": .text("subway")], source: .init(by: "ai"))
+        XCTAssertEqual(MovementCorrectionEngine.applying([], to: [segment], places: places, rules: [subway]).first?.mode, .car)
+        // 확정된 구간은 건드리지 않는다.
+        var confirmed = segment
+        confirmed.isConfirmed = true
+        XCTAssertEqual(MovementCorrectionEngine.applying([], to: [confirmed], places: places, rules: [bus]).first?.mode, .car)
+        XCTAssertEqual(Set(MovementCorrectionEngine.ruleModes.keys), Set(RuleShape.modes))
+    }
 }
