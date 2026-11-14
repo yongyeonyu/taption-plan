@@ -579,7 +579,8 @@ extension AppModel {
             corrections: snapshot.settings.movementCorrections,
             boardingDecisions: snapshot.settings.transitBoardingDecisions,
             maximumGap: max(5 * 60, snapshot.settings.gpsLoggingPreferences.interval + 60),
-            registeredCarAudioNames: Set(settings.registeredCarAudioNames)
+            registeredCarAudioNames: Set(settings.registeredCarAudioNames),
+            rules: AssistantRuleSnapshot.rules
         )
         let generated = await SensorTravelDerivation.generatedInBackground(travelInput)
         guard !Task.isCancelled, acceptsDataMutation() else { return false }

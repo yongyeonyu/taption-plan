@@ -2095,3 +2095,423 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertEqual(Phase3RelayStub.requests.count, 4, "지운 뒤에는 아무것도 보내지 않는다")
     }
 }
+
+// MARK: - 등록부 동작 5·6묶음, 장소 쌍 규칙, 새 규칙 기록 (ACT1114A09)
+
+extension AssistantPhase3Tests {
+    private func send(_ model: AppModel, _ action: String, _ extra: [String: Any], store: UserDefaults) async throws -> (reason: String?, entry: AssistantLogEntry?) {
+        let applied = await model.applyAssistantCommands(try batch([command("c-\(UUID().uuidString)", action, extra)]), defaults: store)
+        let outcome = try XCTUnwrap(applied)
+        return (outcome.results.first?.reason, outcome.entries.first)
+    }
+
+    private func invalid(_ action: String, _ extra: [String: Any]) throws -> Bool {
+        try batch([command("x", action, extra)]).invalidIDs == ["x"]
+    }
+
+    func testCatalogAndSystemOperationsParseWithTheServerRules() throws {
+        let id = UUID().uuidString
+        let good: [(String, [String: Any])] = [
+            ("moveCategory", ["categoryId": "work", "position": 1]),
+            ("deleteCategory", ["categoryId": "custom-1", "moveTo": "work"]),
+            ("setPlaceFloor", ["placeId": id, "floor": -2]),
+            ("addMyStop", ["name": "집 앞 정류장", "kind": "busStop", "latitude": 10.5, "longitude": 20.5]),
+            ("addMyStop", ["name": "역", "kind": "subwayStation", "latitude": 10.5, "longitude": 20.5, "floor": -3]),
+            ("updateMyStop", ["stopId": id, "name": "새 이름"]),
+            ("updateMyStop", ["stopId": id, "clearFloor": true]),
+            ("deleteMyStop", ["stopId": id]),
+            ("setDayCardItems", ["items": ["sleep", "steps", "memos"]]),
+            ("setDayCardItems", ["items": [String]()]),
+            ("setDayCardTime", ["time": "07:30"]),
+            ("setAlert", ["alert": "wakeUp", "enabled": false]),
+            ("setCatOutfit", ["accessoryId": "cat.accessory.sample"]),
+            ("refreshNow", ["target": "cloud"]),
+            ("stopTracking", [:]),
+            ("disconnectCalendar", ["calendar": "device"]),
+            ("restoreFromBackup", [:]),
+            ("setSetting", ["setting": "strideCentimeters", "value": 72]),
+            ("setSetting", ["setting": "watchAcceleration", "value": "balanced"]),
+            ("setSetting", ["setting": "watchDataSync", "value": "off"]),
+            ("setSetting", ["setting": "location", "value": false]),
+            ("setSetting", ["setting": "photos", "value": false]),
+        ]
+        for (action, extra) in good { XCTAssertFalse(try invalid(action, extra), "\(action) \(extra)") }
+        let bad: [(String, [String: Any])] = [
+            ("moveCategory", ["categoryId": "work", "position": 0]),
+            ("moveCategory", ["categoryId": "work"]),
+            ("deleteCategory", ["categoryId": "work", "moveTo": "work"]),
+            ("deleteCategory", ["categoryId": "work"]),
+            ("setPlaceFloor", ["placeId": id, "floor": 101]),
+            ("setPlaceFloor", ["placeId": "p1", "floor": 2]),
+            ("addMyStop", ["name": "역", "kind": "tram", "latitude": 10.5, "longitude": 20.5]),
+            ("addMyStop", ["name": "역", "kind": "busStop", "latitude": 91, "longitude": 20.5]),
+            ("addMyStop", ["name": "역", "kind": "busStop", "latitude": 10.5]),
+            ("addMyStop", ["name": "역", "kind": "busStop", "latitude": 10.5, "longitude": 20.5, "floor": 500]),
+            ("updateMyStop", ["stopId": id]),
+            ("updateMyStop", ["stopId": id, "floor": 2, "clearFloor": true]),
+            ("updateMyStop", ["stopId": id, "clearFloor": false]),
+            ("deleteMyStop", ["stopId": "s1"]),
+            ("setDayCardItems", ["items": ["sleep", "sleep"]]),
+            ("setDayCardItems", ["items": ["sleep", "steps", "memos", "work", "study"]]),
+            ("setDayCardItems", ["items": ["mood"]]),
+            ("setDayCardTime", ["time": "24:00"]),
+            ("setAlert", ["alert": "nearbyMemo", "enabled": true]),
+            ("setAlert", ["alert": "wakeUp"]),
+            ("setCatOutfit", ["accessoryId": "hat"]),
+            ("refreshNow", ["target": "all"]),
+            ("disconnectCalendar", ["calendar": "outlook"]),
+            ("setSetting", ["setting": "strideCentimeters", "value": 20]),
+            ("setSetting", ["setting": "strideCentimeters", "value": 72.5]),
+            ("setSetting", ["setting": "watchAcceleration", "value": "max"]),
+            ("setSetting", ["setting": "location", "value": true]),
+            ("setSetting", ["setting": "photos", "value": true]),
+            ("setAppLock", ["enabled": true]),
+            ("changePin", ["pin": "000000"]),
+            ("eraseAllData", [:]),
+        ]
+        for (action, extra) in bad { XCTAssertTrue(try invalid(action, extra), "\(action) \(extra)") }
+
+        let kinds = try batch(good.prefix(17).enumerated().map { command("k\($0.offset)", $0.element.0, $0.element.1) }).commands.map(\.action.kind.rawValue)
+        XCTAssertEqual(Set(kinds), Set((AssistantOperations.catalog + AssistantOperations.system).map { $0.spec.name }))
+        XCTAssertEqual(Set(AssistantActionTogglesView.kinds(deleting: true).map(\.rawValue)).intersection(kinds), ["deleteCategory", "deleteMyStop", "disconnectCalendar", "restoreFromBackup"])
+        // 값 목록이 화면의 것과 같다.
+        XCTAssertEqual(AssistantSetting.watchProfiles.count, TaptionWatchAccelerationProfile.allCases.count)
+        XCTAssertEqual(AssistantSetting.watchProfiles.count, TaptionWatchDataSyncProfile.allCases.count)
+        let guide = AssistantOperations.guide(command: #"{"action":"#)
+        XCTAssertTrue(guide.contains(#"{"action":"stopTracking"} (ends"#), "칸이 없는 동작의 안내도 JSON 꼴이다")
+        XCTAssertTrue(guide.contains(#"{"action":"setAlert","alert":"arriveCompany|"#))
+    }
+
+    func testCategoriesAreMovedAndDeletedAndUndone() async throws {
+        let store = defaults()
+        let model = await makeModel()
+        func order() -> [String] { model.snapshot.categories.sorted { $0.sortOrder < $1.sortOrder }.map(\.id).filter { $0 != "unconfirmed" } }
+        let start = order()
+        XCTAssertGreaterThanOrEqual(start.count, 3)
+        let last = try XCTUnwrap(start.last)
+
+        let moved = try await send(model, "moveCategory", ["categoryId": last, "position": 1], store: store)
+        XCTAssertNil(moved.reason)
+        XCTAssertEqual(order(), [last] + start.dropLast())
+        let same = try await send(model, "moveCategory", ["categoryId": last, "position": 1], store: store)
+        XCTAssertEqual(same.reason, "no_change")
+        let missing = try await send(model, "moveCategory", ["categoryId": "nope", "position": 2], store: store)
+        XCTAssertEqual(missing.reason, "unknown_category")
+        let down = try await send(model, "moveCategory", ["categoryId": last, "position": 99], store: store)
+        XCTAssertNil(down.reason)
+        XCTAssertEqual(order(), start, "목록보다 큰 자리는 맨 끝이다")
+        await undo(model, try XCTUnwrap(down.entry), store: store)
+        XCTAssertEqual(order(), [last] + start.dropLast())
+        await undo(model, try XCTUnwrap(moved.entry), store: store)
+        XCTAssertEqual(order(), start)
+
+        // 내가 만든 분류만 지우고, 그 분류의 일정·기록은 옮긴다.
+        let made = try await send(model, "addCategory", ["name": "독서", "color": "#3366FF"], store: store)
+        XCTAssertNil(made.reason)
+        let reading = try XCTUnwrap(model.snapshot.categories.first { $0.name == "독서" })
+        let keep = try XCTUnwrap(start.first)
+        let planned = try await send(model, "addSchedule", ["title": "책", "start": "2026-11-10T20:00+09:00", "end": "2026-11-10T21:00+09:00", "categoryId": reading.id], store: store)
+        XCTAssertNil(planned.reason)
+        XCTAssertEqual(model.snapshot.plans.first { $0.title == "책" }?.categoryID, reading.id)
+
+        let builtIn = try await send(model, "deleteCategory", ["categoryId": keep, "moveTo": last], store: store)
+        XCTAssertEqual(builtIn.reason, "not_editable")
+        let nowhere = try await send(model, "deleteCategory", ["categoryId": reading.id, "moveTo": "nope"], store: store)
+        XCTAssertEqual(nowhere.reason, "unknown_category")
+        let deleted = try await send(model, "deleteCategory", ["categoryId": reading.id, "moveTo": keep], store: store)
+        XCTAssertNil(deleted.reason)
+        XCTAssertNil(model.snapshot.categories.first { $0.id == reading.id })
+        XCTAssertEqual(model.snapshot.plans.first { $0.title == "책" }?.categoryID, keep)
+        XCTAssertNil(model.userFacingError)
+        await undo(model, try XCTUnwrap(deleted.entry), store: store)
+        XCTAssertEqual(model.snapshot.categories.first { $0.id == reading.id }, reading)
+        XCTAssertEqual(model.snapshot.plans.first { $0.title == "책" }?.categoryID, reading.id)
+    }
+
+    func testPlaceFloorAndMyStopsApplyAndUndo() async throws {
+        let store = defaults()
+        let model = await makeModel()
+        let made = try await send(model, "addPlace", ["name": "체육관"], store: store)
+        XCTAssertNil(made.reason)
+        let gym = try XCTUnwrap(model.snapshot.settings.frequentPlaces.first { $0.name == "체육관" })
+        func floor() -> Int? { model.snapshot.settings.frequentPlaces.first { $0.id == gym.id }?.floor }
+
+        let third = try await send(model, "setPlaceFloor", ["placeId": gym.id.uuidString, "floor": 3], store: store)
+        XCTAssertNil(third.reason)
+        XCTAssertEqual(floor(), 3)
+        let again = try await send(model, "setPlaceFloor", ["placeId": gym.id.uuidString, "floor": 3], store: store)
+        XCTAssertEqual(again.reason, "no_change")
+        let nowhere = try await send(model, "setPlaceFloor", ["placeId": UUID().uuidString, "floor": 3], store: store)
+        XCTAssertEqual(nowhere.reason, "no_place")
+        await undo(model, try XCTUnwrap(third.entry), store: store)
+        XCTAssertEqual(floor(), gym.floor)
+
+        func stops() -> [UserTransitLocation] { model.snapshot.settings.userTransitLocations }
+        let added = try await send(model, "addMyStop", ["name": "집 앞 정류장", "kind": "busStop", "latitude": 10.5, "longitude": 20.5, "floor": 1], store: store)
+        XCTAssertNil(added.reason)
+        let stop = try XCTUnwrap(stops().first)
+        XCTAssertEqual([stop.name, stop.kind.rawValue], ["집 앞 정류장", "busStop"])
+        XCTAssertEqual([stop.point.latitude, stop.point.longitude, Double(stop.floor ?? 0)], [10.5, 20.5, 1])
+        let twice = try await send(model, "addMyStop", ["name": "집 앞 정류장", "kind": "busStop", "latitude": 11, "longitude": 21], store: store)
+        XCTAssertEqual(twice.reason, "duplicate")
+
+        let renamed = try await send(model, "updateMyStop", ["stopId": stop.id.uuidString, "name": "큰길 정류장", "clearFloor": true], store: store)
+        XCTAssertNil(renamed.reason)
+        XCTAssertEqual(stops().first?.name, "큰길 정류장")
+        XCTAssertNil(stops().first?.floor)
+        let unchanged = try await send(model, "updateMyStop", ["stopId": stop.id.uuidString, "name": "큰길 정류장"], store: store)
+        XCTAssertEqual(unchanged.reason, "no_change")
+        let unknown = try await send(model, "deleteMyStop", ["stopId": UUID().uuidString], store: store)
+        XCTAssertEqual(unknown.reason, "no_stop")
+
+        // 앱 상태에는 이름·종류·층만, 「머문 곳 이름」 공유 수준에서만 올린다.
+        var input = await AssistantAppStateSync.input(model: model, preferences: .test(store), now: at(15), calendar: calendar)
+        XCTAssertNil(AssistantAppStateSync.make(input).settings.myStops)
+        input.shareLevel = .visits
+        let state = AssistantAppStateSync.make(input)
+        XCTAssertEqual(state.settings.myStops?.map(\.name), ["큰길 정류장"])
+        XCTAssertEqual(state.settings.myStops?.first?.kind, "busStop")
+        let json = String(decoding: try XCTUnwrap(AssistantAppStateSync.body(state)), as: UTF8.self)
+        XCTAssertFalse(json.contains("10.5") || json.contains("20.5") || json.contains("latitude"), "좌표는 내보내지 않는다")
+
+        let removed = try await send(model, "deleteMyStop", ["stopId": stop.id.uuidString], store: store)
+        XCTAssertNil(removed.reason)
+        XCTAssertTrue(stops().isEmpty)
+        await undo(model, try XCTUnwrap(removed.entry), store: store)
+        XCTAssertEqual(stops().map(\.name), ["큰길 정류장"])
+        await undo(model, try XCTUnwrap(renamed.entry), store: store)
+        XCTAssertEqual(stops().first, stop)
+        await undo(model, try XCTUnwrap(added.entry), store: store)
+        XCTAssertTrue(stops().isEmpty)
+    }
+
+    func testDayCardAlertsOutfitAndStrideApplyAndUndo() async throws {
+        let store = defaults()
+        let model = await makeModel()
+
+        let items = try await send(model, "setDayCardItems", ["items": ["sleep", "steps", "memos"]], store: store)
+        XCTAssertNil(items.reason)
+        XCTAssertEqual(MapHomeCardMetricSelection.load(store), ["sleep", "steps", "memos"])
+        let sameItems = try await send(model, "setDayCardItems", ["items": ["sleep", "steps", "memos"]], store: store)
+        XCTAssertEqual(sameItems.reason, "no_change")
+        await undo(model, try XCTUnwrap(items.entry), store: store)
+        XCTAssertEqual(MapHomeCardMetricSelection.load(store), [])
+
+        XCTAssertEqual(AssistantOperations.dayCardTime(store), "08:00", "정하기 전에는 오전 8시")
+        let eight = try await send(model, "setDayCardTime", ["time": "08:00"], store: store)
+        XCTAssertEqual(eight.reason, "no_change")
+        let time = try await send(model, "setDayCardTime", ["time": "21:45"], store: store)
+        XCTAssertNil(time.reason)
+        XCTAssertEqual([MapHomeAlarmSettings.dailyCardTime(store).hour, MapHomeAlarmSettings.dailyCardTime(store).minute], [21, 45])
+        await undo(model, try XCTUnwrap(time.entry), store: store)
+        XCTAssertEqual(AssistantOperations.dayCardTime(store), "08:00")
+
+        XCTAssertTrue(MapHomeAlarmSettings.stored(store).enabled.contains(.wakeUp))
+        let off = try await send(model, "setAlert", ["alert": "wakeUp", "enabled": false], store: store)
+        XCTAssertNil(off.reason)
+        XCTAssertFalse(MapHomeAlarmSettings.stored(store).enabled.contains(.wakeUp))
+        XCTAssertTrue(MapHomeAlarmSettings.stored(store).enabled.contains(.dailyCard), "다른 알림은 그대로다")
+        let offAgain = try await send(model, "setAlert", ["alert": "wakeUp", "enabled": false], store: store)
+        XCTAssertEqual(offAgain.reason, "no_change")
+        let on = try await send(model, "setAlert", ["alert": "rateChange", "enabled": true], store: store)
+        XCTAssertNil(on.reason)
+        let stale = await model.undoAssistantEntry(try XCTUnwrap(off.entry), preferences: .test(store))
+        XCTAssertFalse(stale, "그 뒤 알림 설정이 바뀌었으면 되돌리지 않는다")
+        await undo(model, try XCTUnwrap(on.entry), store: store)
+        await undo(model, try XCTUnwrap(off.entry), store: store)
+        XCTAssertEqual(MapHomeAlarmSettings.stored(store).enabled, MapHomeAlarmSettings.defaultEnabled)
+
+        // 받은 장식만 입힌다.
+        let none = try await send(model, "setCatOutfit", ["accessoryId": "cat.accessory.sample"], store: store)
+        XCTAssertEqual(none.reason, "no_accessory")
+        let landmark = try XCTUnwrap(MapHomeLandmarkCatalog.candidates.first)
+        var history = MapHomeGrowthHistory.initial(for: at(9))
+        history.season.accessories = [landmark.accessoryID]
+        store.set(try JSONEncoder().encode(history), forKey: MapHomeGrowthPolicy.storageKey)
+        let notMine = try await send(model, "setCatOutfit", ["accessoryId": "cat.accessory.sample"], store: store)
+        XCTAssertEqual(notMine.reason, "no_accessory")
+        let worn = try await send(model, "setCatOutfit", ["accessoryId": landmark.accessoryID], store: store)
+        XCTAssertNil(worn.reason)
+        XCTAssertEqual(AssistantOperations.growthHistory(store)?.season.isEquipped(landmark.accessoryID), true)
+        let wornAgain = try await send(model, "setCatOutfit", ["accessoryId": landmark.accessoryID], store: store)
+        XCTAssertEqual(wornAgain.reason, "no_change")
+        let input = await AssistantAppStateSync.input(model: model, preferences: .test(store), now: at(15), calendar: calendar)
+        let settings = AssistantAppStateSync.make(input).settings
+        XCTAssertEqual(settings.outfit, .init(owned: [landmark.accessoryID], worn: [landmark.accessoryID]))
+        XCTAssertEqual(settings.dayCard, .init(items: [], time: "08:00"))
+        XCTAssertEqual(settings.alertsOn, MapHomeAlarmSettings.defaultEnabled.map(\.rawValue).sorted())
+        await undo(model, try XCTUnwrap(worn.entry), store: store)
+        XCTAssertEqual(AssistantOperations.growthHistory(store)?.season.isEquipped(landmark.accessoryID), false)
+
+        // 보폭은 보폭 보정 화면과 같은 키에 m로 둔다.
+        let stride = try await send(model, "setSetting", ["setting": "strideCentimeters", "value": 72], store: store)
+        XCTAssertNil(stride.reason)
+        XCTAssertEqual(store.double(forKey: MapHomeStride.storageKey), 0.72, accuracy: 0.0001)
+        XCTAssertEqual(AssistantSetting.strideCentimeters.read(store), "72")
+        let sameStride = try await send(model, "setSetting", ["setting": "strideCentimeters", "value": 72], store: store)
+        XCTAssertEqual(sameStride.reason, "no_change")
+        await undo(model, try XCTUnwrap(stride.entry), store: store)
+        XCTAssertNil(store.object(forKey: MapHomeStride.storageKey))
+    }
+
+    func testWatchLocationPhotosSettingsAndSystemOperations() async throws {
+        let store = defaults()
+        let model = await makeModel()
+
+        let target = model.snapshot.settings.watchAccelerationProfile == .batterySaver ? "balanced" : "batterySaver"
+        let watch = try await send(model, "setSetting", ["setting": "watchAcceleration", "value": target], store: store)
+        XCTAssertNil(watch.reason)
+        XCTAssertEqual(AssistantSetting.watchAcceleration.read(model: model), target)
+
+        // 위치 수집·사진은 끄기만 한다(설정의 스위치와 같은 함수).
+        model.snapshot.settings.locationEnabled = true
+        let location = try await send(model, "setSetting", ["setting": "location", "value": false], store: store)
+        XCTAssertNil(location.reason)
+        XCTAssertFalse(model.snapshot.settings.locationEnabled)
+        let locationAgain = try await send(model, "setSetting", ["setting": "location", "value": false], store: store)
+        XCTAssertEqual(locationAgain.reason, "no_change")
+        model.snapshot.settings.showsPhotos = true
+        let photos = try await send(model, "setSetting", ["setting": "photos", "value": false], store: store)
+        XCTAssertNil(photos.reason)
+        XCTAssertFalse(model.snapshot.settings.showsPhotos)
+
+        // 새로고침은 바꾸는 것이 없고 되돌릴 것도 없다. 이 시험 모델에는 iCloud가 없다.
+        let refreshed = try await send(model, "refreshNow", ["target": "records"], store: store)
+        XCTAssertNil(refreshed.reason)
+        XCTAssertEqual(refreshed.entry?.irreversible, true)
+        XCTAssertEqual(refreshed.entry?.canUndo, false)
+        let cloud = try await send(model, "refreshNow", ["target": "cloud"], store: store)
+        XCTAssertEqual(cloud.reason, "not_available")
+
+        let idle = try await send(model, "stopTracking", [:], store: store)
+        XCTAssertEqual(idle.reason, "no_tracking")
+        model.activeTrackingSession = TrackingSession(kind: .walking, startedAt: at(14))
+        let stopped = try await send(model, "stopTracking", [:], store: store)
+        XCTAssertNil(stopped.reason)
+        XCTAssertNil(model.activeTrackingSession)
+        XCTAssertEqual(stopped.entry?.canUndo, false)
+
+        let unlinked = try await send(model, "disconnectCalendar", ["calendar": "device"], store: store)
+        XCTAssertEqual(unlinked.reason, "no_change")
+        model.snapshot.settings.selectedCalendarIDs = ["cal-1"]
+        let cut = try await send(model, "disconnectCalendar", ["calendar": "device"], store: store)
+        XCTAssertNil(cut.reason)
+        XCTAssertTrue(model.snapshot.settings.selectedCalendarIDs.isEmpty)
+        XCTAssertEqual(cut.entry?.irreversible, true)
+        let google = try await send(model, "disconnectCalendar", ["calendar": "google"], store: store)
+        XCTAssertEqual(google.reason, "no_change", "시험 저장소로는 실제 계정을 건드리지 않는다")
+
+        // 복원은 사용자가 켜기 전에는 꺼져 있고, 켜도 화면만 연다.
+        let restore = AssistantActionKind.operation("restoreFromBackup")
+        XCTAssertFalse(AssistantActionToggles.isEnabled(restore, defaults: store))
+        XCTAssertTrue(AssistantActionToggles.isEnabled(.operation("disconnectCalendar"), defaults: store))
+        let refused = try await send(model, "restoreFromBackup", [:], store: store)
+        XCTAssertEqual(refused.reason, "disabled")
+        let input = await AssistantAppStateSync.input(model: model, preferences: .test(store), now: at(15), calendar: calendar)
+        XCTAssertTrue(AssistantAppStateSync.make(input).settings.actionsOff.contains("restoreFromBackup"))
+        AssistantActionToggles.set(restore, enabled: true, defaults: store)
+        let opened = try await send(model, "restoreFromBackup", [:], store: store)
+        XCTAssertNil(opened.reason)
+        XCTAssertEqual(AssistantScreenRequest(defaults: store).take(), .dataProtection)
+        XCTAssertFalse(AssistantOperations.all.contains { ["setAppLock", "changePin", "eraseAllData"].contains($0.spec.name) }, "잠금·PIN·전부 지우기는 넣지 않는다")
+    }
+
+    /// 장소 쌍 규칙은 사용자 교정이 없는 구간에서만 수단을 정하고, 확정으로 올리지 않는다.
+    func testPlacePairRuleSetsTheModeOnlyWithoutAUserCorrection() throws {
+        let start = at(9), hour: TimeInterval = 3_600
+        let places = [
+            PlaceStay(placeKey: "a", displayName: "집", span: TimeSpan(start: start.addingTimeInterval(-hour), end: start), confidence: .high),
+            PlaceStay(placeKey: "b", displayName: "회사", span: TimeSpan(start: start.addingTimeInterval(hour), end: start.addingTimeInterval(2 * hour)), confidence: .high),
+        ]
+        let segment = TravelSegment(
+            fromPlaceID: places[0].id, toPlaceID: places[1].id, mode: .car,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)), distanceMeters: 9_000, confidence: .low, evidence: ["센서 판정"]
+        )
+        let bus = Rule(id: "r1", type: "place_pair_mode", match: ["from": .text("집"), "to": .text("회사")], result: ["mode": .text("bus")], source: .init(by: "ai"))
+        XCTAssertTrue(AssistantRuleStore.appliedTypes.contains(.placePairMode))
+
+        let ruled = try XCTUnwrap(MovementCorrectionEngine.applying([], to: [segment], places: places, rules: [bus]).first)
+        XCTAssertEqual(ruled.mode, .bus)
+        XCTAssertFalse(ruled.isConfirmed)
+        XCTAssertEqual(ruled.confidence, .low)
+        XCTAssertTrue(ruled.evidence.contains(MovementCorrectionEngine.ruleEvidence))
+        XCTAssertEqual(MovementCorrectionEngine.applying([], to: [segment], places: places).first, segment, "규칙이 없으면 그대로다")
+
+        // 반대 방향·다른 장소에는 쓰지 않는다.
+        var back = segment
+        back.fromPlaceID = places[1].id
+        back.toPlaceID = places[0].id
+        XCTAssertEqual(MovementCorrectionEngine.applying([], to: [back], places: places, rules: [bus]).first?.mode, .car)
+
+        // 사용자 교정이 있으면 규칙을 보지 않는다.
+        let corrections = MovementCorrectionEngine.recording(mode: .cycling, for: segment, places: places, existing: [])
+        let corrected = try XCTUnwrap(MovementCorrectionEngine.applying(corrections, to: [segment], places: places, rules: [bus]).first)
+        XCTAssertEqual(corrected.mode, .cycling)
+        XCTAssertTrue(corrected.isConfirmed)
+
+        // 지하철은 유효한 노선이 있어야 한다(다른 날 기억과 같은 조건).
+        let subway = Rule(id: "r2", type: "place_pair_mode", match: ["from": .text("집"), "to": .text("회사")], result: ["mode": .text("subway")], source: .init(by: "ai"))
+        XCTAssertEqual(MovementCorrectionEngine.applying([], to: [segment], places: places, rules: [subway]).first?.mode, .car)
+        // 확정된 구간은 건드리지 않는다.
+        var confirmed = segment
+        confirmed.isConfirmed = true
+        XCTAssertEqual(MovementCorrectionEngine.applying([], to: [confirmed], places: places, rules: [bus]).first?.mode, .car)
+        XCTAssertEqual(Set(MovementCorrectionEngine.ruleModes.keys), Set(RuleShape.modes))
+    }
+
+    /// 서버에서 새로 들어온 AI 규칙은 「AI가 한 일」에 남고, 되돌리면 그 규칙이 꺼진다.
+    func testNewAIRulesAreLoggedAndUndoSwitchesThemOff() async throws {
+        let store = defaults()
+        let model = await makeModel()
+        let old = Rule(id: "r0", type: "skip_word", match: ["word": .text("광고")], source: .init(by: "ai"))
+        let learned = Rule(id: "r1", type: "merchant_category", match: ["contains": .list(["빵집"])], result: ["category": .text("cafe")], source: .init(by: "ai", keyId: "aaaa1111", taskId: "t1"))
+        let mine = Rule(id: "r2", type: "skip_word", match: ["word": .text("이벤트")], source: .init(by: "user"))
+        var off = Rule(id: "r3", type: "skip_word", match: ["word": .text("할인")], source: .init(by: "ai"))
+        off.enabled = false
+
+        let entries = AssistantRuleLog.entries(for: [learned, mine, off], defaults: store)
+        XCTAssertEqual(entries.map(\.kind.rawValue), ["rule.merchant_category"], "내가 정한 규칙과 꺼진 규칙은 적지 않는다")
+        let entry = try XCTUnwrap(entries.first)
+        XCTAssertEqual([entry.after, entry.taskID, entry.keyID], ["빵집 → cafe", "t1", "aaaa1111"])
+        XCTAssertEqual(entry.delta.appChange?.ruleID, "r1")
+        XCTAssertEqual(entry.kind.title(.korean), "AI 규칙 받음 · 가게 분류")
+        XCTAssertTrue(AssistantActionToggles.isEnabled(entry.kind, defaults: store))
+        let decoded = try JSONDecoder().decode([AssistantLogEntry].self, from: JSONEncoder().encode(entries))
+        XCTAssertEqual(decoded, entries)
+
+        // 되돌리기 = 그 규칙 끄기. 보낼 것에 남아 서버에도 올라간다.
+        store.set(try JSONEncoder().encode(RuleSet(version: 2, rules: [old, learned, mine])), forKey: AssistantRuleStore.setKey)
+        let undone = await model.undoAssistantEntry(entry, preferences: .test(store))
+        XCTAssertTrue(undone)
+        XCTAssertEqual(AssistantRuleStore.effective(store).rules.first { $0.id == "r1" }?.enabled, false)
+        XCTAssertEqual(AssistantRuleStore.outbox(store), [.init(op: "disable", id: "r1")])
+        XCTAssertEqual(AssistantRuleStore.effective(store).rules.first { $0.id == "r0" }?.enabled, true)
+        let again = await model.undoAssistantEntry(entry, preferences: .test(store))
+        XCTAssertFalse(again, "이미 꺼졌거나 지워진 규칙은 되돌리지 않는다")
+        AssistantRuleSnapshot.set([])
+
+        // 동기화: 전에 받은 사본에 없던 AI 규칙만 적는다. 처음 받는 사본은 적지 않는다.
+        let secrets = AssistantMemorySecrets()
+        _ = secrets.write(String(repeating: "m", count: 43), to: .master)
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("rule-log-\(UUID().uuidString).json")
+        addTeardownBlock { try? FileManager.default.removeItem(at: file) }
+        func sync(_ target: UserDefaults, _ set: RuleSet) async throws -> Bool {
+            let env = environment(secrets, target, status: { _ in 200 })
+            Phase3RelayStub.body = String(decoding: try JSONEncoder().encode(set), as: UTF8.self)
+            return await AssistantRuleStore.sync(env: env, logFile: file)
+        }
+        let fresh = defaults()
+        fresh.set(1, forKey: AssistantKeyLabels.serverCountKey)
+        fresh.set(true, forKey: AssistantRuleStore.migratedKey)
+        let first = try await sync(fresh, RuleSet(version: 1, rules: [old]))
+        XCTAssertTrue(first)
+        XCTAssertTrue(AssistantActionLog.load(from: file).isEmpty)
+        let second = try await sync(fresh, RuleSet(version: 2, rules: [old, learned, mine]))
+        XCTAssertTrue(second)
+        XCTAssertEqual(AssistantActionLog.load(from: file).map(\.kind.rawValue), ["rule.merchant_category"])
+        let third = try await sync(fresh, RuleSet(version: 3, rules: [old, learned, mine]))
+        XCTAssertTrue(third)
+        XCTAssertEqual(AssistantActionLog.load(from: file).count, 1, "이미 있던 규칙은 다시 적지 않는다")
+        AssistantRuleSnapshot.set([])
+    }
+}

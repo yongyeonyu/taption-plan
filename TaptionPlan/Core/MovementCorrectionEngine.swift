@@ -82,14 +82,19 @@ enum MovementCorrectionEngine {
         _ corrections: [TravelModeCorrection],
         to segments: [TravelSegment],
         places: [PlaceStay],
-        readings: [SensorReading] = []
+        readings: [SensorReading] = [],
+        rules: [TaptionRules.Rule] = []
     ) -> [TravelSegment] {
         segments.map { segment in
+            // 사용자 교정이 없는 구간만 AI 규칙을 본다(ACT1114A09). 교정이 있는데 근거와 부딪쳐 못 쓴 구간은 그대로 둔다.
             guard let correction = bestCorrection(
                 for: segment,
                 places: places,
                 in: corrections
-            ), !isContradictedByAutomotive(correction, segment: segment, readings: readings),
+            ) else {
+                return applyingRule(rules, to: segment, places: places, readings: readings)
+            }
+            guard !isContradictedByAutomotive(correction, segment: segment, readings: readings),
                !lacksSubwayProof(correction, segment: segment) else {
                 return segment
             }
@@ -101,6 +106,36 @@ enum MovementCorrectionEngine {
             value.evidence.append("사용자 확인 기억")
             return value
         }
+    }
+
+    static let ruleEvidence = "AI 규칙"
+    /// 규칙의 수단 이름(`RuleShape.modes`) → 앱의 수단.
+    static let ruleModes: [String: TravelMode] = [
+        "walk": .walking, "subway": .subway, "bus": .bus, "car": .car, "train": .train, "flight": .airplane, "cycling": .cycling,
+    ]
+
+    /// 장소 쌍 규칙(`place_pair_mode`)으로 수단을 정한다. 확정된 구간은 건드리지 않고, 확정으로 올리지도 않는다.
+    /// 다른 날의 기억과 같은 조건으로 막는다: 자동차 모션이 대부분이면 철도로 바꾸지 않고, 지하철은 유효한 노선이 있어야 한다.
+    static func applyingRule(
+        _ rules: [TaptionRules.Rule], to segment: TravelSegment, places: [PlaceStay], readings: [SensorReading]
+    ) -> TravelSegment {
+        guard !rules.isEmpty, !segment.isConfirmed,
+              let from = segment.fromPlaceID.flatMap({ id in places.first { $0.id == id }?.displayName }),
+              let to = segment.toPlaceID.flatMap({ id in places.first { $0.id == id }?.displayName }),
+              let learned = RuleEngine.placePairMode(from: from, to: to, rules: rules),
+              let mode = ruleModes[learned.mode], mode != segment.mode else { return segment }
+        let start = segment.span.start.addingTimeInterval(-366 * 86_400)
+        let remembered = TravelModeCorrection(
+            id: UUID(), fromPlaceKey: nil, toPlaceKey: nil, span: TimeSpan(start: start, end: start.addingTimeInterval(60)),
+            mode: mode, inferredMode: segment.mode, inferredConfidence: segment.confidence, updatedAt: start
+        )
+        guard !isContradictedByAutomotive(remembered, segment: segment, readings: readings),
+              !lacksSubwayProof(remembered, segment: segment) else { return segment }
+        var value = segment
+        value.mode = mode
+        value.evidence.removeAll { $0 == ruleEvidence }
+        value.evidence.append(ruleEvidence)
+        return value
     }
 
     static func correction(

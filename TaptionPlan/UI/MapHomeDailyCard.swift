@@ -147,16 +147,16 @@ enum MapHomeCardMetricSelection {
     static let storageKey = "mapHomeDailyCardMetrics"
     static let maximum = 4
 
-    static func load() -> [String] {
-        guard let data = UserDefaults.standard.string(forKey: storageKey)?.data(using: .utf8),
+    static func load(_ defaults: UserDefaults = .standard) -> [String] {
+        guard let data = defaults.string(forKey: storageKey)?.data(using: .utf8),
               let ids = try? JSONDecoder().decode([String].self, from: data) else { return [] }
         return Array(ids.prefix(maximum))
     }
 
-    static func save(_ ids: [String]) {
+    static func save(_ ids: [String], defaults: UserDefaults = .standard) {
         let trimmed = Array(ids.prefix(maximum))
         let data = (try? JSONEncoder().encode(trimmed)) ?? Data("[]".utf8)
-        UserDefaults.standard.set(String(decoding: data, as: UTF8.self), forKey: storageKey)
+        defaults.set(String(decoding: data, as: UTF8.self), forKey: storageKey)
     }
 
     /// 항목 id에 해당하는 값을 카드용 문자열로 바꾼다.

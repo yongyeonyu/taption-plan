@@ -434,6 +434,8 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
     var stored: [Stored]?
     /// 지운 여행 장부. 되돌리면 다시 만든다.
     var deletedLedgerTrip: LedgerTrip?
+    /// 서버에서 새로 받은 AI 규칙(ACT1114A09). 되돌리면 그 규칙을 끈다.
+    var ruleID: String?
 
     struct Stored: Codable, Equatable, Sendable {
         var key: String
@@ -458,6 +460,7 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
             await preferences.ledger.load()
             if preferences.ledger.trip(deletedLedgerTrip.id) != nil { return false }
         }
+        if let ruleID, AssistantRuleStore.effective(preferences.defaults).rules.first(where: { $0.id == ruleID })?.enabled != true { return false }
         return true
     }
 
@@ -474,7 +477,15 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
             if let before = ledgerTrip.before { await preferences.ledger.saveTrip(before) } else { await preferences.ledger.deleteTrip(ledgerTrip.after.id) }
         }
         for value in stored ?? [] { value.undo(preferences.defaults) }
+        // 알림 종류·하루 카드 시각이 돌아갔으면 예약도 맞춘다(화면이 바꿀 때와 같다).
+        if preferences.isLive, (stored ?? []).contains(where: { AssistantOperations.alarmKeys.contains($0.key) }) {
+            await MapHomeAlarmCenter.shared.syncDailyCardSchedule()
+        }
         if let deletedLedgerTrip { await preferences.ledger.saveTrip(deletedLedgerTrip) }
+        if let ruleID {
+            AssistantRuleStore.setEnabled(ruleID, false, defaults: preferences.defaults)
+            if preferences.isLive { Task { await AssistantRuleStore.sync() } }
+        }
     }
 }
 

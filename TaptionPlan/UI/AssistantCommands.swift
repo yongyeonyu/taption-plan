@@ -569,7 +569,7 @@ extension AppModel {
             commandID: command.id, kind: command.action.kind, appliedAt: .now,
             before: result.before, after: result.after, delta: delta,
             keyID: command.keyID, connection: AssistantConnectionName.name(keyID: command.keyID, source: command.source, defaults: defaults),
-            taskID: command.taskID
+            taskID: command.taskID, irreversible: result.cannotUndo ? true : nil
         )
     }
 }

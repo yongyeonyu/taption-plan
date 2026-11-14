@@ -294,6 +294,7 @@ export const TOLL_VEHICLES = ["standard", "compact", "electric"];
 export const SALARY_MODES = ["salary", "hourly"];
 export const HOURLY_TAXES = ["threePointThree", "fourInsurance", "none"];
 export const CATS = ["white", "calico", "mackerel"];
+export const WATCH_PROFILES = ["off", "batterySaver", "balanced", "accuracy"];
 export const SETTINGS = {
   tollVehicle: oneOf(TOLL_VEHICLES),
   salaryMode: oneOf(SALARY_MODES),
@@ -314,6 +315,12 @@ export const SETTINGS = {
   notifications: (v) => v === false,
   // ACT1114A07: 지도에 보일 메모.
   memoDisplay: oneOf(["all", "located", "hidden"]),
+  // ACT1114A09: 보폭(cm), Watch 수집 단계, 위치 수집·사진은 끄기만(켜기는 iOS 권한 창이 필요하다).
+  strideCentimeters: (v) => Number.isInteger(v) && v >= 30 && v <= 150,
+  watchAcceleration: oneOf(WATCH_PROFILES),
+  watchDataSync: oneOf(WATCH_PROFILES),
+  location: (v) => v === false,
+  photos: (v) => v === false,
 };
 export const SETTING_NAMES = Object.keys(SETTINGS);
 // ACD1112A01: 승인 요청 종류. 값이 있는 것은 그 값만, 없는 것은 값을 받지 않는다.

@@ -117,7 +117,9 @@ final class AssistantCommandEditTests: XCTestCase {
 
     func testActionTogglesDefaultOnAndRejectWhenOff() async throws {
         let store = defaults()
-        XCTAssertTrue(AssistantActionKind.allCases.allSatisfy { AssistantActionToggles.isEnabled($0, defaults: store) })
+        // 사용자가 켜기 전에는 꺼져 있는 동작(백업에서 복원)만 빼고 모두 켜져 있다.
+        XCTAssertTrue(AssistantActionKind.allCases.allSatisfy { AssistantActionToggles.isEnabled($0, defaults: store) != (AssistantOperations.spec($0.rawValue)?.startsOff ?? false) })
+        XCTAssertEqual(AssistantOperations.all.filter { $0.spec.startsOff }.map { $0.spec.name }, ["restoreFromBackup"])
         AssistantActionToggles.set(.deleteMemo, enabled: false, defaults: store)
         XCTAssertFalse(AssistantActionToggles.isEnabled(.deleteMemo, defaults: store))
         XCTAssertTrue(AssistantActionToggles.isEnabled(.updateMemo, defaults: store))
@@ -415,7 +417,7 @@ extension AssistantCommandEditTests {
         }
         for spec in app {
             XCTAssertFalse(spec.title(.korean).isEmpty)
-            XCTAssertTrue(spec.guide.hasPrefix("\""), spec.name)
+            XCTAssertTrue(spec.guide.hasPrefix(spec.fields.isEmpty ? "}" : "\""), spec.name)
             XCTAssertNil(["format", "version", "id", "action", "taskId", "keyId", "source"].first(where: spec.fields.contains), spec.name)
         }
     }
@@ -511,7 +513,7 @@ extension AssistantCommandEditTests {
 
         let text = TripRelay.assistantSetupText(host: "relay.example", key: "key")
         for spec in AssistantOperations.all.map { $0.spec } {
-            XCTAssertTrue(text.contains("\"action\":\"\(spec.name)\",\"\(spec.fields[0])\""), spec.name)
+            XCTAssertTrue(text.contains("\"action\":\"\(spec.name)\"" + (spec.fields.first.map { ",\"\($0)\"" } ?? "}")), spec.name)
         }
         XCTAssertFalse(TripRelay.assistantSetupText(host: "relay.example", key: "key", scope: .read).contains("setFxRate"))
     }

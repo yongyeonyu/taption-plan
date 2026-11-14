@@ -49,7 +49,7 @@ export function makeRegistry() {
     add(name, spec) {
       if (specs.has(name)) throw new Error("duplicate action " + name);
       if (!/^[a-z][A-Za-z]{2,40}$/.test(name) || !/^[a-z][a-z_]{2,50}$/.test(spec.tool ?? "")) throw new Error("bad action name " + name);
-      for (const reserved of ["format", "version", "id", "action", "taskId"]) if (reserved in spec.fields) throw new Error("reserved field " + reserved);
+      for (const reserved of ["format", "version", "id", "action", "taskId", "keyId", "source"]) if (reserved in spec.fields) throw new Error("reserved field " + reserved);
       specs.set(name, { destructive: true, since: 0, ...spec });
       return this;
     },
@@ -279,4 +279,120 @@ registry
       candidateId: f.match(/^[0-9a-f]{16}$/, "Candidate id from get_app_state boarding").required_(),
       decision: f.oneOf(["confirm", "reject"], "confirm or reject").required_(),
     },
+  });
+
+// 5묶음: 분류·장소·설정 (ACT1114A09). 값 목록은 앱의 것과 같다(층 범위, 정류장 종류, 하루 카드 항목, 알림 종류).
+export const FLOORS = [-10, 100];
+export const MY_STOP_KINDS = ["subwayStation", "busStop", "trainStation", "airport", "harbor"];
+export const DAY_CARD_ITEMS = ["sleep", "movement", "study", "work", "exercise", "hobby", "distance", "places", "trips", "steps", "photos",
+  "walkDistance", "carDistance", "transitDistance", "awayTime", "stepDistance", "calories", "income", "expense", "memos"];
+export const ALERTS = ["arriveCompany", "leaveCompany", "arriveSchool", "leaveSchool", "arriveAcademy", "leaveAcademy", "arriveHome", "leaveHome",
+  "wakeUp", "dailyCard", "rateChange", "breakEven"];
+const floor = (description) => f.integer(FLOORS[0], FLOORS[1], description);
+registry
+  .add("moveCategory", {
+    tool: "move_category", title: "Change the order of a category", since: SINCE,
+    description: "Move one major category (get_app_state categories, listed in their order) to a new place in the list. position 1 is the top. Undoable.",
+    fields: {
+      categoryId: f.id("Category id from get_app_state categories").required_(),
+      position: f.integer(1, 100, "New place in the list, 1 is the top").required_(),
+    },
+  })
+  .add("deleteCategory", {
+    tool: "delete_category", title: "Delete a category the user made", since: SINCE,
+    description: "Delete one major category the user made (custom:true in get_app_state categories). Its plans and records move to moveTo. "
+      + "Built-in categories cannot be deleted: hide them with update_category. Only when the user asked. Undoable.",
+    fields: {
+      categoryId: f.id("Category to delete").required_(),
+      moveTo: f.id("Category that takes over its plans and records").required_(),
+    },
+    check: (v) => v.categoryId !== v.moveTo,
+  })
+  .add("setPlaceFloor", {
+    tool: "set_place_floor", title: "Set the floor of a frequent place", since: SINCE,
+    description: "Set which floor one registered place is on (placeId from get_app_state places). Basement floors are negative. Undoable.",
+    fields: {
+      placeId: f.match(UUID, "Place id from get_app_state places").required_(),
+      floor: floor("Floor, -10 to 100").required_(),
+    },
+  })
+  .add("addMyStop", {
+    tool: "add_my_stop", title: "Add a station or stop the user uses", destructive: false, since: SINCE,
+    description: "Register a station, stop, airport or harbour the user names (get_app_state settings.myStops), so rides from there are recognised. "
+      + "latitude and longitude are required and are never sent back. Undoable.",
+    fields: {
+      name: f.text(40, "Name of the station or stop").required_(),
+      kind: f.oneOf(MY_STOP_KINDS, "Kind of place").required_(),
+      latitude: f.number(-90, 90, "Latitude").required_(),
+      longitude: f.number(-180, 180, "Longitude").required_(),
+      floor: floor("Platform floor, optional"),
+    },
+  })
+  .add("updateMyStop", {
+    tool: "update_my_stop", title: "Rename a station or stop, or set its floor", since: SINCE,
+    description: "Change one of the user's stations or stops (stopId from get_app_state settings.myStops): name, floor, or clearFloor:true for no floor. "
+      + "Give at least one. Undoable.",
+    fields: {
+      stopId: f.match(UUID, "Stop id from get_app_state settings.myStops").required_(),
+      name: f.text(40, "New name"),
+      floor: floor("New floor"),
+      clearFloor: f.flag("true removes the floor"),
+    },
+    check: (v) => anyOf(v, ["name", "floor", "clearFloor"]) && v.clearFloor !== false && !(v.clearFloor === true && given(v.floor)),
+  })
+  .add("deleteMyStop", {
+    tool: "delete_my_stop", title: "Delete a station or stop the user added", since: SINCE,
+    description: "Delete one of the user's stations or stops. Only when the user asked. Undoable.",
+    fields: { stopId: f.match(UUID, "Stop id from get_app_state settings.myStops").required_() },
+  })
+  .add("setDayCardItems", {
+    tool: "set_day_card_items", title: "Choose the figures on the day card", since: SINCE,
+    description: "Choose up to four figures shown on the daily share card, in order (current ones in get_app_state settings.dayCard.items). [] shows none. Undoable.",
+    fields: { items: f.list(f.oneOf(DAY_CARD_ITEMS), 4, "Figures in the order shown", 0).required_() },
+    check: (v) => new Set(v.items).size === v.items.length,
+  })
+  .add("setDayCardTime", {
+    tool: "set_day_card_time", title: "Set the time of the day card alert", since: SINCE,
+    description: "Set when the daily \"yesterday's card is ready\" alert arrives (get_app_state settings.dayCard.time). Undoable.",
+    fields: { time: f.time("HH:mm (24h)").required_() },
+  })
+  .add("setAlert", {
+    tool: "set_alert", title: "Switch one kind of alert on or off", since: SINCE,
+    description: "Switch one kind of app alert on or off (those on are in get_app_state settings.alertsOn). This does not grant the iOS notification "
+      + "permission: if notifications are not allowed, the user has to allow them. Undoable.",
+    fields: {
+      alert: f.oneOf(ALERTS, "Kind of alert").required_(),
+      enabled: f.flag("true on, false off").required_(),
+    },
+  })
+  .add("setCatOutfit", {
+    tool: "set_cat_outfit", title: "Dress the user's cat", since: SINCE,
+    description: "Put on one accessory the user already earned (get_app_state settings.outfit.owned; one hat, one scarf and one tail ribbon can be worn together). Undoable.",
+    fields: { accessoryId: f.match(/^cat\.accessory\.[\w.-]{1,80}$/, "Accessory id from settings.outfit.owned").required_() },
+  });
+
+// 6묶음: 시스템 (ACT1114A09). 권한 켜기·앱 잠금·PIN·전부 지우기는 넣지 않는다(대표 결정).
+registry
+  .add("refreshNow", {
+    tool: "refresh_now", title: "Refresh records or run the iCloud sync now", destructive: false, since: SINCE,
+    description: "Run what the app's refresh buttons do: records re-reads the connected data (health, calendar, sensors) for today, cloud starts an iCloud sync. "
+      + "It changes no settings and there is nothing to undo.",
+    fields: { target: f.oneOf(["records", "cloud"], "What to refresh").required_() },
+  })
+  .add("stopTracking", {
+    tool: "stop_tracking", title: "Stop the walk or run being tracked", since: SINCE,
+    description: "End the walk or run the user started tracking in the app and save it as a record. Only when the user asked. Cannot be undone.",
+    fields: {},
+  })
+  .add("disconnectCalendar", {
+    tool: "disconnect_calendar", title: "Disconnect a calendar", since: SINCE,
+    description: "Stop reading a calendar: device removes every iOS calendar from the app, google signs the linked Google account out. Events already in "
+      + "the calendars stay there. Connecting again needs the user in the app. Only when the user asked. Cannot be undone.",
+    fields: { calendar: f.oneOf(["device", "google"], "Which calendar connection").required_() },
+  })
+  .add("restoreFromBackup", {
+    tool: "restore_from_backup", title: "Open the restore-from-backup screen", since: SINCE,
+    description: "Open the app's data protection screen so the user can restore from a backup. The backup password is typed by the user in the app; "
+      + "never ask for it or handle it. Nothing is restored until the user does it there. This action is switched off until the user turns it on in the app.",
+    fields: {},
   });

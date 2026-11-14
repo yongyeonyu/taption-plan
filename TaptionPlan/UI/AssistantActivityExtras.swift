@@ -185,6 +185,28 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var paymentSources: [PaymentSource]?
         var skipWords: [String]?
         var fxRates: [String: Double]?
+        /// ACT1114A09: 내 정류장(장소 이름 공유 수준에서만, 좌표 없음), 하루 카드 항목·알림 시각, 켜 둔 알림, 화랑이 장식. 없으면 칸째 뺀다.
+        var myStops: [MyStop]?
+        var dayCard: DayCard?
+        var alertsOn: [String]?
+        var outfit: Outfit?
+    }
+
+    struct MyStop: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var kind: String
+        var floor: Int?
+    }
+
+    struct DayCard: Codable, Equatable, Sendable {
+        var items: [String]
+        var time: String
+    }
+
+    struct Outfit: Codable, Equatable, Sendable {
+        var owned: [String]
+        var worn: [String]
     }
 
     struct PaymentSource: Codable, Equatable, Sendable {
@@ -267,6 +289,8 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var radius: Int
         var autoRecord: Bool
         var located: Bool
+        /// 정해 둔 층(ACT1114A09). 없으면 칸째 뺀다.
+        var floor: Int?
     }
 
     /// 여행 하나(ACB1112A01). 날짜를 정하지 않은 여행은 `wishDays`만 있다. 좌표는 담지 않는다.
@@ -381,6 +405,10 @@ enum AssistantAppStateSync {
         var skipWords: [String] = []
         var fxRates: [String: Double] = [:]
         var boarding: [TransitBoardingCandidate] = []
+        var myStops: [UserTransitLocation] = []
+        var dayCard: AssistantAppState.DayCard?
+        var alertsOn: [String]?
+        var outfit: AssistantAppState.Outfit?
     }
 
     static func make(_ input: Input) -> AssistantAppState {
@@ -401,7 +429,11 @@ enum AssistantAppStateSync {
                     .init(name: mask($0.name, 40), expense: $0.expense, income: $0.income)
                 },
                 skipWords: input.skipWords.isEmpty ? nil : input.skipWords.prefix(PaymentAlertSources.skipWordLimit).map { mask($0, 20) },
-                fxRates: input.fxRates.isEmpty ? nil : input.fxRates
+                fxRates: input.fxRates.isEmpty ? nil : input.fxRates,
+                myStops: input.shareLevel == .visits && !input.myStops.isEmpty ? input.myStops.prefix(AssistantCatalogLimits.places).map {
+                    .init(id: $0.id.uuidString, name: mask($0.name, AssistantCatalogLimits.placeName), kind: $0.kind.rawValue, floor: $0.floor)
+                } : nil,
+                dayCard: input.dayCard, alertsOn: input.alertsOn, outfit: input.outfit
             ),
             ledger: .init(
                 month: LedgerBook.monthKey(input.now, calendar: input.calendar), budgetKRW: input.budgetKRW,
@@ -441,7 +473,7 @@ enum AssistantAppStateSync {
             places: input.shareLevel == .visits && !input.places.isEmpty ? input.places.prefix(AssistantCatalogLimits.places).map {
                 .init(
                     id: $0.id.uuidString, name: mask($0.displayName, AssistantCatalogLimits.placeName), kind: $0.kind.rawValue,
-                    radius: Int($0.radiusMeters.rounded()), autoRecord: $0.isAutomaticRecordingEnabled, located: $0.point != nil
+                    radius: Int($0.radiusMeters.rounded()), autoRecord: $0.isAutomaticRecordingEnabled, located: $0.point != nil, floor: $0.floor
                 )
             } : nil,
             categories: input.categories.isEmpty ? nil : input.categories.filter { $0.id != "unconfirmed" }.prefix(AssistantCatalogLimits.places).map {
@@ -524,7 +556,11 @@ enum AssistantAppStateSync {
             }),
             paymentSources: PaymentAlertSources.all(defaults), skipWords: PaymentAlertSources.skipWords(defaults),
             fxRates: (defaults.dictionary(forKey: LedgerBook.manualRatesKey) as? [String: Double]) ?? [:],
-            boarding: AssistantBoardingCandidates.current
+            boarding: AssistantBoardingCandidates.current,
+            myStops: model.snapshot.settings.userTransitLocations,
+            dayCard: .init(items: MapHomeCardMetricSelection.load(defaults), time: AssistantOperations.dayCardTime(defaults)),
+            alertsOn: MapHomeAlarmSettings.stored(defaults).enabled.map(\.rawValue).sorted(),
+            outfit: AssistantOperations.growthHistory(defaults).map { .init(owned: $0.season.accessories, worn: [$0.season.equippedHat, $0.season.equippedScarf, $0.season.equippedRibbon].compactMap { $0 }) }
         )
     }
 

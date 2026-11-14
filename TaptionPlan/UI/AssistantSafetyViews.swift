@@ -370,6 +370,8 @@ struct AssistantActionLogView: View {
             }
             if entry.undoneAt != nil {
                 Text(language.text("되돌렸어요", "Undone")).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
+            } else if entry.irreversible == true {
+                Text(language.text("되돌릴 수 없는 일이에요", "This can't be undone")).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             } else if !entry.isRejected {
                 Button(language.text("되돌리기", "Undo")) { undo(entry) }
                     .buttonStyle(.borderless)
@@ -511,7 +513,7 @@ struct AssistantRuleListView: View {
         }
     }
 
-    static func title(_ type: String, _ language: MapHomeLanguage) -> String {
+    nonisolated static func title(_ type: String, _ language: MapHomeLanguage) -> String {
         switch RuleType(rawValue: type) {
         case .paymentText: language.text("결제 문자 읽기", "Reading payment texts")
         case .skipWord: language.text("넣지 않을 낱말", "Words to skip")

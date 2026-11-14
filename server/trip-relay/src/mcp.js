@@ -271,7 +271,9 @@ const TOOLS = [
     + "currency, 0 clears); payIsNet, hourlyPayIsNet (the amount entered is after tax), showsNetPay (show after-tax amounts), "
     + "hourlyTax threePointThree|fourInsurance|none, weeklyHolidayPay true|false; reduceMotion, weather (weather on the timeline), "
     + "weatherSidebar true|false; gpsIntervalSeconds 30-1800 in steps of 30 (how often location is logged; longer saves battery); "
-    + "cat white|calico|mackerel (the map cat); memoDisplay all|located|hidden (which memos show on the map); notifications false only (turning notifications, Health, Photos, Calendar or location ON "
+    + "cat white|calico|mackerel (the map cat); memoDisplay all|located|hidden (which memos show on the map); strideCentimeters 30-150 (step length used to turn steps into distance); "
+    + "watchAcceleration, watchDataSync off|batterySaver|balanced|accuracy (what the Apple Watch app collects and how often it sends); "
+    + "notifications, location (location logging), photos (photos on the map) false only (turning notifications, Health, Photos, Calendar or location ON "
     + "needs an iOS permission prompt the user must answer: use open_screen settings and tell them what to tap). Current values are in "
     + "get_app_state settings.values, pay amounts included (annualPay, monthlyPay, hourlyPay as the user entered them). Undoable.",
     { setting: enumOf("Setting name", SETTING_NAMES), value: { description: "New value: a string, number or boolean as the setting needs" } }, ["setting", "value"]),
@@ -459,6 +461,10 @@ const RAW_VALUES = {
   ...Object.fromEntries(["annualPay", "monthlyPay", "hourlyPay", "gpsIntervalSeconds"].map((k) => [k, (v) => /^\d{1,12}(\.\d{1,2})?$/.test(v)])),
   cat: oneOf("white", "calico", "mackerel"),
   memoDisplay: oneOf("all", "located", "hidden"),
+  // ACT1114A09
+  ...Object.fromEntries(["location", "photos"].map((k) => [k, oneOf("true", "false")])),
+  strideCentimeters: (v) => /^\d{2,3}$/.test(v),
+  ...Object.fromEntries(["watchAcceleration", "watchDataSync"].map((k) => [k, oneOf("off", "batterySaver", "balanced", "accuracy")])),
   hourlyTax: oneOf("threePointThree", "fourInsurance", "none"),
   status: oneOf("applied", "rejected", "running", "completed", ...TRIP_STATUSES, ...TASK_STATUSES, ...ANSWER_STATUSES),
   kind: oneOf(...TASK_KINDS, "expense", "income", "ignore"),
