@@ -14,12 +14,16 @@ let package = Package(
         .library(name: "TaptionAssistantProtocol", targets: ["TaptionAssistantProtocol"]),
         .library(name: "TaptionAssistantKit", targets: ["TaptionAssistantKit"])
     ],
+    dependencies: [
+        // 문구의 언어 값(`AppLanguagePreference.ResolvedLanguage`)만 쓴다.
+        .package(path: "../TaptionWatchSync")
+    ],
     targets: [
         // 화면·앱 모델·저장소를 모른다. Foundation만 쓴다.
         .target(name: "TaptionRules"),
         .testTarget(name: "TaptionRulesTests", dependencies: ["TaptionRules"]),
-        // 명령에 실려 오는 값과 그것을 읽는 순수 함수. Foundation만 쓴다.
-        .target(name: "TaptionAssistantProtocol"),
+        // 명령에 실려 오는 값과 그것을 읽는 순수 함수, 동작 등록부의 읽기 쪽. Foundation과 언어 값만 쓴다.
+        .target(name: "TaptionAssistantProtocol", dependencies: [.product(name: "TaptionWatchSync", package: "TaptionWatchSync")]),
         // 중계 서버 전송과 키 보관. 앱 모델·화면을 모른다.
         .target(name: "TaptionAssistantKit", dependencies: ["TaptionAssistantProtocol"])
     ]

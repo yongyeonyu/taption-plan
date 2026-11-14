@@ -410,36 +410,6 @@ enum AssistantPush {
 // (3) 아래 `AssistantOperations.all`에 한 줄. 토글·알림 수·안내문·로그 이름은 `spec`에서 만들어진다.
 // 서버와 이름·칸이 같은지는 `server/trip-relay/test/fixtures/actions.json`으로 시험한다.
 
-/// 동작 하나의 이름표. 서버 등록부와 `name`·`fields`가 같아야 한다.
-struct AssistantOperationSpec: Sendable {
-    /// 「AI 비서 요청을 반영했어요」 알림에서 어느 수에 더할지.
-    enum Counter: Sendable { case memos, schedules, edits, settings, ledger }
-
-    var name: String
-    var fields: [String]
-    var counter: Counter
-    /// 지우는 동작. 「AI가 할 수 있는 일」의 「지우는 일」 묶음에 보인다.
-    var deletes = false
-    /// 사용자가 켜기 전에는 꺼져 있는 동작(ACT1114A09: 백업에서 복원).
-    var startsOff = false
-    /// 바꾸는 기존 항목 수(20개 확인 규칙). 새로 더하기만 하면 0.
-    var changes = 1
-    var title: @Sendable (AppLanguagePreference.ResolvedLanguage) -> String
-    /// 연결 안내의 한 줄: 동작 이름 뒤에 오는 칸 보기와 설명.
-    var guide: String
-}
-
-/// 등록부 동작의 읽기 쪽. 읽기(`init?`)에서 서버와 같은 규칙으로 다시 본다. 앱 모델을 모른다.
-protocol AssistantOperationReading: Sendable {
-    static var spec: AssistantOperationSpec { get }
-    init?(fields: AssistantFields)
-    var changeCount: Int { get }
-}
-
-extension AssistantOperationReading {
-    var changeCount: Int { Self.spec.changes }
-}
-
 /// 등록부 동작 하나. 읽기에 더해 `apply`가 화면이 쓰는 함수를 부른다.
 protocol AssistantOperation: AssistantOperationReading {
     @MainActor func apply(host: AssistantOperationHost) async -> AssistantEditResult
@@ -464,15 +434,6 @@ struct AssistantOperationHost {
         guard !AssistantAppChange.Stored.same(before, after) else { return nil }
         return .init(key: key, before: AssistantAppChange.Stored.pack(before), after: AssistantAppChange.Stored.pack(after))
     }
-}
-
-/// 읽어 낸 동작. 같은 이름·같은 칸이면 같은 명령이다.
-struct AssistantParsedOperation: Equatable, Sendable {
-    let name: String
-    let values: [String: AssistantJSON]
-    let operation: any AssistantOperationReading
-
-    static func == (lhs: Self, rhs: Self) -> Bool { lhs.name == rhs.name && lhs.values == rhs.values }
 }
 
 enum AssistantOperations {
