@@ -87,6 +87,8 @@
 "Localizable:Lv.%lld": "Lv.%lld",
 "Localizable:PM10 %lld": "PM10 %lld",
 "Localizable:PM2.5 %lld": "PM2.5 %lld",
+"Localizable:PUSH_AI_NEEDS_YOU": "AI ของคุณรอให้คุณตรวจสอบ",
+"Localizable:PUSH_AI_QUESTION": "AI ของคุณมีคำถาม",
 "Localizable:Taption Plan Pro": "Taption Plan Pro",
 "Localizable:Taption 계획 처리": "จัดการแผน Taption",
 "Localizable:Taption 시간표": "ไทม์ไลน์ Taption",

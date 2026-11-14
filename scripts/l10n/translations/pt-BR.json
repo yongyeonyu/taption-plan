@@ -87,6 +87,8 @@
 "Localizable:Lv.%lld": "Nv. %lld",
 "Localizable:PM10 %lld": "PM10 %lld",
 "Localizable:PM2.5 %lld": "PM2.5 %lld",
+"Localizable:PUSH_AI_NEEDS_YOU": "Sua IA precisa que você confira algo",
+"Localizable:PUSH_AI_QUESTION": "Sua IA tem uma pergunta",
 "Localizable:Taption Plan Pro": "Taption Plan Pro",
 "Localizable:Taption 계획 처리": "Gerenciar planos do Taption",
 "Localizable:Taption 시간표": "Linha do tempo do Taption",

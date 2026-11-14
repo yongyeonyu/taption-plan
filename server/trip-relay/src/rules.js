@@ -1,6 +1,7 @@
 // 규칙 저장소(AIX1114A01 P3). AI가 판단한 것을 규칙(JSON)으로 서버에 계속 두고, 앱이 같은 버전을 받아 1차로 쓴다.
 // 목록은 Durable Object에 규칙 하나씩 둔다(기한 없음, 쓰기가 차례로 일어남). 본문(match·result·note·source)은 봉인한다.
 // 규칙 종류와 칸은 아래 RULE_TYPES 한 곳에 있고, 앱의 Swift 평가기와 `test/fixtures/rules.json`으로 맞춘다.
+import { notify, pushForRules } from "./apns.js";
 import { openJson, randomHex, sealJson } from "./crypto.js";
 import { json } from "./http.js";
 
@@ -118,6 +119,7 @@ export async function putRules(ctx, value) {
   if (!items) return json({ error: "bad_rule" }, 422);
   const result = await ctx.state.call("rulePut", { items, now: ctx.now, master });
   if (result.error) return json({ error: result.error, ...(result.ids ? { ids: result.ids } : {}) }, result.error === "too_many_rules" ? 409 : 422);
+  if (result.ids.length) notify(ctx, pushForRules());
   return json({ ok: true, version: result.version, ids: result.ids, refused: result.refused }, 201);
 }
 
@@ -144,12 +146,14 @@ export async function deleteRules(ctx, ids) {
   const list = (ids ?? "").split(",").filter(Boolean);
   if (list.length < 1 || list.length > 50 || !list.every(ruleID)) return json({ error: "bad_rule_ids" }, 422);
   const result = await ctx.state.call("ruleOps", { ops: list.map((id) => ({ op: "delete", id })), now: ctx.now, onlyAI: ctx.auth?.kind !== "master" });
+  if (result.changed) notify(ctx, pushForRules());
   return json({ ok: true, version: result.version, removed: result.changed }, 200);
 }
 
 export async function setRuleEnabled(ctx, value) {
   if (!ruleID(value?.id) || typeof value.enabled !== "boolean") return json({ error: "bad_rule_op" }, 422);
   const result = await ctx.state.call("ruleOps", { ops: [{ op: value.enabled ? "enable" : "disable", id: value.id }], now: ctx.now });
+  if (result.changed) notify(ctx, pushForRules());
   return result.changed ? json({ ok: true, version: result.version }, 200) : json({ error: "no_rule" }, 404);
 }
 

@@ -46,6 +46,10 @@ export const LIMITS = {
   bubblesPerDay: 48,
   bubbleQueue: 48,
   activeKeys: 20,
+  // 푸시(PSH1114A06): 조용한 것은 종류마다 간격을 두고 하루 60번, 보이는 것은 하루 20번.
+  pushGapMs: { cmd: 2 * MINUTE_MS, task: MINUTE_MS, rules: 2 * MINUTE_MS },
+  pushSilentPerDay: 60,
+  pushVisiblePerDay: 20,
   pinFailures: 5,
   pinWindowMs: 15 * MINUTE_MS,
   pinLockMs: 15 * MINUTE_MS,
@@ -133,6 +137,47 @@ async function sweepTasks(s, now) {
 }
 
 const OPS = {
+  // MARK: 푸시 기기 토큰과 보낸 수 (PSH1114A06). 토큰은 Worker가 봉인해 넘긴다.
+
+  async pushSet(s, { sealed, sandbox, build, now }) {
+    await s.put("push", { sealed, sandbox: !!sandbox, build: build ?? null, at: now });
+    return { ok: true };
+  },
+
+  async pushGet(s) {
+    const push = await s.get("push");
+    return push ? { sealed: push.sealed, sandbox: push.sandbox, build: push.build, at: push.at } : {};
+  },
+
+  // sealed가 있으면 그 토큰일 때만 지운다(그 사이 앱이 새 토큰을 올렸으면 둔다).
+  async pushClear(s, { sealed } = {}) {
+    const push = await s.get("push");
+    if (!push || (sealed && push.sealed !== sealed)) return { cleared: false };
+    await s.delete("push");
+    return { cleared: true };
+  },
+
+  // 보내도 되는지 보고, 되면 보낸 것으로 적은 뒤 토큰을 돌려준다.
+  async pushGate(s, { kind, visible, now }) {
+    const push = await s.get("push");
+    if (!push) return { ok: false, error: "no_token" };
+    const day = Math.floor(now / DAY_MS);
+    const sent = (await s.get("pushSent")) ?? {};
+    const note = sent.day === day ? sent : { day, silent: 0, visible: 0, last: sent.last ?? {} };
+    if (visible) {
+      if (note.visible >= LIMITS.pushVisiblePerDay) return { ok: false, error: "daily_push_limit" };
+      note.visible++;
+    } else {
+      const last = note.last[kind] ?? 0;
+      if (now >= last && now - last < (LIMITS.pushGapMs[kind] ?? MINUTE_MS)) return { ok: false, error: "too_soon" };
+      if (note.silent >= LIMITS.pushSilentPerDay) return { ok: false, error: "daily_push_limit" };
+      note.silent++;
+      note.last = { ...note.last, [kind]: now };
+    }
+    await s.put("pushSent", note);
+    return { ok: true, sealed: push.sealed, sandbox: push.sandbox };
+  },
+
   // MARK: AI 일 목록 (AIX1114A01 P2). 본문(글·맥락·결과)은 Worker가 봉인해 `sealed`로 넘긴다.
 
   async taskAdd(s, { items, now }) {
@@ -409,6 +454,7 @@ const OPS = {
     await s.delete("pinAttempts");
     await s.put("epoch", ((await s.get("epoch")) ?? 0) + 1);
     await s.put("legacy", { ...(await legacyFlags(s)), adoptClosed: true });
+    await s.delete("push");
     return { ok: true, revoked: await revokeEntries(s, await activeEntries(s), now) };
   },
 
@@ -483,7 +529,10 @@ const OPS = {
   async revoke(s, { keyId, now }) {
     await pruneTombstones(s, now);
     const entries = (await activeEntries(s)).filter(([, e]) => keyId === null || e.keyId === keyId);
-    if (keyId === null) await s.put("legacy", { ...(await legacyFlags(s)), adoptClosed: true });
+    if (keyId === null) {
+      await s.put("legacy", { ...(await legacyFlags(s)), adoptClosed: true });
+      await s.delete("push"); // 모두 끊으면 깨울 일이 없다. 다시 연결하면 앱이 토큰을 새로 올린다.
+    }
     return { revoked: await revokeEntries(s, entries, now) };
   },
 

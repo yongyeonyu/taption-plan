@@ -304,4 +304,59 @@ final class AssistantRelayTests: XCTestCase {
         XCTAssertEqual(TripRelay.commandFetchTimeout, 5)
         XCTAssertEqual(TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com", timeout: TripRelay.commandFetchTimeout)?.timeoutInterval, 5)
     }
+
+    /// PSH1114A06: 푸시 종류 읽기, 기기 토큰 글자, 같은 토큰을 다시 올리지 않기.
+    func testPushHelpers() {
+        XCTAssertEqual(AssistantPush.kind(from: ["aps": ["content-available": 1], "k": "cmd"]), .cmd)
+        XCTAssertEqual(["q", "task", "rules"].map { AssistantPush.kind(from: ["k": $0]) }, [.q, .task, .rules])
+        XCTAssertNil(AssistantPush.kind(from: ["k": "other"]))
+        XCTAssertNil(AssistantPush.kind(from: ["k": 1]))
+        XCTAssertNil(AssistantPush.kind(from: ["aps": ["alert": "x"]]))
+        XCTAssertEqual(AssistantPush.hex(Data([0x00, 0x0f, 0xa0, 0xff])), "000fa0ff")
+        XCTAssertEqual(AssistantPush.hex(Data(repeating: 0xab, count: 32)).count, 64)
+
+        let store = defaults(), now = at(12), token = String(repeating: "ab", count: 32)
+        XCTAssertTrue(AssistantPush.needsUpload(token: token, environment: "production", defaults: store, now: now))
+        store.set("production:\(token)", forKey: AssistantPush.uploadedKey)
+        store.set(now.timeIntervalSince1970, forKey: AssistantPush.uploadedAtKey)
+        XCTAssertFalse(AssistantPush.needsUpload(token: token, environment: "production", defaults: store, now: now.addingTimeInterval(3_600)))
+        XCTAssertTrue(AssistantPush.needsUpload(token: token, environment: "sandbox", defaults: store, now: now), "other environment")
+        XCTAssertTrue(AssistantPush.needsUpload(token: String(repeating: "cd", count: 32), environment: "production", defaults: store, now: now), "new token")
+        XCTAssertTrue(AssistantPush.needsUpload(token: token, environment: "production", defaults: store, now: now.addingTimeInterval(AssistantPush.reuploadAfter)), "weekly")
+        XCTAssertTrue(AssistantPush.needsUpload(token: token, environment: "production", defaults: store, now: now.addingTimeInterval(-60)), "clock went back")
+    }
+
+    /// 연결이 있을 때만 주인 키로 올리고, 같은 토큰은 한 번만. 연결이 없어지면 서버의 토큰을 지운다.
+    @MainActor
+    func testPushTokenUploadAndRemoval() async throws {
+        let store = defaults(), master = String(repeating: "M", count: 43), token = String(repeating: "ab", count: 32)
+        Phase3RelayStub.reset(status: { $0.httpMethod == "DELETE" ? 204 : 200 })
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [Phase3RelayStub.self]
+        let env = AssistantRegistration.Environment(
+            secrets: AssistantMemorySecrets([.master: master]), defaults: store, session: URLSession(configuration: configuration),
+            host: "relay.example.com", clearConnections: {}
+        )
+        await AssistantPush.upload(token: token, environment: "sandbox", env: env)
+        XCTAssertTrue(Phase3RelayStub.requests.isEmpty, "no AI connection, no upload")
+
+        store.set(1, forKey: AssistantKeyLabels.serverCountKey)
+        await AssistantPush.upload(token: token, environment: "sandbox", env: env)
+        await AssistantPush.upload(token: token, environment: "sandbox", env: env)
+        XCTAssertEqual(Phase3RelayStub.requests.map(\.summary), ["POST /push/token"])
+        let sent = try XCTUnwrap(Phase3RelayStub.requests.first)
+        XCTAssertEqual(sent.token, master)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: sent.body) as? [String: String])
+        XCTAssertEqual(body["token"], token)
+        XCTAssertEqual(body["env"], "sandbox")
+        XCTAssertFalse(AssistantPush.needsUpload(token: token, environment: "sandbox", defaults: store))
+
+        await AssistantPush.syncRegistration(env: env)
+        XCTAssertEqual(Phase3RelayStub.requests.count, 1, "still connected: nothing to remove")
+        store.set(0, forKey: AssistantKeyLabels.serverCountKey)
+        await AssistantPush.syncRegistration(env: env)
+        await AssistantPush.syncRegistration(env: env)
+        XCTAssertEqual(Phase3RelayStub.requests.map(\.summary), ["POST /push/token", "DELETE /push/token"])
+        XCTAssertTrue(AssistantPush.needsUpload(token: token, environment: "sandbox", defaults: store))
+    }
 }

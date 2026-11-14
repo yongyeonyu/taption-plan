@@ -5,6 +5,7 @@
 // AIR1110A02/SEC1110A01 add scoped AI keys, per-user DEK encryption (v2), summaries, a remote MCP endpoint and OpenAPI.
 // SEC1110A02 requires registration (/register), adds a PIN, a per-master Durable Object (keys, queue, budgets, PIN tries),
 // per-route limits and encrypted metadata. AIR1110A03 adds OAuth 2.1 for MCP connectors and more AI actions.
+import * as apns from "./apns.js";
 import * as rules from "./rules.js";
 import { createSetup, readSetup } from "./setup.js";
 import { fxRoute } from "./fx.js";
@@ -327,6 +328,11 @@ const ROUTES = {
   "/tasks/result": {
     POST: ["write", withBody(store.finishTask)],
   },
+  // 푸시 기기 토큰(PSH1114A06). 앱만 올리고 지운다.
+  "/push/token": {
+    POST: ["master", withBody(apns.saveToken)],
+    DELETE: ["master", (request, ctx) => apns.deleteToken(ctx)],
+  },
   "/command/result": {
     POST: ["master", withBody(store.saveResults)],
     GET: ["read", (request, ctx) => store.readResults(ctx)],
@@ -419,7 +425,7 @@ export function clientInfo(header) {
   return { device, appBuild, shareLevel, ...(flags.includes("debug") ? { debugBuild: true } : {}), ...(flags.includes("locked") ? { uploadsPaused: "privacyLock" } : {}) };
 }
 
-async function authorized(request, env, url, route, pathKey = null) {
+async function authorized(request, env, url, route, exec, pathKey = null) {
   const token = pathKey ?? bearer(request);
   const now = env.NOW?.() ?? Date.now(); // 시험에서 시계를 바꿀 수 있게 한다.
   const auth = token ? await resolveKey(env.PLANS, token, now) : null;
@@ -445,21 +451,26 @@ async function authorized(request, env, url, route, pathKey = null) {
   const ctx = { env, kv: env.PLANS, store: vault(env.PLANS, ring, now), state, auth, ring, master: auth.master, now, legacy: admission.legacy };
   if (auth.legacyWrap) await resealLegacyWrap(ctx);
   if (part === "keys" && !ctx.legacy.keys) await importLegacyKeys(ctx);
-  return run(request, ctx);
+  // 푸시처럼 응답 뒤에 해도 되는 일. 실행 문맥이 없으면(시험) 응답 전에 기다린다.
+  const pending = [];
+  ctx.defer = (work) => { if (exec?.waitUntil) exec.waitUntil(work); else pending.push(work); };
+  const response = await run(request, ctx);
+  await Promise.all(pending);
+  return response;
 }
 
-export async function handle(request, env) {
+export async function handle(request, env, exec) {
   const url = new URL(request.url);
   const cors = CORS_PATHS.has(url.pathname);
   if (request.method === "OPTIONS" && cors) return new Response(null, { status: 204, headers: CORS });
-  const response = await route(request, env, url);
+  const response = await route(request, env, url, exec);
   return cors ? withCors(response) : response;
 }
 
 const MCP_KEY_PATH = /^\/mcp\/([A-Za-z0-9_-]{43})$/;
 const SETUP_PATH = /^\/s\/([A-Za-z0-9]{1,20})$/;
 
-async function route(request, env, url) {
+async function route(request, env, url, exec) {
   const now = env.NOW?.() ?? Date.now();
   const publicRoute = PUBLIC[url.pathname];
   if (publicRoute) return request.method === "GET" ? publicRoute(request, env, url) : json({ error: "method_not_allowed" }, 405);
@@ -476,15 +487,15 @@ async function route(request, env, url) {
       const setup = SETUP_PATH.exec(url.pathname);
       if (setup) return request.method === "GET" ? readSetup(env, setup[1], now) : json({ error: "method_not_allowed" }, 405);
       const keyed = MCP_KEY_PATH.exec(url.pathname);
-      if (keyed) return authorized(request, env, url, ROUTES["/mcp"], keyed[1]);
+      if (keyed) return authorized(request, env, url, ROUTES["/mcp"], exec, keyed[1]);
       const entry = ROUTES[url.pathname];
-      return entry ? authorized(request, env, url, entry) : json({ error: "not_found" }, 404);
+      return entry ? authorized(request, env, url, entry, exec) : json({ error: "not_found" }, 404);
     }
   }
 }
 
 export default {
-  fetch(request, env) {
-    return handle(request, env);
+  fetch(request, env, exec) {
+    return handle(request, env, exec);
   },
 };
