@@ -725,6 +725,27 @@ final class TravelTripUnitTests: XCTestCase {
     }
 
     /// TVV1113A01 C6: 위키백과 사진 — 연락처가 없으면 묻지 않고, 이름의 글자로 언어를 고르고, 좌표가 가깝고 이름이 맞는 항목의 사진만 쓴다.
+    func testCommonsAndWebPhotoPicking() throws {
+        // 위키미디어 공용의 주변 사진: 사진 파일이고 라이선스가 있는 첫 장.
+        let commons = #"{"query":{"pages":[{"index":2,"title":"File:Street.jpg","imageinfo":[{"mime":"image/jpeg","thumburl":"https://upload.example.org/street-640.jpg","extmetadata":{"Artist":{"value":"<a href=\"x\">Someone</a>"},"LicenseShortName":{"value":"CC BY-SA 4.0"}}}]},{"index":1,"title":"File:Map.svg","imageinfo":[{"mime":"image/svg+xml","thumburl":"https://upload.example.org/map.png","extmetadata":{"LicenseShortName":{"value":"CC0"}}}]},{"index":0,"title":"File:NoLicense.jpg","imageinfo":[{"mime":"image/jpeg","thumburl":"https://upload.example.org/none.jpg","extmetadata":{}}]}]}}"#
+        let picked = try XCTUnwrap(TravelWikiPhoto.pickCommons(Data(commons.utf8)))
+        XCTAssertEqual(picked.thumbnail.absoluteString, "https://upload.example.org/street-640.jpg")
+        XCTAssertEqual(picked.credit, "Someone · CC BY-SA 4.0 · Wikimedia Commons")
+        XCTAssertNil(TravelWikiPhoto.pickCommons(Data(#"{"query":{"pages":[]}}"#.utf8)))
+        let url = try XCTUnwrap(TravelWikiPhoto.commonsURL(latitude: 13.74567, longitude: 100.49012))
+        XCTAssertTrue(url.absoluteString.contains("generator=geosearch"))
+        XCTAssertTrue(url.absoluteString.contains("13.74567%7C100.49012"))
+
+        // 웹 검색: 너무 작거나 길쭉한 것, https가 아닌 것은 버린다. 큰 사진 주소가 없으면 작은 그림 주소.
+        let web = #"{"documents":[{"image":"https://img.example.com/tiny.jpg","width":120,"height":90,"site":"a"},{"image":"https://img.example.com/banner.jpg","width":1200,"height":200,"site":"b"},{"image":"http://img.example.com/plain.jpg","width":800,"height":600,"site":"c"},{"image":"https://img.example.com/good.jpg","width":800,"height":600,"site":" 어느 블로그 "},{"thumbnail":"https://thumb.example.com/t","width":640,"height":480,"site":""}]}"#
+        XCTAssertEqual(TravelWikiPhoto.pickWeb(Data(web.utf8)), [
+            .init(image: try XCTUnwrap(URL(string: "https://img.example.com/good.jpg")), site: "어느 블로그"),
+            .init(image: try XCTUnwrap(URL(string: "https://thumb.example.com/t")), site: ""),
+        ])
+        XCTAssertEqual(TravelPlacePhotoStore.fitted(CGSize(width: 1_600, height: 800), longSide: 640), CGSize(width: 640, height: 320))
+        XCTAssertEqual(TravelPlacePhotoStore.fitted(CGSize(width: 300, height: 200), longSide: 640), CGSize(width: 300, height: 200), "small pictures are not enlarged")
+    }
+
     func testWikiPhotoPickingAndCredit() throws {
         XCTAssertNil(TravelWikiPhoto.userAgent(contact: nil, version: "1.0"))
         XCTAssertNil(TravelWikiPhoto.userAgent(contact: "  ", version: "1.0"))

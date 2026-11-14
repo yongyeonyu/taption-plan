@@ -7,6 +7,12 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## PHX1114A01 · 여행 카드 사진 출처 늘리기 (2026-11-14 오후, 아직 빌드에 없음)
+
+- 앱 `TripItemStatusTests` 10건 통과·실패 0(`build/validation/AIX1114A01/sim-phx.xcresult`, 공용·웹 사진 고르기 시험 포함), 구조 점검 통과.
+- 서버 `npm test` 133건 통과(`/kakao/image`가 https 사진 주소와 출처만 돌려주는지 포함). 서버는 아직 배포하지 않았다.
+- 하지 않은 것: 실제 사진이 받아지는지(위키미디어 공용·웹 검색·지도 그림 모두 네트워크가 필요하고 시뮬레이터에서 돌려 보지 않음), 카드에 그려진 모습. 「AI가 사진 주소 넣기」는 아직 구현 전이다.
+
 ## PSN1114A01 · 여행 계획 판 손잡이 (2026-11-14 오후, 아직 빌드에 없음)
 
 - `TripItemStatusTests`·`TravelMapTests` 26건 통과·실패 0(`build/validation/AIX1114A01/sim-psn.xcresult`), 구조 점검 통과.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handle, isActivityUpload, isCommand, isTripPlan, kakaoKeyword, seal, storageCryptoKey, storageKey } from "../src/index.js";
+import { handle, isActivityUpload, isCommand, isTripPlan, kakaoImage, kakaoKeyword, seal, storageCryptoKey, storageKey } from "../src/index.js";
 
 import { MemoryKV, makeEnv } from "./fakes.mjs";
 
@@ -300,4 +300,22 @@ test("legacy plaintext plans stay readable once and are encrypted on the next wr
   const queued = await (await handle(at("/command", "GET"), env)).json();
   assert.deepEqual(queued.commands.map((c) => [c.id, c.keyId, c.source]), [["plain", null, "legacy"]]);
   assert.ok(!env.PLANS.map.has("cmd:" + hash), "moved into the Durable Object");
+});
+
+test("kakao image proxy returns only https photo links and their source (PHX1114A01)", async () => {
+  let asked;
+  const fetcher = async (url, init) => {
+    asked = { url: String(url), auth: init.headers.authorization };
+    return new Response(JSON.stringify({ documents: [
+      { image_url: "https://img.example.com/a.jpg", thumbnail_url: "https://thumb.example.com/a", width: 800, height: 600, display_sitename: "어느 블로그", doc_url: "https://blog.example.com/1", collection: "blog" },
+      { image_url: "http://insecure.example.com/b.jpg", thumbnail_url: "http://insecure.example.com/b", width: 1, height: 1, display_sitename: "x", doc_url: "http://x" },
+    ] }), { status: 200 });
+  };
+  const response = await kakaoImage(new Request("https://relay.example.com/kakao/image?query=%EC%B9%B4%ED%8E%98"), { KAKAO_REST_API_KEY: "secret" }, fetcher);
+  assert.equal(response.status, 200);
+  assert.match(asked.url, /^https:\/\/dapi\.kakao\.com\/v2\/search\/image\?query=.*&size=5$/);
+  assert.equal(asked.auth, "KakaoAK secret");
+  assert.deepEqual((await response.json()).documents, [{ image: "https://img.example.com/a.jpg", thumbnail: "https://thumb.example.com/a", width: 800, height: 600, site: "어느 블로그", page: "https://blog.example.com/1" }]);
+  assert.equal((await kakaoImage(new Request("https://relay.example.com/kakao/image?query="), { KAKAO_REST_API_KEY: "secret" }, fetcher)).status, 400);
+  assert.equal((await kakaoImage(new Request("https://relay.example.com/kakao/image?query=a"), {}, fetcher)).status, 503);
 });

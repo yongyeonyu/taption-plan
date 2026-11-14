@@ -1,12 +1,17 @@
+import MapKit
 import SwiftUI
 import TaptionPlanStore
 
 /// 여행 전 계획 단계의 장소 사진(TVV1113A01 C6): 위키백과의 대표 사진을 그때그때 받아 작게 보인다.
 /// 우리 서버는 없다. 장소 이름과 좌표가 위키미디어로 나가므로, 연락처가 설정돼 있고 사용자가 켜 둔 때만 받는다.
 struct TravelPlacePhoto: Equatable {
+    /// 어디서 온 그림인지(PHX1114A01). 웹 검색 사진과 지도 그림은 기기에 오래 두지 않는다.
+    enum Source: String { case wiki, commons, web, map }
+
     var image: UIImage
-    /// 저작권 표시(작가 · 라이선스). 이것이 없는 사진은 쓰지 않는다.
+    /// 저작권 표시(작가 · 라이선스) 또는 출처 사이트. 지도 그림은 비어 있다.
     var credit: String
+    var source: Source = .wiki
 }
 
 /// 위키백과 요청과 응답 읽기. 네트워크 없이 시험할 수 있게 계산만 둔다.
@@ -110,6 +115,53 @@ enum TravelWikiPhoto {
         return (artist.isEmpty ? "" : artist + " · ") + license + " · Wikimedia Commons"
     }
 
+    // MARK: 위키미디어 공용의 주변 사진 (PHX1114A01)
+
+    /// 좌표 근처에서 찍힌 공개 사진을 가까운 순으로 찾는다. 장소 이름이 위키백과에 없어도 나온다.
+    static func commonsURL(latitude: Double, longitude: Double, radiusMeters: Int = 300) -> URL? {
+        var parts = URLComponents(string: "https://commons.wikimedia.org/w/api.php")
+        parts?.queryItems = [
+            .init(name: "action", value: "query"), .init(name: "format", value: "json"), .init(name: "formatversion", value: "2"),
+            .init(name: "generator", value: "geosearch"), .init(name: "ggscoord", value: String(format: "%.5f|%.5f", latitude, longitude)),
+            .init(name: "ggsradius", value: String(radiusMeters)), .init(name: "ggsnamespace", value: "6"), .init(name: "ggslimit", value: "12"),
+            .init(name: "prop", value: "imageinfo"), .init(name: "iiprop", value: "url|extmetadata|mime"),
+            .init(name: "iiurlwidth", value: "640"), .init(name: "iiextmetadatafilter", value: "Artist|LicenseShortName"),
+        ]
+        return parts?.url
+    }
+
+    /// 찾은 것 가운데 쓸 사진: 사진 파일(JPEG)이고 라이선스가 적혀 있는 첫 장. 지도·도면·로고(SVG·PNG)는 쓰지 않는다.
+    static func pickCommons(_ data: Data) -> (thumbnail: URL, credit: String)? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let pages = (root["query"] as? [String: Any])?["pages"] as? [[String: Any]] else { return nil }
+        for page in pages.sorted(by: { ($0["index"] as? Int ?? .max) < ($1["index"] as? Int ?? .max) }) {
+            guard let info = (page["imageinfo"] as? [[String: Any]])?.first, info["mime"] as? String == "image/jpeg",
+                  let link = info["thumburl"] as? String, let thumbnail = URL(string: link),
+                  let meta = try? JSONSerialization.data(withJSONObject: ["query": ["pages": [["imageinfo": [info]]]]]),
+                  let credit = credit(meta) else { continue }
+            return (thumbnail, credit)
+        }
+        return nil
+    }
+
+    // MARK: 웹 이미지 검색 (PHX1114A01). 우리 서버가 카카오 검색을 대신 부른다.
+
+    struct WebCandidate: Equatable {
+        var image: URL
+        var site: String
+    }
+
+    /// 쓸 만한 사진: 너무 작지 않고(긴 쪽 300 이상), 지나치게 길쭉하지 않은 것. 큰 사진 주소가 없으면 작은 그림 주소.
+    static func pickWeb(_ data: Data) -> [WebCandidate] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let documents = root["documents"] as? [[String: Any]] else { return [] }
+        return documents.compactMap { item in
+            let width = item["width"] as? Double ?? 0, height = item["height"] as? Double ?? 0
+            guard max(width, height) >= 300, min(width, height) > 0, max(width, height) / min(width, height) <= 2.5,
+                  let link = (item["image"] as? String) ?? (item["thumbnail"] as? String), let url = URL(string: link), url.scheme == "https" else { return nil }
+            return WebCandidate(image: url, site: (item["site"] as? String ?? "").trimmingCharacters(in: .whitespaces))
+        }
+    }
+
     /// 기기 캐시의 파일 이름표: 이름과 좌표 네 자리. 일정이 다른 곳으로 옮겨지면 다시 찾는다.
     static func cacheKey(name: String, latitude: Double, longitude: Double) -> String {
         let text = normalized(name) + String(format: "|%.4f|%.4f", latitude, longitude)
@@ -144,6 +196,8 @@ final class TravelPlacePhotoStore {
     static let limitBytes = 30 * 1_024 * 1_024
     /// 못 찾은 곳을 다시 묻지 않는 동안.
     static let missSeconds: TimeInterval = 7 * 86_400
+    /// 웹에서 찾은 사진은 기기에 하루만 둔다(남의 사진이라 오래 저장하지 않는다).
+    static let webSeconds: TimeInterval = 86_400
 
     private(set) var photos: [String: TravelPlacePhoto] = [:]
     @ObservationIgnored private var asked: Set<String> = []
@@ -173,7 +227,7 @@ final class TravelPlacePhotoStore {
     }
 
     func load(_ places: [Place]) async {
-        guard agent != nil, let folder else { return }
+        guard let folder else { return }
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         for place in places where photos[place.itemID] == nil {
             if Task.isCancelled { return }
@@ -183,15 +237,20 @@ final class TravelPlacePhotoStore {
                 photos[place.itemID] = cached
                 continue
             }
-            if isRecentMiss(key, in: folder) { continue }
+            if isRecentMiss(key, in: folder) {
+                // 사진을 못 찾은 곳은 작은 지도 그림으로 채운다(기기에 저장하지 않는다).
+                if let map = await mapPicture(place) { photos[place.itemID] = map }
+                continue
+            }
             let fetched = await fetch(place)
             if let fetched, let data = fetched.image.jpegData(compressionQuality: 0.85) {
                 try? data.write(to: folder.appendingPathComponent(key + ".jpg"))
-                try? Data(fetched.credit.utf8).write(to: folder.appendingPathComponent(key + ".txt"))
+                try? Data((fetched.source.rawValue + "\n" + fetched.credit).utf8).write(to: folder.appendingPathComponent(key + ".txt"))
                 photos[place.itemID] = fetched
                 trim(folder)
             } else {
                 try? Data().write(to: folder.appendingPathComponent(key + ".none"))
+                if let map = await mapPicture(place) { photos[place.itemID] = map }
             }
             // 잇달아 물으면 막힌다(429). 한 곳에 요청이 셋까지라 사이를 둔다.
             try? await Task.sleep(for: .milliseconds(1_200))
@@ -201,9 +260,21 @@ final class TravelPlacePhotoStore {
     private func readCache(_ key: String, in folder: URL) -> TravelPlacePhoto? {
         let file = folder.appendingPathComponent(key + ".jpg")
         guard let data = try? Data(contentsOf: file), let image = UIImage(data: data),
-              let credit = try? String(contentsOf: folder.appendingPathComponent(key + ".txt"), encoding: .utf8), !credit.isEmpty else { return nil }
-        try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
-        return TravelPlacePhoto(image: image, credit: credit)
+              let note = try? String(contentsOf: folder.appendingPathComponent(key + ".txt"), encoding: .utf8), !note.isEmpty else { return nil }
+        // 첫 줄이 출처 종류다. 예전 파일은 한 줄(저작권 표시)뿐이고 위키백과 것이다.
+        let lines = note.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+        let source = lines.count == 2 ? TravelPlacePhoto.Source(rawValue: lines[0]) ?? .wiki : .wiki
+        let credit = lines.count == 2 ? lines[1] : note
+        if source == .web {
+            let saved = (try? FileManager.default.attributesOfItem(atPath: folder.appendingPathComponent(key + ".txt").path))?[.modificationDate] as? Date ?? .distantPast
+            guard Date().timeIntervalSince(saved) < Self.webSeconds else {
+                for suffix in [".jpg", ".txt"] { try? FileManager.default.removeItem(at: folder.appendingPathComponent(key + suffix)) }
+                return nil
+            }
+        } else {
+            try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
+        }
+        return TravelPlacePhoto(image: image, credit: credit, source: source)
     }
 
     private func isRecentMiss(_ key: String, in folder: URL) -> Bool {
@@ -220,13 +291,60 @@ final class TravelPlacePhotoStore {
         return data
     }
 
+    /// 차례로 찾는다(PHX1114A01): 위키백과 대표 사진 → 위키미디어 공용의 주변 사진 → 웹 이미지 검색.
     private func fetch(_ place: Place) async -> TravelPlacePhoto? {
+        if let photo = await wikiPhoto(place) { return photo }
+        if let photo = await commonsPhoto(place) { return photo }
+        return await webPhoto(place)
+    }
+
+    private func wikiPhoto(_ place: Place) async -> TravelPlacePhoto? {
         let language = TravelWikiPhoto.language(for: place.name)
         guard let found = await get(TravelWikiPhoto.searchURL(name: place.name, language: language)),
               let pick = TravelWikiPhoto.pick(found, name: place.name, latitude: place.latitude, longitude: place.longitude),
               let meta = await get(TravelWikiPhoto.creditURL(file: pick.file, language: language)), let credit = TravelWikiPhoto.credit(meta),
               let bytes = await get(pick.thumbnail), let image = UIImage(data: bytes) else { return nil }
-        return TravelPlacePhoto(image: image, credit: credit)
+        return TravelPlacePhoto(image: image, credit: credit, source: .wiki)
+    }
+
+    private func commonsPhoto(_ place: Place) async -> TravelPlacePhoto? {
+        guard let found = await get(TravelWikiPhoto.commonsURL(latitude: place.latitude, longitude: place.longitude)),
+              let pick = TravelWikiPhoto.pickCommons(found), let bytes = await get(pick.thumbnail), let image = UIImage(data: bytes) else { return nil }
+        return TravelPlacePhoto(image: image, credit: pick.credit, source: .commons)
+    }
+
+    /// 장소 이름으로 웹에서 찾는다. 우리 서버가 검색만 대신 하고, 사진은 그 사이트에서 바로 받는다. 출처 사이트 이름을 함께 보인다.
+    private func webPhoto(_ place: Place) async -> TravelPlacePhoto? {
+        guard let host = TripRelay.host, let token = await AssistantRegistration.searchToken(), var parts = URLComponents(string: "https://\(host)/kakao/image") else { return nil }
+        parts.queryItems = [.init(name: "query", value: String(place.name.prefix(100)))]
+        guard let url = parts.url else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 10)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await session.data(for: request), (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        for candidate in TravelWikiPhoto.pickWeb(data).prefix(3) {
+            var picture = URLRequest(url: candidate.image, timeoutInterval: 10)
+            picture.setValue("image/*", forHTTPHeaderField: "Accept")
+            guard let (bytes, reply) = try? await session.data(for: picture), (reply as? HTTPURLResponse)?.statusCode == 200,
+                  bytes.count <= 4_000_000, let image = UIImage(data: bytes), let small = image.preparingThumbnail(of: Self.fitted(image.size, longSide: 640)) else { continue }
+            return TravelPlacePhoto(image: small, credit: candidate.site.isEmpty ? "web" : candidate.site, source: .web)
+        }
+        return nil
+    }
+
+    nonisolated static func fitted(_ size: CGSize, longSide: CGFloat) -> CGSize {
+        let scale = min(1, longSide / max(size.width, size.height, 1))
+        return CGSize(width: max(1, size.width * scale), height: max(1, size.height * scale))
+    }
+
+    /// 사진이 없는 곳: 그 자리의 작은 지도 한 컷. 그때그때 그리고 기기에 저장하지 않는다(Apple 지도 타일은 저장하지 않는다).
+    private func mapPicture(_ place: Place) async -> TravelPlacePhoto? {
+        guard abs(place.latitude) <= 90, abs(place.longitude) <= 180, !(place.latitude == 0 && place.longitude == 0) else { return nil }
+        let options = MKMapSnapshotter.Options()
+        options.region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude), latitudinalMeters: 500, longitudinalMeters: 500)
+        options.size = CGSize(width: 240, height: 240)
+        options.pointOfInterestFilter = .includingAll
+        guard let snapshot = try? await MKMapSnapshotter(options: options).start() else { return nil }
+        return TravelPlacePhoto(image: snapshot.image, credit: "", source: .map)
     }
 
     private func trim(_ folder: URL) {

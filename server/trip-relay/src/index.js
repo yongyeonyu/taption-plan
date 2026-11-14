@@ -60,6 +60,30 @@ export async function kakaoKeyword(request, env, fetcher = fetch, category = fal
   });
 }
 
+// 장소 사진 찾기(PHX1114A01, 대표 지시 「카드에 사진을 최대한 받아오고 싶다」). 카카오(다음) 이미지 검색을 같은 키로 대신 부른다.
+// 앱에는 사진 주소·크기·출처 사이트·출처 글 주소만 돌려준다(5건). 사진 자체는 서버를 거치지 않고 서버에 남기지도 않는다.
+const KAKAO_IMAGE_URL = "https://dapi.kakao.com/v2/search/image";
+export async function kakaoImage(request, env, fetcher = fetch) {
+  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+  if (!env.KAKAO_REST_API_KEY) return json({ error: "unavailable" }, 503);
+  const query = new URL(request.url).searchParams.get("query") ?? "";
+  if (!query.trim() || query.length > 100) return json({ error: "bad_query" }, 400);
+  const target = new URL(KAKAO_IMAGE_URL);
+  target.searchParams.set("query", query);
+  target.searchParams.set("size", "5");
+  const upstream = await fetcher(target, { headers: { authorization: `KakaoAK ${env.KAKAO_REST_API_KEY}` } });
+  if (!upstream.ok) return json({ error: "upstream", status: upstream.status }, 502);
+  let found;
+  try { found = await upstream.json(); } catch { return json({ error: "upstream" }, 502); }
+  const https = (v) => typeof v === "string" && v.startsWith("https://") && v.length <= 600;
+  const documents = (Array.isArray(found?.documents) ? found.documents : []).filter((d) => https(d?.image_url) || https(d?.thumbnail_url)).slice(0, 5).map((d) => ({
+    ...(https(d.image_url) ? { image: d.image_url } : {}), ...(https(d.thumbnail_url) ? { thumbnail: d.thumbnail_url } : {}),
+    width: Number(d.width) || 0, height: Number(d.height) || 0,
+    site: typeof d.display_sitename === "string" ? d.display_sitename.slice(0, 40) : "", ...(https(d.doc_url) ? { page: d.doc_url } : {}),
+  }));
+  return json({ documents }, 200);
+}
+
 // 버스 노선 중계(BRT1113A01, 대표 지시 「버스노선 api 추가하자」). 국토교통부 TAGO(공공데이터포털) 버스정류소 정보.
 // 키는 Worker 비밀값 TAGO_SERVICE_KEY(공공데이터포털 「일반 인증키 Decoding」 값)이고 앱에 넣지 않는다. 카카오와 같은 검색 한도를 쓴다.
 // /tago/stops?lat&lng: 좌표 근처 정류소(도시 코드·정류소 ID·이름·좌표). /tago/routes?cityCode&nodeId: 그 정류소를 지나는 노선(번호·종류).
@@ -155,7 +179,9 @@ async function kakaoRoute(request, ctx) {
     const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
     if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
   }
-  return kakaoKeyword(request, ctx.env, ctx.env.FETCH, new URL(request.url).pathname === "/kakao/category"); // FETCH: 시험용 바꿔치기
+  const path = new URL(request.url).pathname;
+  if (path === "/kakao/image") return kakaoImage(request, ctx.env, ctx.env.FETCH);
+  return kakaoKeyword(request, ctx.env, ctx.env.FETCH, path === "/kakao/category"); // FETCH: 시험용 바꿔치기
 }
 
 const ROUTES = {
@@ -249,6 +275,9 @@ const ROUTES = {
     GET: ["search", kakaoRoute],
   },
   "/kakao/category": {
+    GET: ["search", kakaoRoute],
+  },
+  "/kakao/image": {
     GET: ["search", kakaoRoute],
   },
   "/tago/stops": {

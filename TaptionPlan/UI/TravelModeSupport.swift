@@ -620,8 +620,8 @@ struct TravelCourseView: View {
                 Text(clock(block.startMinute) + " – " + clock(block.endMinute) + " · " + TravelQuickEntrySheet.durationText(block.endMinute - block.startMinute, language: language))
                     .font(.caption.monospacedDigit()).opacity(0.8)
                 ProgressView(value: TravelCourse.progress(block, minute: playMinute)).tint(TravelInk.plan)
-                // 위키백과 사진을 보일 때는 작가·라이선스를 함께 적는다.
-                if images[block.id] == nil, let credit = placePhotos[block.id]?.credit {
+                // 받아 온 사진에는 작가·라이선스나 출처 사이트를 함께 적는다(지도 그림은 표시가 없다).
+                if images[block.id] == nil, let credit = placePhotos[block.id]?.credit, !credit.isEmpty {
                     Text(credit).font(.system(size: 9)).opacity(0.6).lineLimit(1).accessibilityIdentifier("travelCoursePhotoCredit")
                 }
                 HStack {
