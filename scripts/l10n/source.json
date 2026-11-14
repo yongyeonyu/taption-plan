@@ -635,7 +635,7 @@
    "ko": "AI 공유 수준 낮추기",
    "en": "Lower AI sharing",
    "files": [
-    "AssistantCommandRunner.swift:620"
+    "AssistantCommandRunner.swift:578"
    ],
    "args": [],
    "targets": [
@@ -647,7 +647,7 @@
    "ko": "AI 공유 수준 높이기",
    "en": "Raise AI sharing",
    "files": [
-    "AssistantCommandRunner.swift:638"
+    "AssistantCommandRunner.swift:596"
    ],
    "args": [],
    "targets": [
@@ -762,7 +762,7 @@
    "ko": "AI 비서 요청을 반영했어요",
    "en": "Applied AI assistant requests",
    "files": [
-    "AssistantCommands.swift:411"
+    "AssistantCommands.swift:394"
    ],
    "args": [],
    "targets": [
@@ -2780,7 +2780,7 @@
    "ko": "iCloud 동기화 시작",
    "en": "iCloud sync started",
    "files": [
-    "AssistantCommandRunner.swift:495"
+    "AssistantCommandRunner.swift:453"
    ],
    "args": [],
    "targets": [
@@ -33843,7 +33843,7 @@
    "ko": "가계부 {0}개",
    "en": "{0} ledger entr(ies)",
    "files": [
-    "AssistantCommands.swift:408"
+    "AssistantCommands.swift:391"
    ],
    "args": [
     "ledger"
@@ -34602,7 +34602,7 @@
    "ko": "건강 연동 끄기(가져온 기록 삭제)",
    "en": "Turn off Health sync (removes imported records)",
    "files": [
-    "AssistantCommandRunner.swift:691"
+    "AssistantCommandRunner.swift:649"
    ],
    "args": [],
    "targets": [
@@ -34614,7 +34614,7 @@
    "ko": "건강 연동 끔",
    "en": "Health sync off",
    "files": [
-    "AssistantCommandRunner.swift:701"
+    "AssistantCommandRunner.swift:659"
    ],
    "args": [],
    "targets": [
@@ -34784,7 +34784,7 @@
    "ko": "걷기·달리기 추적 끝내기",
    "en": "Stop walk or run tracking",
    "files": [
-    "AssistantCommandRunner.swift:506"
+    "AssistantCommandRunner.swift:464"
    ],
    "args": [],
    "targets": [
@@ -36327,7 +36327,7 @@
    "ko": "구글 캘린더",
    "en": "Google Calendar",
    "files": [
-    "AssistantCommandRunner.swift:550"
+    "AssistantCommandRunner.swift:508"
    ],
    "args": [],
    "targets": [
@@ -37090,7 +37090,7 @@
    "ko": "기기 캘린더",
    "en": "Device calendars",
    "files": [
-    "AssistantCommandRunner.swift:545"
+    "AssistantCommandRunner.swift:503"
    ],
    "args": [],
    "targets": [
@@ -37217,7 +37217,7 @@
    "ko": "기록 새로고침",
    "en": "Records refreshed",
    "files": [
-    "AssistantCommandRunner.swift:491"
+    "AssistantCommandRunner.swift:449"
    ],
    "args": [],
    "targets": [
@@ -37229,7 +37229,7 @@
    "ko": "기록 수정 {0}개",
    "en": "{0} record edit(s)",
    "files": [
-    "AssistantCommands.swift:405"
+    "AssistantCommands.swift:388"
    ],
    "args": [
     "edits"
@@ -41018,7 +41018,7 @@
    "ko": "말풍선 {0}개",
    "en": "{0} bubble(s)",
    "files": [
-    "AssistantCommands.swift:407"
+    "AssistantCommands.swift:390"
    ],
    "args": [
     "bubbles"
@@ -41495,7 +41495,7 @@
    "ko": "메모 {0}개",
    "en": "{0} memo(s)",
    "files": [
-    "AssistantCommands.swift:403"
+    "AssistantCommands.swift:386"
    ],
    "args": [
     "memos"
@@ -41938,7 +41938,7 @@
    "ko": "못 한 것 {0}개",
    "en": "{0} not done",
    "files": [
-    "AssistantCommands.swift:410"
+    "AssistantCommands.swift:393"
    ],
    "args": [
     "rejected"
@@ -42887,7 +42887,7 @@
    "ko": "백업 화면 열기",
    "en": "Open the backup screen",
    "files": [
-    "AssistantCommandRunner.swift:711"
+    "AssistantCommandRunner.swift:669"
    ],
    "args": [],
    "targets": [
@@ -42947,7 +42947,7 @@
    "ko": "백업에서 복원 화면 열기",
    "en": "Open restore from backup",
    "files": [
-    "AssistantCommandRunner.swift:562"
+    "AssistantCommandRunner.swift:520"
    ],
    "args": [],
    "targets": [
@@ -45005,7 +45005,7 @@
    "ko": "새로고침·iCloud 동기화 실행",
    "en": "Refresh or run the iCloud sync",
    "files": [
-    "AssistantCommandRunner.swift:472"
+    "AssistantCommandRunner.swift:430"
    ],
    "args": [],
    "targets": [
@@ -45180,7 +45180,7 @@
    "ko": "서버 보관 기간 늘리기",
    "en": "Extend server retention",
    "files": [
-    "AssistantCommandRunner.swift:673"
+    "AssistantCommandRunner.swift:631"
    ],
    "args": [],
    "targets": [
@@ -45192,7 +45192,7 @@
    "ko": "서버 보관 기간 줄이기",
    "en": "Shorten server retention",
    "files": [
-    "AssistantCommandRunner.swift:655"
+    "AssistantCommandRunner.swift:613"
    ],
    "args": [],
    "targets": [
@@ -45454,7 +45454,7 @@
    "ko": "설정 {0}개",
    "en": "{0} setting(s)",
    "files": [
-    "AssistantCommands.swift:406"
+    "AssistantCommands.swift:389"
    ],
    "args": [
     "settings"
@@ -49590,8 +49590,8 @@
    "ko": "연결 끊음",
    "en": "Disconnected",
    "files": [
-    "AssistantCommandRunner.swift:545",
-    "AssistantCommandRunner.swift:550"
+    "AssistantCommandRunner.swift:503",
+    "AssistantCommandRunner.swift:508"
    ],
    "args": [],
    "targets": [
@@ -54622,7 +54622,7 @@
    "ko": "일정 {0}개",
    "en": "{0} schedule(s)",
    "files": [
-    "AssistantCommands.swift:404"
+    "AssistantCommands.swift:387"
    ],
    "args": [
     "schedules"
@@ -58254,7 +58254,7 @@
    "ko": "질문 {0}개",
    "en": "{0} question(s)",
    "files": [
-    "AssistantCommands.swift:409"
+    "AssistantCommands.swift:392"
    ],
    "args": [
     "questions"
@@ -58826,7 +58826,7 @@
    "ko": "추적 끝냄",
    "en": "Tracking stopped",
    "files": [
-    "AssistantCommandRunner.swift:516"
+    "AssistantCommandRunner.swift:474"
    ],
    "args": [],
    "targets": [
@@ -59426,7 +59426,7 @@
    "ko": "캘린더 연결 끊기",
    "en": "Disconnect calendars",
    "files": [
-    "AssistantCommandRunner.swift:526"
+    "AssistantCommandRunner.swift:484"
    ],
    "args": [],
    "targets": [
