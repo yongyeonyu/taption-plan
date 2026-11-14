@@ -7,6 +7,14 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## TFB1114A341 · 서버 배포와 TestFlight 341 (2026-11-14 밤)
+
+- 서버 배포 한 번(대표 선택 「다 끝난 뒤 한 번에」): AI 동작 등록부 전체, 일 처리 강화(쓰기 권한·`queue_full`), 사진 중계(`/photo/search`, 구글 포함), 푸시(APNs, 비밀값 없으면 건너뜀). 배포 뒤 운영 서버의 `list_actions`가 동작 79개를 돌려주고 `classifyInboxItem`·`setTripItemPhoto`·`moveCategory`·`restoreFromBackup`이 들어 있음을 읽어 확인.
+- 341 첫 시도 실패: 아카이브 서명에서 「프로비저닝 프로파일에 Push Notifications·aps-environment가 없다」(`build/validation/TFB1114A341-try1/archive.log`). `aps-environment`를 두 권한 파일에서 뺀 뒤(PSH1114A12) 다시 실행.
+- 341 두 번째: `release.sh` 종료 코드 0. 처리 상태 VALID, 내부 그룹 「TP Taption Plan 내부 테스트」 연결 확인, 테스터 1명 노출(`build/validation/TFB1114A341/testflight-report.json`). 네 번들 빌드 번호 341 일치는 스크립트가 확인.
+- 341에 든 것: AIP1114A05·KMP1114A04·PHS1114A01·PSH1114A06(권한 항목 제외)·ACT1114A07·AIP1114A08·ACT1114A09·GPH1114A11·PKG1114A10.
+- 하지 않은 것: 실기기 설치·확인 전부(업로드·그룹 연결만으로 기기 기능을 통과로 보지 않음), 푸시 실제 전달, 구글·Mapillary·관광공사·Unsplash·Pexels 실제 호출(키 없음).
+
 ## PKG1114A10·GPH1114A11 · 패키지 이동 1~3단계와 구글 장소 사진 (2026-11-14 밤, 아직 빌드에 없음)
 
 - 패키지 이동은 따로 만든 작업 공간에서 단계마다 커밋해 메인에 합침(충돌 없음). 작업 공간에서: 지정 9개 클래스 197건 통과(단계마다 3회), `swift test`(TaptionAssistant) 5건, `swift build`(TaptionLedgerCore) 성공, Release 구성 빌드 성공(`build/validation/PKG1114A10/` 로그는 그 작업 공간에).
