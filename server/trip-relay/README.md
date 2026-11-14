@@ -64,6 +64,21 @@ v2: 값은 사용자 DEK(주인 키에서 HKDF info `dek`로 정해지고 저장
 
 (SEC1110A02부터 등록되지 않은 키는 401입니다. 아래 참고.) 코드는 `src/index.js`(경로·범위표), `keys.js`, `store.js`, `validate.js`, `crypto.js`, `mcp.js`, `openapi.js`로 나뉩니다. 시험은 `test/*.test.mjs`. 자세한 규격은 [docs/ACTIVITY_RELAY_API.md](../../docs/ACTIVITY_RELAY_API.md) 6~10장.
 
+## 푸시(APNs, PSH1114A06)
+
+AI(주인 키가 아닌 키)가 명령을 넣거나, 일을 끝내거나, 규칙을 바꾸면 앱을 깨웁니다. 푸시에는 종류(`k`: `cmd`·`q`·`task`·`rules`)만 싣고 사용자 글은 싣지 않습니다. 질문·승인과 `needsUser` 결과만 보이는 알림(`PUSH_AI_QUESTION`·`PUSH_AI_NEEDS_YOU`, 문구는 앱 `Localizable`)이고 나머지는 조용한 푸시입니다. 조용한 것은 종류마다 간격(명령·규칙 2분, 일 60초)과 하루 60번, 보이는 것은 하루 20번까지입니다. 앱의 5분 확인이 예비라 푸시가 안 가도 틀리는 것은 없습니다.
+
+- `POST /push/token {token, env: sandbox|production, build?}`·`DELETE /push/token`: 주인 키만. 토큰은 DEK로 잠가 주인 DO에 둡니다. APNs가 410·`Unregistered`·`BadDeviceToken`을 주면 지우고, 「모두 끊기」·PIN 초기화 때도 지웁니다.
+- 비밀값 세 개가 모두 있어야 보냅니다. 하나라도 없으면 조용히 건너뜁니다(배포 순서 자유).
+
+```sh
+npx wrangler secret put APNS_KEY_P8 --config wrangler.local.toml    # .p8 파일 내용 전체(-----BEGIN PRIVATE KEY----- 포함)
+npx wrangler secret put APNS_KEY_ID --config wrangler.local.toml    # 키 ID
+npx wrangler secret put APNS_TEAM_ID --config wrangler.local.toml   # 팀 ID
+```
+
+번들 ID가 `com.taption.plan`이 아니면 `APNS_TOPIC`을 따로 둡니다. 키 값은 저장소·로그·채팅에 남기지 않습니다.
+
 ## 카카오 검색 중계(REV1110A03)
 
 `GET /kakao/keyword?query=…&x=…&y=…&sort=…&radius=…&size=…` → 카카오 로컬 키워드 검색을 대신 부릅니다. 카카오 REST 키는 서버용이라 앱에 넣지 않고 Worker 비밀값으로만 둡니다(IP당 1분 60번). SEC1110A02부터 등록한 검색 키(설치마다) 또는 주인 키만 받고, 키마다 하루 500번입니다.

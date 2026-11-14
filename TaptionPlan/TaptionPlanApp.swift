@@ -304,6 +304,8 @@ final class TaptionPlanAppDelegate:
             }
         }
         ReceiptPhotoWatcher.shared.startIfNeeded()
+        // AI 연결이 있을 때만 푸시 토큰을 청한다(PSH1114A06).
+        Task { @MainActor in await AssistantPush.syncRegistration() }
         // 지난번에 받아 둔 규칙을 바로 쓴다. 서버와 맞추는 것은 명령 확인 때 한다(AIX1114A01 P3).
         AssistantRuleStore.refreshSnapshot()
         AppleHealthService.shared.startObservingChanges {
@@ -324,6 +326,20 @@ final class TaptionPlanAppDelegate:
             await model.performHealthBackgroundRefresh()
         }
         return true
+    }
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        Task { @MainActor in await AssistantPush.registered(deviceToken) }
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "assistant_push_register_failed", level: .notice, fields: ["error": String(describing: type(of: error)), "code": String((error as NSError).code)]
+        )
+    }
+
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any]) async -> UIBackgroundFetchResult {
+        await AssistantPush.receive(userInfo)
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
@@ -383,6 +399,8 @@ final class TaptionPlanAppDelegate:
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
+        // 앱이 앞에 있으면 푸시의 일반 문구는 띄우지 않는다. 받은 내용은 앱이 직접 보인다(PSH1114A06).
+        if notification.request.trigger is UNPushNotificationTrigger, AssistantPush.kind(from: notification.request.content.userInfo) != nil { return [] }
         MapHomeAlarmDiagnostics.log(MapHomeAlarmDiagnostics.presented(
             kind: notification.request.content.userInfo[MapHomeAlarmCenter.userInfoKind] as? String
         ))

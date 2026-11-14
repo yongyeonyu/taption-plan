@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 /// 명령 처리 장부(REV1110A06). 반영 중인 명령 하나와, 아직 서버에 알리지 못한 결과를 기기에 둔다.
 /// 결과를 서버가 받은 뒤에만 큐에서 지우므로, 도중에 앱이 꺼지거나 전송이 실패해도 AI가 결과를 잃지 않는다.
@@ -164,8 +165,10 @@ enum AssistantCommandRunner {
     /// 대표 결정(2026-11-10): 백그라운드·기기 잠금 중에도 명령을 전부 반영한다. 화면 알림은 띄우지 않고, 사생활 잠금 중에는 올리기만 쉰다.
     /// 큰 묶음은 반영하지 않고 서버에 남겨 다음에 앱을 열 때 묻는다. 남은 시간이 없으면 올리기는 건너뛴다.
     /// 위치 이벤트로 다시 켜졌을 때도 부른다(AIC1112A01). 그런 깨어남은 잦을 수 있어 5분에 한 번만 돌고, 프로세스가 새로 떠도 지키도록 기기에 적어 둔다.
-    static func runInBackground(model: AppModel, budget: TimeInterval = 12) async {
-        guard TripRelay.isAvailable, AssistantRegistration.isReady(), !model.isSceneActive, takeBackgroundTurn() else { return }
+    /// `force`(푸시로 깨어남, PSH1114A06)면 5분 간격을 보지 않고 바로 돌고, 질문·답도 올린다. 앨범은 보지 않는다.
+    static func runInBackground(model: AppModel, budget: TimeInterval = 12, force: Bool = false) async {
+        guard TripRelay.isAvailable, AssistantRegistration.isReady(), !model.isSceneActive,
+              takeBackgroundTurn(minimum: force ? 0 : AssistantActivitySync.minimumInterval) else { return }
         // 지도 화면이 뜨지 않은 깨어남에서도 끝난 일 알림이 설정을 읽을 수 있게 한다(AIP1114A05).
         if AssistantCommandRefresh.model == nil { AssistantCommandRefresh.model = model }
         let deadline = Date.now.addingTimeInterval(budget)
@@ -174,6 +177,7 @@ enum AssistantCommandRunner {
             if case .needsConfirmation = await run(model: model) {
                 TaptionPlanDiagnosticsLogger.shared.record("assistant_background_batch_deferred")
             }
+            if force, Date.now < deadline, !Task.isCancelled { await AssistantQuestionStore.shared.uploadIfNeeded() }
             guard Date.now < deadline, !Task.isCancelled else { return }
             await AssistantActivitySync.run(model: model)
             // 규칙 묶음과 맡긴 일의 상태도 함께 맞춘다(AIX1114A01 P3·P5).
@@ -183,7 +187,7 @@ enum AssistantCommandRunner {
             await AITaskQueue.refresh()
         }
         // 남은 시간에 앨범의 새 영수증을 본다(RPA1114A01).
-        if Date.now < deadline, !Task.isCancelled { await ReceiptPhotoScanner.scan(deadline: deadline) }
+        if !force, Date.now < deadline, !Task.isCancelled { await ReceiptPhotoScanner.scan(deadline: deadline) }
     }
 }
 
@@ -280,6 +284,7 @@ enum AssistantCommandRefresh {
             await AITaskQueue.upload()
             return false
         }
+        await AssistantPush.syncRegistration()
         let result = await TripRelay.$singleAttempt.withValue(true) { await AssistantCommandRunner.run(model: model) }
         // 새 질문(답 기다림)과 아직 못 올린 답을 올린다(ASK1112A01).
         await AssistantQuestionStore.shared.uploadIfNeeded()
@@ -300,5 +305,102 @@ enum AssistantCommandRefresh {
         case .nothing:
             return false
         }
+    }
+}
+
+/// 푸시(APNs, PSH1114A06). 외부 AI가 무언가 하면 서버가 종류만 실어 깨우고, 앱은 평소 확인과 같은 일을 바로 한다.
+/// 푸시가 오지 않아도 5분 확인이 같은 일을 하므로, 푸시에 기대는 것은 빠르기뿐이다.
+@MainActor
+enum AssistantPush {
+    enum Kind: String { case cmd, q, task, rules }
+
+    nonisolated static let uploadedKey = "assistantPushUploaded"
+    nonisolated static let uploadedAtKey = "assistantPushUploadedAt"
+    /// 서버가 토큰을 지웠을 수 있어(만료·모두 끊기) 이만큼 지나면 다시 올린다.
+    nonisolated static let reuploadAfter: TimeInterval = 7 * 86_400
+    private static var requested = false
+    /// 이번 실행에서 iOS가 준 토큰. 올리지 못했으면 다음 확인 때 다시 올린다.
+    private static var token: String?
+
+    nonisolated static var environment: String {
+        #if DEBUG
+        "sandbox"
+        #else
+        "production"
+        #endif
+    }
+
+    nonisolated static func kind(from userInfo: [AnyHashable: Any]) -> Kind? {
+        (userInfo["k"] as? String).flatMap(Kind.init(rawValue:))
+    }
+
+    nonisolated static func hex(_ deviceToken: Data) -> String {
+        deviceToken.map { String(format: "%02x", $0) }.joined()
+    }
+
+    nonisolated static func needsUpload(token: String, environment: String, defaults: UserDefaults, now: Date = .now) -> Bool {
+        guard defaults.string(forKey: uploadedKey) == "\(environment):\(token)" else { return true }
+        let elapsed = now.timeIntervalSince1970 - defaults.double(forKey: uploadedAtKey)
+        return elapsed < 0 || elapsed >= reuploadAfter
+    }
+
+    /// AI 연결이 있으면 iOS에 토큰을 청하고(실행마다 한 번), 연결이 없어졌으면 서버에 올려 둔 토큰을 지운다.
+    static func syncRegistration(env: AssistantRegistration.Environment = .live) async {
+        if MemoPolishQueue.hasConnection(env.defaults) {
+            if let token { return await upload(token: token, env: env) }
+            guard !requested, env.defaults === UserDefaults.standard else { return }
+            requested = true
+            UIApplication.shared.registerForRemoteNotifications()
+            return
+        }
+        requested = false
+        guard env.defaults.string(forKey: uploadedKey) != nil, let master = env.secrets.read(.master),
+              let reply = await TripRelay.send(TripRelay.relayRequest("/push/token", method: "DELETE", token: master, host: env.host), session: env.session),
+              (200..<300).contains(reply.status) else { return }
+        env.defaults.removeObject(forKey: uploadedKey)
+        env.defaults.removeObject(forKey: uploadedAtKey)
+    }
+
+    static func registered(_ deviceToken: Data) async {
+        let value = hex(deviceToken)
+        token = value
+        await upload(token: value)
+    }
+
+    /// 주인 키로 `POST /push/token`. 같은 토큰은 다시 올리지 않는다.
+    static func upload(token: String, environment: String = AssistantPush.environment, env: AssistantRegistration.Environment = .live) async {
+        guard MemoPolishQueue.hasConnection(env.defaults), needsUpload(token: token, environment: environment, defaults: env.defaults),
+              let master = env.secrets.read(.master) else { return }
+        var payload = ["token": token, "env": environment]
+        if let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String, !build.isEmpty, build.count <= 8, build.allSatisfy({ ("0"..."9").contains($0) }) {
+            payload["build"] = build
+        }
+        let body = try? JSONSerialization.data(withJSONObject: payload)
+        let request = body.flatMap { TripRelay.relayRequest("/push/token", method: "POST", body: $0, token: master, host: env.host) }
+        guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return }
+        env.defaults.set("\(environment):\(token)", forKey: uploadedKey)
+        env.defaults.set(Date.now.timeIntervalSince1970, forKey: uploadedAtKey)
+    }
+
+    /// 푸시를 받았다. 앱이 앞에 있으면 평소 확인을, 아니면 백그라운드 확인을 간격 제한 없이 바로 돈다. `budget`초에서 끊는다.
+    static func receive(_ userInfo: [AnyHashable: Any], budget: TimeInterval = 20) async -> UIBackgroundFetchResult {
+        guard let kind = kind(from: userInfo), TripRelay.isAvailable, AssistantRegistration.isReady() else { return .noData }
+        TaptionPlanDiagnosticsLogger.shared.record("assistant_push_received", fields: ["kind": kind.rawValue])
+        let work = Task { @MainActor () -> Bool in
+            if let model = AssistantCommandRefresh.model, model.isSceneActive {
+                await AssistantCommandRefresh.now()
+                return true
+            }
+            guard await TaptionProAccessController.currentAccessGranted() else { return false }
+            await AssistantCommandRunner.runInBackground(model: AppModel.backgroundTaskInstance(), budget: budget * 0.75, force: true)
+            return true
+        }
+        let timeout = Task {
+            try? await Task.sleep(for: .seconds(budget))
+            work.cancel()
+        }
+        let ran = await work.value
+        timeout.cancel()
+        return ran ? .newData : .noData
     }
 }

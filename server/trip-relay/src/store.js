@@ -3,6 +3,7 @@
 // SEC1110A02: 하루 기록 이름은 `act:<주인>:<HMAC(날짜)>`이고 날짜 목록은 DO가 잠근 채 가진다(KV list를 쓰지 않는다).
 // 명령 큐와 24시간 한도는 DO가 가진다. 여행 계획·명령 결과·추가 칸(goals·trips·placeBook)은 KV에 잠가 둔다.
 import { registry } from "./actions.js";
+import { notify, pushForCommand, pushForTask } from "./apns.js";
 import { nameKey, openJson, sealJson, tagOf } from "./crypto.js";
 import { json, stored, tooMany } from "./http.js";
 import { LIMITS, chargeWrites } from "./state.js";
@@ -247,6 +248,7 @@ export async function finishTask(ctx, value) {
   });
   if (result.error === "no_task") return json({ error: "no_task" }, 404);
   if (result.error === "not_claimer") return json({ error: "not_claimer" }, 409);
+  notify(ctx, pushForTask(outcome));
   return json({ ok: true, id: result.id, status: result.status });
 }
 
@@ -514,6 +516,7 @@ export async function queueCommand(ctx, value, source = "rest") {
     const limit = bubble ? DAILY_BUBBLE_LIMIT : DAILY_COMMAND_LIMIT;
     return json({ error: result.error, limit, retryAfter: retry, retryAfterSeconds: retry }, 429, { "retry-after": String(retry) });
   }
+  notify(ctx, pushForCommand(command));
   return json({ ok: true, id: command.id, queued: result.queued, remainingToday: result.remaining, expiresInSeconds: QUEUE_TTL_SECONDS }, 201);
 }
 
