@@ -612,13 +612,11 @@ struct AppShellView: View {
         guard NSClassFromString("XCTestCase") == nil else { return false }
         let store = FirstRunTutorialStore()
         let snapshot = model.snapshot
-        // 시험용 저장소(`-firstRunStore`)로 띄우면 쓰던 설치라도 새 설치처럼 판단한다.
-        let isFresh = FirstRunTutorialStore.usesLaunchStore
         let decision = FirstRunTutorialPolicy.decision(
             outcome: store.outcome,
             savedStep: store.savedStep,
-            permissionOnboardingDone: !isFresh && UserDefaults.standard.bool(forKey: AppModel.permissionOnboardingKey),
-            hasUserData: !isFresh && (!snapshot.plans.isEmpty
+            permissionOnboardingDone: !FirstRunTutorialStore.usesLaunchStore && UserDefaults.standard.bool(forKey: AppModel.permissionOnboardingKey),
+            hasUserData: !FirstRunTutorialStore.usesLaunchStore && (!snapshot.plans.isEmpty
                 || !snapshot.actuals.isEmpty
                 || !snapshot.places.isEmpty
                 || !snapshot.travel.isEmpty
