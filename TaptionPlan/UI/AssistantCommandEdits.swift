@@ -60,61 +60,6 @@ extension AssistantActionKind {
 }
 
 extension AssistantCommand.Action {
-    var kind: AssistantActionKind {
-        switch self {
-        case .addMemo: .addMemo
-        case .addSchedule: .addSchedule
-        case .updateActivity: .updateActivity
-        case .hideRecord: .hideRecord
-        case .mergeRecords: .mergeRecords
-        case .updateRecordTime: .updateRecordTime
-        case .updateSchedule: .updateSchedule
-        case .deleteSchedule: .deleteSchedule
-        case .updateMemo: .updateMemo
-        case .deleteMemo: .deleteMemo
-        case .addGoal: .addGoal
-        case .updateGoal: .updateGoal
-        case .deleteGoal: .deleteGoal
-        case .addTripStop: .addTripStop
-        case .updateTripStop: .updateTripStop
-        case .deleteTripStop: .deleteTripStop
-        case .setTripItemStatus: .setTripItemStatus
-        case .updateSleep: .updateSleep
-        case .setLanguage: .setLanguage
-        case .setMapStyle: .setMapStyle
-        case .setDisplayOption: .setDisplayOption
-        case .setBubble: .setBubble
-        case .addExpense: .addExpense
-        case .updateExpense: .updateExpense
-        case .classifyUnconfirmed: .classifyUnconfirmed
-        case .setTravelMode: .setTravelMode
-        case .addPaymentRule: .addPaymentRule
-        case .setBudget: .setBudget
-        case .addOwnAccount: .addOwnAccount
-        case .removeOwnAccount: .removeOwnAccount
-        case .deletePaymentRule: .deletePaymentRule
-        case .resolveReview: .resolveReview
-        case .deleteInboxItem: .deleteInboxItem
-        case .openScreen: .openScreen
-        case .askUser: .askUser
-        case .addPlace: .addPlace
-        case .updatePlace: .updatePlace
-        case .deletePlace: .deletePlace
-        case .addCategory: .addCategory
-        case .updateCategory: .updateCategory
-        case .addTrip: .addTrip
-        case .updateTrip: .updateTrip
-        case .deleteTrip: .deleteTrip
-        case .setSetting: .setSetting
-        case .requestApproval: .requestApproval
-        case .resolvePlaceSuggestion: .resolvePlaceSuggestion
-        case .setCarAudio: .setCarAudio
-        case .setCalendarTitleDetail: .setCalendarTitleDetail
-        case .setTripBudget: .setTripBudget
-        case let .operation(parsed): .operation(parsed.name)
-        }
-    }
-
     /// 이 명령이 바꾸는 기존 기록·일정·메모 수. 새로 더하는 것은 0.
     /// 루틴을 지우면 하위 일정도 함께 지워지므로 `plans`를 주면 그 수까지 센다(REV1110A06).
     func existingChangeCount(plans: [PlanRecord] = []) -> Int {

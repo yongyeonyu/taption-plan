@@ -1,4 +1,5 @@
 import Foundation
+import TaptionAssistantProtocol
 
 /// 이미 처리한 명령 id. 서버에서 지운 뒤에도 캐시가 잠깐 예전 목록을 줄 수 있어 두 번 반영하지 않는다.
 public enum AssistantCommandLedger {
@@ -112,5 +113,36 @@ public enum AssistantCommandPolling {
 
     public static func nextInterval(now: Date = .now, info: ProcessInfo = .processInfo) -> TimeInterval {
         interval(conversation: isConversation(signal: signal, manualAt: manualAt, now: now), lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState)
+    }
+}
+
+extension AssistantCommandLedger {
+    /// 이미 처리한 id를 뺀 묶음.
+    public static func unseen(_ batch: AssistantCommandBatch, defaults: UserDefaults = .standard) -> AssistantCommandBatch {
+        let seen = Set(handled(defaults))
+        return AssistantCommandBatch(
+            commands: batch.commands.filter { !seen.contains($0.id) },
+            invalidIDs: batch.invalidIDs.filter { !seen.contains($0) }, invalidInfo: batch.invalidInfo
+        )
+    }
+}
+
+/// 폐기됐거나 모르는 연결 키가 보낸 명령은 반영하지 않는다(SEC1110A02).
+public enum AssistantKeyFilter {
+    public static func split(_ batch: AssistantCommandBatch, active: Set<String>) -> (kept: AssistantCommandBatch, inactiveIDs: [String]) {
+        let kept = batch.commands.filter { isAllowed($0, active: active) }
+        let inactive = batch.commands.filter { !isAllowed($0, active: active) }.map(\.id)
+        return (AssistantCommandBatch(commands: kept, invalidIDs: batch.invalidIDs, invalidInfo: batch.invalidInfo), inactive)
+    }
+
+    /// 살아 있는 연결이 보낸 것, 그리고 서버가 예전 큐에서 옮긴 것(`legacy`, 연결 id 없음)만 받는다.
+    /// 주 키로 보낸 것(`master`)은 연결이 아니라 받지 않는다.
+    public static func isAllowed(_ command: AssistantCommand, active: Set<String>) -> Bool {
+        if let keyID = command.keyID { return active.contains(keyID) }
+        return command.source == "legacy"
+    }
+
+    public static func activeIDs(_ keys: [AssistantScopedKey], now: Date = .now) -> Set<String> {
+        Set(keys.filter { $0.isActive(now: now) }.map(\.id))
     }
 }

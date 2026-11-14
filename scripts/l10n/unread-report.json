@@ -106,7 +106,7 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 768,
+   "line": 767,
    "ko": "$0",
    "en": "host.language"
   },
@@ -172,13 +172,13 @@
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 745,
+   "line": 723,
    "ko": "stop.kind.title",
    "en": "stop.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 175,
+   "line": 155,
    "ko": "before.amount",
    "en": "before.currency"
   },

@@ -20,7 +20,9 @@ let package = Package(
         // 가계부 값 타입(`LedgerEntry`·`LedgerCategory`)만 쓴다(RMN1114A25).
         .package(path: "../TaptionLedgerCore"),
         // 저장 본문의 값 타입(장소 종류·내 정류장 종류·층 범위)만 쓴다. 저장소(`TaptionStoreRepository`)는 부르지 않는다(RMN1114A25).
-        .package(path: "../TaptionPlanStore")
+        .package(path: "../TaptionPlanStore"),
+        // 이동 수단 값(`TravelMode`)만 쓴다.
+        .package(path: "../TaptionPlanCore")
     ],
     targets: [
         // 화면·앱 모델·저장소를 모른다. Foundation만 쓴다.
@@ -31,7 +33,8 @@ let package = Package(
             "TaptionRules",
             .product(name: "TaptionWatchSync", package: "TaptionWatchSync"),
             .product(name: "TaptionLedgerCore", package: "TaptionLedgerCore"),
-            .product(name: "TaptionPlanStore", package: "TaptionPlanStore")
+            .product(name: "TaptionPlanStore", package: "TaptionPlanStore"),
+            .product(name: "TaptionPlanCore", package: "TaptionPlanCore")
         ]),
         .testTarget(name: "TaptionAssistantProtocolTests", dependencies: ["TaptionAssistantProtocol"]),
         // 중계 서버 전송·키 보관·등록·맡긴 일. 앱 모델·화면을 모르고, 앱 설정·잠금은 `AssistantEnvironment`로 받는다.

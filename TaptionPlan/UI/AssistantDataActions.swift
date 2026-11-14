@@ -2,26 +2,6 @@ import Foundation
 import MapKit
 import TaptionPlanCore
 
-/// 폐기됐거나 모르는 연결 키가 보낸 명령은 반영하지 않는다(SEC1110A02).
-enum AssistantKeyFilter {
-    static func split(_ batch: AssistantCommandBatch, active: Set<String>) -> (kept: AssistantCommandBatch, inactiveIDs: [String]) {
-        let kept = batch.commands.filter { isAllowed($0, active: active) }
-        let inactive = batch.commands.filter { !isAllowed($0, active: active) }.map(\.id)
-        return (AssistantCommandBatch(commands: kept, invalidIDs: batch.invalidIDs, invalidInfo: batch.invalidInfo), inactive)
-    }
-
-    /// 살아 있는 연결이 보낸 것, 그리고 서버가 예전 큐에서 옮긴 것(`legacy`, 연결 id 없음)만 받는다.
-    /// 주 키로 보낸 것(`master`)은 연결이 아니라 받지 않는다.
-    static func isAllowed(_ command: AssistantCommand, active: Set<String>) -> Bool {
-        if let keyID = command.keyID { return active.contains(keyID) }
-        return command.source == "legacy"
-    }
-
-    static func activeIDs(_ keys: [AssistantScopedKey], now: Date = .now) -> Set<String> {
-        Set(keys.filter { $0.isActive(now: now) }.map(\.id))
-    }
-}
-
 /// 「AI가 한 일」에 보일 연결 이름. 키를 나중에 폐기해도 남도록 반영할 때 적어 둔다.
 enum AssistantConnectionName {
     static func name(keyID: String?, source: String?, defaults: UserDefaults = .standard) -> String? {

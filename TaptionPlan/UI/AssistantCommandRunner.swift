@@ -206,12 +206,6 @@ extension AssistantCommandRunner {
     }
 }
 
-extension AssistantCommandBatch {
-    func excluding(_ ids: Set<String>) -> Self {
-        Self(commands: commands.filter { !ids.contains($0.id) }, invalidIDs: invalidIDs.filter { !ids.contains($0) }, invalidInfo: invalidInfo)
-    }
-}
-
 /// 확인을 기다리는 큰 묶음과 잠깐 보이는 알림. 지도 화면 본문 상태를 늘리지 않게 따로 둔다(AIR1110A02).
 @MainActor
 @Observable

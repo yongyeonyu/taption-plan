@@ -762,7 +762,7 @@
    "ko": "AI 비서 요청을 반영했어요",
    "en": "Applied AI assistant requests",
    "files": [
-    "AssistantCommands.swift:402"
+    "AssistantCommands.swift:286"
    ],
    "args": [],
    "targets": [
@@ -2780,7 +2780,7 @@
    "ko": "iCloud 동기화 시작",
    "en": "iCloud sync started",
    "files": [
-    "AssistantCommandRunner.swift:410"
+    "AssistantCommandRunner.swift:404"
    ],
    "args": [],
    "targets": [
@@ -3336,7 +3336,7 @@
    "ko": "{0} · {1}번째",
    "en": "{0} · #{1}",
    "files": [
-    "AssistantDataActions.swift:706"
+    "AssistantDataActions.swift:685"
    ],
    "args": [
     "visible[from].name",
@@ -4761,7 +4761,7 @@
    "ko": "{0}일(날짜 미정)",
    "en": "{0} day(s), no dates",
    "files": [
-    "AssistantDataActions.swift:525"
+    "AssistantDataActions.swift:505"
    ],
    "args": [
     "trip.wishDays ?? 1"
@@ -4925,7 +4925,7 @@
    "ko": "{0}층",
    "en": "Floor {0}",
    "files": [
-    "AssistantDataActions.swift:688"
+    "AssistantDataActions.swift:667"
    ],
    "args": [
     "$0"
@@ -33844,7 +33844,7 @@
    "en": "{0} ledger entr(ies)",
    "files": [
     "AssistantOperationReading.swift:48",
-    "AssistantCommands.swift:399"
+    "AssistantCommands.swift:283"
    ],
    "args": [
     "count"
@@ -34055,7 +34055,7 @@
    "ko": "가림",
    "en": "Hidden",
    "files": [
-    "AssistantCommandEdits.swift:289"
+    "AssistantCommandEdits.swift:234"
    ],
    "args": [],
    "targets": [
@@ -34615,7 +34615,7 @@
    "ko": "건강 연동 끔",
    "en": "Health sync off",
    "files": [
-    "AssistantCommandRunner.swift:513"
+    "AssistantCommandRunner.swift:506"
    ],
    "args": [],
    "targets": [
@@ -35438,7 +35438,7 @@
    "ko": "계절",
    "en": "Seasons",
    "files": [
-    "AssistantDataActions.swift:392",
+    "AssistantDataActions.swift:372",
     "MapHomeView+Map.swift:942"
    ],
    "args": [],
@@ -36328,7 +36328,7 @@
    "ko": "구글 캘린더",
    "en": "Google Calendar",
    "files": [
-    "AssistantCommandRunner.swift:441"
+    "AssistantCommandRunner.swift:435"
    ],
    "args": [],
    "targets": [
@@ -37092,7 +37092,7 @@
    "ko": "기기 캘린더",
    "en": "Device calendars",
    "files": [
-    "AssistantCommandRunner.swift:436"
+    "AssistantCommandRunner.swift:430"
    ],
    "args": [],
    "targets": [
@@ -37219,7 +37219,7 @@
    "ko": "기록 새로고침",
    "en": "Records refreshed",
    "files": [
-    "AssistantCommandRunner.swift:406"
+    "AssistantCommandRunner.swift:400"
    ],
    "args": [],
    "targets": [
@@ -37232,7 +37232,7 @@
    "en": "{0} record edit(s)",
    "files": [
     "AssistantOperationReading.swift:46",
-    "AssistantCommands.swift:396"
+    "AssistantCommands.swift:280"
    ],
    "args": [
     "count"
@@ -37897,8 +37897,8 @@
    "en": "Off",
    "files": [
     "LedgerMessageRules.swift:685",
-    "AssistantDataActions.swift:691",
-    "AssistantDataActions.swift:408"
+    "AssistantDataActions.swift:670",
+    "AssistantDataActions.swift:388"
    ],
    "args": [],
    "targets": [
@@ -38609,7 +38609,7 @@
    "ko": "내 차 아님",
    "en": "Not my car",
    "files": [
-    "AssistantDataActions.swift:612"
+    "AssistantDataActions.swift:592"
    ],
    "args": [],
    "targets": [
@@ -38684,7 +38684,7 @@
    "ko": "내 차로 등록",
    "en": "Registered as my car",
    "files": [
-    "AssistantDataActions.swift:612"
+    "AssistantDataActions.swift:592"
    ],
    "args": [],
    "targets": [
@@ -39225,7 +39225,7 @@
    "ko": "다시 묻지 않음",
    "en": "Won't ask again",
    "files": [
-    "AssistantDataActions.swift:595"
+    "AssistantDataActions.swift:575"
    ],
    "args": [],
    "targets": [
@@ -41022,7 +41022,7 @@
    "ko": "말풍선 {0}개",
    "en": "{0} bubble(s)",
    "files": [
-    "AssistantCommands.swift:398"
+    "AssistantCommands.swift:282"
    ],
    "args": [
     "bubbles"
@@ -41500,7 +41500,7 @@
    "en": "{0} memo(s)",
    "files": [
     "AssistantOperationReading.swift:44",
-    "AssistantCommands.swift:394"
+    "AssistantCommands.swift:278"
    ],
    "args": [
     "count"
@@ -41943,7 +41943,7 @@
    "ko": "못 한 것 {0}개",
    "en": "{0} not done",
    "files": [
-    "AssistantCommands.swift:401"
+    "AssistantCommands.swift:285"
    ],
    "args": [
     "rejected"
@@ -42221,7 +42221,7 @@
    "ko": "미확인",
    "en": "Unconfirmed",
    "files": [
-    "AssistantDataActions.swift:157",
+    "AssistantDataActions.swift:137",
     "MapHomeLocationPresentation.swift:311",
     "MapHomeNLEClipEditor.swift:459"
    ],
@@ -43003,7 +43003,7 @@
    "ko": "백자",
    "en": "Porcelain",
    "files": [
-    "AssistantDataActions.swift:395",
+    "AssistantDataActions.swift:375",
     "MapHomeView+Map.swift:945"
    ],
    "args": [],
@@ -43778,7 +43778,7 @@
    "ko": "분류 안 함",
    "en": "Not classified",
    "files": [
-    "AssistantDataActions.swift:621"
+    "AssistantDataActions.swift:601"
    ],
    "args": [],
    "targets": [
@@ -45460,7 +45460,7 @@
    "en": "{0} setting(s)",
    "files": [
     "AssistantOperationReading.swift:47",
-    "AssistantCommands.swift:397"
+    "AssistantCommands.swift:281"
    ],
    "args": [
     "count"
@@ -46192,7 +46192,7 @@
    "ko": "수묵",
    "en": "Ink Wash",
    "files": [
-    "AssistantDataActions.swift:394",
+    "AssistantDataActions.swift:374",
     "MapHomeView+Map.swift:944"
    ],
    "args": [],
@@ -46385,7 +46385,7 @@
    "ko": "숨김",
    "en": "Hidden",
    "files": [
-    "AssistantDataActions.swift:497"
+    "AssistantDataActions.swift:477"
    ],
    "args": [],
    "targets": [
@@ -46679,7 +46679,7 @@
    "ko": "시간 사이드바",
    "en": "Time sidebar",
    "files": [
-    "AssistantDataActions.swift:405",
+    "AssistantDataActions.swift:385",
     "MapHomeScreenRecording.swift:592"
    ],
    "args": [],
@@ -47155,7 +47155,7 @@
    "ko": "실외(고대비)",
    "en": "Outdoor (high contrast)",
    "files": [
-    "AssistantDataActions.swift:391",
+    "AssistantDataActions.swift:371",
     "MapHomeView+Map.swift:941"
    ],
    "args": [],
@@ -48015,7 +48015,7 @@
    "ko": "애플맵",
    "en": "Apple Maps",
    "files": [
-    "AssistantDataActions.swift:388",
+    "AssistantDataActions.swift:368",
     "MapHomeView+Map.swift:937"
    ],
    "args": [],
@@ -48516,7 +48516,7 @@
    "ko": "야간",
    "en": "Night",
    "files": [
-    "AssistantDataActions.swift:390",
+    "AssistantDataActions.swift:370",
     "MapHomeView+Map.swift:940"
    ],
    "args": [],
@@ -49598,8 +49598,8 @@
    "ko": "연결 끊음",
    "en": "Disconnected",
    "files": [
-    "AssistantCommandRunner.swift:436",
-    "AssistantCommandRunner.swift:441"
+    "AssistantCommandRunner.swift:430",
+    "AssistantCommandRunner.swift:435"
    ],
    "args": [],
    "targets": [
@@ -52142,7 +52142,7 @@
    "ko": "위성",
    "en": "Satellite",
    "files": [
-    "AssistantDataActions.swift:389",
+    "AssistantDataActions.swift:369",
     "MapHomeView+Map.swift:938"
    ],
    "args": [],
@@ -54669,7 +54669,7 @@
    "en": "{0} schedule(s)",
    "files": [
     "AssistantOperationReading.swift:45",
-    "AssistantCommands.swift:395"
+    "AssistantCommands.swift:279"
    ],
    "args": [
     "count"
@@ -56453,7 +56453,7 @@
    "en": "Not set",
    "files": [
     "LedgerMessageRules.swift:599",
-    "AssistantDataActions.swift:626",
+    "AssistantDataActions.swift:606",
     "TravelNewTripSheet.swift:70"
    ],
    "args": [],
@@ -56534,7 +56534,7 @@
    "ko": "제안한 곳",
    "en": "Suggested place",
    "files": [
-    "AssistantDataActions.swift:591"
+    "AssistantDataActions.swift:571"
    ],
    "args": [],
    "targets": [
@@ -57671,7 +57671,7 @@
    "ko": "지도에 경로 선",
    "en": "Route lines on map",
    "files": [
-    "AssistantDataActions.swift:403"
+    "AssistantDataActions.swift:383"
    ],
    "args": [],
    "targets": [
@@ -57695,7 +57695,7 @@
    "ko": "지도에 발자국",
    "en": "Footprints on map",
    "files": [
-    "AssistantDataActions.swift:404"
+    "AssistantDataActions.swift:384"
    ],
    "args": [],
    "targets": [
@@ -57719,7 +57719,7 @@
    "ko": "지도에 사진",
    "en": "Photos on map",
    "files": [
-    "AssistantDataActions.swift:402"
+    "AssistantDataActions.swift:382"
    ],
    "args": [],
    "targets": [
@@ -58325,7 +58325,7 @@
    "ko": "질문 {0}개",
    "en": "{0} question(s)",
    "files": [
-    "AssistantCommands.swift:400"
+    "AssistantCommands.swift:284"
    ],
    "args": [
     "questions"
@@ -58897,7 +58897,7 @@
    "ko": "추적 끝냄",
    "en": "Tracking stopped",
    "files": [
-    "AssistantCommandRunner.swift:422"
+    "AssistantCommandRunner.swift:416"
    ],
    "args": [],
    "targets": [
@@ -59218,7 +59218,7 @@
    "ko": "층 없음",
    "en": "No floor",
    "files": [
-    "AssistantDataActions.swift:688"
+    "AssistantDataActions.swift:667"
    ],
    "args": [],
    "targets": [
@@ -59398,7 +59398,7 @@
    "ko": "카카오 지도",
    "en": "Kakao Map",
    "files": [
-    "AssistantDataActions.swift:396",
+    "AssistantDataActions.swift:376",
     "MapHomeView+Map.swift:946"
    ],
    "args": [],
@@ -59739,8 +59739,8 @@
    "en": "On",
    "files": [
     "LedgerMessageRules.swift:685",
-    "AssistantDataActions.swift:691",
-    "AssistantDataActions.swift:408"
+    "AssistantDataActions.swift:670",
+    "AssistantDataActions.swift:388"
    ],
    "args": [],
    "targets": [
@@ -60005,7 +60005,7 @@
    "ko": "탈것 표시",
    "en": "Show vehicles",
    "files": [
-    "AssistantDataActions.swift:406",
+    "AssistantDataActions.swift:386",
     "MapHomeView+Menu2.swift:21"
    ],
    "args": [],
@@ -60270,7 +60270,7 @@
    "ko": "판타지",
    "en": "Fantasy",
    "files": [
-    "AssistantDataActions.swift:393",
+    "AssistantDataActions.swift:373",
     "MapHomeView+Map.swift:943"
    ],
    "args": [],
