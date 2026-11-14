@@ -159,7 +159,7 @@ actor TaptionBackupEngine {
     private let memoStore: TaptionStoreV2?
     private let destination: any TaptionBackupDestination
     private let configuration: Configuration
-    private var calendar: Calendar
+    private(set) var calendar: Calendar
     private var keyCache: [String: SymmetricKey] = [:]
     private var unrecognizedFileCount = 0
     private var didCleanUploads = false

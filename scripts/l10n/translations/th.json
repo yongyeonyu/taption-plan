@@ -5729,7 +5729,7 @@
 "|You arrived at a planned place": "คุณมาถึงสถานที่ในแผนแล้ว",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "คุณมาถึงแล้ว แตะเพื่อดูโน้ตและรายการตรวจสอบ",
 "|You're here. Tap to see your notes and checklist.": "คุณมาถึงแล้ว แตะเพื่อดูโน้ตและรายการตรวจสอบ",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "แสดงโน้ต แผนย่อย และค่าใช้จ่ายที่คาดไว้เมื่อคุณไปถึงสถานที่ในแผนการเดินทาง หากอนุญาตการแจ้งเตือนและตำแหน่งไว้ สถานที่ในแผนของวันนี้อาจแจ้งเตือนคุณได้แม้ปิดแอปอยู่ และแสดงครั้งเดียวต่อแผน",
+"여행 일정의 곳이나 일반 일정에 넣은 장소에 도착하면 메모·예상 지출을 보여요(여행 일정은 세부 계획도). 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes and planned spend when you reach a place from a trip plan or a regular plan (trip plans also show sub-plans). With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "แสดงโน้ตและค่าใช้จ่ายที่คาดไว้เมื่อคุณไปถึงสถานที่ในแผนการเดินทางหรือในแผนทั่วไป (แผนการเดินทางจะแสดงแผนย่อยด้วย) หากอนุญาตการแจ้งเตือนและตำแหน่งไว้ สถานที่ในแผนของวันนี้อาจแจ้งเตือนคุณได้แม้ปิดแอปอยู่ และแสดงครั้งเดียวต่อแผน",
 "{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
 "1건으로 합침 · {0}|Merged into one · {0}": "รวมเป็นรายการเดียว · {0}",
 "일상 지출|Everyday spending": "ค่าใช้จ่ายประจำวัน",
@@ -5767,6 +5767,9 @@
 "예산 {0}|Budget {0}": "งบประมาณ {0}",
 "이 날은 계획 경로가 없어 실제 경로만 보입니다.|No planned route for this day, so only the actual route is shown.": "วันนี้ไม่มีเส้นทางตามแผน จึงแสดงเฉพาะเส้นทางจริง",
 "이 날은 비교할 계획이 없습니다.|No plans to compare on this day.": "วันนี้ไม่มีแผนให้เปรียบเทียบ",
+"이 날의 자료를 불러오지 못했습니다.|Couldn't load this day's data.": "โหลดข้อมูลของวันนี้ไม่ได้",
+"이 날이 든 달은 백업한 뒤 이 기기에서 정리해서, 남아 있는 것만 보입니다. 백업 목록에서 다시 불러올 수 있습니다.|This day's month was cleared from this device after backup, so only what remains is shown. You can restore it from the backup list.": "เดือนของวันนี้ถูกล้างออกจากอุปกรณ์นี้หลังสำรองข้อมูลแล้ว จึงแสดงเฉพาะส่วนที่เหลืออยู่ คุณกู้คืนได้จากรายการข้อมูลสำรอง",
+"이 날의 경로 기록을 다 불러오지 못했습니다.|Couldn't load all of this day's route records.": "โหลดบันทึกเส้นทางของวันนี้ได้ไม่ครบ",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "ส่งเฉพาะเวลา ส่วนต่าง และส่วนต่างงบประมาณเป็นงานของ AI ไม่ส่งพิกัดหรือข้อมูลการชำระเงิน",
 "지연 {0}|Late {0}": "ล่าช้า {0}",
 "진행 중|ongoing": "กำลังดำเนินอยู่"

@@ -5729,7 +5729,7 @@
 "|You arrived at a planned place": "Has llegado a un lugar planificado",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "Ya estás aquí. Toca para ver tus notas y tu lista.",
 "|You're here. Tap to see your notes and checklist.": "Ya estás aquí. Toca para ver tus notas y tu lista.",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "Muestra notas, planes detallados y gasto previsto cuando llegas a un lugar de tu plan de viaje. Con las notificaciones y la ubicación permitidas, los lugares previstos para hoy pueden avisarte aunque la app esté cerrada, una vez por plan.",
+"여행 일정의 곳이나 일반 일정에 넣은 장소에 도착하면 메모·예상 지출을 보여요(여행 일정은 세부 계획도). 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes and planned spend when you reach a place from a trip plan or a regular plan (trip plans also show sub-plans). With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "Muestra notas y gasto previsto cuando llegas a un lugar de un plan de viaje o de un plan normal (los planes de viaje también muestran los planes detallados). Con las notificaciones y la ubicación permitidas, los lugares previstos para hoy pueden avisarte aunque la app esté cerrada, una vez por plan.",
 "{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
 "1건으로 합침 · {0}|Merged into one · {0}": "Fusionado en uno · {0}",
 "일상 지출|Everyday spending": "Gastos cotidianos",
@@ -5767,6 +5767,9 @@
 "예산 {0}|Budget {0}": "Presupuesto {0}",
 "이 날은 계획 경로가 없어 실제 경로만 보입니다.|No planned route for this day, so only the actual route is shown.": "No hay ruta planificada para este día, así que solo se muestra la ruta real.",
 "이 날은 비교할 계획이 없습니다.|No plans to compare on this day.": "No hay planes que comparar este día.",
+"이 날의 자료를 불러오지 못했습니다.|Couldn't load this day's data.": "No se pudieron cargar los datos de este día.",
+"이 날이 든 달은 백업한 뒤 이 기기에서 정리해서, 남아 있는 것만 보입니다. 백업 목록에서 다시 불러올 수 있습니다.|This day's month was cleared from this device after backup, so only what remains is shown. You can restore it from the backup list.": "El mes de este día se eliminó de este dispositivo después de la copia de seguridad, así que solo se muestra lo que queda. Puedes restaurarlo desde la lista de copias.",
+"이 날의 경로 기록을 다 불러오지 못했습니다.|Couldn't load all of this day's route records.": "No se pudieron cargar todos los registros de ruta de este día.",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "Solo se envían como tarea de IA los horarios, las diferencias y la diferencia de presupuesto. Sin coordenadas ni datos de pago.",
 "지연 {0}|Late {0}": "Retraso {0}",
 "진행 중|ongoing": "en curso"
