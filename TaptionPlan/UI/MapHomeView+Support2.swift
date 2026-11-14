@@ -939,12 +939,9 @@ extension MapHomeView {
             { currentDayReadings.last(where: { $0.point != nil })?.point },
         ]
         // 앞 후보로 정해지면 하루치 병합·정렬(currentDayReadings)은 계산하지 않는다.
-        for candidate in candidates {
-            if let point = candidate(), isValid(point) {
-                return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
-            }
+        return MapHomeLastKnownLocationPolicy.point(candidates: candidates).map {
+            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
         }
-        return nil
     }
 
     var hasConfirmedCurrentGPS: Bool {

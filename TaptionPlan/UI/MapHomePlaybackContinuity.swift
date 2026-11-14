@@ -398,3 +398,37 @@ enum MapHomePlaybackCategoryRanges {
             }
     }
 }
+
+/// GPS가 끊겼을 때 화랑이를 둘 자리(LOC1104A01). 화면 상태를 모르는 판정만 둔다.
+enum MapHomeLastKnownLocationPolicy {
+    static func isValid(_ point: GeoPoint) -> Bool {
+        (-90...90).contains(point.latitude)
+            && (-180...180).contains(point.longitude)
+            && point.horizontalAccuracy >= 0
+    }
+
+    /// 앞 후보부터 보고 처음 쓸 수 있는 자리. 앞에서 정해지면 뒤 후보는 계산하지 않는다.
+    static func point(candidates: [() -> GeoPoint?]) -> GeoPoint? {
+        for candidate in candidates {
+            if let point = candidate(), isValid(point) { return point }
+        }
+        return nil
+    }
+
+    /// 화랑이를 그릴 자리. 시각을 고르지 않았으면 오늘만 현재(없으면 마지막) 위치에 둔다.
+    /// 시각을 골랐으면 그 시각의 자리, 못 찾으면 오늘은 마지막 위치·다른 날은 그 시각까지 기록된 마지막 자리다.
+    static func displayed(
+        isToday: Bool,
+        hasSelectedMinute: Bool,
+        playback: () -> CLLocationCoordinate2D?,
+        isDayLoaded: Bool,
+        live: () -> CLLocationCoordinate2D?,
+        lastRecorded: () -> CLLocationCoordinate2D?
+    ) -> CLLocationCoordinate2D? {
+        guard hasSelectedMinute else { return isToday ? live() : nil }
+        if let coordinate = playback() { return coordinate }
+        if isToday { return live() }
+        // 다른 날을 불러오는 중에는 전날 기록을 쓰지 않는다.
+        return isDayLoaded ? lastRecorded() : nil
+    }
+}
