@@ -3245,3 +3245,13 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
   - 실패 1건은 `TripShareFoundationTests.testStoreOpensARoomOnTheFakeServerAndForgetsIt` — 시험이 세션이 `live`가 되기 전에 써서 `readOnly(.notStarted)`. 앱 코드가 아니라 시험 결함이라 `live`를 기다리게 고침.
   - 고친 뒤 `TripShareFoundationTests` 14건 통과(`stage0-foundation-2.log`). 전체 묶음은 고친 뒤 다시 돌리지 않음(세 묶음 합친 뒤 돌릴 예정).
 - 실기기 확인 없음.
+
+## TSH1114A26 · 여행 공유 앱 묶음 A·B·C 합친 뒤 (2026-11-15 오전, 시뮬레이터)
+
+- 합침: 묶음 C(가계부·정산·공지) → A(방 만들기·입장·참여자·수명) → B(계획 공동 편집). 충돌 없음. 구조 지표 기준선·import 경계 통과.
+- 묶음별 시험(가짜 서버 `ShareFakeServer`): 토대 14, A `TripShareRoomTests` 12, B `TripSharePlanTests` 7, C `TripShareLedgerTests` 9.
+  - A는 자기 작업 공간에서 최종 코드로 시험을 끝까지 돌리지 못했고(러너 멈춤·시뮬레이터 실행 실패), main에 합친 뒤 A·C·토대 35건 통과로 확인(`build/validation/TSH1114A26/ac-test-1.log`).
+- 번역: 새 문구 142개 × 12개 언어. `check.py` 실패 0(긴 문구 3건은 기존 지명), `generate.py` 실행.
+- 전체 단위 시험(A·B·C 합친 main, 번역 생성 전 빌드): 2,918건, 건너뜀 25, 실패 0, 397초. 로그 `build/validation/TSH1114A26/abc-full-unit-1.log`.
+- 하지 않은 것: 실기기, 실제 서버(WebSocket 왕복), 공유 화면의 눈 확인(시트·띠·배지·알림 중복), 아이폰 11에서 키 유도 60만 회 시간.
+- 묶음들이 남긴 알려진 한계: 일상 시간표에서 공유 일정을 직접 고치는 경로는 막지 않음(다음 방 변경 때 방 값으로 돌아오나 지운 것은 안 돌아옴); 앱이 꺼진 동안 방에서 지워진 공동 지출이 로컬에 남을 수 있음; `LedgerBook.syncTrip`이 동시에 두 번 돌면 예산 이체 짝 기록이 겹칠 수 있음(호출 횟수만 줄임); 가계부에서 연 방은 여행 화면을 거치지 않으면 닫히지 않음; 끌어 옮기기는 서버 왕복 동안 블록이 원래 자리로 잠깐 돌아감.
