@@ -91,12 +91,13 @@ final class TravelDayBoardTests: XCTestCase {
     func testSortStopsMarkBookedLodgingSleepAndCalendarFixedAsTimeFixed() {
         let blocks = [
             block("a", 540, 600), block("b", 600, 660, booked: true), block("c", 660, 720, kind: "lodging"), block("d", 720, 780, kind: "sleep"),
-            block("e", 780, 840), block("f", 840, 900), block("a1", 550, 560, parent: "a"),
+            block("e", 780, 840), block("f", 840, 900), block("g", 900, 930, kind: "transfer"), block("h", 930, 1_050, kind: "flight"),
+            block("a1", 550, 560, parent: "a"),
         ]
         let stops = TravelDayBoard.sortStops(blocks, pins: ["a": (35, 129), "f": (35.1, 129.1)], fixedIDs: ["e"])
-        XCTAssertEqual(stops.map(\.id), ["a", "b", "c", "d", "e", "f"], "세부 계획은 굵은 곳에 딸려 가므로 뺀다")
-        XCTAssertEqual(stops.map(\.isTimeFixed), [false, true, true, true, true, false])
-        XCTAssertEqual(stops.map(\.hasPin), [true, false, false, false, false, true])
+        XCTAssertEqual(stops.map(\.id), ["a", "b", "c", "d", "e", "f", "g", "h"], "세부 계획은 굵은 곳에 딸려 가므로 뺀다")
+        XCTAssertEqual(stops.map(\.isTimeFixed), [false, true, true, true, true, false, true, true], "예약·숙소·잠·캘린더 고정·이동·항공")
+        XCTAssertEqual(stops.map(\.hasPin), [true, false, false, false, false, true, false, false])
     }
 
     // MARK: 다른 날로 옮기기

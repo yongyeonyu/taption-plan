@@ -3529,7 +3529,7 @@
 "동선 정리|Tidy route": "整理路線",
 "바꾸기|Reorder": "重新排序",
 "이미 가까운 순서입니다|Already in the nearest order": "已是最近順序",
-"이동 거리 약 {0} km → {1} km (직선 거리 기준). 예약·숙소와 첫 곳은 그대로 둡니다.|Travel distance about {0} km → {1} km (straight line). Booked plans, lodging, and the first stop stay put.": "移動距離約 {0} km → {1} km(直線距離)。已預訂的行程、住宿和第一站維持不變。",
+"이동 거리 약 {0} km → {1} km (직선 거리 기준). 예약·숙소·이동과 첫 곳은 그대로 둡니다.|Travel distance about {0} km → {1} km (straight line). Booked plans, lodging, transfers, and the first stop stay put.": "移動距離約 {0} km → {1} km(直線距離)。已預訂的行程、住宿、交通和第一站維持不變。",
 "공부|Study": "學習",
 "공유 항목|Share items": "分享項目",
 "공유|Share": "分享",

@@ -43,9 +43,9 @@ enum TravelDayBoard {
         }
     }
 
-    /// 동선 정리에서 시각을 그대로 둘 곳: 예약·숙소·잠.
+    /// 동선 정리에서 시각을 그대로 둘 곳: 예약·숙소·잠, 그리고 「A→B」로 앞뒤 곳을 잇는 이동·항공.
     static func isTimeFixed(_ block: TravelPlanTableModel.Block) -> Bool {
-        block.tripStatus == .booked || block.kind == "lodging" || block.kind == "sleep"
+        block.tripStatus == .booked || ["lodging", "sleep", "transfer", "flight"].contains(block.kind)
     }
 
     /// 그날 코스의 굵은 곳들을 동선 정리의 입력으로. `pins`는 일정 번호별 지도 핀(위도, 경도), `fixedIDs`는 캘린더 고정 일정.
@@ -140,8 +140,8 @@ private struct TravelDayBoardHost: ViewModifier {
                 if case .sort(let plan) = prompt {
                     let before = TravelCourseSort.kilometers(plan.beforeMeters), after = TravelCourseSort.kilometers(plan.afterMeters)
                     Text(language.runtimeText(
-                        "이동 거리 약 \(before) km → \(after) km (직선 거리 기준). 예약·숙소와 첫 곳은 그대로 둡니다.",
-                        "Travel distance about \(before) km → \(after) km (straight line). Booked plans, lodging, and the first stop stay put."
+                        "이동 거리 약 \(before) km → \(after) km (직선 거리 기준). 예약·숙소·이동과 첫 곳은 그대로 둡니다.",
+                        "Travel distance about \(before) km → \(after) km (straight line). Booked plans, lodging, transfers, and the first stop stay put."
                     ))
                 }
             }
