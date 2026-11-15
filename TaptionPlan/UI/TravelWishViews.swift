@@ -75,7 +75,7 @@ struct TravelWishFooter: View {
                             Button(language.text("정하기", "Set")) {
                                 let trip = TravelTripDirectory.scheduled(entry.trip, startDay: TravelModeView.dayKey(start))
                                 Task {
-                                    if await model.saveTravelTrip(trip) { isPicking = false }
+                                    if await TripSharePlanEditor.saveTrip(model: model, trip: trip) != nil { isPicking = false }
                                 }
                             }
                         }
