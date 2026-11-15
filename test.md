@@ -3264,3 +3264,9 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 서버 `npm test` 3회: 193/193 × 3. 패키지 `swift test`: TaptionTripShare 62건 통과, TaptionAssistant 통과.
 - 전체 단위 시험은 번역 생성 전 빌드에서 2,918건 통과(위 항목). 번역 생성 뒤에는 다시 돌리지 않음(바뀐 것은 문자열 카탈로그뿐).
 - 실기기 확인 없음.
+
+## TFB1114A344 · 서버 배포와 TestFlight 344 (2026-11-15)
+
+- 서버: 대표 객관식 답 「Claude가 넣고 배포」에 따라 로컬 배포 설정(커밋 안 됨)에 `SHARE_ROOM` 바인딩과 `v2-share-room` 이전을 덧붙여 배포. 배포 출력에 `env.SHARE_ROOM (ShareRoom)` 확인, 없는 방 조회가 503이 아니라 404로 답함. 실제 방 만들기·WebSocket 왕복은 확인하지 않음.
+- TestFlight: `release.sh --yes --request-id TFB1114A344` 종료 코드 0. 빌드 344, 처리 상태 VALID, 내부 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1114A344/testflight-report.json`.
+- 설치·실기기 확인 없음(아이폰 11에서 볼 것: 여행 공유 만들기·입장·함께 고치기·정산·공지, 두 기기 필요).
