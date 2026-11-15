@@ -39,6 +39,8 @@ struct BokkiShortcutsGuideSections: View {
             }
         }
         .listRowBackground(Color.tpSurface)
+        // 다른 설정 목록과 같은 글자(UIF1115A01). 메뉴·가계부·튜토리얼 어디에 놓여도 같다.
+        .font(.taptionStyle(.subheadline))
     }
 
     static func siriExamples(_ language: MapHomeLanguage) -> [String] {

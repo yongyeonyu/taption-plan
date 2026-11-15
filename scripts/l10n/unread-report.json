@@ -1,5 +1,5 @@
 {
- "ui": 5168,
+ "ui": 5165,
  "catalog": 504,
  "unread": [
   {
@@ -100,25 +100,25 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 503,
+   "line": 505,
    "ko": "$0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 767,
+   "line": 769,
    "ko": "$0",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 671,
+   "line": 673,
    "ko": "value",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 539,
+   "line": 541,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -694,19 +694,19 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 875,
+   "line": 876,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 883,
+   "line": 884,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 932,
+   "line": 933,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
   },

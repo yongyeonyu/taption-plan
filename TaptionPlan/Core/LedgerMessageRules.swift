@@ -245,7 +245,7 @@ struct PaymentInboxDetail: View {
         NavigationStack {
             List {
                 Section {
-                    Text(item.text).font(.taptionStyle(.body)).textSelection(.enabled)
+                    Text(item.text).textSelection(.enabled)
                 } header: {
                     Text(item.receivedAt.formatted(date: .abbreviated, time: .shortened))
                 } footer: {
@@ -278,6 +278,8 @@ struct PaymentInboxDetail: View {
                 }
             }
             .tpListStyle()
+            // 다른 설정 목록과 같은 글자(UIF1115A01).
+            .font(.taptionStyle(.subheadline))
             .navigationTitle(language.text("받은 문자", "Received text"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }

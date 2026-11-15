@@ -2,20 +2,15 @@ import SwiftUI
 import UIKit
 
 /// 메인 메뉴 → 연결 → 「AI 연결」(AIR1110A03, 예전 「AI 비서」). AI별 연결, 연결 키 관리(승인 PIN은 앱 비밀번호, PIN1110A01),
-/// 할 수 있는 일·한 일, 기록 공유 수준과 보관 기간, 주 키 바꾸기를 둔다. 위험한 설정은 여기서만 바꾼다.
+/// 할 수 있는 일·한 일을 둔다. 기록 공유 수준·보관 기간 고르기는 없앴고(ASM1115A01), 서버 기록 지우기는 데이터 보호 화면에 있다.
 struct AssistantSettingsView: View {
     @Bindable var model: AppModel
     let language: MapHomeLanguage
 
     @Environment(\.dismiss) private var dismiss
     @State private var relayKey = TripRelay.key
-    @State private var isRotating = false
-    @State private var keyMessage: String?
     @State private var store = AssistantConnectionStore()
     @State private var selected: AssistantAIProvider?
-    @State private var isConfirmingRotation = false
-    @AppStorage(AssistantShareLevel.defaultsKey) private var levelRaw = AssistantShareLevel.summary.rawValue
-    @AppStorage(AssistantRetention.defaultsKey) private var retentionDays = AssistantRetention.week.rawValue
     @AppStorage(AssistantRegistration.reconnectKey) private var needsReconnect = false
 
     var body: some View {
@@ -32,20 +27,6 @@ struct AssistantSettingsView: View {
                     NavigationLink(language.text("AI가 한 일", "What the AI did")) { AssistantActionLogView(model: model, language: language) }
                     NavigationLink(language.text("AI 규칙", "AI rules")) { AssistantRuleListView(language: language) }
                 }
-                Section {
-                    Picker(language.text("기록 공유", "Share records"), selection: $levelRaw) {
-                        ForEach(AssistantShareLevel.allCases) { Text($0.title(language)).tag($0.rawValue) }
-                    }
-                    Picker(language.text("서버 보관 기간", "Keep on server"), selection: $retentionDays) {
-                        ForEach(AssistantRetention.allCases) { Text($0.title(language)).tag($0.rawValue) }
-                    }
-                } footer: {
-                    Text(language.text(
-                        "좌표와 경로는 보내지 않아요. 기록은 고른 기간이 지나면 서버에서 지워져요. AI 비서가 보낸 메모·일정·기록 수정은 앱을 열 때나 백그라운드 새로 고침 때 바로 반영돼요.",
-                        "Coordinates and routes are never sent. Records are deleted from the server after the chosen period. Memos, schedules and record edits from the AI assistant are applied when you open the app or during background refresh."
-                    ))
-                }
-                keySection
             }
             .listRowBackground(Color.tpSurface)
         }
@@ -70,16 +51,6 @@ struct AssistantSettingsView: View {
                 relayKey = TripRelay.key
                 await store.reload()
             }
-            .onChange(of: levelRaw) { old, new in
-                // 덜 보내는 쪽으로 바꾸면 서버에 남은 더 자세한 날(장소 이름 등)을 모두 지운다(REV1110A06).
-                let before = AssistantShareLevel(rawValue: old) ?? .summary, after = AssistantShareLevel(rawValue: new) ?? .summary
-                resync(clearing: AssistantShareLevel.isDowngrade(from: before, to: after))
-            }
-            .onChange(of: retentionDays) { old, new in
-                // 기간이 바뀌면 서버 보관 시간도 새로 정해지도록 모든 날을 다시 올린다.
-                AssistantActivityUploadGate.reset()
-                resync(clearing: new < old)
-            }
         }
     }
 
@@ -92,19 +63,32 @@ struct AssistantSettingsView: View {
             Button(language.text("알겠어요", "Got it")) { needsReconnect = false }
         }
     }
+}
 
-    private var keySection: some View {
-        Section {
-            Label(
-                relayKey == nil ? language.text("연동 키가 없어요", "No link key") : language.text("연동 키가 있어요", "Link key is set"),
-                systemImage: relayKey == nil ? "key" : "key.fill"
-            )
-            Button(language.text("새 키로 바꾸기", "Replace with a new key"), role: .destructive) { isConfirmingRotation = true }
-                .disabled(isRotating || AssistantRelayGate.isRotating)
+/// 데이터 보호 화면의 「AI 서버 기록 모두 지우기」(ASM1115A01). 예전 「AI 연결 › 새 키로 바꾸기」와 같은 일을 한다:
+/// 새 주 키를 등록하고 예전 키로 서버의 AI용 키·기록·명령·계획을 지운 뒤 바꾼다(SEC1110A02).
+struct AssistantServerEraseRow: View {
+    let model: AppModel
+    let language: MapHomeLanguage
+    @State private var isRotating = false
+    @State private var isConfirming = false
+    @State private var note: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(language.text(
+                "서버에 올린 기록과 모든 AI 연결, PIN을 지워요. 쓰던 AI는 다시 연결해야 해요. 연결 키가 새어 나간 것 같을 때 쓰세요.",
+                "Deletes the records on the server, every AI connection and the PIN. You'll need to reconnect the AIs you use. Use it if a connection key may have leaked."
+            ))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+            .foregroundStyle(.secondary)
+            Button(language.text("AI 서버 기록 모두 지우기", "Erase all AI server records"), role: .destructive) { isConfirming = true }
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                .disabled(isRotating || AssistantRelayGate.isRotating || TripRelay.key == nil)
                 .confirmationDialog(
-                    language.text("새 키로 바꿀까요?", "Replace the link key?"), isPresented: $isConfirmingRotation, titleVisibility: .visible
+                    language.text("새 키로 바꿀까요?", "Replace the link key?"), isPresented: $isConfirming, titleVisibility: .visible
                 ) {
-                    Button(language.text("바꾸고 모두 지우기", "Replace and delete everything"), role: .destructive) { replaceKey() }
+                    Button(language.text("바꾸고 모두 지우기", "Replace and delete everything"), role: .destructive) { erase() }
                     Button(language.text("취소", "Cancel"), role: .cancel) {}
                 } message: {
                     Text(language.text(
@@ -112,38 +96,38 @@ struct AssistantSettingsView: View {
                         "The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use."
                     ))
                 }
-            if let keyMessage { Text(keyMessage).font(.taptionStyle(.footnote)).foregroundStyle(.secondary) }
-        } footer: {
-            Text(language.text(
-                "연동 키는 이 기기에만 있고 AI에게 주지 않아요. 키를 바꾸면 서버의 기록과 AI 연결을 모두 지워요.",
-                "The link key stays on this device and is never given to the AI. Replacing it deletes the server records and all AI connections."
-            ))
+            if let note {
+                Text(note).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(.secondary)
+            }
         }
     }
 
-    /// 새 주 키를 등록하고 예전 키로 서버의 AI용 키·기록·명령·계획을 지운 뒤 바꾼다(SEC1110A02).
-    private func replaceKey() {
+    private func erase() {
         guard !isRotating else { return }
         isRotating = true
+        let model = model
         Task { @MainActor in
             defer { isRotating = false }
-            guard let key = await TripRelay.rotateMasterKey() else {
-                keyMessage = AssistantKeyText.rotationFailed(language)
+            guard await TripRelay.rotateMasterKey() != nil else {
+                note = AssistantKeyText.rotationFailed(language)
                 return
             }
-            relayKey = key
-            keyMessage = nil
-            await store.reload()
-            resync(clearing: false)
+            note = language.text("지웠어요.", "Erased.")
+            await AssistantActivitySync.run(model: model)
         }
     }
+}
 
-    /// 덜 보내게 하거나 기간을 줄이면 서버 기록을 지우고, 켜져 있으면 새 설정으로 다시 올린다.
-    /// 지우기는 적어 두었다가 `run`이 올리기 전에 하므로, 지금 서버에 닿지 못해도 다음에 지운다.
-    private func resync(clearing: Bool) {
-        let model = model
-        if clearing { AssistantActivitySync.requestClear() }
-        Task { @MainActor in await AssistantActivitySync.run(model: model) }
+extension AssistantRetention {
+    /// 보관 기간 고르기를 화면에서 없앴다(ASM1115A01). 30일로 두었던 기기는 한 번 7일로 내리고 서버의 날들을 지워 새 기간으로 다시 올리게 한다.
+    /// 바꿨으면 true.
+    @MainActor @discardableResult
+    static func retireMonth(defaults: UserDefaults = .standard) -> Bool {
+        guard defaults.integer(forKey: defaultsKey) == month.rawValue else { return false }
+        defaults.set(week.rawValue, forKey: defaultsKey)
+        AssistantActivityUploadGate.reset()
+        AssistantActivitySync.requestClear(defaults: defaults)
+        return true
     }
 }
 
@@ -159,6 +143,7 @@ private struct AssistantActivityObserver: View {
             .accessibilityHidden(true)
             .task {
                 await AssistantRegistration.ensureReady()
+                AssistantRetention.retireMonth()
                 await AssistantActivitySync.run(model: model)
             }
             .onChange(of: scenePhase) { _, phase in

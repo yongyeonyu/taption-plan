@@ -465,3 +465,32 @@ final class AssistantRelayTests: XCTestCase {
         XCTAssertTrue(AssistantPush.needsUpload(token: token, environment: "sandbox", defaults: store))
     }
 }
+
+/// 보관 기간 고르기를 없애며 30일을 7일로 내린다(ASM1115A01).
+@MainActor
+final class AssistantRetentionRetireTests: XCTestCase {
+    func testMonthBecomesWeekOnceAndAsksTheServerToClear() throws {
+        let suite = "retention-retire-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(30, forKey: AssistantRetention.defaultsKey)
+        XCTAssertTrue(AssistantRetention.retireMonth(defaults: defaults))
+        XCTAssertEqual(AssistantRetention.current(defaults), .week)
+        XCTAssertTrue(defaults.bool(forKey: AssistantActivitySync.pendingClearKey), "서버에 남은 날을 지우고 새 기간으로 다시 올린다")
+        defaults.set(false, forKey: AssistantActivitySync.pendingClearKey)
+        XCTAssertFalse(AssistantRetention.retireMonth(defaults: defaults), "한 번만")
+        XCTAssertFalse(defaults.bool(forKey: AssistantActivitySync.pendingClearKey))
+    }
+
+    func testOneDayWeekAndUnsetStayAsTheyAre() throws {
+        for stored in [nil, 1, 7] as [Int?] {
+            let suite = "retention-keep-\(UUID().uuidString)"
+            let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+            defer { defaults.removePersistentDomain(forName: suite) }
+            if let stored { defaults.set(stored, forKey: AssistantRetention.defaultsKey) }
+            XCTAssertFalse(AssistantRetention.retireMonth(defaults: defaults))
+            XCTAssertEqual(AssistantRetention.current(defaults).rawValue, stored ?? 7)
+            XCTAssertFalse(defaults.bool(forKey: AssistantActivitySync.pendingClearKey))
+        }
+    }
+}

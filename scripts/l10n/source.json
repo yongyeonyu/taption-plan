@@ -45,7 +45,7 @@
    "ko": " 위치 설정",
    "en": " location",
    "files": [
-    "MapHomeSettingsSheets.swift:876"
+    "MapHomeSettingsSheets.swift:877"
    ],
    "args": [],
    "targets": [
@@ -698,8 +698,8 @@
    "en": "AI rules",
    "files": [
     "AssistantDataCommands.swift:497",
-    "AssistantSafetyViews.swift:483",
-    "AssistantSettingsView.swift:33"
+    "AssistantSafetyViews.swift:490",
+    "AssistantSettingsView.swift:28"
    ],
    "args": [],
    "targets": [
@@ -750,7 +750,7 @@
    "ko": "AI 비서 요청 확인",
    "en": "Review AI assistant requests",
    "files": [
-    "AssistantSafetyViews.swift:444"
+    "AssistantSafetyViews.swift:448"
    ],
    "args": [],
    "targets": [
@@ -774,7 +774,7 @@
    "ko": "AI 비서가 기존 항목 {0}개를 한꺼번에 바꾸려고 해요. 반영할까요?",
    "en": "The AI assistant wants to change {0} existing items at once. Apply?",
    "files": [
-    "AssistantSafetyViews.swift:425"
+    "AssistantSafetyViews.swift:429"
    ],
    "args": [
     "total"
@@ -789,6 +789,30 @@
    "en": "Let the AI send it to the app",
    "files": [
     "TripImportSheet.swift:641"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI 서버 기록 모두 지우기|Erase all AI server records",
+   "ko": "AI 서버 기록 모두 지우기",
+   "en": "Erase all AI server records",
+   "files": [
+    "AssistantSettingsView.swift:85"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI 서버 기록|AI server records",
+   "ko": "AI 서버 기록",
+   "en": "AI server records",
+   "files": [
+    "MapHomeSettingsSheets.swift:400"
    ],
    "args": [],
    "targets": [
@@ -888,7 +912,7 @@
    "en": "AI connections",
    "files": [
     "AssistantDataCommands.swift:482",
-    "AssistantSettingsView.swift:55",
+    "AssistantSettingsView.swift:36",
     "MapHomeView+Menu.swift:471"
    ],
    "args": [],
@@ -1041,7 +1065,7 @@
    "ko": "AI가 만듦",
    "en": "Made by AI",
    "files": [
-    "AssistantSafetyViews.swift:506"
+    "AssistantSafetyViews.swift:513"
    ],
    "args": [],
    "targets": [
@@ -1053,7 +1077,7 @@
    "ko": "AI가 배운 것을 앱이 먼저 스스로 판단해요. 끄거나 밀어서 지울 수 있어요.",
    "en": "The app decides these by itself first, using what your AI learned. Switch one off or swipe to delete it.",
    "files": [
-    "AssistantSafetyViews.swift:479"
+    "AssistantSafetyViews.swift:483"
    ],
    "args": [],
    "targets": [
@@ -1118,8 +1142,8 @@
    "en": "What the AI did",
    "files": [
     "AITaskPanel.swift:88",
-    "AssistantSafetyViews.swift:352",
-    "AssistantSettingsView.swift:32"
+    "AssistantSafetyViews.swift:355",
+    "AssistantSettingsView.swift:27"
    ],
    "args": [],
    "targets": [
@@ -1131,8 +1155,8 @@
    "ko": "AI가 할 수 있는 일",
    "en": "What the AI can do",
    "files": [
-    "AssistantSafetyViews.swift:329",
-    "AssistantSettingsView.swift:31"
+    "AssistantSafetyViews.swift:331",
+    "AssistantSettingsView.swift:26"
    ],
    "args": [],
    "targets": [
@@ -1241,7 +1265,7 @@
    "ko": "AI에게 맡겼어요. 규칙이 오면 이 문자도 다시 읽어 넣어요.",
    "en": "Sent to your AI. When the rule arrives this text is read again.",
    "files": [
-    "LedgerMessageRules.swift:306"
+    "LedgerMessageRules.swift:308"
    ],
    "args": [],
    "targets": [
@@ -1523,7 +1547,7 @@
    "ko": "BOKKI Plan AI에게 맡겨",
    "en": "Ask BOKKI Plan AI",
    "files": [
-    "BokkiShortcutsGuide.swift:53"
+    "BokkiShortcutsGuide.swift:55"
    ],
    "args": [],
    "targets": [
@@ -1550,7 +1574,7 @@
    "ko": "BOKKI Plan 가계부 열어",
    "en": "Open ledger in BOKKI Plan",
    "files": [
-    "BokkiShortcutsGuide.swift:52"
+    "BokkiShortcutsGuide.swift:54"
    ],
    "args": [],
    "targets": [
@@ -1586,7 +1610,7 @@
    "ko": "BOKKI Plan 오늘 몇 걸음",
    "en": "Steps today in BOKKI Plan",
    "files": [
-    "BokkiShortcutsGuide.swift:50"
+    "BokkiShortcutsGuide.swift:52"
    ],
    "args": [],
    "targets": [
@@ -1598,7 +1622,7 @@
    "ko": "BOKKI Plan 오늘 얼마 썼어",
    "en": "How much did I spend today in BOKKI Plan",
    "files": [
-    "BokkiShortcutsGuide.swift:49"
+    "BokkiShortcutsGuide.swift:51"
    ],
    "args": [],
    "targets": [
@@ -1622,7 +1646,7 @@
    "ko": "BOKKI Plan 지금 뭐로 기록돼",
    "en": "What is BOKKI Plan recording now",
    "files": [
-    "BokkiShortcutsGuide.swift:51"
+    "BokkiShortcutsGuide.swift:53"
    ],
    "args": [],
    "targets": [
@@ -1634,7 +1658,7 @@
    "ko": "BOKKI Plan 지출 기록",
    "en": "Add an expense in BOKKI Plan",
    "files": [
-    "BokkiShortcutsGuide.swift:48"
+    "BokkiShortcutsGuide.swift:50"
    ],
    "args": [],
    "targets": [
@@ -1646,7 +1670,7 @@
    "ko": "BOKKI Plan 출근 기록 · 퇴근 · 기상 · 귀가",
    "en": "Log arrived at work in BOKKI Plan",
    "files": [
-    "BokkiShortcutsGuide.swift:47"
+    "BokkiShortcutsGuide.swift:49"
    ],
    "args": [],
    "targets": [
@@ -1658,7 +1682,7 @@
    "ko": "BOKKI Plan에 저장 → 커피 4500원",
    "en": "Save to BOKKI Plan → coffee 4,500 won",
    "files": [
-    "BokkiShortcutsGuide.swift:46"
+    "BokkiShortcutsGuide.swift:48"
    ],
    "args": [],
    "targets": [
@@ -1732,7 +1756,7 @@
    "ko": "BOKKI 결제 알림",
    "en": "BOKKI Payment Alerts",
    "files": [
-    "BokkiShortcutsGuide.swift:81"
+    "BokkiShortcutsGuide.swift:83"
    ],
    "args": [],
    "targets": [
@@ -1756,7 +1780,7 @@
    "ko": "BOKKI 결제",
    "en": "BOKKI Payment",
    "files": [
-    "BokkiShortcutsGuide.swift:79"
+    "BokkiShortcutsGuide.swift:81"
    ],
    "args": [],
    "targets": [
@@ -2704,7 +2728,7 @@
    "ko": "iCloud Drive/TaptionBackup에 달마다 파일 하나로 압축·암호화해 저장합니다. 자동으로 올리지 않으며, ‘지금 백업’을 누를 때만 올립니다.",
    "en": "Saved to iCloud Drive/TaptionBackup as one compressed, encrypted file per month. Nothing is uploaded automatically; it runs only when you tap Back up now.",
    "files": [
-    "MapHomeSettingsSheets.swift:462"
+    "MapHomeSettingsSheets.swift:463"
    ],
    "args": [],
    "targets": [
@@ -2817,7 +2841,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud Backup",
    "files": [
-    "MapHomeSettingsSheets.swift:461"
+    "MapHomeSettingsSheets.swift:462"
    ],
    "args": [],
    "targets": [
@@ -2914,7 +2938,7 @@
    "ko": "iCloud에 백업 파일이 없습니다.",
    "en": "No backup files in iCloud.",
    "files": [
-    "MapHomeSettingsSheets.swift:756"
+    "MapHomeSettingsSheets.swift:757"
    ],
    "args": [],
    "targets": [
@@ -2926,7 +2950,7 @@
    "ko": "iCloud에서 내려받는 중 · 불러오기를 눌러도 됩니다",
    "en": "Downloading from iCloud · you can tap Restore",
    "files": [
-    "MapHomeSettingsSheets.swift:763"
+    "MapHomeSettingsSheets.swift:764"
    ],
    "args": [],
    "targets": [
@@ -2938,7 +2962,7 @@
    "ko": "iCloud에서 목록을 읽는 중",
    "en": "Reading the list from iCloud",
    "files": [
-    "MapHomeSettingsSheets.swift:574"
+    "MapHomeSettingsSheets.swift:575"
    ],
    "args": [],
    "targets": [
@@ -3365,7 +3389,7 @@
    "ko": "{0} · 다른 비밀번호로 만든 백업입니다. 위에 그 비밀번호를 넣어 주세요",
    "en": "{0} · made with another password. Enter that password above",
    "files": [
-    "MapHomeSettingsSheets.swift:766"
+    "MapHomeSettingsSheets.swift:767"
    ],
    "args": [
     "size"
@@ -3394,7 +3418,7 @@
    "ko": "{0} · 열 수 없음(손상되었거나 충돌 버전이 있음)",
    "en": "{0} · unreadable (damaged or has conflicting versions)",
    "files": [
-    "MapHomeSettingsSheets.swift:768"
+    "MapHomeSettingsSheets.swift:769"
    ],
    "args": [
     "size"
@@ -3552,7 +3576,7 @@
    "ko": "{0} 불러오는 중",
    "en": "Restoring {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:569"
+    "MapHomeSettingsSheets.swift:570"
    ],
    "args": [
     "name"
@@ -4258,7 +4282,7 @@
    "en": "{0}/{1}",
    "files": [
     "LedgerSheet.swift:256",
-    "MapHomeSettingsSheets.swift:747"
+    "MapHomeSettingsSheets.swift:748"
    ],
    "args": [
     "parts[1]",
@@ -4775,7 +4799,7 @@
    "ko": "{0}의 백업을 이 기기로 가져옵니다. 이 기기에 더 새로운 기록이 있으면 그대로 유지됩니다. 위 입력란의 비밀번호는 그 백업을 만들 때 쓴 비밀번호여야 합니다.",
    "en": "Brings the backup for {0} onto this device. Newer records already on this device are kept. The password above must be the one used when that backup was made.",
    "files": [
-    "MapHomeSettingsSheets.swift:439"
+    "MapHomeSettingsSheets.swift:440"
    ],
    "args": [
     "restoreTarget.map(title(of:)) ?? \"\""
@@ -4981,7 +5005,7 @@
    "ko": "{0}행",
    "en": "{0} rows",
    "files": [
-    "MapHomeSettingsSheets.swift:773"
+    "MapHomeSettingsSheets.swift:774"
    ],
    "args": [
     "rows"
@@ -33634,7 +33658,7 @@
    "ko": "「BOKKI 결제 알림」 스위치를 켜요. 내 은행·카드 앱이 빠져 있으면 이 줄을 눌러 앱 이름 옆 「+」로 넣어요.",
    "en": "Turn on the BOKKI Payment Alerts switch. If your bank or card app is missing, tap the row and add it with + next to the app names.",
    "files": [
-    "BokkiShortcutsGuide.swift:145"
+    "BokkiShortcutsGuide.swift:147"
    ],
    "args": [],
    "targets": [
@@ -33658,7 +33682,7 @@
    "ko": "「BOKKI 결제」라고 적힌 줄의 스위치를 모두 켜요(낱말마다 한 줄). iOS는 가져온 자동화를 꺼진 채로 넣어요.",
    "en": "Turn on every switch labelled BOKKI Payment (one row per word). iOS adds shared automations switched off.",
    "files": [
-    "BokkiShortcutsGuide.swift:153"
+    "BokkiShortcutsGuide.swift:155"
    ],
    "args": [],
    "targets": [
@@ -33722,8 +33746,8 @@
    "ko": "「{0}」 자동화 추가",
    "en": "Add the \"{0}\" automation",
    "files": [
-    "BokkiShortcutsGuide.swift:117",
-    "BokkiShortcutsGuide.swift:242"
+    "BokkiShortcutsGuide.swift:119",
+    "BokkiShortcutsGuide.swift:244"
    ],
    "args": [
     "title"
@@ -33751,7 +33775,7 @@
    "ko": "「결제 알림 넣기」 넣기",
    "en": "Add \"Add payment alert\"",
    "files": [
-    "BokkiShortcutsGuide.swift:280"
+    "BokkiShortcutsGuide.swift:282"
    ],
    "args": [],
    "targets": [
@@ -33787,7 +33811,7 @@
    "ko": "「실행 시 보기」 끄기 · 완료",
    "en": "Turn off Show When Run · Done",
    "files": [
-    "BokkiShortcutsGuide.swift:284"
+    "BokkiShortcutsGuide.swift:286"
    ],
    "args": [],
    "targets": [
@@ -33811,7 +33835,7 @@
    "ko": "「자동화」 › 「알림」",
    "en": "Automation › Notification",
    "files": [
-    "BokkiShortcutsGuide.swift:276"
+    "BokkiShortcutsGuide.swift:278"
    ],
    "args": [],
    "targets": [
@@ -33835,7 +33859,7 @@
    "ko": "가게 분류",
    "en": "Shop category",
    "files": [
-    "AssistantSafetyViews.swift:524"
+    "AssistantSafetyViews.swift:531"
    ],
    "args": [],
    "targets": [
@@ -34022,7 +34046,7 @@
    "ko": "가계부에 넣음",
    "en": "Added to the ledger",
    "files": [
-    "LedgerMessageRules.swift:550"
+    "LedgerMessageRules.swift:552"
    ],
    "args": [],
    "targets": [
@@ -34358,7 +34382,7 @@
    "ko": "개발자에게 보내기",
    "en": "Send to developer",
    "files": [
-    "MapHomeSettingsSheets.swift:801"
+    "MapHomeSettingsSheets.swift:802"
    ],
    "args": [],
    "targets": [
@@ -34382,7 +34406,7 @@
    "ko": "개인용",
    "en": "Personal",
    "files": [
-    "BokkiShortcutsGuide.swift:274"
+    "BokkiShortcutsGuide.swift:276"
    ],
    "args": [],
    "targets": [
@@ -35015,7 +35039,7 @@
    "ko": "검색: BOKKI",
    "en": "Search: BOKKI",
    "files": [
-    "BokkiShortcutsGuide.swift:281"
+    "BokkiShortcutsGuide.swift:283"
    ],
    "args": [],
    "targets": [
@@ -35128,7 +35152,7 @@
    "ko": "결제 문자 읽기",
    "en": "Reading payment texts",
    "files": [
-    "AssistantSafetyViews.swift:518"
+    "AssistantSafetyViews.swift:525"
    ],
    "args": [],
    "targets": [
@@ -35226,8 +35250,8 @@
    "ko": "결제 알림 넣기",
    "en": "Add payment alert",
    "files": [
-    "BokkiShortcutsGuide.swift:282",
-    "BokkiShortcutsGuide.swift:285"
+    "BokkiShortcutsGuide.swift:284",
+    "BokkiShortcutsGuide.swift:287"
    ],
    "args": [],
    "targets": [
@@ -35264,7 +35288,7 @@
    "ko": "결제 앱 알림 자동화 따라 하기",
    "en": "Set up payment app alerts",
    "files": [
-    "BokkiShortcutsGuide.swift:247"
+    "BokkiShortcutsGuide.swift:249"
    ],
    "args": [],
    "targets": [
@@ -35276,7 +35300,7 @@
    "ko": "결제 앱 알림 자동화",
    "en": "Payment alert automation",
    "files": [
-    "BokkiShortcutsGuide.swift:320"
+    "BokkiShortcutsGuide.swift:322"
    ],
    "args": [],
    "targets": [
@@ -35288,7 +35312,7 @@
    "ko": "결제가 아닌 글",
    "en": "Not a payment",
    "files": [
-    "AssistantSafetyViews.swift:520"
+    "AssistantSafetyViews.swift:527"
    ],
    "args": [],
    "targets": [
@@ -36466,7 +36490,7 @@
    "ko": "구간 이동 수단",
    "en": "Travel mode for a route",
    "files": [
-    "AssistantSafetyViews.swift:527"
+    "AssistantSafetyViews.swift:534"
    ],
    "args": [],
    "targets": [
@@ -36878,7 +36902,7 @@
    "en": "It changed afterwards, so it couldn't be undone.",
    "files": [
     "AssistantBeforeAfterView.swift:180",
-    "AssistantSafetyViews.swift:381"
+    "AssistantSafetyViews.swift:385"
    ],
    "args": [],
    "targets": [
@@ -37419,18 +37443,6 @@
    "en": "Edit entry",
    "files": [
     "LedgerSheet.swift:380"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "기록 공유|Share records",
-   "ko": "기록 공유",
-   "en": "Share records",
-   "files": [
-    "AssistantSettingsView.swift:36"
    ],
    "args": [],
    "targets": [
@@ -38157,7 +38169,7 @@
    "ko": "끔",
    "en": "Off",
    "files": [
-    "LedgerMessageRules.swift:685",
+    "LedgerMessageRules.swift:687",
     "AssistantDataActions.swift:676",
     "AssistantDataActions.swift:392"
    ],
@@ -38736,7 +38748,7 @@
    "ko": "내 계좌 사이 이체",
    "en": "Transfers between my accounts",
    "files": [
-    "AssistantSafetyViews.swift:521"
+    "AssistantSafetyViews.swift:528"
    ],
    "args": [],
    "targets": [
@@ -38796,7 +38808,7 @@
    "ko": "내 계좌 이름",
    "en": "My account names",
    "files": [
-    "AssistantSafetyViews.swift:522",
+    "AssistantSafetyViews.swift:529",
     "LedgerReviewBand.swift:128",
     "LedgerSheet.swift:77"
    ],
@@ -39056,7 +39068,7 @@
    "ko": "내가 정함",
    "en": "Set by me",
    "files": [
-    "AssistantSafetyViews.swift:506"
+    "AssistantSafetyViews.swift:513"
    ],
    "args": [],
    "targets": [
@@ -39274,7 +39286,7 @@
    "en": "Words to skip",
    "files": [
     "PaymentAlertSources.swift:181",
-    "AssistantSafetyViews.swift:519"
+    "AssistantSafetyViews.swift:526"
    ],
    "args": [],
    "targets": [
@@ -39497,7 +39509,7 @@
    "ko": "다 했어요",
    "en": "All done",
    "files": [
-    "BokkiShortcutsGuide.swift:312"
+    "BokkiShortcutsGuide.swift:314"
    ],
    "args": [],
    "targets": [
@@ -39838,7 +39850,7 @@
    "en": "Next",
    "files": [
     "AssistantConnectGuide.swift:175",
-    "BokkiShortcutsGuide.swift:225"
+    "BokkiShortcutsGuide.swift:227"
    ],
    "args": [],
    "targets": [
@@ -39875,7 +39887,7 @@
    "en": "Shortcuts · Siri",
    "files": [
     "AssistantDataCommands.swift:481",
-    "BokkiShortcutsGuide.swift:67",
+    "BokkiShortcutsGuide.swift:69",
     "FirstRunTutorialView.swift:182"
    ],
    "args": [],
@@ -39900,7 +39912,7 @@
    "ko": "단축어 앱 › 자동화에서 아래 + 를 누르면 새 단축어 편집 화면이 열려요.",
    "en": "In Shortcuts › Automation, tap + at the bottom. A new shortcut editor opens.",
    "files": [
-    "BokkiShortcutsGuide.swift:275"
+    "BokkiShortcutsGuide.swift:277"
    ],
    "args": [],
    "targets": [
@@ -39914,7 +39926,7 @@
    "files": [
     "PaymentAlertSources.swift:192",
     "BokkiShortcutsGuide.swift:37",
-    "BokkiShortcutsGuide.swift:195"
+    "BokkiShortcutsGuide.swift:197"
    ],
    "args": [],
    "targets": [
@@ -39926,7 +39938,7 @@
    "ko": "단축어 앱에서 추가하기",
    "en": "Add in Shortcuts",
    "files": [
-    "BokkiShortcutsGuide.swift:195"
+    "BokkiShortcutsGuide.swift:197"
    ],
    "args": [],
    "targets": [
@@ -39938,8 +39950,8 @@
    "ko": "단축어 앱이 열리면 「단축어 추가」를 눌러요.",
    "en": "When Shortcuts opens, tap Add Shortcut.",
    "files": [
-    "BokkiShortcutsGuide.swift:142",
-    "BokkiShortcutsGuide.swift:150"
+    "BokkiShortcutsGuide.swift:144",
+    "BokkiShortcutsGuide.swift:152"
    ],
    "args": [],
    "targets": [
@@ -40840,7 +40852,7 @@
    "ko": "되돌리기",
    "en": "Undo",
    "files": [
-    "AssistantSafetyViews.swift:376",
+    "AssistantSafetyViews.swift:379",
     "MapHomeNLEClipEditor.swift:503",
     "MapHomeStickerEditor.swift:332"
    ],
@@ -40883,7 +40895,7 @@
    "en": "This can't be undone",
    "files": [
     "AssistantBeforeAfterView.swift:170",
-    "AssistantSafetyViews.swift:374"
+    "AssistantSafetyViews.swift:377"
    ],
    "args": [],
    "targets": [
@@ -40909,7 +40921,7 @@
    "ko": "두 스위치를 끄고 왼쪽 위 「<」로 저장하면 끝이에요.",
    "en": "Turn both switches off and tap < to save.",
    "files": [
-    "BokkiShortcutsGuide.swift:287"
+    "BokkiShortcutsGuide.swift:289"
    ],
    "args": [],
    "targets": [
@@ -41206,7 +41218,7 @@
    "ko": "로그 보내기",
    "en": "Logs",
    "files": [
-    "MapHomeSettingsSheets.swift:805"
+    "MapHomeSettingsSheets.swift:806"
    ],
    "args": [],
    "targets": [
@@ -41257,7 +41269,7 @@
    "ko": "로컬 정리",
    "en": "Clear from this device",
    "files": [
-    "MapHomeSettingsSheets.swift:445"
+    "MapHomeSettingsSheets.swift:446"
    ],
    "args": [],
    "targets": [
@@ -41389,7 +41401,7 @@
    "ko": "마지막 기록 {0}",
    "en": "last record {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:775"
+    "MapHomeSettingsSheets.swift:776"
    ],
    "args": [
     "formatted(last)"
@@ -41415,7 +41427,7 @@
    "ko": "마지막 백업: {0}",
    "en": "Last backup: {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:481"
+    "MapHomeSettingsSheets.swift:482"
    ],
    "args": [
     "latestBackupText"
@@ -42216,7 +42228,7 @@
    "ko": "메시지",
    "en": "Message",
    "files": [
-    "BokkiShortcutsGuide.swift:278"
+    "BokkiShortcutsGuide.swift:280"
    ],
    "args": [],
    "targets": [
@@ -42280,7 +42292,7 @@
    "ko": "모두 반영",
    "en": "Apply all",
    "files": [
-    "AssistantSafetyViews.swift:434"
+    "AssistantSafetyViews.swift:438"
    ],
    "args": [],
    "targets": [
@@ -42388,7 +42400,7 @@
    "ko": "목록 새로고침",
    "en": "Refresh list",
    "files": [
-    "MapHomeSettingsSheets.swift:596"
+    "MapHomeSettingsSheets.swift:597"
    ],
    "args": [],
    "targets": [
@@ -42707,7 +42719,7 @@
    "ko": "바꾸고 모두 지우기",
    "en": "Replace and delete everything",
    "files": [
-    "AssistantSettingsView.swift:107"
+    "AssistantSettingsView.swift:91"
    ],
    "args": [],
    "targets": [
@@ -42956,7 +42968,7 @@
    "ko": "반영하지 않기",
    "en": "Don't apply",
    "files": [
-    "AssistantSafetyViews.swift:435"
+    "AssistantSafetyViews.swift:439"
    ],
    "args": [],
    "targets": [
@@ -42968,7 +42980,7 @@
    "ko": "반영한 뒤에도 「AI가 한 일」에서 하나씩 되돌릴 수 있어요. 닫으면 다음에 다시 물어요.",
    "en": "You can still undo each one in What the AI did. If you close this, you'll be asked again next time.",
    "files": [
-    "AssistantSafetyViews.swift:437"
+    "AssistantSafetyViews.swift:441"
    ],
    "args": [],
    "targets": [
@@ -43065,7 +43077,7 @@
    "ko": "받은 문자",
    "en": "Received text",
    "files": [
-    "LedgerMessageRules.swift:281"
+    "LedgerMessageRules.swift:283"
    ],
    "args": [],
    "targets": [
@@ -43389,7 +43401,7 @@
    "ko": "백업 {0}",
    "en": "backed up {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:778"
+    "MapHomeSettingsSheets.swift:779"
    ],
    "args": [
     "formatted(created)"
@@ -43415,7 +43427,7 @@
    "ko": "백업 목록과 복원",
    "en": "Backups and restore",
    "files": [
-    "MapHomeSettingsSheets.swift:548"
+    "MapHomeSettingsSheets.swift:549"
    ],
    "args": [],
    "targets": [
@@ -43429,7 +43441,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:709",
     "FirstRunTutorialView.swift:183",
-    "MapHomeSettingsSheets.swift:556"
+    "MapHomeSettingsSheets.swift:557"
    ],
    "args": [],
    "targets": [
@@ -43492,7 +43504,7 @@
    "ko": "백업 중 {0}/{1}",
    "en": "Backing up {0}/{1}",
    "files": [
-    "MapHomeSettingsSheets.swift:490"
+    "MapHomeSettingsSheets.swift:491"
    ],
    "args": [
     "completed",
@@ -43579,7 +43591,7 @@
    "ko": "백업 후 로컬 정리",
    "en": "Clear after backup",
    "files": [
-    "MapHomeSettingsSheets.swift:536"
+    "MapHomeSettingsSheets.swift:537"
    ],
    "args": [],
    "targets": [
@@ -43591,7 +43603,7 @@
    "ko": "백업 후 로컬 정리",
    "en": "Clear from device after backup",
    "files": [
-    "MapHomeSettingsSheets.swift:513"
+    "MapHomeSettingsSheets.swift:514"
    ],
    "args": [],
    "targets": [
@@ -43615,7 +43627,7 @@
    "ko": "백업을 다시 읽어 확인된 지난 달만 이 기기에서 지웁니다. 먼저 ‘지금 백업’을 해야 하며, 설정은 지우지 않습니다.",
    "en": "Only past months whose backup was read back and verified are removed from this device. Run ‘Back up now’ first; settings are never removed.",
    "files": [
-    "MapHomeSettingsSheets.swift:527"
+    "MapHomeSettingsSheets.swift:528"
    ],
    "args": [],
    "targets": [
@@ -43691,7 +43703,7 @@
    "ko": "버림",
    "en": "Discarded",
    "files": [
-    "LedgerMessageRules.swift:543"
+    "LedgerMessageRules.swift:545"
    ],
    "args": [],
    "targets": [
@@ -43781,7 +43793,7 @@
    "ko": "버스·지하철 노선",
    "en": "Bus and subway lines",
    "files": [
-    "AssistantSafetyViews.swift:528"
+    "AssistantSafetyViews.swift:535"
    ],
    "args": [],
    "targets": [
@@ -44022,8 +44034,8 @@
    "ko": "보관함에서 「자동화」를 눌러요.",
    "en": "In the library, tap Automation.",
    "files": [
-    "BokkiShortcutsGuide.swift:144",
-    "BokkiShortcutsGuide.swift:152"
+    "BokkiShortcutsGuide.swift:146",
+    "BokkiShortcutsGuide.swift:154"
    ],
    "args": [],
    "targets": [
@@ -44060,7 +44072,7 @@
    "en": "From: {0}",
    "files": [
     "AssistantBeforeAfterView.swift:138",
-    "AssistantSafetyViews.swift:369"
+    "AssistantSafetyViews.swift:372"
    ],
    "args": [
     "connection"
@@ -44150,7 +44162,7 @@
    "ko": "보안 설정을 저장했습니다.",
    "en": "Security settings saved.",
    "files": [
-    "MapHomeSettingsSheets.swift:716"
+    "MapHomeSettingsSheets.swift:717"
    ],
    "args": [],
    "targets": [
@@ -44162,7 +44174,7 @@
    "ko": "보안 업데이트로 예전 AI 연결을 모두 끊었어요. 쓰던 AI를 아래에서 다시 연결해 주세요.",
    "en": "A security update disconnected your previous AI connections. Reconnect the AIs you use below.",
    "files": [
-    "AssistantSettingsView.swift:88"
+    "AssistantSettingsView.swift:59"
    ],
    "args": [],
    "targets": [
@@ -44540,8 +44552,8 @@
    "ko": "불러오기",
    "en": "Restore",
    "files": [
-    "MapHomeSettingsSheets.swift:437",
-    "MapHomeSettingsSheets.swift:621"
+    "MapHomeSettingsSheets.swift:438",
+    "MapHomeSettingsSheets.swift:622"
    ],
    "args": [],
    "targets": [
@@ -44603,7 +44615,7 @@
    "ko": "비밀번호 {0}자리를 넣으면 iCloud 백업이 보입니다.",
    "en": "Enter your {0}-digit password to see iCloud backups.",
    "files": [
-    "MapHomeSettingsSheets.swift:754"
+    "MapHomeSettingsSheets.swift:755"
    ],
    "args": [
     "securityPINDigits"
@@ -44682,7 +44694,7 @@
    "en": "Passwords do not match.",
    "files": [
     "FirstRunTutorialView.swift:364",
-    "MapHomeSettingsSheets.swift:689"
+    "MapHomeSettingsSheets.swift:690"
    ],
    "args": [],
    "targets": [
@@ -44695,7 +44707,7 @@
    "en": "Password",
    "files": [
     "MapHomeSettingsSheets.swift:342",
-    "MapHomeSettingsSheets.swift:469",
+    "MapHomeSettingsSheets.swift:470",
     "TripShareCreateSheet.swift:178"
    ],
    "args": [],
@@ -44808,7 +44820,7 @@
    "ko": "비밀번호를 넣으면 같은 iCloud의 다른 기기에서 만든 백업까지 보입니다. 백업을 만들 때 쓴 비밀번호로 열립니다.",
    "en": "Enter the password to see backups from every device on this iCloud account. They open with the password used when they were made.",
    "files": [
-    "MapHomeSettingsSheets.swift:549"
+    "MapHomeSettingsSheets.swift:550"
    ],
    "args": [],
    "targets": [
@@ -44820,7 +44832,7 @@
    "ko": "비밀번호를 먼저 입력해 주세요.",
    "en": "Enter your password first.",
    "files": [
-    "MapHomeSettingsSheets.swift:623"
+    "MapHomeSettingsSheets.swift:624"
    ],
    "args": [],
    "targets": [
@@ -44892,7 +44904,7 @@
    "ko": "비밀번호를 저장했습니다.",
    "en": "Password saved.",
    "files": [
-    "MapHomeSettingsSheets.swift:696"
+    "MapHomeSettingsSheets.swift:697"
    ],
    "args": [],
    "targets": [
@@ -45847,23 +45859,11 @@
    ]
   },
   {
-   "key": "새 키로 바꾸기|Replace with a new key",
-   "ko": "새 키로 바꾸기",
-   "en": "Replace with a new key",
-   "files": [
-    "AssistantSettingsView.swift:102"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "새 키로 바꿀까요?|Replace the link key?",
    "ko": "새 키로 바꿀까요?",
    "en": "Replace the link key?",
    "files": [
-    "AssistantSettingsView.swift:105"
+    "AssistantSettingsView.swift:89"
    ],
    "args": [],
    "targets": [
@@ -46083,18 +46083,6 @@
    ]
   },
   {
-   "key": "서버 보관 기간|Keep on server",
-   "ko": "서버 보관 기간",
-   "en": "Keep on server",
-   "files": [
-    "AssistantSettingsView.swift:39"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "서버 보관 기간을 {0}로 바꿀까요?|Change server retention to {0}?",
    "ko": "서버 보관 기간을 {0}로 바꿀까요?",
    "en": "Change server retention to {0}?",
@@ -46194,11 +46182,23 @@
    ]
   },
   {
+   "key": "서버에 올린 기록과 모든 AI 연결, PIN을 지워요. 쓰던 AI는 다시 연결해야 해요. 연결 키가 새어 나간 것 같을 때 쓰세요.|Deletes the records on the server, every AI connection and the PIN. You'll need to reconnect the AIs you use. Use it if a connection key may have leaked.",
+   "ko": "서버에 올린 기록과 모든 AI 연결, PIN을 지워요. 쓰던 AI는 다시 연결해야 해요. 연결 키가 새어 나간 것 같을 때 쓰세요.",
+   "en": "Deletes the records on the server, every AI connection and the PIN. You'll need to reconnect the AIs you use. Use it if a connection key may have leaked.",
+   "files": [
+    "AssistantSettingsView.swift:79"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "서버에 올린 기록과 모든 AI 연결, PIN이 지워져요. 쓰던 AI는 다시 연결해야 해요.|The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use.",
    "ko": "서버에 올린 기록과 모든 AI 연결, PIN이 지워져요. 쓰던 AI는 다시 연결해야 해요.",
    "en": "The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use.",
    "files": [
-    "AssistantSettingsView.swift:110"
+    "AssistantSettingsView.swift:94"
    ],
    "args": [],
    "targets": [
@@ -46455,7 +46455,7 @@
    "files": [
     "AssistantDataCommands.swift:485",
     "AssistantDigest.swift:81",
-    "MapHomeSettingsSheets.swift:745"
+    "MapHomeSettingsSheets.swift:746"
    ],
    "args": [],
    "targets": [
@@ -47187,7 +47187,7 @@
    "ko": "수입",
    "en": "Income",
    "files": [
-    "LedgerMessageRules.swift:686",
+    "LedgerMessageRules.swift:688",
     "PaymentAlertSources.swift:143",
     "PaymentAlertSources.swift:346"
    ],
@@ -47311,7 +47311,7 @@
    "ko": "스위치를 켰어요",
    "en": "I turned it on",
    "files": [
-    "BokkiShortcutsGuide.swift:196"
+    "BokkiShortcutsGuide.swift:198"
    ],
    "args": [],
    "targets": [
@@ -48173,7 +48173,7 @@
    "ko": "실패 · {0}",
    "en": "Failed · {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:837",
+    "MapHomeSettingsSheets.swift:838",
     "AppModel+Export.swift:111"
    ],
    "args": [
@@ -48201,7 +48201,7 @@
    "ko": "실행 시 보기",
    "en": "Show When Run",
    "files": [
-    "BokkiShortcutsGuide.swift:286"
+    "BokkiShortcutsGuide.swift:288"
    ],
    "args": [],
    "targets": [
@@ -48213,7 +48213,7 @@
    "ko": "실행 전에 확인",
    "en": "Ask Before Running",
    "files": [
-    "BokkiShortcutsGuide.swift:286"
+    "BokkiShortcutsGuide.swift:288"
    ],
    "args": [],
    "targets": [
@@ -48277,7 +48277,7 @@
    "ko": "아래 검색에 BOKKI를 적어 「결제 알림 넣기」를 넣고, 「알림 내용」 칸을 눌러 「단축어 입력」을 골라요.",
    "en": "Search BOKKI, add \"Add payment alert\", tap its text field and choose Shortcut Input.",
    "files": [
-    "BokkiShortcutsGuide.swift:283"
+    "BokkiShortcutsGuide.swift:285"
    ],
    "args": [],
    "targets": [
@@ -48337,7 +48337,7 @@
    "ko": "아래 목록 위의 「자동화」를 누르고 「알림」을 고른 뒤, 은행·카드 앱을 골라요.",
    "en": "Tap Automation above the list, choose Notification, then pick your bank and card apps.",
    "files": [
-    "BokkiShortcutsGuide.swift:279"
+    "BokkiShortcutsGuide.swift:281"
    ],
    "args": [],
    "targets": [
@@ -48413,7 +48413,7 @@
    "ko": "아직 AI가 한 일이 없어요",
    "en": "The AI hasn't done anything yet",
    "files": [
-    "AssistantSafetyViews.swift:345"
+    "AssistantSafetyViews.swift:347"
    ],
    "args": [],
    "targets": [
@@ -48425,7 +48425,7 @@
    "ko": "아직 규칙이 없어요.",
    "en": "No rules yet.",
    "files": [
-    "AssistantSafetyViews.swift:471"
+    "AssistantSafetyViews.swift:475"
    ],
    "args": [],
    "targets": [
@@ -48694,7 +48694,7 @@
    "ko": "알겠어요",
    "en": "Got it",
    "files": [
-    "AssistantSettingsView.swift:92"
+    "AssistantSettingsView.swift:63"
    ],
    "args": [],
    "targets": [
@@ -48744,7 +48744,7 @@
    "ko": "알림 내용: 입력",
    "en": "Alert text: Input",
    "files": [
-    "BokkiShortcutsGuide.swift:282"
+    "BokkiShortcutsGuide.swift:284"
    ],
    "args": [],
    "targets": [
@@ -48756,7 +48756,7 @@
    "ko": "알림 앱별 받기",
    "en": "Alerts by app",
    "files": [
-    "AssistantSafetyViews.swift:523"
+    "AssistantSafetyViews.swift:530"
    ],
    "args": [],
    "targets": [
@@ -48793,7 +48793,7 @@
    "ko": "알림",
    "en": "Notification",
    "files": [
-    "BokkiShortcutsGuide.swift:278"
+    "BokkiShortcutsGuide.swift:280"
    ],
    "args": [],
    "targets": [
@@ -48857,7 +48857,7 @@
    "ko": "압축 중…",
    "en": "Compressing…",
    "files": [
-    "MapHomeSettingsSheets.swift:829"
+    "MapHomeSettingsSheets.swift:830"
    ],
    "args": [],
    "targets": [
@@ -49578,7 +49578,7 @@
    "ko": "어제·오늘 데이터",
    "en": "2 days data",
    "files": [
-    "MapHomeSettingsSheets.swift:808"
+    "MapHomeSettingsSheets.swift:809"
    ],
    "args": [],
    "targets": [
@@ -51071,7 +51071,7 @@
    "ko": "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.",
    "en": "No AI is connected. Connect one in Menu › AI connection first.",
    "files": [
-    "LedgerMessageRules.swift:300"
+    "LedgerMessageRules.swift:302"
    ],
    "args": [],
    "targets": [
@@ -51381,42 +51381,6 @@
    "en": "Link off",
    "files": [
     "MapHomeAppleWatchMenuItem.swift:165"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "연동 키가 없어요|No link key",
-   "ko": "연동 키가 없어요",
-   "en": "No link key",
-   "files": [
-    "AssistantSettingsView.swift:99"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "연동 키가 있어요|Link key is set",
-   "ko": "연동 키가 있어요",
-   "en": "Link key is set",
-   "files": [
-    "AssistantSettingsView.swift:99"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "연동 키는 이 기기에만 있고 AI에게 주지 않아요. 키를 바꾸면 서버의 기록과 AI 연결을 모두 지워요.|The link key stays on this device and is never given to the AI. Replacing it deletes the server records and all AI connections.",
-   "ko": "연동 키는 이 기기에만 있고 AI에게 주지 않아요. 키를 바꾸면 서버의 기록과 AI 연결을 모두 지워요.",
-   "en": "The link key stays on this device and is never given to the AI. Replacing it deletes the server records and all AI connections.",
-   "files": [
-    "AssistantSettingsView.swift:117"
    ],
    "args": [],
    "targets": [
@@ -51832,7 +51796,7 @@
    "ko": "영수증 판정",
    "en": "Receipt check",
    "files": [
-    "AssistantSafetyViews.swift:525"
+    "AssistantSafetyViews.swift:532"
    ],
    "args": [],
    "targets": [
@@ -51973,7 +51937,7 @@
    "ko": "예산 없음",
    "en": "No budget",
    "files": [
-    "LedgerMessageRules.swift:503"
+    "LedgerMessageRules.swift:505"
    ],
    "args": [],
    "targets": [
@@ -52683,7 +52647,7 @@
    "ko": "완료",
    "en": "Done",
    "files": [
-    "LedgerMessageRules.swift:283",
+    "LedgerMessageRules.swift:285",
     "PaymentAlertSources.swift:329",
     "AITaskPanel.swift:285"
    ],
@@ -53395,7 +53359,7 @@
    "ko": "위치 기록이 포함될 수 있어요. 메일 화면에서 보내기를 눌러야 전송됩니다.",
    "en": "May include location history. Nothing is sent until you tap Send in Mail.",
    "files": [
-    "MapHomeSettingsSheets.swift:812"
+    "MapHomeSettingsSheets.swift:813"
    ],
    "args": [],
    "targets": [
@@ -54088,7 +54052,7 @@
    "ko": "이 기기에 남길 최근 {0}개 달(이번 달 포함)",
    "en": "Keep the latest {0} months on this device (this month included)",
    "files": [
-    "MapHomeSettingsSheets.swift:521"
+    "MapHomeSettingsSheets.swift:522"
    ],
    "args": [
     "security.localMonthsToKeep"
@@ -54211,7 +54175,7 @@
    "ko": "이 기기에서는 정리됨 · 불러올 수 있음",
    "en": "Cleared from this device · can be restored",
    "files": [
-    "MapHomeSettingsSheets.swift:615"
+    "MapHomeSettingsSheets.swift:616"
    ],
    "args": [],
    "targets": [
@@ -54499,7 +54463,7 @@
    "ko": "이 달을 불러올까요?",
    "en": "Restore this month?",
    "files": [
-    "MapHomeSettingsSheets.swift:430"
+    "MapHomeSettingsSheets.swift:431"
    ],
    "args": [],
    "targets": [
@@ -54548,7 +54512,7 @@
    "ko": "이 버전의 앱은 아직 쓰지 못해요.",
    "en": "This app version can't use it yet.",
    "files": [
-    "AssistantSafetyViews.swift:509"
+    "AssistantSafetyViews.swift:516"
    ],
    "args": [],
    "targets": [
@@ -55115,7 +55079,7 @@
    "ko": "이렇게 초록색이 되면 끝이에요. 이제 결제 문자가 저절로 가계부에 들어가요.",
    "en": "Green means done. Payment texts now go into the ledger by themselves.",
    "files": [
-    "BokkiShortcutsGuide.swift:154"
+    "BokkiShortcutsGuide.swift:156"
    ],
    "args": [],
    "targets": [
@@ -55127,7 +55091,7 @@
    "ko": "이렇게 초록색이 되면 끝이에요. 이제 결제 앱 알림이 저절로 가계부에 들어가요.",
    "en": "Green means done. Payment app alerts now go into the ledger by themselves.",
    "files": [
-    "BokkiShortcutsGuide.swift:146"
+    "BokkiShortcutsGuide.swift:148"
    ],
    "args": [],
    "targets": [
@@ -55565,7 +55529,7 @@
    "ko": "이전 버전에서 만든 백업 {0}개는 이 버전에서 열 수 없어 목록에서 뺐습니다. 파일은 그대로 있습니다.",
    "en": "{0} backups from an earlier version cannot be opened here and are not listed. The files are untouched.",
    "files": [
-    "MapHomeSettingsSheets.swift:586"
+    "MapHomeSettingsSheets.swift:587"
    ],
    "args": [
     "model.backupUnsupportedFileCount"
@@ -55604,7 +55568,7 @@
    "en": "Back",
    "files": [
     "AssistantConnectGuide.swift:173",
-    "BokkiShortcutsGuide.swift:223",
+    "BokkiShortcutsGuide.swift:225",
     "FirstRunTutorialView.swift:71"
    ],
    "args": [],
@@ -56005,7 +55969,7 @@
    "ko": "일정 제목 분류",
    "en": "Calendar title category",
    "files": [
-    "AssistantSafetyViews.swift:526"
+    "AssistantSafetyViews.swift:533"
    ],
    "args": [],
    "targets": [
@@ -56565,7 +56529,7 @@
    "ko": "자동화 › +",
    "en": "Automation › +",
    "files": [
-    "BokkiShortcutsGuide.swift:272"
+    "BokkiShortcutsGuide.swift:274"
    ],
    "args": [],
    "targets": [
@@ -56577,8 +56541,8 @@
    "ko": "자동화",
    "en": "Automation",
    "files": [
-    "BokkiShortcutsGuide.swift:273",
-    "BokkiShortcutsGuide.swift:277"
+    "BokkiShortcutsGuide.swift:275",
+    "BokkiShortcutsGuide.swift:279"
    ],
    "args": [],
    "targets": [
@@ -56774,7 +56738,7 @@
    "ko": "작업 중입니다",
    "en": "Working",
    "files": [
-    "MapHomeSettingsSheets.swift:494"
+    "MapHomeSettingsSheets.swift:495"
    ],
    "args": [],
    "targets": [
@@ -57288,8 +57252,8 @@
    "ko": "저장된 위치 삭제",
    "en": "Delete saved location",
    "files": [
-    "MapHomeSettingsSheets.swift:984",
-    "MapHomeSettingsSheets.swift:1015"
+    "MapHomeSettingsSheets.swift:985",
+    "MapHomeSettingsSheets.swift:1016"
    ],
    "args": [],
    "targets": [
@@ -57301,7 +57265,7 @@
    "ko": "저장된 위치를 삭제할까요?",
    "en": "Delete the saved location?",
    "files": [
-    "MapHomeSettingsSheets.swift:1007"
+    "MapHomeSettingsSheets.swift:1008"
    ],
    "args": [],
    "targets": [
@@ -57427,7 +57391,7 @@
    "en": "Floor to save",
    "files": [
     "MapHomeLocationSheets.swift:249",
-    "MapHomeSettingsSheets.swift:930",
+    "MapHomeSettingsSheets.swift:931",
     "MapHomeTransitSheets.swift:430"
    ],
    "args": [],
@@ -57720,7 +57684,7 @@
    "ko": "정리",
    "en": "Clear",
    "files": [
-    "MapHomeSettingsSheets.swift:449"
+    "MapHomeSettingsSheets.swift:450"
    ],
    "args": [],
    "targets": [
@@ -57878,7 +57842,7 @@
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "LedgerMessageRules.swift:599",
+    "LedgerMessageRules.swift:601",
     "AssistantDataActions.swift:612",
     "TravelNewTripSheet.swift:74"
    ],
@@ -58129,18 +58093,6 @@
    "en": "Sweet dreams 💤",
    "files": [
     "MapHomeDefaultBubblePool.swift:60"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "좌표와 경로는 보내지 않아요. 기록은 고른 기간이 지나면 서버에서 지워져요. AI 비서가 보낸 메모·일정·기록 수정은 앱을 열 때나 백그라운드 새로 고침 때 바로 반영돼요.|Coordinates and routes are never sent. Records are deleted from the server after the chosen period. Memos, schedules and record edits from the AI assistant are applied when you open the app or during background refresh.",
-   "ko": "좌표와 경로는 보내지 않아요. 기록은 고른 기간이 지나면 서버에서 지워져요. AI 비서가 보낸 메모·일정·기록 수정은 앱을 열 때나 백그라운드 새로 고침 때 바로 반영돼요.",
-   "en": "Coordinates and routes are never sent. Records are deleted from the server after the chosen period. Memos, schedules and record edits from the AI assistant are applied when you open the app or during background refresh.",
-   "files": [
-    "AssistantSettingsView.swift:43"
    ],
    "args": [],
    "targets": [
@@ -58530,7 +58482,7 @@
    "ko": "지금 백업",
    "en": "Back up now",
    "files": [
-    "MapHomeSettingsSheets.swift:494"
+    "MapHomeSettingsSheets.swift:495"
    ],
    "args": [],
    "targets": [
@@ -59357,9 +59309,21 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "LedgerMessageRules.swift:527",
-    "LedgerMessageRules.swift:533",
-    "LedgerMessageRules.swift:555"
+    "LedgerMessageRules.swift:529",
+    "LedgerMessageRules.swift:535",
+    "LedgerMessageRules.swift:557"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지웠어요.|Erased.",
+   "ko": "지웠어요.",
+   "en": "Erased.",
+   "files": [
+    "AssistantSettingsView.swift:115"
    ],
    "args": [],
    "targets": [
@@ -59411,7 +59375,7 @@
    "ko": "지출",
    "en": "Spending",
    "files": [
-    "LedgerMessageRules.swift:686",
+    "LedgerMessageRules.swift:688",
     "PaymentAlertSources.swift:142",
     "PaymentAlertSources.swift:345"
    ],
@@ -60303,7 +60267,7 @@
    "ko": "최근 {0}개 달을 뺀 지난 달 중 백업을 다시 읽어 확인된 달만 이 기기에서 지웁니다. 지운 달은 백업 목록에서 다시 불러올 수 있습니다.",
    "en": "Past months older than the latest {0} are removed from this device only after their backup is read back and verified. You can restore them from the backup list.",
    "files": [
-    "MapHomeSettingsSheets.swift:451"
+    "MapHomeSettingsSheets.swift:452"
    ],
    "args": [
     "security.localMonthsToKeep"
@@ -60468,8 +60432,8 @@
    "ko": "추가가 끝나면 왼쪽 위 「<」를 눌러요.",
    "en": "Then tap < at the top left.",
    "files": [
-    "BokkiShortcutsGuide.swift:143",
-    "BokkiShortcutsGuide.swift:151"
+    "BokkiShortcutsGuide.swift:145",
+    "BokkiShortcutsGuide.swift:153"
    ],
    "args": [],
    "targets": [
@@ -60826,7 +60790,7 @@
    "ko": "층수 저장",
    "en": "Save floor",
    "files": [
-    "MapHomeSettingsSheets.swift:946"
+    "MapHomeSettingsSheets.swift:947"
    ],
    "args": [],
    "targets": [
@@ -61322,7 +61286,7 @@
    "ko": "켬",
    "en": "On",
    "files": [
-    "LedgerMessageRules.swift:685",
+    "LedgerMessageRules.swift:687",
     "AssistantDataActions.swift:676",
     "AssistantDataActions.swift:392"
    ],
@@ -61830,7 +61794,7 @@
    "ko": "특정 시간",
    "en": "Time of Day",
    "files": [
-    "BokkiShortcutsGuide.swift:278"
+    "BokkiShortcutsGuide.swift:280"
    ],
    "args": [],
    "targets": [
@@ -63371,7 +63335,7 @@
    "ko": "현재 위치로 다시 저장",
    "en": "Update current location",
    "files": [
-    "MapHomeSettingsSheets.swift:967"
+    "MapHomeSettingsSheets.swift:968"
    ],
    "args": [],
    "targets": [
@@ -63396,7 +63360,7 @@
    "ko": "현재 위치로 저장",
    "en": "Save current location",
    "files": [
-    "MapHomeSettingsSheets.swift:966"
+    "MapHomeSettingsSheets.swift:967"
    ],
    "args": [],
    "targets": [
@@ -63432,7 +63396,7 @@
    "ko": "현재 위치를 기준으로 저장할 수 있습니다",
    "en": "Save this place from your current location",
    "files": [
-    "MapHomeSettingsSheets.swift:889"
+    "MapHomeSettingsSheets.swift:890"
    ],
    "args": [],
    "targets": [
@@ -63456,7 +63420,7 @@
    "ko": "현재 위치를 받는 중입니다. 위치 기록이 잡히면 저장할 수 있습니다.",
    "en": "Waiting for location. Save becomes available when a location is recorded.",
    "files": [
-    "MapHomeSettingsSheets.swift:920"
+    "MapHomeSettingsSheets.swift:921"
    ],
    "args": [],
    "targets": [
@@ -63482,7 +63446,7 @@
    "ko": "현재 위치를 이 장소의 기준 위치로 저장합니다. 좌표는 화면에 표시하지 않습니다.",
    "en": "Save the current location as this place. Coordinates are not shown.",
    "files": [
-    "MapHomeSettingsSheets.swift:916"
+    "MapHomeSettingsSheets.swift:917"
    ],
    "args": [],
    "targets": [
@@ -63494,7 +63458,7 @@
    "ko": "현재 저장 상태",
    "en": "Saved",
    "files": [
-    "MapHomeSettingsSheets.swift:881"
+    "MapHomeSettingsSheets.swift:882"
    ],
    "args": [],
    "targets": [

@@ -3303,3 +3303,10 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - `BokkiGuideActions`(큰 단추 + 「이전 · 다음」 줄)를 문자용·알림용 추가 팝업(`BokkiPaymentAddPopup`)과 알림 따라 하기 창(`BokkiPaymentAutomationSetup`)이 함께 쓴다. 1쪽에서도 「이전」(비활성)·「다음」이 보이고, 큰 단추는 모든 쪽에서 강조 모양. 새 문구 없음.
 - Debug 빌드 성공, 구조 지표 통과, 번역 `check.py` 실패 0.
 - 화면 눈 확인은 못 함: 시뮬레이터 탭 조작이 불안정했고, 시험에서 그려 본 그림은 빈 화면으로 나옴. 대표 기기 확인 필요.
+
+## ASM1115A01 · UIF1115A01 · AI 연결 화면 정리와 설정 목록 글자 통일 (2026-11-15 오후, 시뮬레이터)
+
+- ASM1115A01: AI 연결 화면에서 「기록 공유」·「서버 보관 기간」·연동 키 구역을 없앰. 공유 수준은 저장된 값 그대로(AI 요청·승인 경로 유지). 30일로 둔 기기는 한 번 7일로 내리고 서버의 날들을 지워 다시 올림(`AssistantRetention.retireMonth`, 하루 기록 동기화 시작 때). 「새 키로 바꾸기」는 데이터 보호 화면 맨 아래 「AI 서버 기록 모두 지우기」로 옮김. 새 문구 4개 × 12개 언어, `check.py` 실패 0.
+- UIF1115A01: AI가 할 수 있는 일·AI가 한 일·AI 규칙·단축어·Siri·받은 문자 화면에 다른 설정 목록과 같은 `.font(.taptionStyle(.subheadline))`(AI 규칙은 `tpListStyle`·줄 배경도), 「되돌리기」는 footnote 굵게.
+- 시험: `AssistantRetentionRetireTests` 2건 등 Assistant 관련 70건 통과(`build/validation/SCG1115A01/test-asm2.log`). 전체 단위 시험 2,925건 중 1건 실패 — `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`(66초 걸려 지도 스타일 재로딩을 못 봄). 그 묶음만 다시 돌리니 0.7초에 통과(`test-uif-route.log`) → 간헐 실패로 보고 이번 변경과 무관(지도 코드 안 건드림).
+- 구조 지표 통과. 화면 눈 확인은 대표 기기 몫.

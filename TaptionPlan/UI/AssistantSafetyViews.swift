@@ -326,6 +326,8 @@ struct AssistantActionTogglesView: View {
             .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
+        // 다른 설정 목록과 같은 글자(UIF1115A01).
+        .font(.taptionStyle(.subheadline))
         .navigationTitle(language.text("AI가 할 수 있는 일", "What the AI can do"))
     }
 }
@@ -349,6 +351,7 @@ struct AssistantActionLogView: View {
             .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
+        .font(.taptionStyle(.subheadline))
         .navigationTitle(language.text("AI가 한 일", "What the AI did"))
         .onAppear { entries = AssistantActionLog.load() }
     }
@@ -374,6 +377,7 @@ struct AssistantActionLogView: View {
                 Text(language.text("되돌릴 수 없는 일이에요", "This can't be undone")).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             } else if !entry.isRejected {
                 Button(language.text("되돌리기", "Undo")) { undo(entry) }
+                    .font(.taptionStyle(.footnote, weight: .semibold))
                     .buttonStyle(.borderless)
                     .disabled(workingID != nil)
             }
@@ -479,7 +483,10 @@ struct AssistantRuleListView: View {
                 Text(language.text("AI가 배운 것을 앱이 먼저 스스로 판단해요. 끄거나 밀어서 지울 수 있어요.",
                                    "The app decides these by itself first, using what your AI learned. Switch one off or swipe to delete it."))
             }
+            .listRowBackground(Color.tpSurface)
         }
+        .tpListStyle()
+        .font(.taptionStyle(.subheadline))
         .navigationTitle(language.text("AI 규칙", "AI rules"))
         .task {
             reload()

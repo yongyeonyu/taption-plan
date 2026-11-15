@@ -4929,6 +4929,160 @@
         }
       }
     },
+    "AI 서버 기록 모두 지우기|Erase all AI server records" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIサーバーの記録をすべて消去"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除全部 AI 服务器记录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除全部 AI 伺服器紀錄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle KI-Serverdaten löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer toutes les données IA du serveur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancella tutti i dati IA sul server"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borrar todos los registros de IA del servidor"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagar todos os registros de IA do servidor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa toàn bộ dữ liệu AI trên máy chủ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus semua catatan AI di server"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบข้อมูล AI บนเซิร์ฟเวอร์ทั้งหมด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर के सभी AI रिकॉर्ड मिटाएँ"
+          }
+        }
+      }
+    },
+    "AI 서버 기록|AI server records" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIサーバーの記録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 服务器记录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 伺服器紀錄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Serverdaten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Données IA sur le serveur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dati IA sul server"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registros de IA en el servidor"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registros de IA no servidor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dữ liệu AI trên máy chủ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan AI di server"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อมูล AI บนเซิร์ฟเวอร์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर पर AI रिकॉर्ड"
+          }
+        }
+      }
+    },
     "AI 서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.|Couldn't reach the AI server. Check your connection and try again." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -231540,83 +231694,6 @@
         }
       }
     },
-    "기록 공유|Share records" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "記録の共有"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共享记录"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分享記錄"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Einträge teilen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Partager les enregistrements"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condividi registrazioni"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compartir registros"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compartilhar registros"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chia sẻ bản ghi"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bagikan catatan"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "แชร์บันทึก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "रिकॉर्ड साझा करें"
-          }
-        }
-      }
-    },
     "기록 더하기|Add entry" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -282437,83 +282514,6 @@
         }
       }
     },
-    "새 키로 바꾸기|Replace with a new key" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいキーに変える"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "换成新密钥"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "換成新金鑰"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Durch neuen Schlüssel ersetzen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remplacer par une nouvelle clé"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sostituisci con una nuova chiave"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cambiar por una clave nueva"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trocar por uma nova chave"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thay bằng khóa mới"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ganti dengan kunci baru"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เปลี่ยนเป็นคีย์ใหม่"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "नई कुंजी से बदलें"
-          }
-        }
-      }
-    },
     "새 키로 바꿀까요?|Replace the link key?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -283900,83 +283900,6 @@
         }
       }
     },
-    "서버 보관 기간|Keep on server" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サーバー保管期間"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "服务器保存期限"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "伺服器保存期限"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auf dem Server behalten"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conserver sur le serveur"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conserva sul server"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conservar en el servidor"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Manter no servidor"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lưu trên máy chủ"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Simpan di server"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เก็บไว้บนเซิร์ฟเวอร์"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सर्वर पर रखने की अवधि"
-          }
-        }
-      }
-    },
     "서버 보관 기간을 {0}로 바꿀까요?|Change server retention to {0}?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -284589,6 +284512,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सर्वर तक नहीं पहुँच सके, इसलिए कुंजी नहीं बदली। थोड़ी देर बाद फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "서버에 올린 기록과 모든 AI 연결, PIN을 지워요. 쓰던 AI는 다시 연결해야 해요. 연결 키가 새어 나간 것 같을 때 쓰세요.|Deletes the records on the server, every AI connection and the PIN. You'll need to reconnect the AIs you use. Use it if a connection key may have leaked." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーに上げた記録、すべてのAI接続、PINを消去します。使っていたAIは再接続が必要です。接続キーが漏れたかもしれないときに使ってください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将删除上传到服务器的记录、所有 AI 连接和 PIN。之前使用的 AI 需要重新连接。怀疑连接密钥泄露时请使用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將刪除上傳到伺服器的紀錄、所有 AI 連線和 PIN。先前使用的 AI 需要重新連線。懷疑連線金鑰外洩時請使用。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löscht die Einträge auf dem Server, alle KI-Verbindungen und die PIN. Deine KIs musst du neu verbinden. Nutze es, wenn ein Verbindungsschlüssel durchgesickert sein könnte."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprime les données du serveur, toutes les connexions IA et le code. Vous devrez reconnecter vos IA. À utiliser si une clé de connexion a pu fuiter."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elimina i dati sul server, tutte le connessioni IA e il PIN. Dovrai ricollegare le IA che usi. Usalo se una chiave di connessione potrebbe essere trapelata."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borra los registros del servidor, todas las conexiones de IA y el PIN. Tendrás que volver a conectar tus IA. Úsalo si una clave de conexión pudo filtrarse."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apaga os registros no servidor, todas as conexões de IA e o PIN. Você precisará reconectar as IAs que usa. Use se uma chave de conexão puder ter vazado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa dữ liệu trên máy chủ, mọi kết nối AI và mã PIN. Bạn sẽ cần kết nối lại các AI đang dùng. Hãy dùng khi nghi khóa kết nối bị lộ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menghapus catatan di server, semua koneksi AI, dan PIN. Kamu perlu menghubungkan ulang AI yang dipakai. Gunakan jika kunci koneksi mungkin bocor."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบข้อมูลบนเซิร์ฟเวอร์ การเชื่อมต่อ AI ทั้งหมด และ PIN คุณต้องเชื่อมต่อ AI ที่ใช้อยู่ใหม่ ใช้เมื่อสงสัยว่าคีย์การเชื่อมต่อรั่วไหล"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर पर रखे रिकॉर्ड, सभी AI कनेक्शन और PIN मिटा देता है। आपको अपने AI दोबारा जोड़ने होंगे। कनेक्शन कुंजी लीक होने का शक हो तो इस्तेमाल करें।"
           }
         }
       }
@@ -315697,237 +315697,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "लिंक बंद"
-          }
-        }
-      }
-    },
-    "연동 키가 없어요|No link key" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連携キーがありません"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有连接密钥"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有連線金鑰"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kein Verbindungsschlüssel"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucune clé de liaison"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessuna chiave di collegamento"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No hay clave de enlace"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sem chave de conexão"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chưa có khóa liên kết"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Belum ada kunci tautan"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ยังไม่มีคีย์เชื่อมต่อ"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कोई लिंक कुंजी नहीं"
-          }
-        }
-      }
-    },
-    "연동 키가 있어요|Link key is set" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連携キーがあります"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已有连接密钥"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已有連線金鑰"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verbindungsschlüssel ist eingerichtet"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clé de liaison définie"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chiave di collegamento impostata"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clave de enlace configurada"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chave de conexão definida"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã có khóa liên kết"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kunci tautan sudah ada"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "มีคีย์เชื่อมต่อแล้ว"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "लिंक कुंजी सेट है"
-          }
-        }
-      }
-    },
-    "연동 키는 이 기기에만 있고 AI에게 주지 않아요. 키를 바꾸면 서버의 기록과 AI 연결을 모두 지워요.|The link key stays on this device and is never given to the AI. Replacing it deletes the server records and all AI connections." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連携キーはこの端末にだけあり、AIには渡しません。キーを変えるとサーバーの記録とAI連携がすべて削除されます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关联密钥只保存在本设备上，不会交给 AI。更换密钥会删除服务器上的记录和所有 AI 连接。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連結金鑰只存在本裝置上，不會交給 AI。更換金鑰會刪除伺服器上的記錄與所有 AI 連線。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Verknüpfungsschlüssel bleibt auf diesem Gerät und wird nie an die KI gegeben. Ersetzt du ihn, werden die Server-Einträge und alle KI-Verbindungen gelöscht."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La clé de liaison reste sur cet appareil et n’est jamais donnée à l’IA. La remplacer supprime les données du serveur et toutes les connexions IA."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La chiave di collegamento resta su questo dispositivo e non viene mai data all’IA. Sostituirla elimina le registrazioni sul server e tutte le connessioni IA."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La clave de enlace se queda en este dispositivo y nunca se da a la IA. Al cambiarla se borran los registros del servidor y todas las conexiones de IA."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A chave de vínculo fica só neste aparelho e nunca é entregue à IA. Trocá-la apaga os registros do servidor e todas as conexões de IA."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khóa liên kết chỉ nằm trên thiết bị này và không bao giờ đưa cho AI. Đổi khóa sẽ xóa bản ghi trên máy chủ và mọi kết nối AI."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kunci tautan hanya ada di perangkat ini dan tidak pernah diberikan ke AI. Mengganti kunci akan menghapus catatan di server dan semua koneksi AI."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "คีย์เชื่อมต่ออยู่ในอุปกรณ์นี้เท่านั้นและไม่ส่งให้ AI การเปลี่ยนคีย์จะลบบันทึกบนเซิร์ฟเวอร์และการเชื่อมต่อ AI ทั้งหมด"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "लिंक कुंजी सिर्फ़ इसी डिवाइस पर रहती है और AI को कभी नहीं दी जाती। कुंजी बदलने पर सर्वर के रिकॉर्ड और सभी AI कनेक्शन हट जाते हैं।"
           }
         }
       }
@@ -356357,83 +356126,6 @@
         }
       }
     },
-    "좌표와 경로는 보내지 않아요. 기록은 고른 기간이 지나면 서버에서 지워져요. AI 비서가 보낸 메모·일정·기록 수정은 앱을 열 때나 백그라운드 새로 고침 때 바로 반영돼요.|Coordinates and routes are never sent. Records are deleted from the server after the chosen period. Memos, schedules and record edits from the AI assistant are applied when you open the app or during background refresh." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "座標と経路は送りません。記録は選んだ期間が過ぎるとサーバーから削除されます。AIアシスタントが送ったメモ・予定・記録の修正は、アプリを開いたときやバックグラウンド更新時にすぐ反映されます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不会发送坐标和路线。记录会在所选期限过后从服务器删除。AI 助理发送的备忘、日程和记录修改会在打开 App 或后台刷新时立即应用。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不會傳送座標與路線。記錄會在所選期限過後從伺服器刪除。AI 助理傳送的備忘、行程與記錄修改會在打開 App 或背景重新整理時立即套用。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Koordinaten und Routen werden nie gesendet. Einträge werden nach dem gewählten Zeitraum vom Server gelöscht. Notizen, Termine und Änderungen des KI-Assistenten werden beim Öffnen der App oder bei der Hintergrundaktualisierung übernommen."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les coordonnées et les trajets ne sont jamais envoyés. Les enregistrements sont supprimés du serveur après la durée choisie. Les notes, événements et modifications de l’assistant IA sont appliqués à l’ouverture de l’app ou lors de l’actualisation en arrière-plan."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coordinate e percorsi non vengono mai inviati. Le registrazioni vengono eliminate dal server dopo il periodo scelto. Note, impegni e modifiche dell’assistente IA vengono applicati all’apertura dell’app o durante l’aggiornamento in background."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nunca se envían coordenadas ni rutas. Los registros se borran del servidor tras el periodo elegido. Las notas, eventos y ediciones del asistente de IA se aplican al abrir la app o durante la actualización en segundo plano."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coordenadas e rotas nunca são enviadas. Os registros são apagados do servidor após o período escolhido. Notas, compromissos e edições do assistente de IA são aplicados ao abrir o app ou durante a atualização em segundo plano."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không bao giờ gửi tọa độ và lộ trình. Bản ghi sẽ bị xóa khỏi máy chủ sau thời gian đã chọn. Ghi chú, lịch trình và chỉnh sửa từ trợ lý AI được áp dụng khi mở ứng dụng hoặc khi làm mới nền."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Koordinat dan rute tidak pernah dikirim. Catatan dihapus dari server setelah periode yang dipilih. Memo, jadwal, dan perubahan dari asisten AI diterapkan saat aplikasi dibuka atau saat penyegaran latar belakang."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ไม่ส่งพิกัดและเส้นทาง บันทึกจะถูกลบจากเซิร์ฟเวอร์เมื่อครบระยะที่เลือก บันทึกย่อ กำหนดการ และการแก้ไขจากผู้ช่วย AI จะใช้ทันทีเมื่อเปิดแอปหรือขณะรีเฟรชเบื้องหลัง"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "निर्देशांक और रास्ते कभी नहीं भेजे जाते। चुनी गई अवधि के बाद रिकॉर्ड सर्वर से हटा दिए जाते हैं। AI सहायक के भेजे मेमो, शेड्यूल और रिकॉर्ड बदलाव ऐप खोलने पर या बैकग्राउंड रीफ़्रेश के दौरान तुरंत लागू होते हैं।"
-          }
-        }
-      }
-    },
     "주|Week" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -363822,6 +363514,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "हटाया गया"
+          }
+        }
+      }
+    },
+    "지웠어요.|Erased." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "消去しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已清除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已清除。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gelöscht."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancellato."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borrado."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã xóa."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terhapus."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मिटा दिया।"
           }
         }
       }

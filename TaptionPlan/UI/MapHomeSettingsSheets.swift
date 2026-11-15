@@ -397,6 +397,7 @@ struct MapHomeSecuritySheet: View {
                 backupCard
                 offloadCard
                 restoreCard
+                card(language.text("AI 서버 기록", "AI server records")) { AssistantServerEraseRow(model: model, language: language) }
 
                 if let message {
                     Text(message)
