@@ -200,7 +200,7 @@ extension MapHomeView {
     /// 할 일 목록 패널(TDP1113A01): 확인할 것·일정·메모·지출·AI를 한 판에 모은다. 폭은 280.
     var memoListPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
-            LedgerMemoHeader(filter: $memoLedgerFilter, linkedMemoIDs: $memoLedgerLinkedIDs, language: language, day: model.selectedDate)
+            LedgerMemoHeader(filter: $memoLedgerFilter, linkedMemoIDs: $memoLedgerLinkedIDs, language: language, day: model.selectedDate, counts: todoTabCounts)
             switch memoLedgerFilter {
             case .today:
                 EmptyView()
@@ -270,6 +270,13 @@ extension MapHomeView {
     }
 
     static let todoPanelCollapsedRows = 4
+
+    /// 할 일 판 탭의 개수 점(HUX1116A04). 판이 이미 들고 있는 목록만 센다.
+    var todoTabCounts: [LedgerMemoFilter: Int] {
+        [.check: todoItems.count,
+         .schedule: dayPlans.count + dayCalendarEventsForSelectedDate.count,
+         .memos: todoPanelRows.count]
+    }
 
     /// 늘 왼쪽 위에 떠 있는 판의 폭(TDW1114A01): 오른쪽에 단추 한 줄과 날짜 배지가 들어갈 자리를 남긴다. 넓은 화면은 280.
     var todoPanelWidth: CGFloat {

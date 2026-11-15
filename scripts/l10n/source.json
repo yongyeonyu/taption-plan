@@ -1180,7 +1180,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:718"
+    "MapHomeView+Support.swift:711"
    ],
    "args": [],
    "targets": [
@@ -4191,6 +4191,20 @@
    ]
   },
   {
+   "key": "{0}개|{0} items",
+   "ko": "{0}개",
+   "en": "{0} items",
+   "files": [
+    "LedgerMemoPanel.swift:87"
+   ],
+   "args": [
+    "$0"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0}개는 그 뒤에 바뀌어 되돌리지 못했어요|{0} changed afterwards and couldn't be undone",
    "ko": "{0}개는 그 뒤에 바뀌어 되돌리지 못했어요",
    "en": "{0} changed afterwards and couldn't be undone",
@@ -4237,7 +4251,7 @@
    "ko": "{0}건",
    "en": "{0} entries",
    "files": [
-    "LedgerMemoPanel.swift:265"
+    "LedgerMemoPanel.swift:341"
    ],
    "args": [
     "list.count"
@@ -35673,7 +35687,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:797"
+    "MapHomeView+Support.swift:790"
    ],
    "args": [],
    "targets": [
@@ -37017,8 +37031,8 @@
    "ko": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.",
    "en": "No spending that day. Write a memo like \"Coffee 4500\" to add one.",
    "files": [
-    "LedgerMemoPanel.swift:129",
-    "LedgerMemoPanel.swift:264"
+    "LedgerMemoPanel.swift:205",
+    "LedgerMemoPanel.swift:340"
    ],
    "args": [],
    "targets": [
@@ -38461,7 +38475,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:712"
+    "MapHomeView+Support.swift:705"
    ],
    "args": [],
    "targets": [
@@ -42003,7 +42017,7 @@
    "ko": "메모 {0}",
    "en": "Memo {0}",
    "files": [
-    "MapHomeView+Memos.swift:404"
+    "MapHomeView+Memos.swift:411"
    ],
    "args": [
     "memo.text"
@@ -44617,7 +44631,7 @@
    "ko": "분류별",
    "en": "By category",
    "files": [
-    "LedgerMemoPanel.swift:261"
+    "LedgerMemoPanel.swift:337"
    ],
    "args": [],
    "targets": [
@@ -45816,7 +45830,7 @@
    "en": "New memo",
    "files": [
     "MapHomeStickerEditor.swift:569",
-    "MapHomeView+Memos.swift:417"
+    "MapHomeView+Memos.swift:424"
    ],
    "args": [],
    "targets": [
@@ -45915,7 +45929,7 @@
    "ko": "새 지도 메모",
    "en": "New map memo",
    "files": [
-    "MapHomeView+Memos.swift:540"
+    "MapHomeView+Memos.swift:547"
    ],
    "args": [],
    "targets": [
@@ -46506,7 +46520,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:791"
+    "MapHomeView+Support.swift:784"
    ],
    "args": [],
    "targets": [
@@ -46580,7 +46594,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:787"
+    "MapHomeView+Support.swift:780"
    ],
    "args": [],
    "targets": [
@@ -47818,7 +47832,7 @@
    "ko": "시간순",
    "en": "By time",
    "files": [
-    "LedgerMemoPanel.swift:262"
+    "LedgerMemoPanel.swift:338"
    ],
    "args": [],
    "targets": [
@@ -50033,7 +50047,7 @@
    "ko": "여기에 메모",
    "en": "Memo here",
    "files": [
-    "MapHomeView+Memos.swift:501"
+    "MapHomeView+Memos.swift:508"
    ],
    "args": [],
    "targets": [
@@ -50181,7 +50195,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:716"
+    "MapHomeView+Support.swift:709"
    ],
    "args": [],
    "targets": [
@@ -52526,7 +52540,7 @@
    "ko": "오늘",
    "en": "Today",
    "files": [
-    "LedgerMemoPanel.swift:107",
+    "LedgerMemoPanel.swift:183",
     "MapHomeDateStrip.swift:60",
     "PlanRealityView.swift:240"
    ],
@@ -53772,7 +53786,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:710"
+    "MapHomeView+Support.swift:703"
    ],
    "args": [],
    "targets": [
@@ -54811,7 +54825,7 @@
    "ko": "이 위치로",
    "en": "Use this spot",
    "files": [
-    "MapHomeView+Memos.swift:500"
+    "MapHomeView+Memos.swift:507"
    ],
    "args": [],
    "targets": [
@@ -55605,7 +55619,7 @@
    "ko": "이번 달",
    "en": "This month",
    "files": [
-    "LedgerMemoPanel.swift:110"
+    "LedgerMemoPanel.swift:186"
    ],
    "args": [],
    "targets": [
@@ -58230,7 +58244,7 @@
    "ko": "종일",
    "en": "All day",
    "files": [
-    "LedgerMemoPanel.swift:353",
+    "LedgerMemoPanel.swift:429",
     "MapHomeTodayCalendar.swift:236"
    ],
    "args": [],
@@ -58717,7 +58731,7 @@
    "ko": "지금 확인할 것이 없어요.",
    "en": "Nothing to check right now.",
    "files": [
-    "MapHomeView+Memos.swift:322"
+    "MapHomeView+Memos.swift:329"
    ],
    "args": [],
    "targets": [
@@ -59201,7 +59215,7 @@
    "ko": "지도를 움직여 핀 위치를 맞추세요",
    "en": "Move the map to place the pin",
    "files": [
-    "MapHomeView+Memos.swift:463"
+    "MapHomeView+Memos.swift:470"
    ],
    "args": [],
    "targets": [
@@ -59261,7 +59275,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:694"
+    "MapHomeView+Support.swift:687"
    ],
    "args": [],
    "targets": [
@@ -59756,7 +59770,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:717",
+    "MapHomeView+Support.swift:710",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -60868,7 +60882,7 @@
    "ko": "취소됨",
    "en": "Canceled",
    "files": [
-    "LedgerMemoPanel.swift:166",
+    "LedgerMemoPanel.swift:242",
     "LedgerSheet.swift:281"
    ],
    "args": [],
@@ -62531,7 +62545,7 @@
    "ko": "하루 지출",
    "en": "Daily spending",
    "files": [
-    "LedgerMemoPanel.swift:258"
+    "LedgerMemoPanel.swift:334"
    ],
    "args": [],
    "targets": [

@@ -3378,3 +3378,8 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 단위 시험: `MapHomeLiveMapTests` 96개 실행, 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A03/unit-1.log`.
 - 구조 지표 통과, l10n `check.py` 실패 0.
 - 제한: 시트 낮춤·뒤 지도 만지기·「오늘」 칸은 화면 시험·기기 눈 확인을 하지 않음. 새 동작 전용 단위 시험 없음(보기 코드만 바뀜).
+
+## HUX1116A04 — 홈 제안 5 (할 일 판 탭 개수)
+- 단위 시험: `MapHomeLiveMapTests` 96개 + `LedgerTests` 34개, 합 130개 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A04/unit-1.log`.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 탭 줄 모양·긴 언어 잘림 여부는 눈으로 보지 않음(기기·화면 시험 없음). 「AI」 탭 개수는 넣지 않음.
