@@ -1,5 +1,6 @@
 import Foundation
 import QuartzCore
+import UIKit
 
 /// 손짓별 끊김 계측(대표 지시 "터치·팝업·드래그 최적화", ARC1030A07).
 ///
@@ -160,6 +161,75 @@ enum MapHomeSheetBench {
             }
         }
         TaptionPlanDiagnosticsLogger.shared.record("bench_sheets_done")
+    }
+}
+/// 측정용: `-autoBenchLedgerScroll`이면 가계부를 열고 목록을 일정한 속도로 굴리며 프레임 간격을 남긴다(LGS1115A01).
+/// 기록이 적으면 보기 기록을 넣었다가 끝나면 지운다. 시뮬레이터 Debug에서만 쓴다.
+@MainActor
+enum LedgerScrollBench {
+    static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains("-autoBenchLedgerScroll") }
+    private static let marker = "bench-LGS1115A01"
+
+    private static var started = false
+
+    static func run() async {
+        guard !started else { return }
+        started = true
+        try? await Task.sleep(for: .seconds(8))
+        let book = LedgerBook.shared
+        await book.load()
+        let monthStart = Calendar.autoupdatingCurrent.dateInterval(of: .month, for: .now)?.start ?? .now
+        let titles = ["점심 식당", "모퉁이 카페 라떼", "가상고속도로 통행료", "마트 장보기", "택시", "서점", "약국", "주유소"]
+        var seeded: [UUID] = []
+        for index in 0..<300 {
+            var entry = LedgerEntry(occurredAt: min(.now, monthStart.addingTimeInterval(Double(index) * 2.3 * 3_600)), amount: Double(1_000 + index * 37), title: titles[index % titles.count])
+            entry.category = LedgerCategory.allCases[index % LedgerCategory.allCases.count]
+            entry.note = marker
+            if index % 3 == 0 { entry.source = .message }
+            seeded.append(await book.save(entry).id)
+        }
+        LedgerPresenter.shared.isPresented = true
+        try? await Task.sleep(for: .seconds(4))
+        MapHomeInteractionMonitor.shared.begin("bench_ledger_scroll_idle")
+        try? await Task.sleep(for: .seconds(4))
+        MapHomeInteractionMonitor.shared.end("bench_ledger_scroll_idle")
+        let speed = ProcessInfo.processInfo.arguments.first { $0.hasPrefix("-ledgerBenchSpeed=") }.flatMap { Double($0.dropFirst("-ledgerBenchSpeed=".count)) } ?? 1_800
+        for round in ["cold", "warm", "warm2"] {
+            guard let scroll = listScrollView() else { print("LGSBENCH no scroll view"); break }
+            let top = -scroll.adjustedContentInset.top
+            scroll.setContentOffset(CGPoint(x: 0, y: top), animated: false)
+            try? await Task.sleep(for: .seconds(1))
+            let limit = scroll.contentSize.height - scroll.bounds.height
+            MapHomeInteractionMonitor.shared.begin("bench_ledger_scroll_\(round)")
+            let began = CACurrentMediaTime()
+            // 초당 1,800pt로 4초: 손가락으로 빠르게 굴리는 정도.
+            while CACurrentMediaTime() - began < 4 {
+                let y = min(limit, top + (CACurrentMediaTime() - began) * speed)
+                scroll.setContentOffset(CGPoint(x: 0, y: y), animated: false)
+                await Task.yield()
+                try? await Task.sleep(for: .milliseconds(4))
+            }
+            MapHomeInteractionMonitor.shared.end("bench_ledger_scroll_\(round)")
+            try? await Task.sleep(for: .seconds(1))
+        }
+        LedgerPresenter.shared.isPresented = false
+        for id in seeded { await book.delete(id) }
+        print("LGSBENCH done")
+    }
+
+    private static func listScrollView() -> UIScrollView? {
+        func find(_ view: UIView) -> UIScrollView? {
+            if let scroll = view as? UIScrollView, scroll.contentSize.height > scroll.bounds.height * 2 { return scroll }
+            for sub in view.subviews { if let found = find(sub) { return found } }
+            return nil
+        }
+        let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
+        for window in windows {
+            var controller = window.rootViewController
+            while let presented = controller?.presentedViewController { controller = presented }
+            if let view = controller?.view, let found = find(view) { return found }
+        }
+        return nil
     }
 }
 #endif

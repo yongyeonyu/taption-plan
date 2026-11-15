@@ -157,6 +157,7 @@ extension MapHomeView {
             return
         }
         // 가계부 화면 확인용(UIR1111A01, Debug 전용): 기록이 없으면 보기 몇 줄을 넣고 가계부를 연다. 시뮬레이터에서만 쓴다.
+        if LedgerScrollBench.isRequested { return await LedgerScrollBench.run() }
         if ProcessInfo.processInfo.arguments.contains("-ledgerPreview") {
             try? await Task.sleep(for: .seconds(3))
             await LedgerBook.shared.load()

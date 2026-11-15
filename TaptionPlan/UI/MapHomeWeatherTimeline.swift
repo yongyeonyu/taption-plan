@@ -19,6 +19,34 @@ enum MapHomeWeatherTimelineMath {
             .max { $0.observedAt < $1.observedAt }
     }
 
+    private struct SpanKey: Equatable {
+        let dayStart: Date
+        let timeZone: TimeZone
+        let minimumChange: Int
+        let contexts: [WeatherContext]
+    }
+
+    @MainActor private static var spanCache: (key: SpanKey, spans: [(context: WeatherContext, span: TimeSpan)])?
+
+    /// 같은 날·같은 날씨 값이면 지난 계산을 그대로 쓴다. 홈 화면이 다시 그려질 때마다 구간을 새로 묶으면
+    /// 위에 뜬 시트(가계부)의 스크롤이 끊겼다(LGS1115A01).
+    @MainActor
+    static func cachedPersistentSpans(
+        for date: Date,
+        contexts: [WeatherContext],
+        calendar: Calendar = .autoupdatingCurrent,
+        minimumTemperatureChangeCelsius: Int = 0
+    ) -> [(context: WeatherContext, span: TimeSpan)] {
+        let key = SpanKey(
+            dayStart: calendar.startOfDay(for: date), timeZone: calendar.timeZone,
+            minimumChange: minimumTemperatureChangeCelsius, contexts: contexts
+        )
+        if let spanCache, spanCache.key == key { return spanCache.spans }
+        let spans = persistentSpans(for: date, contexts: contexts, calendar: calendar, minimumTemperatureChangeCelsius: minimumTemperatureChangeCelsius)
+        spanCache = (key, spans)
+        return spans
+    }
+
     static func persistentSpans(
         for date: Date,
         contexts: [WeatherContext],

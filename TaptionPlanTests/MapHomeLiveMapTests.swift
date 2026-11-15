@@ -175,6 +175,28 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertEqual(spans[1].span.end, day.addingTimeInterval(24 * 3_600))
     }
 
+    /// 캐시를 거쳐도 값이 같고, 날씨 값이나 날이 바뀌면 새로 계산한다(LGS1115A01).
+    @MainActor
+    func testCachedWeatherSpansMatchFreshOnesAndFollowChanges() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let day = calendar.date(from: DateComponents(year: 2031, month: 4, day: 2))!
+        let first = [weather(at: day.addingTimeInterval(9 * 3_600), symbol: "sun.max", celsius: 12)]
+        let second = first + [weather(at: day.addingTimeInterval(13 * 3_600), symbol: "cloud.rain", celsius: 7)]
+        func starts(_ spans: [(context: WeatherContext, span: TimeSpan)]) -> [Date] { spans.map(\.span.start) }
+        for contexts in [first, first, second, first] {
+            XCTAssertEqual(
+                starts(MapHomeWeatherTimelineMath.cachedPersistentSpans(for: day, contexts: contexts, calendar: calendar)),
+                starts(MapHomeWeatherTimelineMath.persistentSpans(for: day, contexts: contexts, calendar: calendar))
+            )
+        }
+        let nextDay = day.addingTimeInterval(86_400)
+        XCTAssertEqual(
+            starts(MapHomeWeatherTimelineMath.cachedPersistentSpans(for: nextDay, contexts: second, calendar: calendar)),
+            starts(MapHomeWeatherTimelineMath.persistentSpans(for: nextDay, contexts: second, calendar: calendar))
+        )
+    }
+
     // MARK: - Home weather badge
 
     func testHomeWeatherBadgePicksClosestCompleteContextAndRoundsTemperature() throws {

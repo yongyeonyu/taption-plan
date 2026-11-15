@@ -2567,7 +2567,7 @@ struct MapHomeWeatherSidebar: View {
     private func weatherEntries(splittingAt currentMinute: Int?) -> [Entry] {
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: date)
-        return MapHomeWeatherTimelineMath.persistentSpans(
+        return MapHomeWeatherTimelineMath.cachedPersistentSpans(
             for: date,
             contexts: contexts.filter(MapHomeWeatherDisplayPolicy.isComplete),
             calendar: calendar,
