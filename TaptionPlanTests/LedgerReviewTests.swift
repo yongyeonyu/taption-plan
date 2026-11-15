@@ -88,6 +88,24 @@ final class LedgerReviewTests: XCTestCase {
         }
     }
 
+    /// 은행 이름으로 이미 들어간 입금을 받은 글의 이름으로 고친다. 가게 기록·금액이 다른 기록은 두고, 고친 기록은 다시 고치지 않는다.
+    func testExistingBankTitledDepositIsRenamedFromTheInbox() {
+        var deposit = entry("카카오뱅크", 140_000, minutes: 1, note: "카카오뱅크")
+        deposit.kind = .income
+        deposit.createdAt = base.addingTimeInterval(60)
+        var shop = entry("가나다식당", 140_000, minutes: 1)
+        shop.createdAt = base.addingTimeInterval(60)
+        let item = PaymentInbox.Item(text: "[카카오뱅크] 입금 140,000원\n홍길동 → 내 입출금통장(1234)", receivedAt: base.addingTimeInterval(62), outcome: .added, message: "")
+        let fixed = LedgerTransferRename.renames(entries: [shop, deposit], inbox: [item])
+        XCTAssertEqual(fixed.map(\.id), [deposit.id])
+        XCTAssertEqual(fixed.first?.title, "홍길동")
+        XCTAssertEqual(fixed.first?.note, "카카오뱅크")
+        XCTAssertTrue(LedgerTransferRename.renames(entries: fixed, inbox: [item]).isEmpty, "고친 기록은 그대로")
+        var later = item
+        later.receivedAt = base.addingTimeInterval(3_600)
+        XCTAssertTrue(LedgerTransferRename.renames(entries: [deposit], inbox: [later]).isEmpty, "시각이 먼 글은 짝이 아니다")
+    }
+
     @MainActor
     func testSameTextWithinTwoMinutesIsHandledOnce() throws {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: "PaymentRepeat-\(UUID())"))

@@ -151,3 +151,42 @@ extension LedgerMessageParser {
         return cards.contains(where: merchant.contains)
     }
 }
+
+/// 이미 들어간 이체·입금의 제목을 상대 이름으로(TPY1115A01, 대표 지시). 받은 문자함(7일)에 남은 글로만 고친다.
+enum LedgerTransferRename {
+    /// 은행·규칙 이름이 제목인 결제 문자 기록 가운데, 같은 금액의 받은 글(10분 안)에서 상대 이름을 읽은 것.
+    static func renames(entries: [LedgerEntry], inbox: [PaymentInbox.Item]) -> [LedgerEntry] {
+        var result: [LedgerEntry] = []
+        for item in inbox where item.outcome == .added {
+            guard let party = LedgerMessageParser.transferParty(item.text), let money = LedgerMessageParser.amount(item.text),
+                  let entry = entries.first(where: { entry in
+                      entry.source == .message && isBankTitle(entry) && entry.title != party
+                          && entry.amount == money.value && entry.currency == money.currency
+                          && abs(entry.createdAt.timeIntervalSince(item.receivedAt)) <= 600 && !result.contains { $0.id == entry.id }
+                  }) else { continue }
+            var fixed = entry
+            fixed.title = party
+            if fixed.note == nil { fixed.note = entry.title }
+            result.append(fixed)
+        }
+        return result
+    }
+
+    /// 가게 이름 대신 은행·카드·규칙 이름이 제목에 들어간 기록.
+    static func isBankTitle(_ entry: LedgerEntry) -> Bool {
+        entry.title == entry.note || LedgerMessageParser.cards.contains(entry.title)
+            || ["은행", "뱅크", "페이", "금고"].contains(where: entry.title.hasSuffix)
+    }
+
+    @MainActor
+    static func run(defaults: UserDefaults = .standard, now: Date = .now) async {
+        let inbox = PaymentInbox.items(defaults, now: now)
+        guard inbox.contains(where: { $0.outcome == .added }) else { return }
+        await LedgerBook.shared.load()
+        guard LedgerBook.shared.isLoaded else { return }
+        for fixed in renames(entries: LedgerBook.shared.entries, inbox: inbox) {
+            await LedgerBook.shared.save(fixed)
+            TaptionPlanDiagnosticsLogger.shared.record("ledger_transfer_renamed", fields: [:])
+        }
+    }
+}
