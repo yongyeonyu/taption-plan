@@ -2,6 +2,33 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TVX1116A01 · 여행 모드 A안 「한 화면으로 정리」 (2026-11-16, 아직 빌드에 없음)
+
+- 바꾼 것: 카드·깃발 한 번 탭으로 날아가 바로 열림(`TravelModeView.select`·`finishFlight`), 카드 ⋯ 메뉴(`cardMenu`, 길게 누르기와 같은 내용), 여행 화면 + 메뉴와 지구본 아래 「AI로 만들기」(`MapHomeTripImportSheet`를 여행 화면에서 엶), 붙여넣기 배너·중계로 받은 계획은 `TravelModeView(importText:)`로 열림(`MapHomeView+Support`·`TripClipboardBanner`·`TripRelay`), 「지도에서 일정 보기」 없앰, 코스 「순서 편집」 단추(`TravelCourseView`, 손잡이·지우기), 「지출 넣기」가 여행 장부를 만들고 바로 폼, 여행 없음 안내와 핀 없음 「곳 더하기」 단추. 새 문구 4개를 12개 언어에 더함.
+- 시뮬레이터 단위 시험: `TripItemStatusTests`·`TravelMapTests`·`TripSharePlanTests` 33건 통과(`build/validation/TVX1116A01/test2.log`). 첫 실행은 빌드는 됐으나 「Simulator device failed to launch」로 시험이 돌지 않았고(`test.log`) 다시 돌려 통과.
+- 번역 점검: `check.py` 실패 0(긴 문구 3은 전부터 있던 것), `generate.py`로 카탈로그 다시 씀.
+- 하지 않은 것: 바뀐 화면을 시뮬레이터·기기에서 눈으로 보지 않았다(다른 세션들과 시뮬레이터를 나눠 쓰는 중). 새 동작만 보는 단위 시험은 더하지 않았다(화면 연결뿐). 전체 단위·UI 시험 미실행. 예전 지도 여행 모드(`isTravelMode`)의 코드는 들어가는 길만 끊겼고 남아 있다.
+
+## SRL1116A01 · 공통 규칙 — 서버에서 받아 쓰기와 후보 수집·검토·배포 (2026-11-16)
+
+- 설계: `docs/SHARED_RULES_PLAN.md`. 대표 객관식 답: 동의 = AI 연결 화면의 기본 꺼짐 스위치 하나(확인창 없음), 수집 범위 = 가게→분류 포함(기기 2대 이상일 때만 검토 목록), 알림 규칙 = 앱별 기본값 포함(대표가 직접 작성), 받기 = 기본 켜짐, 약관 문구 = 앱 안 「공통 규칙」 화면에도 요약(초안 표시).
+- 서버 `npm test`: 199건 통과·실패 0(새 `test/shared.test.mjs` 5건: 개인 정보 거르기 견본, 서명 묶음 받기·304, 관리 토큰·서명·판 번호·개인 정보 거절·거두기, 관리 길 닫힘, 후보 2대 이상·익명·하루 한도·만료).
+- `TaptionRules` 패키지 `swift test`: 6건 통과(새 `SharedRuleFilterTests`가 서버와 같은 `shared-rules.json`을 읽음).
+- 앱 시험(`build/validation/SRL1116A01/test-4.log`, 지정 시뮬레이터 BOKKI-STL, `-parallel-testing-enabled NO`, 외장 볼륨 DerivedData): `SharedRuleStoreTests` 4건·`LedgerTests` 34건·`AssistantRelayTests` 21건 등 59건 통과·실패 0, `TEST SUCCEEDED`(앱 Debug 빌드 포함). 첫 실행은 내부 구조체 `Bundle`이 Foundation `Bundle`을 가려 컴파일 실패해 `SignedBundle`로 고쳤고(`test-2.log`), 다음 실행은 다른 세션의 미커밋 `TripLiveLocationTests.swift` 오류로 막혀 HEAD에 이 수정만 얹은 깨끗한 사본(외장 볼륨 worktree)에서 돌렸다. 이 작업 폴더 전체의 앱 시험은 그 파일이 고쳐진 뒤 다시 필요하다.
+- 못 한 것: 실기기·아이폰 11 확인 없음(시뮬레이터 결과만).
+- 서버 미배포, 서명 키 미생성(`admin.mjs keygen` 미실행), 앱 공개 키 비어 있음(공통 규칙을 받지 않음), 실기기 미확인. 새 화면 문구는 12개 언어 번역 전(영어로 보임). 약관·방침은 초안이며 확정은 대표.
+
+## APS1115A01·BGM1115A01 · 일레븐랩스로 App Store 자료와 재생 음악 (2026-11-15~16)
+
+- 일레븐랩스(대표 Chrome 로그인)로 만든 것: 배경 그림 24장(Seedream 5.5, 9:16 2K, 장당 73) 중 6장 선택 → `design/APS1115A01/source/backgrounds/`(JPEG 88). 미리보기용 음악 2곡(30초, 900). 재생 음악 20곡(1분, 곡당 2가지 1,800×10) 중 10곡 선택. 홍보 장면 3편(Gemini Omni Flash 1.2, 5초 9:16 720p, 편당 2,153; 생성 전 「사용 금지 정책」 동의는 대표 객관식 답 「동의하고 3편 생성」). Seedance 2.5는 5초에 14,004라 쓰지 않음.
+- 크레딧: 사용 142,438 → 175,453(+33,015, 남음 41,337/216,790, 12월 11일 다운그레이드 예정). 이 작업 추정 약 27,100, 나머지는 같은 시간에 같은 계정을 쓴 다른 세션 생성분으로 보임(확인 못 함).
+- 스크린샷: 빌드 347 코드 Debug를 BOKKI-STL 시뮬레이터에서 지어낸 자료로 캡처(위치 서울시청 앞 공공 좌표, 지도 스타일 「계절」). iPhone 1290×2796 5장·iPad 2064×2752 5장 `design/APS1115A01/output/`(가계부 03은 아직). 개인 정보: 화면에 실제 기록·계정 없음을 눈으로 확인. 결제 문자 미리보기는 실제 상호가 보여 쓰지 않음. iPad 판은 iPhone 화면을 얹은 초안(iPad 화면 캡처로 바꿔야 함). AI 연결 화면에 다른 회사 AI 이름이 보임.
+- 가계부 캡처용으로 Debug 전용 `-ledgerPreview` 견본을 「이번 달 일반 기록이 없으면 지어낸 7건(월급 포함)」으로 고침(`MapHomeLaunchPrompts.swift`, `#if DEBUG` 안). Debug 빌드 3회 `BUILD SUCCEEDED`(`build/validation/APS1115A01/captures/build-debug*.log`). 고친 견본으로 찍기는 BOKKI Editor 세션이 같은 시뮬레이터에서 UI 시험을 돌려 앱이 밀려나 못 함.
+- 홍보 영상(App Store 밖): `output/promo/bokki-plan-promo.mp4` 1080×1920 30fps H.264 25.0초, AAC, -14.0 LUFS, 프레임 눈 확인.
+- 앱 미리보기 영상(886×1920, 앱 화면 녹화만): 만들지 못함. 스크립트 `preview.sh`만 있음. 녹화는 시뮬레이터가 빌 때.
+- BGM1115A01: `TaptionPlan/Audio/PlaybackMusic/*.m4a` 10개를 같은 이름으로 교체(AAC 44.1kHz 스테레오 192k, 57~60초, -13.7~-14.4 LUFS; 끝이 줄어드는 2곡은 57초로 자름). 고른 기준은 시작·중간·끝 음량(반복 이음새)으로, 귀로 듣지 않음 — 가사가 섞였는지 확인 못 함. build-for-testing 성공(`build/validation/BGM1115A01/build-for-testing.log`). `MapHomePlaybackMusicTests` 1차는 「test runner hung before establishing connection」(`music-tests-1-hung.log`), 2차는 시뮬레이터가 꺼지고 맥 프로세스 한도·디스크 부족(여유 1.9GB) 때문에 멈춰 중단. **음악 단위 시험 통과는 아직 근거 없음.**
+- 디스크 공지에 따라 스크래치 DerivedData 등 약 3.6GB 지움 → 다음 빌드·시험은 처음부터 다시 빌드해야 함.
+
 ## CLM1114A01 · 337 뒤에 넣은 것 (2026-11-14 낮)
 
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).

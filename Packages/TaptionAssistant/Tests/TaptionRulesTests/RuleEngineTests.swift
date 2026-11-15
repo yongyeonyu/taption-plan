@@ -102,3 +102,36 @@ final class RuleEngineTests: XCTestCase {
         XCTAssertEqual(RuleEngine.usable(set).skipped, ["r_2"], "a rule from a newer server is kept and skipped, not dropped")
     }
 }
+
+/// 공통 규칙 후보 거르기(SRL1116A01). 서버 시험(`shared.test.mjs`)과 같은 견본 파일을 읽는다.
+final class SharedRuleFilterTests: XCTestCase {
+    private struct Fixtures: Decodable {
+        struct Literal: Decodable { let pattern: String; let personal: Bool }
+        struct Accept: Decodable { let `in`: Rule; let out: Rule }
+        struct Refuse: Decodable { let why: String; let rule: Rule }
+        let personal: [String]
+        let notPersonal: [String]
+        let literals: [Literal]
+        let accept: [Accept]
+        let refuse: [Refuse]
+    }
+
+    private func fixtures() throws -> Fixtures {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        return try JSONDecoder().decode(Fixtures.self, from: Data(contentsOf: root.appendingPathComponent("server/trip-relay/test/fixtures/shared-rules.json")))
+    }
+
+    func testFilterAgreesWithTheServer() throws {
+        let fixtures = try fixtures()
+        for text in fixtures.personal { XCTAssertTrue(SharedRuleFilter.isPersonal(text), text) }
+        for text in fixtures.notPersonal { XCTAssertFalse(SharedRuleFilter.isPersonal(text), text) }
+        for item in fixtures.literals { XCTAssertEqual(SharedRuleFilter.isPersonal(SharedRuleFilter.patternLiterals(item.pattern)), item.personal, item.pattern) }
+        for item in fixtures.accept {
+            let made = try XCTUnwrap(SharedRuleFilter.candidate(from: item.in), item.in.type)
+            XCTAssertEqual([made.type], [item.out.type])
+            XCTAssertEqual(made.match, item.out.match, item.in.type)
+            XCTAssertEqual(made.result, item.out.result, item.in.type)
+        }
+        for item in fixtures.refuse { XCTAssertNil(SharedRuleFilter.candidate(from: item.rule), item.why) }
+    }
+}

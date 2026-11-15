@@ -484,6 +484,10 @@ struct AssistantRuleListView: View {
                                    "The app decides these by itself first, using what your AI learned. Switch one off or swipe to delete it."))
             }
             .listRowBackground(Color.tpSurface)
+            Section {
+                NavigationLink(language.text("공통 규칙", "Shared rules")) { SharedRulesView(language: language) }
+            }
+            .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
         .font(.taptionStyle(.subheadline))
