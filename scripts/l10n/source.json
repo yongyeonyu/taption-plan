@@ -1,11 +1,35 @@
 {
  "ui": [
   {
+   "key": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 몇 대에서 올라왔는지와 날짜만 세고 누가 보냈는지는 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)|                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • The server only counts how many devices and which day; it does not record who sent it. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
+   "ko": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 몇 대에서 올라왔는지와 날짜만 세고 누가 보냈는지는 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)",
+   "en": "                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • The server only counts how many devices and which day; it does not record who sent it. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
+   "files": [
+    "SharedRulesView.swift:25"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "                앱 사용 데이터 접근이 승인되지 않았습니다. 순서대로 확인해 주세요.\n                1. 설정 > 스크린 타임을 켭니다.\n                2. 설정 > 스크린 타임 > 앱 및 웹사이트 활동을 켭니다.\n                3. 설정 > 스크린 타임 > 앱 사용 데이터 공유에서 BOKKI Plan을 허용합니다.\n                그래도 같다면 이 Apple 계정에서는 접근이 제한됩니다. 가족 공유의 자녀 계정이거나 일부 국가/지역인 경우가 여기에 해당합니다.|                App usage data access has not been granted. Please check the following in order.\n                1. Turn on Settings > Screen Time.\n                2. Turn on Settings > Screen Time > App & Website Activity.\n                3. Allow BOKKI Plan under Settings > Screen Time > Share App Usage Data.\n                If it still fails, access is restricted for this Apple Account, such as a child account in Family Sharing or an account in some countries or regions.",
    "ko": "                앱 사용 데이터 접근이 승인되지 않았습니다. 순서대로 확인해 주세요.\n                1. 설정 > 스크린 타임을 켭니다.\n                2. 설정 > 스크린 타임 > 앱 및 웹사이트 활동을 켭니다.\n                3. 설정 > 스크린 타임 > 앱 사용 데이터 공유에서 BOKKI Plan을 허용합니다.\n                그래도 같다면 이 Apple 계정에서는 접근이 제한됩니다. 가족 공유의 자녀 계정이거나 일부 국가/지역인 경우가 여기에 해당합니다.",
    "en": "                App usage data access has not been granted. Please check the following in order.\n                1. Turn on Settings > Screen Time.\n                2. Turn on Settings > Screen Time > App & Website Activity.\n                3. Allow BOKKI Plan under Settings > Screen Time > Share App Usage Data.\n                If it still fails, access is restricted for this Apple Account, such as a child account in Family Sharing or an account in some countries or regions.",
    "files": [
     "ScreenTimeUsageService.swift:625"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "                켜면 내 AI가 만든 규칙 가운데 결제 문자·알림 읽기, 가게 분류, 영수증 판정만 개인 정보를 지운 조건과 분류로 운영자에게 보내요. \n                받은 글 원문, 금액, 이름, 계좌, 위치, 내가 정한 규칙은 보내지 않아요. 운영자가 확인해 쓸 만한 것만 모든 사용자의 공통 규칙으로 내보내요. \n                언제든 끌 수 있고, 이미 보낸 것은 지워 달라고 요청할 수 있어요. (초안)|                When on, only the conditions and categories of rules your AI made for reading payment texts and alerts, shop categories and receipt checks are sent to the operator, with personal details removed. \n                Original texts, amounts, names, accounts, locations and rules you set yourself are never sent. Only what the operator reviews and approves becomes a shared rule for everyone. \n                You can turn it off anytime and ask for what was sent to be deleted. (Draft)",
+   "ko": "                켜면 내 AI가 만든 규칙 가운데 결제 문자·알림 읽기, 가게 분류, 영수증 판정만 개인 정보를 지운 조건과 분류로 운영자에게 보내요. \n                받은 글 원문, 금액, 이름, 계좌, 위치, 내가 정한 규칙은 보내지 않아요. 운영자가 확인해 쓸 만한 것만 모든 사용자의 공통 규칙으로 내보내요. \n                언제든 끌 수 있고, 이미 보낸 것은 지워 달라고 요청할 수 있어요. (초안)",
+   "en": "                When on, only the conditions and categories of rules your AI made for reading payment texts and alerts, shop categories and receipt checks are sent to the operator, with personal details removed. \n                Original texts, amounts, names, accounts, locations and rules you set yourself are never sent. Only what the operator reviews and approves becomes a shared rule for everyone. \n                You can turn it off anytime and ask for what was sent to be deleted. (Draft)",
+   "files": [
+    "SharedRulesView.swift:93"
    ],
    "args": [],
    "targets": [
@@ -364,6 +388,18 @@
    ]
   },
   {
+   "key": "1시간 숨기기|Hide for 1 hour",
+   "ko": "1시간 숨기기",
+   "en": "Hide for 1 hour",
+   "files": [
+    "TripLiveLocationBand.swift:155"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "1일|1 day",
    "ko": "1일",
    "en": "1 day",
@@ -685,7 +721,7 @@
    "ko": "AI 규칙 받음",
    "en": "AI rule received",
    "files": [
-    "AssistantRuleStore.swift:213"
+    "AssistantRuleStore.swift:216"
    ],
    "args": [],
    "targets": [
@@ -698,8 +734,8 @@
    "en": "AI rules",
    "files": [
     "AssistantDataCommands.swift:497",
-    "AssistantSafetyViews.swift:490",
-    "AssistantSettingsView.swift:28"
+    "AssistantSafetyViews.swift:494",
+    "AssistantSettingsView.swift:29"
    ],
    "args": [],
    "targets": [
@@ -800,7 +836,7 @@
    "ko": "AI 서버 기록 모두 지우기",
    "en": "Erase all AI server records",
    "files": [
-    "AssistantSettingsView.swift:85"
+    "AssistantSettingsView.swift:86"
    ],
    "args": [],
    "targets": [
@@ -912,7 +948,7 @@
    "en": "AI connections",
    "files": [
     "AssistantDataCommands.swift:482",
-    "AssistantSettingsView.swift:36",
+    "AssistantSettingsView.swift:37",
     "MapHomeView+Menu.swift:471"
    ],
    "args": [],
@@ -1065,7 +1101,7 @@
    "ko": "AI가 만듦",
    "en": "Made by AI",
    "files": [
-    "AssistantSafetyViews.swift:513"
+    "AssistantSafetyViews.swift:517"
    ],
    "args": [],
    "targets": [
@@ -1143,7 +1179,7 @@
    "files": [
     "AITaskPanel.swift:88",
     "AssistantSafetyViews.swift:355",
-    "AssistantSettingsView.swift:27"
+    "AssistantSettingsView.swift:28"
    ],
    "args": [],
    "targets": [
@@ -1156,7 +1192,7 @@
    "en": "What the AI can do",
    "files": [
     "AssistantSafetyViews.swift:331",
-    "AssistantSettingsView.swift:26"
+    "AssistantSettingsView.swift:27"
    ],
    "args": [],
    "targets": [
@@ -1181,8 +1217,8 @@
    "en": "Plan with AI",
    "files": [
     "MapHomeView+Support.swift:706",
-    "TravelModeView.swift:720",
-    "TravelModeView.swift:830"
+    "TravelModeView.swift:721",
+    "TravelModeView.swift:832"
    ],
    "args": [],
    "targets": [
@@ -1267,7 +1303,7 @@
    "ko": "AI에게 맡겼어요. 규칙이 오면 이 문자도 다시 읽어 넣어요.",
    "en": "Sent to your AI. When the rule arrives this text is read again.",
    "files": [
-    "LedgerMessageRules.swift:308"
+    "LedgerMessageRules.swift:309"
    ],
    "args": [],
    "targets": [
@@ -1303,7 +1339,7 @@
    "ko": "AI에게 이 형식을 읽는 규칙을 부탁해요",
    "en": "Asks your AI for a rule that reads this format",
    "files": [
-    "LedgerMessageRules.swift:262"
+    "LedgerMessageRules.swift:263"
    ],
    "args": [],
    "targets": [
@@ -3405,7 +3441,7 @@
    "ko": "{0} · 받은 문자 {1}건 넣음",
    "en": "{0} · added {1} received text(s)",
    "files": [
-    "LedgerMessageRules.swift:106"
+    "LedgerMessageRules.swift:107"
    ],
    "args": [
     "rule.name",
@@ -4295,6 +4331,21 @@
    ]
   },
   {
+   "key": "{0}님이 도움을 요청했어요 · {1}|{0} asked for help · {1}",
+   "ko": "{0}님이 도움을 요청했어요 · {1}",
+   "en": "{0} asked for help · {1}",
+   "files": [
+    "TripLiveLocationBand.swift:77"
+   ],
+   "args": [
+    "name",
+    "TripLiveLocationPolicy.agoText(minutes: minutes, language)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0}로 Pro 영구 구매|Buy Pro permanently for {0}",
    "ko": "{0}로 Pro 영구 구매",
    "en": "Buy Pro permanently for {0}",
@@ -4327,7 +4378,7 @@
    "ko": "{0}박 {1}일",
    "en": "{0} nights, {1} days",
    "files": [
-    "TravelModeView.swift:580",
+    "TravelModeView.swift:581",
     "TravelNewTripSheet.swift:53"
    ],
    "args": [
@@ -4387,12 +4438,14 @@
    "ko": "{0}분 전",
    "en": "{0} min ago",
    "files": [
+    "TripLiveLocationPolicy.swift:72",
     "WatchStatusViews.swift:131"
    ],
    "args": [
-    "seconds / 60"
+    "minutes"
    ],
    "targets": [
+    "TaptionPlan",
     "TaptionPlanWatch"
    ]
   },
@@ -4887,11 +4940,12 @@
    "ko": "{0}일차",
    "en": "Day {0}",
    "files": [
-    "TravelModeView.swift:807",
-    "TravelModeView.swift:952"
+    "TravelDayBoard.swift:41",
+    "TravelModeView.swift:809",
+    "TravelModeView.swift:955"
    ],
    "args": [
-    "entry.dayNumber ?? 1"
+    "index + 1"
    ],
    "targets": [
     "TaptionPlan"
@@ -33849,7 +33903,7 @@
    "ko": "「학습」을 누르면 AI가 이 형식을 읽는 규칙을 보내고, 그 뒤 같은 글은 앱이 스스로 넣어요.",
    "en": "Teach asks your AI for a rule for this format; after that the app reads the same kind of text by itself.",
    "files": [
-    "LedgerMessageRules.swift:270"
+    "LedgerMessageRules.swift:271"
    ],
    "args": [],
    "targets": [
@@ -33861,7 +33915,7 @@
    "ko": "가게 분류",
    "en": "Shop category",
    "files": [
-    "AssistantSafetyViews.swift:531"
+    "AssistantSafetyViews.swift:535"
    ],
    "args": [],
    "targets": [
@@ -34048,7 +34102,7 @@
    "ko": "가계부에 넣음",
    "en": "Added to the ledger",
    "files": [
-    "LedgerMessageRules.swift:552"
+    "LedgerMessageRules.swift:553"
    ],
    "args": [],
    "targets": [
@@ -34187,7 +34241,7 @@
    "ko": "갈 곳을 굵직하게 먼저 더해 보세요. 세부 계획은 나중에 적어도 됩니다.",
    "en": "Add the main stops first. You can fill in details later.",
    "files": [
-    "TravelModeSupport.swift:555"
+    "TravelModeSupport.swift:557"
    ],
    "args": [],
    "targets": [
@@ -34372,7 +34426,7 @@
    "ko": "개발자에게 반영 요청",
    "en": "Ask the developer to add it",
    "files": [
-    "LedgerMessageRules.swift:274"
+    "LedgerMessageRules.swift:275"
    ],
    "args": [],
    "targets": [
@@ -34396,7 +34450,7 @@
    "ko": "개발자에게 보내면 다음 버전에 모두에게 반영돼요.",
    "en": "Mail the developer to get it built in for everyone.",
    "files": [
-    "LedgerMessageRules.swift:277"
+    "LedgerMessageRules.swift:278"
    ],
    "args": [],
    "targets": [
@@ -34409,6 +34463,18 @@
    "en": "Personal",
    "files": [
     "BokkiShortcutsGuide.swift:276"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "개인정보 처리 요약|Privacy summary",
+   "ko": "개인정보 처리 요약",
+   "en": "Privacy summary",
+   "files": [
+    "SharedRulesView.swift:40"
    ],
    "args": [],
    "targets": [
@@ -35154,7 +35220,7 @@
    "ko": "결제 문자 읽기",
    "en": "Reading payment texts",
    "files": [
-    "AssistantSafetyViews.swift:525"
+    "AssistantSafetyViews.swift:529"
    ],
    "args": [],
    "targets": [
@@ -35314,7 +35380,7 @@
    "ko": "결제가 아닌 글",
    "en": "Not a payment",
    "files": [
-    "AssistantSafetyViews.swift:527"
+    "AssistantSafetyViews.swift:531"
    ],
    "args": [],
    "targets": [
@@ -36091,8 +36157,8 @@
    "ko": "곳 더하기",
    "en": "Add a stop",
    "files": [
-    "TravelModeSupport.swift:607",
-    "TravelModeView.swift:828"
+    "TravelModeSupport.swift:609",
+    "TravelModeView.swift:830"
    ],
    "args": [],
    "targets": [
@@ -36356,6 +36422,45 @@
    ]
   },
   {
+   "key": "공통 규칙 받기|Receive shared rules",
+   "ko": "공통 규칙 받기",
+   "en": "Receive shared rules",
+   "files": [
+    "SharedRulesView.swift:14"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "공통 규칙 버전 {0}|Shared rules version {0}",
+   "ko": "공통 규칙 버전 {0}",
+   "en": "Shared rules version {0}",
+   "files": [
+    "SharedRulesView.swift:58"
+   ],
+   "args": [
+    "version"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "공통 규칙|Shared rules",
+   "ko": "공통 규칙",
+   "en": "Shared rules",
+   "files": [
+    "AssistantSafetyViews.swift:488",
+    "SharedRulesView.swift:65"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "공항|airport",
    "ko": "공항",
    "en": "airport",
@@ -36464,6 +36569,18 @@
    ]
   },
   {
+   "key": "괜찮아졌어요|I'm okay now",
+   "ko": "괜찮아졌어요",
+   "en": "I'm okay now",
+   "files": [
+    "TripLiveLocationBand.swift:175"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "교육|Education",
    "ko": "교육",
    "en": "Education",
@@ -36504,7 +36621,7 @@
    "ko": "구간 이동 수단",
    "en": "Travel mode for a route",
    "files": [
-    "AssistantSafetyViews.swift:534"
+    "AssistantSafetyViews.swift:538"
    ],
    "args": [],
    "targets": [
@@ -37277,6 +37394,18 @@
    ]
   },
   {
+   "key": "기간 저장|Save period",
+   "ko": "기간 저장",
+   "en": "Save period",
+   "files": [
+    "TripLiveLocationBand.swift:246"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "기간|Dates",
    "ko": "기간",
    "en": "Dates",
@@ -37740,8 +37869,8 @@
    "ko": "기본 색으로",
    "en": "Use default color",
    "files": [
-    "TravelModeView.swift:695",
-    "TravelQuickEntrySheet.swift:251"
+    "TravelModeView.swift:696",
+    "TravelQuickEntrySheet.swift:260"
    ],
    "args": [],
    "targets": [
@@ -37778,6 +37907,18 @@
    "en": "Basic",
    "files": [
     "StickerArtBasics.swift:4"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "기본은 여행 시작일 0시 ~ 종료일 24시예요. 이 기간 밖에는 위치가 나가지 않아요.|By default: start day 00:00 to end day 24:00. No location leaves the device outside this period.",
+   "ko": "기본은 여행 시작일 0시 ~ 종료일 24시예요. 이 기간 밖에는 위치가 나가지 않아요.",
+   "en": "By default: start day 00:00 to end day 24:00. No location leaves the device outside this period.",
+   "files": [
+    "TripLiveLocationBand.swift:252"
    ],
    "args": [],
    "targets": [
@@ -38002,6 +38143,30 @@
    ]
   },
   {
+   "key": "긴급 신고(112·119·현지 번호)를 대신하지 못해요. 앱이 꺼졌거나 통신이 없으면 위치가 오지 않아요.|This does not replace emergency calls. If the app is closed or there is no signal, locations will not arrive.",
+   "ko": "긴급 신고(112·119·현지 번호)를 대신하지 못해요. 앱이 꺼졌거나 통신이 없으면 위치가 오지 않아요.",
+   "en": "This does not replace emergency calls. If the app is closed or there is no signal, locations will not arrive.",
+   "files": [
+    "TripLiveLocationBand.swift:113"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "긴급 신고를 대신하지 못해요. 위급하면 먼저 112·119 또는 현지 긴급 번호로 연락하세요.|This does not replace emergency calls. If it is urgent, call local emergency services first.",
+   "ko": "긴급 신고를 대신하지 못해요. 위급하면 먼저 112·119 또는 현지 긴급 번호로 연락하세요.",
+   "en": "This does not replace emergency calls. If it is urgent, call local emergency services first.",
+   "files": [
+    "TripLiveLocationBand.swift:129"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "길이 바꾸기|Change length",
    "ko": "길이 바꾸기",
    "en": "Change length",
@@ -38183,7 +38348,7 @@
    "ko": "끔",
    "en": "Off",
    "files": [
-    "LedgerMessageRules.swift:687",
+    "LedgerMessageRules.swift:688",
     "AssistantDataActions.swift:676",
     "AssistantDataActions.swift:392"
    ],
@@ -38224,6 +38389,18 @@
    "files": [
     "GPXExportCard.swift:20",
     "MapHomePlaybackVideoSheet.swift:432"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "끝|Until",
+   "ko": "끝",
+   "en": "Until",
+   "files": [
+    "TripLiveLocationBand.swift:245"
    ],
    "args": [],
    "targets": [
@@ -38658,7 +38835,7 @@
    "ko": "남은 돈 {0}",
    "en": "Left {0}",
    "files": [
-    "TravelModeView.swift:656"
+    "TravelModeView.swift:657"
    ],
    "args": [
     "amount"
@@ -38746,6 +38923,18 @@
    ]
   },
   {
+   "key": "내 AI가 만든 규칙을 공통 규칙 후보로 보내기|Send my AI's rules as shared-rule candidates",
+   "ko": "내 AI가 만든 규칙을 공통 규칙 후보로 보내기",
+   "en": "Send my AI's rules as shared-rule candidates",
+   "files": [
+    "SharedRulesView.swift:87"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "내 것|Mine",
    "ko": "내 것",
    "en": "Mine",
@@ -38762,7 +38951,7 @@
    "ko": "내 계좌 사이 이체",
    "en": "Transfers between my accounts",
    "files": [
-    "AssistantSafetyViews.swift:528"
+    "AssistantSafetyViews.swift:532"
    ],
    "args": [],
    "targets": [
@@ -38822,7 +39011,7 @@
    "ko": "내 계좌 이름",
    "en": "My account names",
    "files": [
-    "AssistantSafetyViews.swift:529",
+    "AssistantSafetyViews.swift:533",
     "LedgerReviewBand.swift:128",
     "LedgerSheet.swift:77"
    ],
@@ -38887,6 +39076,80 @@
    "en": "My income (refund etc.)",
    "files": [
     "LedgerTripView.swift:184"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 위치 공유 꺼짐 · 켜기|Location sharing off · turn on",
+   "ko": "내 위치 공유 꺼짐 · 켜기",
+   "en": "Location sharing off · turn on",
+   "files": [
+    "TripLiveLocationBand.swift:82"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 위치 공유 중 · 동행 {0}명에게|Sharing my location · with {0} companions",
+   "ko": "내 위치 공유 중 · 동행 {0}명에게",
+   "en": "Sharing my location · with {0} companions",
+   "files": [
+    "TripLiveLocationBand.swift:79"
+   ],
+   "args": [
+    "count"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 위치를 동행에게 공유|Share my location with companions",
+   "ko": "내 위치를 동행에게 공유",
+   "en": "Share my location with companions",
+   "files": [
+    "TripLiveLocationBand.swift:146"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 위치를 모이는 곳으로|Use my location as the meeting point",
+   "ko": "내 위치를 모이는 곳으로",
+   "en": "Use my location as the meeting point",
+   "files": [
+    "TripLiveLocationBand.swift:231"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 위치를 아직 받지 못했어요.|No location fix yet.",
+   "ko": "내 위치를 아직 받지 못했어요.",
+   "en": "No location fix yet.",
+   "files": [
+    "TripLiveLocationBand.swift:233"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 위치를 아직 받지 못했어요.|No recent location fix.",
+   "ko": "내 위치를 아직 받지 못했어요.",
+   "en": "No recent location fix.",
+   "files": [
+    "TripLiveLocationBand.swift:259"
    ],
    "args": [],
    "targets": [
@@ -39082,7 +39345,7 @@
    "ko": "내가 정함",
    "en": "Set by me",
    "files": [
-    "AssistantSafetyViews.swift:513"
+    "AssistantSafetyViews.swift:517"
    ],
    "args": [],
    "targets": [
@@ -39300,7 +39563,7 @@
    "en": "Words to skip",
    "files": [
     "PaymentAlertSources.swift:181",
-    "AssistantSafetyViews.swift:526"
+    "AssistantSafetyViews.swift:530"
    ],
    "args": [],
    "targets": [
@@ -39617,6 +39880,18 @@
    ]
   },
   {
+   "key": "다른 날로…|Move to another day…",
+   "ko": "다른 날로…",
+   "en": "Move to another day…",
+   "files": [
+    "TravelDayBoard.swift:247"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "다른 사람이 고치는 중이에요. 잠시 뒤에 다시 해 주세요.|Someone else is editing this. Try again in a moment.",
    "ko": "다른 사람이 고치는 중이에요. 잠시 뒤에 다시 해 주세요.",
    "en": "Someone else is editing this. Try again in a moment.",
@@ -39710,7 +39985,7 @@
    "ko": "다시 하기",
    "en": "Redo",
    "files": [
-    "TravelModeSupport.swift:420"
+    "TravelModeSupport.swift:421"
    ],
    "args": [],
    "targets": [
@@ -39825,7 +40100,7 @@
    "ko": "다음 일정",
    "en": "Next plan",
    "files": [
-    "TravelModeSupport.swift:642"
+    "TravelModeSupport.swift:644"
    ],
    "args": [],
    "targets": [
@@ -39849,7 +40124,7 @@
    "ko": "다음: {0}",
    "en": "Next: {0}",
    "files": [
-    "TravelModeSupport.swift:829"
+    "TravelModeSupport.swift:831"
    ],
    "args": [
     "$0.title"
@@ -40093,8 +40368,8 @@
    "ko": "당일",
    "en": "Day trip",
    "files": [
-    "TravelModeView.swift:579",
-    "TravelModeView.swift:951",
+    "TravelModeView.swift:580",
+    "TravelModeView.swift:954",
     "TravelNewTripSheet.swift:53"
    ],
    "args": [],
@@ -40338,7 +40613,7 @@
    "ko": "더 보기",
    "en": "More",
    "files": [
-    "TravelQuickEntrySheet.swift:209"
+    "TravelQuickEntrySheet.swift:218"
    ],
    "args": [],
    "targets": [
@@ -40623,6 +40898,42 @@
    ]
   },
   {
+   "key": "도와주세요 보내기|Send help request",
+   "ko": "도와주세요 보내기",
+   "en": "Send help request",
+   "files": [
+    "TripLiveLocationBand.swift:126"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "도와주세요|Ask for help",
+   "ko": "도와주세요",
+   "en": "Ask for help",
+   "files": [
+    "TripLiveLocationBand.swift:172"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "도움 요청|Help",
+   "ko": "도움 요청",
+   "en": "Help",
+   "files": [
+    "TripLiveLocationBand.swift:190"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "도장 {0}개|{0} stamps",
    "ko": "도장 {0}개",
    "en": "{0} stamps",
@@ -40799,6 +41110,20 @@
    ]
   },
   {
+   "key": "동선 정리|Tidy route",
+   "ko": "동선 정리",
+   "en": "Tidy route",
+   "files": [
+    "TravelDayBoard.swift:152",
+    "TravelDayBoard.swift:165",
+    "TravelDayBoard.swift:225"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "동작 · 피트니스|Motion · Fitness",
    "ko": "동작 · 피트니스",
    "en": "Motion · Fitness",
@@ -40845,6 +41170,54 @@
    "args": [],
    "targets": [
     "TaptionPlanWidget"
+   ]
+  },
+  {
+   "key": "동행 모두에게 내 위치와 도움 요청을 보낼까요?|Send your location and a help request to everyone?",
+   "ko": "동행 모두에게 내 위치와 도움 요청을 보낼까요?",
+   "en": "Send your location and a help request to everyone?",
+   "files": [
+    "TripLiveLocationBand.swift:125"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "동행 위치|Companion locations",
+   "ko": "동행 위치",
+   "en": "Companion locations",
+   "files": [
+    "TripLiveLocationBand.swift:116"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "동행|Companions",
+   "ko": "동행",
+   "en": "Companions",
+   "files": [
+    "TripLiveLocationBand.swift:184"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "동행에게 보냈어요. 긴급 신고는 따로 해 주세요.|Sent to your companions. Please also call emergency services if needed.",
+   "ko": "동행에게 보냈어요. 긴급 신고는 따로 해 주세요.",
+   "en": "Sent to your companions. Please also call emergency services if needed.",
+   "files": [
+    "TripLiveLocationBand.swift:258"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -41952,7 +42325,7 @@
    "ko": "메모 (선택)",
    "en": "Note (optional)",
    "files": [
-    "TravelQuickEntrySheet.swift:265"
+    "TravelQuickEntrySheet.swift:274"
    ],
    "args": [],
    "targets": [
@@ -42398,6 +42771,19 @@
    ]
   },
   {
+   "key": "모이는 곳|Meeting point",
+   "ko": "모이는 곳",
+   "en": "Meeting point",
+   "files": [
+    "TripLiveLocationBand.swift:219",
+    "TripLiveLocationBand.swift:234"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "모자|Hat",
    "ko": "모자",
    "en": "Hat",
@@ -42733,7 +43119,7 @@
    "ko": "바꾸고 모두 지우기",
    "en": "Replace and delete everything",
    "files": [
-    "AssistantSettingsView.swift:91"
+    "AssistantSettingsView.swift:92"
    ],
    "args": [],
    "targets": [
@@ -42747,6 +43133,18 @@
    "files": [
     "TripShareMembersView.swift:57",
     "TripShareOwnerActions.swift:207"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "바꾸기|Reorder",
+   "ko": "바꾸기",
+   "en": "Reorder",
+   "files": [
+    "TravelDayBoard.swift:134"
    ],
    "args": [],
    "targets": [
@@ -43067,7 +43465,19 @@
    "ko": "받은 결제 문자·알림",
    "en": "Payment texts received",
    "files": [
-    "LedgerMessageRules.swift:191"
+    "LedgerMessageRules.swift:192"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "받은 공통 규칙이 아직 없어요.|No shared rules yet.",
+   "ko": "받은 공통 규칙이 아직 없어요.",
+   "en": "No shared rules yet.",
+   "files": [
+    "SharedRulesView.swift:44"
    ],
    "args": [],
    "targets": [
@@ -43091,7 +43501,7 @@
    "ko": "받은 문자",
    "en": "Received text",
    "files": [
-    "LedgerMessageRules.swift:283"
+    "LedgerMessageRules.swift:284"
    ],
    "args": [],
    "targets": [
@@ -43194,6 +43604,18 @@
    "args": [],
    "targets": [
     "TaptionPlanWatch"
+   ]
+  },
+  {
+   "key": "방금|just now",
+   "ko": "방금",
+   "en": "just now",
+   "files": [
+    "TripLiveLocationPolicy.swift:72"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -43717,7 +44139,7 @@
    "ko": "버림",
    "en": "Discarded",
    "files": [
-    "LedgerMessageRules.swift:545"
+    "LedgerMessageRules.swift:546"
    ],
    "args": [],
    "targets": [
@@ -43807,7 +44229,7 @@
    "ko": "버스·지하철 노선",
    "en": "Bus and subway lines",
    "files": [
-    "AssistantSafetyViews.swift:535"
+    "AssistantSafetyViews.swift:539"
    ],
    "args": [],
    "targets": [
@@ -43883,7 +44305,7 @@
    "ko": "번호는 가려서 이 기기에만 7일 동안 둬요.",
    "en": "Numbers are masked. Kept on this device only, for 7 days.",
    "files": [
-    "LedgerMessageRules.swift:252"
+    "LedgerMessageRules.swift:253"
    ],
    "args": [],
    "targets": [
@@ -44069,6 +44491,18 @@
    ]
   },
   {
+   "key": "보내지 못했어요. 통신을 확인해 주세요.|Could not send. Check your connection.",
+   "ko": "보내지 못했어요. 통신을 확인해 주세요.",
+   "en": "Could not send. Check your connection.",
+   "files": [
+    "TripLiveLocationBand.swift:261"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "보내지 않음|Don't send",
    "ko": "보내지 않음",
    "en": "Don't send",
@@ -44188,7 +44622,7 @@
    "ko": "보안 업데이트로 예전 AI 연결을 모두 끊었어요. 쓰던 AI를 아래에서 다시 연결해 주세요.",
    "en": "A security update disconnected your previous AI connections. Reconnect the AIs you use below.",
    "files": [
-    "AssistantSettingsView.swift:59"
+    "AssistantSettingsView.swift:60"
    ],
    "args": [],
    "targets": [
@@ -45533,7 +45967,7 @@
    "ko": "삭제",
    "en": "Delete",
    "files": [
-    "LedgerMessageRules.swift:263",
+    "LedgerMessageRules.swift:264",
     "MapHomePlaceBookTools.swift:845",
     "MapHomeSettingsSheets.swift:111"
    ],
@@ -45667,7 +46101,7 @@
    "ko": "상세로 짜기",
    "en": "Plan in detail",
    "files": [
-    "TravelModeView.swift:709"
+    "TravelModeView.swift:710"
    ],
    "args": [],
    "targets": [
@@ -45827,7 +46261,7 @@
    "ko": "새 여행",
    "en": "New trip",
    "files": [
-    "TravelModeView.swift:711",
+    "TravelModeView.swift:712",
     "TravelNewTripSheet.swift:81"
    ],
    "args": [],
@@ -45877,7 +46311,7 @@
    "ko": "새 키로 바꿀까요?",
    "en": "Replace the link key?",
    "files": [
-    "AssistantSettingsView.swift:89"
+    "AssistantSettingsView.swift:90"
    ],
    "args": [],
    "targets": [
@@ -45915,7 +46349,7 @@
    "en": "Color {0}",
    "files": [
     "MapHomeStickerPicker.swift:180",
-    "TravelQuickEntrySheet.swift:251"
+    "TravelQuickEntrySheet.swift:260"
    ],
    "args": [
     "index + 1"
@@ -46200,7 +46634,7 @@
    "ko": "서버에 올린 기록과 모든 AI 연결, PIN을 지워요. 쓰던 AI는 다시 연결해야 해요. 연결 키가 새어 나간 것 같을 때 쓰세요.",
    "en": "Deletes the records on the server, every AI connection and the PIN. You'll need to reconnect the AIs you use. Use it if a connection key may have leaked.",
    "files": [
-    "AssistantSettingsView.swift:79"
+    "AssistantSettingsView.swift:80"
    ],
    "args": [],
    "targets": [
@@ -46212,7 +46646,7 @@
    "ko": "서버에 올린 기록과 모든 AI 연결, PIN이 지워져요. 쓰던 AI는 다시 연결해야 해요.",
    "en": "The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use.",
    "files": [
-    "AssistantSettingsView.swift:94"
+    "AssistantSettingsView.swift:95"
    ],
    "args": [],
    "targets": [
@@ -46616,7 +47050,7 @@
    "ko": "세부 더하기",
    "en": "Add detail",
    "files": [
-    "TravelModeSupport.swift:585"
+    "TravelModeSupport.swift:587"
    ],
    "args": [],
    "targets": [
@@ -46902,7 +47336,7 @@
    "ko": "속성",
    "en": "Details",
    "files": [
-    "TravelModeSupport.swift:676",
+    "TravelModeSupport.swift:678",
     "TravelPlanTable.swift:476",
     "TravelQuickEntrySheet.swift:185"
    ],
@@ -47201,7 +47635,7 @@
    "ko": "수입",
    "en": "Income",
    "files": [
-    "LedgerMessageRules.swift:688",
+    "LedgerMessageRules.swift:689",
     "PaymentAlertSources.swift:143",
     "PaymentAlertSources.swift:346"
    ],
@@ -47301,7 +47735,19 @@
    "ko": "순서 편집",
    "en": "Reorder",
    "files": [
-    "TravelModeSupport.swift:633"
+    "TravelModeSupport.swift:635"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "숨김 풀기|Stop hiding",
+   "ko": "숨김 풀기",
+   "en": "Stop hiding",
+   "files": [
+    "TripLiveLocationBand.swift:153"
    ],
    "args": [],
    "targets": [
@@ -47930,7 +48376,8 @@
    "en": "From",
    "files": [
     "GPXExportCard.swift:18",
-    "MapHomePlaybackVideoSheet.swift:423"
+    "MapHomePlaybackVideoSheet.swift:423",
+    "TripLiveLocationBand.swift:244"
    ],
    "args": [],
    "targets": [
@@ -48276,7 +48723,7 @@
    "en": "Spent {0}",
    "files": [
     "PlanRealityView.swift:403",
-    "TravelModeView.swift:656",
+    "TravelModeView.swift:657",
     "TravelPlanSpend.swift:53"
    ],
    "args": [
@@ -48459,6 +48906,18 @@
    ]
   },
   {
+   "key": "아직 내 위치를 받지 못했어요(위치 권한·수집을 확인해 주세요).|No location fix yet (check location permission and collection).",
+   "ko": "아직 내 위치를 받지 못했어요(위치 권한·수집을 확인해 주세요).",
+   "en": "No location fix yet (check location permission and collection).",
+   "files": [
+    "TripLiveLocationBand.swift:159"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "아직 담은 곳이 없습니다.|No stops yet.",
    "ko": "아직 담은 곳이 없습니다.",
    "en": "No stops yet.",
@@ -48585,7 +49044,7 @@
    "ko": "아직 여행이 없습니다. 아래에서 첫 여행을 만들어 보세요.",
    "en": "No trips yet. Make your first one below.",
    "files": [
-    "TravelModeView.swift:613"
+    "TravelModeView.swift:614"
    ],
    "args": [],
    "targets": [
@@ -48609,7 +49068,7 @@
    "ko": "아직 일정이 없습니다",
    "en": "No plans yet",
    "files": [
-    "TravelModeSupport.swift:829"
+    "TravelModeSupport.swift:831"
    ],
    "args": [],
    "targets": [
@@ -48732,7 +49191,7 @@
    "ko": "알겠어요",
    "en": "Got it",
    "files": [
-    "AssistantSettingsView.swift:63"
+    "AssistantSettingsView.swift:64"
    ],
    "args": [],
    "targets": [
@@ -48794,7 +49253,7 @@
    "ko": "알림 앱별 받기",
    "en": "Alerts by app",
    "files": [
-    "AssistantSafetyViews.swift:530"
+    "AssistantSafetyViews.swift:534"
    ],
    "args": [],
    "targets": [
@@ -49726,8 +50185,8 @@
    "ko": "언젠가",
    "en": "Someday",
    "files": [
-    "TravelModeView.swift:573",
-    "TravelModeView.swift:810"
+    "TravelModeView.swift:574",
+    "TravelModeView.swift:812"
    ],
    "args": [],
    "targets": [
@@ -50166,8 +50625,8 @@
    "ko": "여행 고치기",
    "en": "Edit trip",
    "files": [
-    "TravelModeView.swift:698",
-    "TravelModeView.swift:772",
+    "TravelModeView.swift:699",
+    "TravelModeView.swift:773",
     "TravelNewTripSheet.swift:81"
    ],
    "args": [],
@@ -50192,7 +50651,7 @@
    "ko": "여행 공유",
    "en": "Share trip",
    "files": [
-    "TravelModeView.swift:779",
+    "TravelModeView.swift:780",
     "TripSharePanel.swift:35"
    ],
    "args": [],
@@ -50241,7 +50700,7 @@
    "ko": "여행 메뉴",
    "en": "Trip menu",
    "files": [
-    "TravelModeView.swift:677"
+    "TravelModeView.swift:678"
    ],
    "args": [],
    "targets": [
@@ -50265,7 +50724,7 @@
    "ko": "여행 목록으로",
    "en": "Back to trips",
    "files": [
-    "TravelModeView.swift:760"
+    "TravelModeView.swift:761"
    ],
    "args": [],
    "targets": [
@@ -50519,7 +50978,7 @@
    "ko": "여행 중",
    "en": "On trip",
    "files": [
-    "TravelModeView.swift:570"
+    "TravelModeView.swift:571"
    ],
    "args": [],
    "targets": [
@@ -50532,7 +50991,7 @@
    "en": "Delete trip",
    "files": [
     "TravelModeView.swift:156",
-    "TravelModeView.swift:701"
+    "TravelModeView.swift:702"
    ],
    "args": [],
    "targets": [
@@ -50592,7 +51051,7 @@
    "ko": "여행",
    "en": "Trips",
    "files": [
-    "TravelModeView.swift:599"
+    "TravelModeView.swift:600"
    ],
    "args": [],
    "targets": [
@@ -50617,6 +51076,18 @@
    "en": "The day after the trip, leftovers go back to daily; a shortfall is topped up from daily.",
    "files": [
     "LedgerTripView.swift:160"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여행이 끝날 때까지 숨기기|Hide until the trip ends",
+   "ko": "여행이 끝날 때까지 숨기기",
+   "en": "Hide until the trip ends",
+   "files": [
+    "TripLiveLocationBand.swift:156"
    ],
    "args": [],
    "targets": [
@@ -51121,7 +51592,7 @@
    "ko": "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.",
    "en": "No AI is connected. Connect one in Menu › AI connection first.",
    "files": [
-    "LedgerMessageRules.swift:302"
+    "LedgerMessageRules.swift:303"
    ],
    "args": [],
    "targets": [
@@ -51450,6 +51921,30 @@
    ]
   },
   {
+   "key": "연락 끊김?|Lost contact?",
+   "ko": "연락 끊김?",
+   "en": "Lost contact?",
+   "files": [
+    "TripLiveLocationBand.swift:203"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "연락 끊김?|Lost?",
+   "ko": "연락 끊김?",
+   "en": "Lost?",
+   "files": [
+    "TripLiveLocationService.swift:117"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "연락처에서 고르기|Pick from Contacts",
    "ko": "연락처에서 고르기",
    "en": "Pick from Contacts",
@@ -51704,7 +52199,7 @@
    "ko": "열 편집",
    "en": "Edit columns",
    "files": [
-    "TravelModeView.swift:829",
+    "TravelModeView.swift:831",
     "TravelNewTripSheet.swift:207"
    ],
    "args": [],
@@ -51846,7 +52341,7 @@
    "ko": "영수증 판정",
    "en": "Receipt check",
    "files": [
-    "AssistantSafetyViews.swift:532"
+    "AssistantSafetyViews.swift:536"
    ],
    "args": [],
    "targets": [
@@ -51987,7 +52482,7 @@
    "ko": "예산 없음",
    "en": "No budget",
    "files": [
-    "LedgerMessageRules.swift:505"
+    "LedgerMessageRules.swift:506"
    ],
    "args": [],
    "targets": [
@@ -52049,7 +52544,7 @@
    "ko": "예상 {0}",
    "en": "Planned {0}",
    "files": [
-    "TravelModeSupport.swift:833"
+    "TravelModeSupport.swift:835"
    ],
    "args": [
     "plannedText"
@@ -52104,7 +52599,7 @@
    "files": [
     "PlanSpotFields.swift:72",
     "PlanSpotFields.swift:83",
-    "TravelQuickEntrySheet.swift:228"
+    "TravelQuickEntrySheet.swift:237"
    ],
    "args": [],
    "targets": [
@@ -52128,7 +52623,7 @@
    "ko": "예약된 일정이나 잠을 사이에 두고는 순서를 바꿀 수 없습니다.",
    "en": "You can’t reorder across a booked plan or sleep.",
    "files": [
-    "TravelModeSupport.swift:599"
+    "TravelModeSupport.swift:601"
    ],
    "args": [],
    "targets": [
@@ -52336,7 +52831,7 @@
    "ko": "오늘 당일치기",
    "en": "Day trip today",
    "files": [
-    "TravelModeView.swift:712"
+    "TravelModeView.swift:713"
    ],
    "args": [],
    "targets": [
@@ -52697,7 +53192,7 @@
    "ko": "완료",
    "en": "Done",
    "files": [
-    "LedgerMessageRules.swift:285",
+    "LedgerMessageRules.swift:286",
     "PaymentAlertSources.swift:329",
     "AITaskPanel.swift:285"
    ],
@@ -53021,6 +53516,18 @@
    ]
   },
   {
+   "key": "운영자가 확인한 규칙(문자·알림 읽기, 가게 분류 등)을 서버에서 내려받아 써요. 내가 정한 규칙과 내 AI가 만든 규칙이 먼저예요. 내려받기만 하고 내 정보는 보내지 않아요.|Rules checked by the operator (reading texts and alerts, shop categories, …) are downloaded and used. Your own rules and your AI's rules come first. This only downloads; nothing about you is sent.",
+   "ko": "운영자가 확인한 규칙(문자·알림 읽기, 가게 분류 등)을 서버에서 내려받아 써요. 내가 정한 규칙과 내 AI가 만든 규칙이 먼저예요. 내려받기만 하고 내 정보는 보내지 않아요.",
+   "en": "Rules checked by the operator (reading texts and alerts, shop categories, …) are downloaded and used. Your own rules and your AI's rules come first. This only downloads; nothing about you is sent.",
+   "files": [
+    "SharedRulesView.swift:20"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "운전 거리|Driving",
    "ko": "운전 거리",
    "en": "Driving",
@@ -53318,6 +53825,66 @@
    ]
   },
   {
+   "key": "위치 공유 기간 설정|Location sharing period",
+   "ko": "위치 공유 기간 설정",
+   "en": "Location sharing period",
+   "files": [
+    "TripLiveLocationBand.swift:83"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 공유 기간(주인)|Sharing period (owner)",
+   "ko": "위치 공유 기간(주인)",
+   "en": "Sharing period (owner)",
+   "files": [
+    "TripLiveLocationBand.swift:250"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 공유 기간이 아니에요. 주인이 정한 기간에만 켤 수 있어요.|Outside the sharing period. It can only be turned on during the period the owner set.",
+   "ko": "위치 공유 기간이 아니에요. 주인이 정한 기간에만 켤 수 있어요.",
+   "en": "Outside the sharing period. It can only be turned on during the period the owner set.",
+   "files": [
+    "TripLiveLocationBand.swift:163"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 공유 기간이 아니에요.|Outside the sharing period.",
+   "ko": "위치 공유 기간이 아니에요.",
+   "en": "Outside the sharing period.",
+   "files": [
+    "TripLiveLocationBand.swift:260"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 공유를 켤까요?|Turn on location sharing?",
+   "ko": "위치 공유를 켤까요?",
+   "en": "Turn on location sharing?",
+   "files": [
+    "TripLiveLocationBand.swift:119"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "위치 권한|Location access",
    "ko": "위치 권한",
    "en": "Location access",
@@ -53498,6 +54065,20 @@
     "AssistantDataCommands.swift:703"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 숨김 중 · {0}까지|Location hidden · until {0}",
+   "ko": "위치 숨김 중 · {0}까지",
+   "en": "Location hidden · until {0}",
+   "files": [
+    "TripLiveLocationBand.swift:81"
+   ],
+   "args": [
+    "until.formatted(date: .omitted, time: .shortened)"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -53708,6 +54289,18 @@
    "en": "Set location to Always",
    "files": [
     "MapHomeView+Support.swift:698"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치를 공유 중인 동행이 아직 없어요.|No companion is sharing yet.",
+   "ko": "위치를 공유 중인 동행이 아직 없어요.",
+   "en": "No companion is sharing yet.",
+   "files": [
+    "TripLiveLocationBand.swift:185"
    ],
    "args": [],
    "targets": [
@@ -54562,7 +55155,7 @@
    "ko": "이 버전의 앱은 아직 쓰지 못해요.",
    "en": "This app version can't use it yet.",
    "files": [
-    "AssistantSafetyViews.swift:516"
+    "AssistantSafetyViews.swift:520"
    ],
    "args": [],
    "targets": [
@@ -54706,6 +55299,18 @@
    ]
   },
   {
+   "key": "이 여행의 동행에게만, 여행 기간 동안 내 현재 위치(위도·경도·정확도)가 보여요. 내용은 암호화되어 서버도 읽지 못하고, 서버는 마지막 위치 1건만 10분 동안 두며 이력은 남기지 않아요. 언제든 끄거나 1시간 숨길 수 있고, 여행이 끝나면 자동으로 꺼져요.|Only companions on this trip can see your current location, only during the trip. It is encrypted, so the server cannot read it. The server keeps only your last location for 10 minutes and no history. Turn it off or hide it any time; it stops automatically after the trip.",
+   "ko": "이 여행의 동행에게만, 여행 기간 동안 내 현재 위치(위도·경도·정확도)가 보여요. 내용은 암호화되어 서버도 읽지 못하고, 서버는 마지막 위치 1건만 10분 동안 두며 이력은 남기지 않아요. 언제든 끄거나 1시간 숨길 수 있고, 여행이 끝나면 자동으로 꺼져요.",
+   "en": "Only companions on this trip can see your current location, only during the trip. It is encrypted, so the server cannot read it. The server keeps only your last location for 10 minutes and no history. Turn it off or hide it any time; it stops automatically after the trip.",
+   "files": [
+    "TripLiveLocationBand.swift:123"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "이 연결을 끊을까요?|Disconnect this AI?",
    "ko": "이 연결을 끊을까요?",
    "en": "Disconnect this AI?",
@@ -54772,7 +55377,7 @@
    "en": "Delete this plan?",
    "files": [
     "TravelPlanTable.swift:488",
-    "TravelQuickEntrySheet.swift:214"
+    "TravelQuickEntrySheet.swift:223"
    ],
    "args": [],
    "targets": [
@@ -54920,6 +55525,21 @@
    ],
    "args": [
     "legs.count"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이동 거리 약 {0} km → {1} km (직선 거리 기준). 예약·숙소·이동과 첫 곳은 그대로 둡니다.|Travel distance about {0} km → {1} km (straight line). Booked plans, lodging, transfers, and the first stop stay put.",
+   "ko": "이동 거리 약 {0} km → {1} km (직선 거리 기준). 예약·숙소·이동과 첫 곳은 그대로 둡니다.",
+   "en": "Travel distance about {0} km → {1} km (straight line). Booked plans, lodging, transfers, and the first stop stay put.",
+   "files": [
+    "TravelDayBoard.swift:142"
+   ],
+   "args": [
+    "before",
+    "after"
    ],
    "targets": [
     "TaptionPlan"
@@ -55165,7 +55785,7 @@
    "ko": "이름 (예: 점심 12시 1시간)",
    "en": "Name (e.g. lunch 12:30 1h)",
    "files": [
-    "TravelQuickEntrySheet.swift:368"
+    "TravelQuickEntrySheet.swift:377"
    ],
    "args": [],
    "targets": [
@@ -55201,7 +55821,7 @@
    "ko": "이름 없는 여행",
    "en": "Untitled trip",
    "files": [
-    "TravelModeView.swift:584"
+    "TravelModeView.swift:585"
    ],
    "args": [],
    "targets": [
@@ -55227,6 +55847,18 @@
    "en": "Save name",
    "files": [
     "MapHomeInfoSheets.swift:48"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이름(예: 역 앞 광장)|Name (e.g. station plaza)",
+   "ko": "이름(예: 역 앞 광장)",
+   "en": "Name (e.g. station plaza)",
+   "files": [
+    "TripLiveLocationBand.swift:230"
    ],
    "args": [],
    "targets": [
@@ -55338,6 +55970,18 @@
    "en": "This one is already in the ledger. Alerts like it will be read this way from now on.",
    "files": [
     "PaymentAlertSources.swift:236"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이미 가까운 순서입니다|Already in the nearest order",
+   "ko": "이미 가까운 순서입니다",
+   "en": "Already in the nearest order",
+   "files": [
+    "TravelDayBoard.swift:151"
    ],
    "args": [],
    "targets": [
@@ -55593,7 +56237,7 @@
    "ko": "이전 일정",
    "en": "Previous plan",
    "files": [
-    "TravelModeSupport.swift:641"
+    "TravelModeSupport.swift:643"
    ],
    "args": [],
    "targets": [
@@ -55803,8 +56447,8 @@
    "ko": "일상으로 돌아가기",
    "en": "Back to everyday",
    "files": [
-    "TravelModeView.swift:597",
-    "TravelModeView.swift:787"
+    "TravelModeView.swift:598",
+    "TravelModeView.swift:788"
    ],
    "args": [],
    "targets": [
@@ -55841,7 +56485,7 @@
    "ko": "일정 {0}개",
    "en": "{0} plans",
    "files": [
-    "TravelModeSupport.swift:833"
+    "TravelModeSupport.swift:835"
    ],
    "args": [
     "items.count"
@@ -55894,7 +56538,7 @@
    "ko": "일정 넣기",
    "en": "Add plan",
    "files": [
-    "TravelModeView.swift:827",
+    "TravelModeView.swift:829",
     "TravelPlanTable.swift:460",
     "TravelQuickEntrySheet.swift:185"
    ],
@@ -56019,7 +56663,7 @@
    "ko": "일정 제목 분류",
    "en": "Calendar title category",
    "files": [
-    "AssistantSafetyViews.swift:533"
+    "AssistantSafetyViews.swift:537"
    ],
    "args": [],
    "targets": [
@@ -57388,6 +58032,18 @@
    ]
   },
   {
+   "key": "저장하지 못했어요(40일 이하, 끝이 시작보다 뒤).|Could not save (max 40 days, end after start).",
+   "ko": "저장하지 못했어요(40일 이하, 끝이 시작보다 뒤).",
+   "en": "Could not save (max 40 days, end after start).",
+   "files": [
+    "TripLiveLocationBand.swift:247"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "저장하지 못했어요. 기록은 바뀌지 않았어요.|Couldn't save. Nothing changed.",
    "ko": "저장하지 못했어요. 기록은 바뀌지 않았어요.",
    "en": "Couldn't save. Nothing changed.",
@@ -57876,15 +58532,41 @@
    ]
   },
   {
+   "key": "정하지 못했어요. 위치 공유 기간 안인지 확인해 주세요.|Could not set it. Check that it is inside the sharing period.",
+   "ko": "정하지 못했어요. 위치 공유 기간 안인지 확인해 주세요.",
+   "en": "Could not set it. Check that it is inside the sharing period.",
+   "files": [
+    "TripLiveLocationBand.swift:235"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "정하지 않음|Not set",
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "LedgerMessageRules.swift:601",
+    "LedgerMessageRules.swift:602",
     "AssistantDataActions.swift:612",
     "TravelNewTripSheet.swift:74"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "정확도 약 {0}m|accuracy ~{0} m",
+   "ko": "정확도 약 {0}m",
+   "en": "accuracy ~{0} m",
+   "files": [
+    "TripLiveLocationBand.swift:202"
+   ],
+   "args": [
+    "accuracy"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -58026,7 +58708,7 @@
    "ko": "종료",
    "en": "End",
    "files": [
-    "TravelQuickEntrySheet.swift:287",
+    "TravelQuickEntrySheet.swift:296",
     "TaptionPlanLiveActivity.swift:150"
    ],
    "args": [],
@@ -58714,6 +59396,18 @@
    ]
   },
   {
+   "key": "지금은 위치를 보낼 수 있는 기간이에요.|The sharing period is active.",
+   "ko": "지금은 위치를 보낼 수 있는 기간이에요.",
+   "en": "The sharing period is active.",
+   "files": [
+    "TripLiveLocationBand.swift:163"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.|A past date turns that day's records into this trip's actual records.",
    "ko": "지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.",
    "en": "A past date turns that day's records into this trip's actual records.",
@@ -58730,8 +59424,8 @@
    "ko": "지난 여행",
    "en": "Past",
    "files": [
-    "TravelModeView.swift:572",
-    "TravelModeView.swift:809"
+    "TravelModeView.swift:573",
+    "TravelModeView.swift:811"
    ],
    "args": [],
    "targets": [
@@ -59335,9 +60029,9 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "LedgerMessageRules.swift:529",
-    "LedgerMessageRules.swift:535",
-    "LedgerMessageRules.swift:557"
+    "LedgerMessageRules.swift:530",
+    "LedgerMessageRules.swift:536",
+    "LedgerMessageRules.swift:558"
    ],
    "args": [],
    "targets": [
@@ -59349,7 +60043,7 @@
    "ko": "지웠어요.",
    "en": "Erased.",
    "files": [
-    "AssistantSettingsView.swift:115"
+    "AssistantSettingsView.swift:116"
    ],
    "args": [],
    "targets": [
@@ -59361,7 +60055,7 @@
    "ko": "지출 넣기",
    "en": "Add expense",
    "files": [
-    "TravelModeView.swift:831",
+    "TravelModeView.swift:833",
     "TravelPlanTable.swift:475",
     "TravelPlanTable.swift:625"
    ],
@@ -59401,7 +60095,7 @@
    "ko": "지출",
    "en": "Spending",
    "files": [
-    "LedgerMessageRules.swift:688",
+    "LedgerMessageRules.swift:689",
     "PaymentAlertSources.swift:142",
     "PaymentAlertSources.swift:345"
    ],
@@ -59572,6 +60266,21 @@
     "MapHomeTransitSheets.swift:275"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "직선 {0} · 걸어서 약 {1}분|{0} away · ~{1} min walk",
+   "ko": "직선 {0} · 걸어서 약 {1}분",
+   "en": "{0} away · ~{1} min walk",
+   "files": [
+    "TripLiveLocationBand.swift:215"
+   ],
+   "args": [
+    "far",
+    "walk"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -60243,7 +60952,7 @@
    "ko": "초대로 참여",
    "en": "Join with an invite",
    "files": [
-    "TravelModeView.swift:608"
+    "TravelModeView.swift:609"
    ],
    "args": [],
    "targets": [
@@ -60923,7 +61632,7 @@
    "ko": "카드로 짜기",
    "en": "Plan with cards",
    "files": [
-    "TravelModeView.swift:708"
+    "TravelModeView.swift:709"
    ],
    "args": [],
    "targets": [
@@ -61284,6 +61993,18 @@
    ]
   },
   {
+   "key": "켜기|Turn on",
+   "ko": "켜기",
+   "en": "Turn on",
+   "files": [
+    "TripLiveLocationBand.swift:120"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "켜짐|On",
    "ko": "켜짐",
    "en": "On",
@@ -61312,7 +62033,7 @@
    "ko": "켬",
    "en": "On",
    "files": [
-    "LedgerMessageRules.swift:687",
+    "LedgerMessageRules.swift:688",
     "AssistantDataActions.swift:676",
     "AssistantDataActions.swift:392"
    ],
@@ -62618,7 +63339,7 @@
    "ko": "학습",
    "en": "Teach",
    "files": [
-    "LedgerMessageRules.swift:259"
+    "LedgerMessageRules.swift:260"
    ],
    "args": [],
    "targets": [
@@ -62756,6 +63477,18 @@
    "en": "Month avg",
    "files": [
     "MapHomeCalendarSheet.swift:304"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "한마디(선택, 40자)|Short note (optional)",
+   "ko": "한마디(선택, 40자)",
+   "en": "Short note (optional)",
+   "files": [
+    "TripLiveLocationBand.swift:169"
    ],
    "args": [],
    "targets": [
@@ -63074,6 +63807,18 @@
    "en": "Always",
    "files": [
     "FirstRunTutorialPolicy.swift:195"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "해제|Clear",
+   "ko": "해제",
+   "en": "Clear",
+   "files": [
+    "TripLiveLocationBand.swift:228"
    ],
    "args": [],
    "targets": [
