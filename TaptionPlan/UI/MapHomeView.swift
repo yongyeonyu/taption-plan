@@ -564,6 +564,18 @@ struct MapHomeView: View {
         await MapHomeBenchHomeZoom.run(model: model) { mapPosition = .camera($0); mapCameraRevision += 1 }
         if ProcessInfo.processInfo.arguments.contains("-debugOpenDaySummary") { try? await Task.sleep(for: .seconds(15)); isDaySummaryPresented = true }
         if ProcessInfo.processInfo.arguments.contains("-debugOpenClipEditor") { try? await Task.sleep(for: .seconds(15)); openSectionEditor(at: 600) }
+        if MapHomePerfBench.isRequested {
+            await MapHomePerfBench.run(.init(
+                isReady: { hasReportedInitialDataReady },
+                selectDaysAgo: { model.selectedDate = Calendar.autoupdatingCurrent.date(byAdding: .day, value: -$0, to: .now) ?? .now },
+                isDayLoaded: { routeReadingsLoadState.isLoaded(for: model.selectedDate) && !dayDataIsPreview },
+                dayRowCount: { routeReadings.count },
+                setMinute: { selectedTimelineMinute = $0 },
+                setLedger: { LedgerPresenter.shared.isPresented = $0 },
+                setTravel: { isTravelHomePresented = $0 }
+            ))
+            return
+        }
         if MapHomeSheetBench.isRequested {
             await MapHomeSheetBench.run(selectDate: { model.selectedDate = $0 }, sheets: [
                 ("calendar", { isCalendarPresented = $0 }),
