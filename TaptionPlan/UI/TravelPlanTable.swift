@@ -178,6 +178,8 @@ enum TravelPlanSelection {
 struct TravelPlanTable: View {
     let table: TravelPlanTableModel
     let language: MapHomeLanguage
+    /// 함께 쓰는 여행이면 남이 고치는 칸에 배지를 단다(TSH1114A26).
+    var shareTripID: String?
     /// 선택된 일정을 다시 누르거나 선택 막대의 「속성」을 누름: 편집기를 연다.
     let onSelect: (TravelPlanTableModel.Block) -> Void
     /// 선택 막대의 지출·지우기.
@@ -583,6 +585,7 @@ struct TravelPlanTable: View {
             )
         }
         .overlay(alignment: .bottom) { if isLifted { resizeHandle(block) } }
+        .overlay(alignment: .topTrailing) { if let shareTripID { TripShareLockBadge(tripID: shareTripID, itemID: block.id, language: language, isCompact: true).offset(x: 4, y: -5) } }
         .shadow(color: .black.opacity(isLifted ? 0.25 : 0), radius: 6, y: 3)
         .contentShape(Rectangle())
         // 들린 칸은 눌러도 그대로 둔다(길게 누른 손을 뗄 때 바로 내려놓이지 않게). 내려놓기는 빈 곳을 누른다.

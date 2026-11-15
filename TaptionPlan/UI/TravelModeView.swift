@@ -777,8 +777,8 @@ struct TravelModeView: View {
         let start = TravelQuickEntrySheet.date(dayKey: key, minute: slot.start, offsetSeconds: target.offsetSeconds)
         shareEdit(entry, .addStop(dayKey: key)) {
             Task {
-                guard let id = await model.addTripItem(
-                    tripID: entry.id, kind: kind, title: name, start: start, end: start.addingTimeInterval(TimeInterval(slot.duration * 60)),
+                guard let id = await TripSharePlanEditor.addItem(
+                    model: model, tripID: entry.id, kind: kind, title: name, start: start, end: start.addingTimeInterval(TimeInterval(slot.duration * 60)),
                     offsetSeconds: target.offsetSeconds, place: place
                 ), let added = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == entry.id && $0.itemID == id }) else { return }
                 planHistory.record(.existence(added, place: place, exists: true))
@@ -836,7 +836,7 @@ struct TravelModeView: View {
                         table: table(entry), items: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }, language: language,
                         playMinute: currentPlayMinute(entry), photos: model.photoService, selectedID: $planSelectedID,
                         onScrub: { playMinute = $0 }, onEdit: { editEntry(entry, itemID: $0.id) }, onAddStop: { courseAdding = entry }, onAddDetail: { addEntry(entry, detailOf: $0) },
-                        onReorder: { step in shareEdit(entry, .reorder(dayKey: dayKey(entry))) { Task { await model.applyTravelHistory(step); planHistory.record(step) } } }, onDelete: { deleteEntry(entry, itemID: $0.id) },
+                        onReorder: { step in shareEdit(entry, .reorder(dayKey: dayKey(entry))) { Task { if await TripSharePlanEditor.applyStep(model: model, step) { planHistory.record(step) } } } }, onDelete: { deleteEntry(entry, itemID: $0.id) },
                         placePhotos: placePhotos.photos
                     )
                     .task(id: model.settings.travelPlanStops.count) {
@@ -846,7 +846,7 @@ struct TravelModeView: View {
                     .frame(height: planDragHeight ?? tableHeight)
                 } else {
                 TravelPlanTable(
-                    table: table(entry), language: language,
+                    table: table(entry), language: language, shareTripID: entry.id,
                     onSelect: { block in editEntry(entry, itemID: block.id) },
                     onExpense: { block in addExpense(entry, minute: block.startMinute) },
                     onDelete: { block in deleteEntry(entry, itemID: block.id) },
@@ -913,8 +913,8 @@ struct TravelModeView: View {
     private func editTimes(_ entry: TravelTripDirectory.Entry, block: TravelPlanTableModel.Block, move: Int = 0, resize: Int = 0) {
         shareEdit(entry, move != 0 ? .move(itemID: block.id, minutes: move) : .resize(itemID: block.id, minutes: resize)) { Task {
             let done = move != 0
-                ? await model.moveTripItem(tripID: entry.id, itemID: block.id, by: TimeInterval(move * 60))
-                : await model.resizeTripItem(tripID: entry.id, itemID: block.id, endDelta: TimeInterval(resize * 60))
+                ? await TripSharePlanEditor.moveItem(model: model, tripID: entry.id, itemID: block.id, by: TimeInterval(move * 60))
+                : await TripSharePlanEditor.resizeItem(model: model, tripID: entry.id, itemID: block.id, endDelta: TimeInterval(resize * 60))
             guard done else { return }
             let start = block.startMinute + move, end = block.endMinute + move + resize
             withAnimation(.snappy(duration: 0.2)) {
@@ -935,7 +935,7 @@ struct TravelModeView: View {
     /// 선택 막대에서 지움: 되돌릴 수 있게 그 일정과 장소를 쌓아 둔다.
     private func deleteEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {
         shareEdit(entry, .delete(itemID: itemID)) {
-            Task { if let step = await model.deleteTripItemWithDetails(tripID: entry.id, itemID: itemID) { planHistory.record(step) } }
+            Task { if let step = await TripSharePlanEditor.deleteItem(model: model, tripID: entry.id, itemID: itemID) { planHistory.record(step) } }
         }
     }
 

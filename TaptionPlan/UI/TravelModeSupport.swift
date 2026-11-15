@@ -658,6 +658,7 @@ struct TravelCourseView: View {
                     .font(.caption2.monospacedDigit()).opacity(0.7)
             }
             Spacer(minLength: 0)
+            if let tripID = items.first?.tripID { TripShareLockBadge(tripID: tripID, itemID: block.id, language: language) }
             if isCurrent { Image(systemName: "chart.bar.fill").font(.system(size: 13)).accessibilityHidden(true) }
             Button { onEdit(block) } label: { Image(systemName: "slider.horizontal.3").font(.system(size: 14, weight: .medium)).frame(width: 36, height: 36) }
                 .buttonStyle(.plain)

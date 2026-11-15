@@ -35,6 +35,9 @@ struct TravelNewTripSheet: View {
         language == .korean && !region.nameKo.isEmpty ? region.nameKo : region.nameEn
     }
 
+    /// 함께 쓰는 여행은 날짜를 통째로 옮기지 않는다(TSH1114A26).
+    private var locksDates: Bool { draft.editing.map { model.isSharedTrip($0.id) } ?? false }
+
     private var currency: String? {
         countryCode == "KR" ? nil : TravelModeRegions.currency(forCountry: countryCode)
     }
@@ -44,20 +47,21 @@ struct TravelNewTripSheet: View {
             Form {
                 Section {
                     TextField(language.text("여행 이름", "Trip name"), text: $title)
-                    Toggle(language.text("언젠가 갈 여행 (날짜는 나중에)", "Someday trip (dates later)"), isOn: $isWish)
+                    Toggle(language.text("언젠가 갈 여행 (날짜는 나중에)", "Someday trip (dates later)"), isOn: $isWish).disabled(locksDates)
                     if isWish {
                         Stepper(value: $wishNights, in: 0...60) {
                             Text(wishNights == 0 ? language.text("당일", "Day trip") : language.runtimeText("\(wishNights)박 \(wishNights + 1)일", "\(wishNights) nights, \(wishNights + 1) days"))
                         }
+                        .disabled(locksDates)
                     } else {
-                        Toggle(language.text("당일치기", "Day trip"), isOn: $isDayTrip)
-                        DatePicker(isDayTrip ? language.text("날짜", "Date") : language.text("첫날", "First day"), selection: $start, displayedComponents: .date)
+                        Toggle(language.text("당일치기", "Day trip"), isOn: $isDayTrip).disabled(locksDates)
+                        DatePicker(isDayTrip ? language.text("날짜", "Date") : language.text("첫날", "First day"), selection: $start, displayedComponents: .date).disabled(locksDates)
                         if !isDayTrip {
-                            DatePicker(language.text("마지막 날", "Last day"), selection: $end, in: start..., displayedComponents: .date)
+                            DatePicker(language.text("마지막 날", "Last day"), selection: $end, in: start..., displayedComponents: .date).disabled(locksDates)
                         }
                     }
                 } footer: {
-                    Text(isWish
+                    Text(locksDates ? TripSharePlanText.datesBlocked(language) : isWish
                          ? language.text("버킷리스트에 담아 둡니다. 날짜를 정하면 일정을 넣을 수 있습니다.", "Saved to your bucket list. Set dates later to add plans.")
                          : language.text("지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.", "A past date turns that day's records into this trip's actual records."))
                 }
@@ -137,7 +141,9 @@ struct TravelNewTripSheet: View {
                 trip.currencyCode = old.currencyCode
             }
         }
-        guard await model.saveTravelTrip(trip) else { return }
+        // 함께 쓰는 여행이면 날짜는 그대로 두고 방에 먼저 쓴다(TSH1114A26).
+        guard let saved = await TripSharePlanEditor.saveTrip(model: model, trip: trip) else { return }
+        trip = saved
         // 첫날을 옮겼으면 넣어 둔 일정 전체를 같은 날 수만큼 함께 옮긴다. 언젠가 여행은 1일차 기준일에서 옮긴다(WPS1114A01).
         if let old, let moved = TravelTripDay.days(from: old.planStartDay, to: trip.planStartDay), moved != 0 {
             await model.shiftTravelTrip(trip.id, byDays: moved)
@@ -215,6 +221,6 @@ struct TravelColumnEditorSheet: View {
         // 그사이 다른 곳에서 고친 여행 속성을 덮지 않게 지금 저장된 여행에 열만 바꿔 넣는다.
         var next = model.settings.travelTrips?.first { $0.id == trip.id } ?? trip
         next.columns = TravelPlanColumns.stored(columns)
-        if await model.saveTravelTrip(next) { dismiss() }
+        if await TripSharePlanEditor.saveTrip(model: model, trip: next) != nil { dismiss() }
     }
 }

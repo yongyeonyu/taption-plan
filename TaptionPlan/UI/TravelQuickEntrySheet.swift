@@ -120,6 +120,7 @@ struct TravelQuickEntrySheet: View {
         .presentationDragIndicator(.visible)
         .preferredColorScheme(.light)
         .onAppear(perform: prepare)
+        .tripSharePlanEditing(target.editing, language: language)
         .onChange(of: text) { _, value in read(value) }
         .sheet(isPresented: $isPickingPlace) {
             TravelPlacePicker(language: language, query: TravelQuickEntry.parse(text).title, anchor: target.anchor) { picked in
@@ -130,11 +131,14 @@ struct TravelQuickEntrySheet: View {
         }
     }
 
+    /// 함께 쓰는 여행에서 일행이 붙인 장소는 이름만 온다(핀 없음, TSH1114A26).
+    private var sharedPlaceName: String? { target.editing.flatMap { TripSharePlanEditor.placeName(tripID: $0.tripID, itemID: $0.itemID) } }
+
     /// 장소 줄: 붙이면 지도에 핀이 생긴다.
     private var placeRow: some View {
         HStack(spacing: 6) {
             Button { isPickingPlace = true } label: {
-                Label(place?.name ?? language.text("장소 붙이기", "Add a place"), systemImage: place == nil ? "mappin.and.ellipse" : "mappin.circle.fill")
+                Label(place?.name ?? sharedPlaceName ?? language.text("장소 붙이기", "Add a place"), systemImage: place == nil ? "mappin.and.ellipse" : "mappin.circle.fill")
                     .font(.footnote.weight(.medium)).lineLimit(1)
                     .padding(.horizontal, 10).frame(height: 30)
                     .foregroundStyle(place == nil ? TravelInk.plan : TravelInk.land)
@@ -416,13 +420,13 @@ struct TravelQuickEntrySheet: View {
         let start = Self.date(dayKey: target.dayKey, minute: startMinute, offsetSeconds: target.offsetSeconds)
         let end = start.addingTimeInterval(TimeInterval(duration * 60))
         if let item = target.editing {
-            didFail = !(await model.updateTripItem(
-                tripID: item.tripID, itemID: item.itemID, kind: kind, title: title, start: start, end: end,
+            didFail = !(await TripSharePlanEditor.updateItem(
+                model: model, tripID: item.tripID, itemID: item.itemID, kind: kind, title: title, start: start, end: end,
                 place: place, replacesPlace: place != target.place, note: note, style: (colorHex, Double(plannedSpend))
             ))
         } else {
-            let itemID = await model.addTripItem(
-                tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note,
+            let itemID = await TripSharePlanEditor.addItem(
+                model: model, tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note,
                 colorHex: colorHex, plannedSpendKRW: Double(plannedSpend), parentItemID: target.parentItemID
             )
             didFail = itemID == nil
@@ -438,8 +442,8 @@ struct TravelQuickEntrySheet: View {
     private func duplicate() async {
         guard let item = target.editing else { return }
         let length = item.end.timeIntervalSince(item.start)
-        let added = await model.addTripItem(
-            tripID: item.tripID, kind: TripImportItem.Kind(rawValue: item.kind) ?? .other, title: item.title,
+        let added = await TripSharePlanEditor.addItem(
+            model: model, tripID: item.tripID, kind: TripImportItem.Kind(rawValue: item.kind) ?? .other, title: item.title,
             start: item.end, end: item.end.addingTimeInterval(length), offsetSeconds: item.endOffsetSeconds
         )
         didFail = added == nil
@@ -448,13 +452,13 @@ struct TravelQuickEntrySheet: View {
 
     private func shiftDay(_ days: Int) async {
         guard let item = target.editing else { return }
-        didFail = !(await model.moveTripItem(tripID: item.tripID, itemID: item.itemID, by: TimeInterval(days * 86_400)))
+        didFail = !(await TripSharePlanEditor.moveItem(model: model, tripID: item.tripID, itemID: item.itemID, by: TimeInterval(days * 86_400)))
         if !didFail { dismiss() }
     }
 
     private func remove() async {
         guard let item = target.editing else { return }
-        let step = await model.deleteTripItemWithDetails(tripID: item.tripID, itemID: item.itemID)
+        let step = await TripSharePlanEditor.deleteItem(model: model, tripID: item.tripID, itemID: item.itemID)
         didFail = step == nil
         if let step {
             onHistory(step)
