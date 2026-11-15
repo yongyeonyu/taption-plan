@@ -935,6 +935,7 @@ struct TravelModeView: View {
             }
             tripFooter(entry)
         }
+        .travelDayBoard(model: model, tripID: entry.id, trip: entry.trip, dayKey: dayKey(entry), language: language, history: $planHistory)
         .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: corner, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: corner, style: .continuous).stroke(TravelInk.border, lineWidth: 1) }
         .frame(maxWidth: Self.isWide(viewSize) ? min(460, viewSize.width * 0.5) : .infinity)
