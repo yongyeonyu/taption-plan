@@ -1899,4 +1899,3 @@ final class MapHomeAlarmPolicyTests: XCTestCase {
         XCTAssertNil(MapHomeAlarmPolicy.wakeEvent(phases: phases(60), now: now, calendar: calendar, language: .korean), "45분 넘게 지난 기상")
     }
 }
-

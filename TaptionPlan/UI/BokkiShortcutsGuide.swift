@@ -189,30 +189,42 @@ struct BokkiPaymentAddPopup: View {
         }
     }
 
-    @ViewBuilder
     private func actions(last: Int) -> some View {
+        BokkiGuideActions(
+            language: language,
+            primary: page == 0 ? language.text("단축어 앱에서 추가하기", "Add in Shortcuts") : language.text("단축어 앱 열기", "Open Shortcuts"),
+            done: page == last ? language.text("스위치를 켰어요", "I turned it on") : nil,
+            canGoBack: page > 0,
+            onPrimary: {
+                if page == 0 { openURL(link); page = 1 } else if let url = URL(string: "shortcuts://") { openURL(url) }
+            },
+            onBack: { page -= 1 },
+            onNext: { if page == last { dismiss() } else { page += 1 } }
+        )
+    }
+}
+
+/// 단축어 안내 창들의 하단(SCG1115A01): 어느 쪽에서나 큰 단추 하나와 「이전 · 다음」 줄이 같은 자리·같은 모양이다.
+struct BokkiGuideActions: View {
+    let language: MapHomeLanguage
+    let primary: String
+    /// 마지막 쪽이면 「다음」 자리에 놓을 끝 단추 글.
+    var done: String?
+    let canGoBack: Bool
+    let onPrimary: () -> Void
+    let onBack: () -> Void
+    let onNext: () -> Void
+
+    var body: some View {
         VStack(spacing: 10) {
-            if page == 0 {
-                Button {
-                    openURL(link)
-                    page = 1
-                } label: { Text(language.text("단축어 앱에서 추가하기", "Add in Shortcuts")).frame(maxWidth: .infinity) }
-                    .buttonStyle(.borderedProminent)
-            } else {
-                Button {
-                    if let url = URL(string: "shortcuts://") { openURL(url) }
-                } label: { Text(language.text("단축어 앱 열기", "Open Shortcuts")).frame(maxWidth: .infinity) }
-                    .buttonStyle(.bordered)
-                HStack {
-                    Button(language.text("이전", "Back")) { page -= 1 }
-                    Spacer()
-                    if page == last {
-                        Button(language.text("스위치를 켰어요", "I turned it on")) { dismiss() }.buttonStyle(.borderedProminent)
-                    } else {
-                        Button(language.text("다음", "Next")) { page += 1 }.buttonStyle(.borderedProminent)
-                    }
-                }
+            Button(action: onPrimary) { Text(primary).frame(maxWidth: .infinity) }
+                .buttonStyle(.borderedProminent)
+            HStack {
+                Button(language.text("이전", "Back"), action: onBack).disabled(!canGoBack)
+                Spacer()
+                Button(done ?? language.text("다음", "Next"), action: onNext)
             }
+            .buttonStyle(.bordered)
         }
         .font(.taptionStyle(.subheadline, weight: .semibold))
     }
@@ -293,21 +305,16 @@ struct BokkiPaymentAutomationSetup: View {
                     .font(.taptionStyle(.subheadline))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                Button {
-                    if let url = URL(string: "shortcuts://") { openURL(url) }
-                } label: { Label(language.text("단축어 앱 열기", "Open Shortcuts"), systemImage: "square.2.layers.3d") }
-                    .buttonStyle(.bordered)
-                    .font(.taptionStyle(.subheadline, weight: .semibold))
                 Spacer(minLength: 0)
-                HStack {
-                    Button(language.text("이전", "Back")) { step = index - 1 }.disabled(index == 0)
-                    Spacer()
-                    if index == all.count - 1 {
-                        Button(language.text("다 했어요", "All done")) { step = 0; dismiss() }.buttonStyle(.borderedProminent)
-                    } else {
-                        Button(language.text("다음", "Next")) { step = index + 1 }.buttonStyle(.borderedProminent)
-                    }
-                }
+                BokkiGuideActions(
+                    language: language,
+                    primary: language.text("단축어 앱 열기", "Open Shortcuts"),
+                    done: index == all.count - 1 ? language.text("다 했어요", "All done") : nil,
+                    canGoBack: index > 0,
+                    onPrimary: { if let url = URL(string: "shortcuts://") { openURL(url) } },
+                    onBack: { step = index - 1 },
+                    onNext: { if index == all.count - 1 { step = 0; dismiss() } else { step = index + 1 } }
+                )
             }
             .padding(20)
             .navigationTitle(language.text("결제 앱 알림 자동화", "Payment alert automation"))

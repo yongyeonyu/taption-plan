@@ -1192,7 +1192,7 @@
    "ko": "AI를 연결하면 확인할 것을 AI에게 넘길 수 있어요.",
    "en": "Connect an AI to hand these off.",
    "files": [
-    "MapHomeLaunchPrompts.swift:332"
+    "MapHomeLaunchPrompts.swift:333"
    ],
    "args": [],
    "targets": [
@@ -1217,7 +1217,7 @@
    "ko": "AI에게 넘기기",
    "en": "Hand to AI",
    "files": [
-    "MapHomeLaunchPrompts.swift:303"
+    "MapHomeLaunchPrompts.swift:304"
    ],
    "args": [],
    "targets": [
@@ -1229,7 +1229,7 @@
    "ko": "AI에게 넘김",
    "en": "Handed to AI",
    "files": [
-    "MapHomeLaunchPrompts.swift:300"
+    "MapHomeLaunchPrompts.swift:301"
    ],
    "args": [],
    "targets": [
@@ -33489,7 +33489,7 @@
    "ko": "‘{0}’ 기기가 내 차인가요?",
    "en": "Is ‘{0}’ your car?",
    "files": [
-    "MapHomeLaunchPrompts.swift:320"
+    "MapHomeLaunchPrompts.swift:321"
    ],
    "args": [
     "name"
@@ -33503,7 +33503,7 @@
    "ko": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
    "en": "‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
    "files": [
-    "MapHomeLaunchPrompts.swift:378"
+    "MapHomeLaunchPrompts.swift:379"
    ],
    "args": [
     "name"
@@ -33517,7 +33517,7 @@
    "ko": "‘{0}’ 일정 분류",
    "en": "Classify ‘{0}’",
    "files": [
-    "MapHomeLaunchPrompts.swift:323"
+    "MapHomeLaunchPrompts.swift:324"
    ],
    "args": [
     "title"
@@ -33531,7 +33531,7 @@
    "ko": "‘{0}’ 일정은 무엇인가요?",
    "en": "What is ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:480"
+    "MapHomeLaunchPrompts.swift:481"
    ],
    "args": [
     "calendarTitle ?? \"\""
@@ -33545,7 +33545,7 @@
    "ko": "‘{0}’ 중 무엇인가요?",
    "en": "Which ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:508"
+    "MapHomeLaunchPrompts.swift:509"
    ],
    "args": [
     "category?.localizedTitle(language) ?? \"\""
@@ -33559,7 +33559,7 @@
    "ko": "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?",
    "en": "You stayed at ‘{0}’ {1} times. What is it?",
    "files": [
-    "MapHomeLaunchPrompts.swift:536"
+    "MapHomeLaunchPrompts.swift:537"
    ],
    "args": [
     "name",
@@ -33723,7 +33723,7 @@
    "en": "Add the \"{0}\" automation",
    "files": [
     "BokkiShortcutsGuide.swift:117",
-    "BokkiShortcutsGuide.swift:230"
+    "BokkiShortcutsGuide.swift:242"
    ],
    "args": [
     "title"
@@ -33751,7 +33751,7 @@
    "ko": "「결제 알림 넣기」 넣기",
    "en": "Add \"Add payment alert\"",
    "files": [
-    "BokkiShortcutsGuide.swift:268"
+    "BokkiShortcutsGuide.swift:280"
    ],
    "args": [],
    "targets": [
@@ -33787,7 +33787,7 @@
    "ko": "「실행 시 보기」 끄기 · 완료",
    "en": "Turn off Show When Run · Done",
    "files": [
-    "BokkiShortcutsGuide.swift:272"
+    "BokkiShortcutsGuide.swift:284"
    ],
    "args": [],
    "targets": [
@@ -33811,7 +33811,7 @@
    "ko": "「자동화」 › 「알림」",
    "en": "Automation › Notification",
    "files": [
-    "BokkiShortcutsGuide.swift:264"
+    "BokkiShortcutsGuide.swift:276"
    ],
    "args": [],
    "targets": [
@@ -34382,7 +34382,7 @@
    "ko": "개인용",
    "en": "Personal",
    "files": [
-    "BokkiShortcutsGuide.swift:262"
+    "BokkiShortcutsGuide.swift:274"
    ],
    "args": [],
    "targets": [
@@ -34798,7 +34798,7 @@
    "ko": "걷기",
    "en": "Walking",
    "files": [
-    "MapHomeLaunchPrompts.swift:430",
+    "MapHomeLaunchPrompts.swift:431",
     "MapHomeLocationPresentation.swift:312",
     "MapHomeNLEClipFactory.swift:120"
    ],
@@ -35015,7 +35015,7 @@
    "ko": "검색: BOKKI",
    "en": "Search: BOKKI",
    "files": [
-    "BokkiShortcutsGuide.swift:269"
+    "BokkiShortcutsGuide.swift:281"
    ],
    "args": [],
    "targets": [
@@ -35226,8 +35226,8 @@
    "ko": "결제 알림 넣기",
    "en": "Add payment alert",
    "files": [
-    "BokkiShortcutsGuide.swift:270",
-    "BokkiShortcutsGuide.swift:273"
+    "BokkiShortcutsGuide.swift:282",
+    "BokkiShortcutsGuide.swift:285"
    ],
    "args": [],
    "targets": [
@@ -35264,7 +35264,7 @@
    "ko": "결제 앱 알림 자동화 따라 하기",
    "en": "Set up payment app alerts",
    "files": [
-    "BokkiShortcutsGuide.swift:235"
+    "BokkiShortcutsGuide.swift:247"
    ],
    "args": [],
    "targets": [
@@ -35276,7 +35276,7 @@
    "ko": "결제 앱 알림 자동화",
    "en": "Payment alert automation",
    "files": [
-    "BokkiShortcutsGuide.swift:313"
+    "BokkiShortcutsGuide.swift:320"
    ],
    "args": [],
    "targets": [
@@ -37903,7 +37903,7 @@
    "ko": "기차를 탔나요?",
    "en": "Did you take a train?",
    "files": [
-    "MapHomeLaunchPrompts.swift:462"
+    "MapHomeLaunchPrompts.swift:463"
    ],
    "args": [],
    "targets": [
@@ -38407,7 +38407,7 @@
    "ko": "나중에 확인",
    "en": "Check later",
    "files": [
-    "MapHomeLaunchPrompts.swift:369"
+    "MapHomeLaunchPrompts.swift:370"
    ],
    "args": [],
    "targets": [
@@ -38995,7 +38995,7 @@
    "ko": "내 차로 등록",
    "en": "Register as my car",
    "files": [
-    "MapHomeLaunchPrompts.swift:374"
+    "MapHomeLaunchPrompts.swift:375"
    ],
    "args": [],
    "targets": [
@@ -39068,7 +39068,7 @@
    "ko": "내가 확인",
    "en": "I'll check",
    "files": [
-    "MapHomeLaunchPrompts.swift:296"
+    "MapHomeLaunchPrompts.swift:297"
    ],
    "args": [],
    "targets": [
@@ -39497,7 +39497,7 @@
    "ko": "다 했어요",
    "en": "All done",
    "files": [
-    "BokkiShortcutsGuide.swift:306"
+    "BokkiShortcutsGuide.swift:312"
    ],
    "args": [],
    "targets": [
@@ -39838,8 +39838,7 @@
    "en": "Next",
    "files": [
     "AssistantConnectGuide.swift:175",
-    "BokkiShortcutsGuide.swift:212",
-    "BokkiShortcutsGuide.swift:308"
+    "BokkiShortcutsGuide.swift:225"
    ],
    "args": [],
    "targets": [
@@ -39901,7 +39900,7 @@
    "ko": "단축어 앱 › 자동화에서 아래 + 를 누르면 새 단축어 편집 화면이 열려요.",
    "en": "In Shortcuts › Automation, tap + at the bottom. A new shortcut editor opens.",
    "files": [
-    "BokkiShortcutsGuide.swift:263"
+    "BokkiShortcutsGuide.swift:275"
    ],
    "args": [],
    "targets": [
@@ -39915,7 +39914,7 @@
    "files": [
     "PaymentAlertSources.swift:192",
     "BokkiShortcutsGuide.swift:37",
-    "BokkiShortcutsGuide.swift:204"
+    "BokkiShortcutsGuide.swift:195"
    ],
    "args": [],
    "targets": [
@@ -39927,7 +39926,7 @@
    "ko": "단축어 앱에서 추가하기",
    "en": "Add in Shortcuts",
    "files": [
-    "BokkiShortcutsGuide.swift:199"
+    "BokkiShortcutsGuide.swift:195"
    ],
    "args": [],
    "targets": [
@@ -40910,7 +40909,7 @@
    "ko": "두 스위치를 끄고 왼쪽 위 「<」로 저장하면 끝이에요.",
    "en": "Turn both switches off and tap < to save.",
    "files": [
-    "BokkiShortcutsGuide.swift:275"
+    "BokkiShortcutsGuide.swift:287"
    ],
    "args": [],
    "targets": [
@@ -40922,7 +40921,7 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
-    "MapHomeLaunchPrompts.swift:407",
+    "MapHomeLaunchPrompts.swift:408",
     "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
@@ -40984,7 +40983,7 @@
    "ko": "등록 안 함",
    "en": "Don't register",
    "files": [
-    "MapHomeLaunchPrompts.swift:439"
+    "MapHomeLaunchPrompts.swift:440"
    ],
    "args": [],
    "targets": [
@@ -41566,7 +41565,7 @@
    "ko": "맞아요",
    "en": "Yes",
    "files": [
-    "MapHomeLaunchPrompts.swift:427"
+    "MapHomeLaunchPrompts.swift:428"
    ],
    "args": [],
    "targets": [
@@ -41700,7 +41699,7 @@
    "ko": "먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.",
    "en": "Pick a category first. Once set, events with the same title won't be asked again.",
    "files": [
-    "MapHomeLaunchPrompts.swift:400"
+    "MapHomeLaunchPrompts.swift:401"
    ],
    "args": [],
    "targets": [
@@ -42217,7 +42216,7 @@
    "ko": "메시지",
    "en": "Message",
    "files": [
-    "BokkiShortcutsGuide.swift:266"
+    "BokkiShortcutsGuide.swift:278"
    ],
    "args": [],
    "targets": [
@@ -42629,7 +42628,7 @@
    "ko": "미확인 시간 {0}분",
    "en": "{0} min unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:325"
+    "MapHomeLaunchPrompts.swift:326"
    ],
    "args": [
     "minutes"
@@ -42667,7 +42666,7 @@
    "ko": "미확인 시간이 있어요",
    "en": "Some time is unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:444"
+    "MapHomeLaunchPrompts.swift:445"
    ],
    "args": [],
    "targets": [
@@ -43337,7 +43336,7 @@
    "ko": "배를 탔나요?",
    "en": "Did you take a boat?",
    "files": [
-    "MapHomeLaunchPrompts.swift:463"
+    "MapHomeLaunchPrompts.swift:464"
    ],
    "args": [],
    "targets": [
@@ -43704,7 +43703,7 @@
    "ko": "버스 · {0}번",
    "en": "Bus {0}",
    "files": [
-    "MapHomeLaunchPrompts.swift:423"
+    "MapHomeLaunchPrompts.swift:424"
    ],
    "args": [
     "route.number"
@@ -43754,7 +43753,7 @@
    "ko": "버스(노선 모름)",
    "en": "Bus (route unknown)",
    "files": [
-    "MapHomeLaunchPrompts.swift:425"
+    "MapHomeLaunchPrompts.swift:426"
    ],
    "args": [],
    "targets": [
@@ -43794,7 +43793,7 @@
    "ko": "버스를 탔나요?",
    "en": "Did you take a bus?",
    "files": [
-    "MapHomeLaunchPrompts.swift:466"
+    "MapHomeLaunchPrompts.swift:467"
    ],
    "args": [],
    "targets": [
@@ -44443,7 +44442,7 @@
    "ko": "분류 안 함",
    "en": "Don't classify",
    "files": [
-    "MapHomeLaunchPrompts.swift:397"
+    "MapHomeLaunchPrompts.swift:398"
    ],
    "args": [],
    "targets": [
@@ -44970,7 +44969,7 @@
    "ko": "비행기를 탔나요?",
    "en": "Did you take a flight?",
    "files": [
-    "MapHomeLaunchPrompts.swift:464"
+    "MapHomeLaunchPrompts.swift:465"
    ],
    "args": [],
    "targets": [
@@ -47312,7 +47311,7 @@
    "ko": "스위치를 켰어요",
    "en": "I turned it on",
    "files": [
-    "BokkiShortcutsGuide.swift:210"
+    "BokkiShortcutsGuide.swift:196"
    ],
    "args": [],
    "targets": [
@@ -47969,7 +47968,7 @@
    "en": "Restaurant",
    "files": [
     "AssistantMoreActions.swift:34",
-    "MapHomeLaunchPrompts.swift:550"
+    "MapHomeLaunchPrompts.swift:551"
    ],
    "args": [],
    "targets": [
@@ -48202,7 +48201,7 @@
    "ko": "실행 시 보기",
    "en": "Show When Run",
    "files": [
-    "BokkiShortcutsGuide.swift:274"
+    "BokkiShortcutsGuide.swift:286"
    ],
    "args": [],
    "targets": [
@@ -48214,7 +48213,7 @@
    "ko": "실행 전에 확인",
    "en": "Ask Before Running",
    "files": [
-    "BokkiShortcutsGuide.swift:274"
+    "BokkiShortcutsGuide.swift:286"
    ],
    "args": [],
    "targets": [
@@ -48266,7 +48265,7 @@
    "ko": "아니요",
    "en": "No",
    "files": [
-    "MapHomeLaunchPrompts.swift:375"
+    "MapHomeLaunchPrompts.swift:376"
    ],
    "args": [],
    "targets": [
@@ -48278,7 +48277,7 @@
    "ko": "아래 검색에 BOKKI를 적어 「결제 알림 넣기」를 넣고, 「알림 내용」 칸을 눌러 「단축어 입력」을 골라요.",
    "en": "Search BOKKI, add \"Add payment alert\", tap its text field and choose Shortcut Input.",
    "files": [
-    "BokkiShortcutsGuide.swift:271"
+    "BokkiShortcutsGuide.swift:283"
    ],
    "args": [],
    "targets": [
@@ -48338,7 +48337,7 @@
    "ko": "아래 목록 위의 「자동화」를 누르고 「알림」을 고른 뒤, 은행·카드 앱을 골라요.",
    "en": "Tap Automation above the list, choose Notification, then pick your bank and card apps.",
    "files": [
-    "BokkiShortcutsGuide.swift:267"
+    "BokkiShortcutsGuide.swift:279"
    ],
    "args": [],
    "targets": [
@@ -48745,7 +48744,7 @@
    "ko": "알림 내용: 입력",
    "en": "Alert text: Input",
    "files": [
-    "BokkiShortcutsGuide.swift:270"
+    "BokkiShortcutsGuide.swift:282"
    ],
    "args": [],
    "targets": [
@@ -48794,7 +48793,7 @@
    "ko": "알림",
    "en": "Notification",
    "files": [
-    "BokkiShortcutsGuide.swift:266"
+    "BokkiShortcutsGuide.swift:278"
    ],
    "args": [],
    "targets": [
@@ -49507,7 +49506,7 @@
    "ko": "어느 노선인가요?",
    "en": "Which line?",
    "files": [
-    "MapHomeLaunchPrompts.swift:461"
+    "MapHomeLaunchPrompts.swift:462"
    ],
    "args": [],
    "targets": [
@@ -52247,7 +52246,7 @@
    "ko": "오늘 {0}분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?",
    "en": "{0} min today are unconfirmed. Review them now?",
    "files": [
-    "MapHomeLaunchPrompts.swift:448"
+    "MapHomeLaunchPrompts.swift:449"
    ],
    "args": [
     "minutes"
@@ -52947,7 +52946,7 @@
    "files": [
     "AssistantMoreActions.swift:33",
     "MapHomeInteractionPolicy.swift:459",
-    "MapHomeLaunchPrompts.swift:549"
+    "MapHomeLaunchPrompts.swift:550"
    ],
    "args": [],
    "targets": [
@@ -54077,7 +54076,7 @@
    "ko": "이 기기가 내 차 같아요",
    "en": "This looks like your car",
    "files": [
-    "MapHomeLaunchPrompts.swift:373"
+    "MapHomeLaunchPrompts.swift:374"
    ],
    "args": [],
    "targets": [
@@ -54771,7 +54770,7 @@
    "ko": "이 자리",
    "en": "This spot",
    "files": [
-    "MapHomeLaunchPrompts.swift:535"
+    "MapHomeLaunchPrompts.swift:536"
    ],
    "args": [],
    "targets": [
@@ -55605,8 +55604,8 @@
    "en": "Back",
    "files": [
     "AssistantConnectGuide.swift:173",
-    "BokkiShortcutsGuide.swift:207",
-    "BokkiShortcutsGuide.swift:303"
+    "BokkiShortcutsGuide.swift:223",
+    "FirstRunTutorialView.swift:71"
    ],
    "args": [],
    "targets": [
@@ -56537,7 +56536,7 @@
    "ko": "자동차(내 차·택시)",
    "en": "Car (mine or a taxi)",
    "files": [
-    "MapHomeLaunchPrompts.swift:429"
+    "MapHomeLaunchPrompts.swift:430"
    ],
    "args": [],
    "targets": [
@@ -56566,7 +56565,7 @@
    "ko": "자동화 › +",
    "en": "Automation › +",
    "files": [
-    "BokkiShortcutsGuide.swift:260"
+    "BokkiShortcutsGuide.swift:272"
    ],
    "args": [],
    "targets": [
@@ -56578,8 +56577,8 @@
    "ko": "자동화",
    "en": "Automation",
    "files": [
-    "BokkiShortcutsGuide.swift:261",
-    "BokkiShortcutsGuide.swift:265"
+    "BokkiShortcutsGuide.swift:273",
+    "BokkiShortcutsGuide.swift:277"
    ],
    "args": [],
    "targets": [
@@ -56643,7 +56642,7 @@
    "ko": "자전거를 탔나요?",
    "en": "Did you ride a bicycle?",
    "files": [
-    "MapHomeLaunchPrompts.swift:465"
+    "MapHomeLaunchPrompts.swift:466"
    ],
    "args": [],
    "targets": [
@@ -56727,7 +56726,7 @@
    "ko": "자주 머무는 곳 등록",
    "en": "Register a place you stay often",
    "files": [
-    "MapHomeLaunchPrompts.swift:324"
+    "MapHomeLaunchPrompts.swift:325"
    ],
    "args": [],
    "targets": [
@@ -56751,7 +56750,7 @@
    "ko": "자주 머무는 곳이 있어요",
    "en": "You stay here often",
    "files": [
-    "MapHomeLaunchPrompts.swift:435"
+    "MapHomeLaunchPrompts.swift:436"
    ],
    "args": [],
    "targets": [
@@ -58603,7 +58602,7 @@
    "ko": "지금 정하기",
    "en": "Review now",
    "files": [
-    "MapHomeLaunchPrompts.swift:445"
+    "MapHomeLaunchPrompts.swift:446"
    ],
    "args": [],
    "targets": [
@@ -59539,7 +59538,7 @@
    "ko": "지하철·버스 탑승 확인",
    "en": "Check a subway or bus ride",
    "files": [
-    "MapHomeLaunchPrompts.swift:321"
+    "MapHomeLaunchPrompts.swift:322"
    ],
    "args": [],
    "targets": [
@@ -60520,7 +60519,7 @@
    "ko": "추천: {0}",
    "en": "Suggested: {0}",
    "files": [
-    "MapHomeLaunchPrompts.swift:386"
+    "MapHomeLaunchPrompts.swift:387"
    ],
    "args": [
     "rule.label"
@@ -60689,7 +60688,7 @@
    "files": [
     "AssistantMoreActions.swift:32",
     "MapHomeInteractionPolicy.swift:458",
-    "MapHomeLaunchPrompts.swift:548"
+    "MapHomeLaunchPrompts.swift:549"
    ],
    "args": [],
    "targets": [
@@ -61578,7 +61577,7 @@
    "ko": "탈것 탑승 확인",
    "en": "Check a ride",
    "files": [
-    "MapHomeLaunchPrompts.swift:322"
+    "MapHomeLaunchPrompts.swift:323"
    ],
    "args": [],
    "targets": [
@@ -61831,7 +61830,7 @@
    "ko": "특정 시간",
    "en": "Time of Day",
    "files": [
-    "BokkiShortcutsGuide.swift:266"
+    "BokkiShortcutsGuide.swift:278"
    ],
    "args": [],
    "targets": [
@@ -62581,7 +62580,7 @@
    "en": "School",
    "files": [
     "AssistantMoreActions.swift:29",
-    "MapHomeLaunchPrompts.swift:545"
+    "MapHomeLaunchPrompts.swift:546"
    ],
    "args": [],
    "targets": [
@@ -62654,7 +62653,7 @@
    "en": "Academy",
    "files": [
     "AssistantMoreActions.swift:30",
-    "MapHomeLaunchPrompts.swift:546",
+    "MapHomeLaunchPrompts.swift:547",
     "record-classification.json:0"
    ],
    "args": [],
@@ -62778,7 +62777,7 @@
    "ko": "할 일 목록",
    "en": "To-do list",
    "files": [
-    "MapHomeLaunchPrompts.swift:273"
+    "MapHomeLaunchPrompts.swift:274"
    ],
    "args": [],
    "targets": [
@@ -63826,7 +63825,7 @@
    "ko": "확인할 것은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.",
    "en": "You can hand these to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.",
    "files": [
-    "MapHomeLaunchPrompts.swift:331"
+    "MapHomeLaunchPrompts.swift:332"
    ],
    "args": [],
    "targets": [
@@ -64019,7 +64018,7 @@
    "files": [
     "AssistantMoreActions.swift:31",
     "FirstRunTutorialGuides.swift:695",
-    "MapHomeLaunchPrompts.swift:547"
+    "MapHomeLaunchPrompts.swift:548"
    ],
    "args": [],
    "targets": [
