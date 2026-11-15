@@ -269,6 +269,7 @@ struct TravelDayChips: View {
                             .background(day.key == selected ? TravelInk.plan : TravelInk.planTint, in: Capsule())
                     }
                     .buttonStyle(.plain)
+                    .travelDayChipDrop(day.key)
                 }
             }
             .padding(.horizontal, 10)
@@ -532,6 +533,7 @@ struct TravelCourseView: View {
                                 // 지금 일정이거나 고른 곳은 펼쳐서 세부 계획과 「세부 더하기」를 보인다.
                                 if index == current || selectedID == block.id { detailRows(block) }
                             }
+                                .travelDayBoardDrag(block.id)
                                 .listRowInsets(EdgeInsets())
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(index == current ? TravelInk.planTint : Color.clear)
@@ -541,7 +543,7 @@ struct TravelCourseView: View {
                         }
                         // 길게 눌러 끌면 순서가 바뀌고, 시각은 그 구간 안에서 순서대로 다시 잡힌다.
                         .onMove { from, to in reorder(blocks, from: from, to: to) }
-                        addStopButton.frame(maxWidth: .infinity).padding(.vertical, 8)
+                        HStack(spacing: 8) { addStopButton; TravelCourseSortButton(language: language) }.frame(maxWidth: .infinity).padding(.vertical, 8)
                             .listRowInsets(EdgeInsets()).listRowSeparator(.hidden).listRowBackground(Color.clear)
                     }
                     .listStyle(.plain)
