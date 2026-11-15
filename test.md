@@ -2,14 +2,15 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
-## STY1116A01 · 일상↔여행 전환 효과·전환 아이콘·스타일 통일 1차 (2026-11-16, 진행 중)
+## STY1116A01 · 일상↔여행 전환 효과·전환 아이콘·스타일 통일 1차 (2026-11-16)
 
-- 전환 방식 비교: (가) `fullScreenCover`는 두고 기본 움직임만 끈 뒤 덮개 안에서 원형 가림으로 드러냄 — 모달·`dismiss()`·안쪽 시트가 그대로라 고른 것. (나) 홈 위 겹침(overlay)으로 여행 화면을 띄움 — 움직임은 완전히 다룰 수 있지만 `TravelModeView`의 `dismiss()`와 시트 표시가 달라져 여행 세션 셋이 고치는 파일까지 바꿔야 함. (다) UIKit 사용자 전환(`UIViewControllerTransitioningDelegate`) — 가장 매끄럽지만 SwiftUI 바깥 코드가 커지고 시트 겹침에서 깨지기 쉬움.
-- 단위 시험: `TravelModeTransitionTests` 7건 통과(0 실패), 지정 시뮬레이터 `99AC6F35…`, `-parallel-testing-enabled NO`. 단계 상태 기계(두 번 누름·여는 중 닫기·닫는 중 다시 열기·늦게 온 끝남 신호)와 원 반지름·시작점. 이 실행에서 앱 Debug 빌드도 함께 통과. 로그 `build/validation/STY1116A01/unit-tests-1.log`.
-- 시뮬레이터 Debug 빌드(외장 볼륨 파생 데이터) 통과, 설치 후 확인: 일상 홈의 돋보기 옆 단추가 비행기로 바뀌고, 지도 여행 모드에서는 집으로 바뀜. 하단 메뉴는 위치·모양 그대로(`home-after.png`, 코드도 하단 막대 파일은 손대지 않음).
-- **문제 발견**: 첫 구현을 녹화(`open.mp4`, 프레임 `open-fine.png`)해 보니 원으로 드러나지 않고 기본처럼 아래에서 올라옴. 원인 추정: 덮개를 올리는 「애니메이션 끔」 거래 안에서 퍼짐이 시작돼 바로 끝나고, 시스템 올림 움직임은 거래만으로는 꺼지지 않음. 고침(아직 빌드 전): 올릴 때 `UIView.setAnimationsEnabled(false)`를 한 틱만 켜고, 퍼짐은 40ms 뒤에 시작. 메인 세션의 빌드 일시 중지 공지로 다시 빌드·녹화를 못 함.
-- 스타일: 값이 같은 모서리 숫자 41곳 → `TaptionCorner`(화면 변화 없음). 조사 표와 객관식 물음 초안은 `docs/STYLE_UNIFY.md`, 다시 세는 도구 `scripts/style-survey.py`.
-- 못 한 것: 고친 전환의 녹화 확인, 닫을 때 오므라드는 움직임 확인, 공유 초대로 저절로 열릴 때(가운데에서 퍼짐) 확인, 동작 줄이기 크로스페이드 확인, 실기기(아이폰 11) 확인.
+- 전환 방식 비교: (가) `fullScreenCover`는 두고 시스템 올림 움직임만 끈 뒤 덮개 안에서 원형 가림으로 드러냄 — 모달·`dismiss()`·안쪽 시트가 그대로라 고른 것. (나) 홈 위 겹침(overlay)으로 여행 화면을 띄움 — 움직임은 완전히 다룰 수 있지만 `TravelModeView`의 `dismiss()`와 시트 표시가 달라져 여행 세션 셋이 고치는 파일까지 바꿔야 함. (다) UIKit 사용자 전환 — 가장 매끄럽지만 SwiftUI 바깥 코드가 커지고 시트 겹침에서 깨지기 쉬움.
+- 단위 시험: `TravelModeTransitionTests` 7건 통과(0 실패), 지정 시뮬레이터 `99AC6F35…`, `-parallel-testing-enabled NO`. 단계 상태 기계(두 번 누름·여는 중 닫기·닫는 중 다시 열기·늦게 온 끝남 신호)와 원 반지름·시작점. 로그 `build/validation/STY1116A01/unit-tests-1.log`.
+- 첫 구현은 녹화해 보니 원이 아니라 아래에서 올라옴(덮개를 올리는 「애니메이션 끔」 거래 안에서 퍼짐이 시작돼 바로 끝남). 고침: 올릴 때 `UIView.setAnimationsEnabled(false)`를 한 틱만, 퍼짐은 40ms 뒤 시작.
+- 고친 뒤 시뮬레이터 Debug 빌드(외장 볼륨 파생 데이터) 통과(`build-sim-2.log`), 지정 시뮬레이터에서 녹화: 비행기 단추를 누르면 그 자리에서 원이 퍼지며 여행 화면이 드러나고(`transition-open-frames.png`, 앞·중간·뒤 `transition-1-before.png`·`transition-2-mid.png`·`transition-3-after.png`), 여행 화면의 집 단추를 누르면 원이 오므라들어 일상의 비행기 단추 자리로 들어감(`transition-close-frames.png`). 끝나면 일상 단추는 다시 비행기.
+- 하단 메뉴: 스타일 변경 전(`home-after.png`)과 모든 변경 뒤(`home-style-after.png`) 사진의 하단 막대 영역(아래 8.5%)이 화소 단위로 같음(차이 0화소, `bottom-bar-before-after.png`). 홈 배치·고양이 크기도 같음(`home-before-after.png`, 다른 곳은 시각·고양이 동작 차이).
+- 스타일: 값이 같은 모서리 41곳 → `TaptionCorner`. 대표 결정(객관식 세 물음 모두 추천안)에 따라 사이 값 모서리 111곳을 네 단계로, 옛 `TaptionRadius` 값을 네 단계에 연결, 모양 바로 뒤 테두리 19곳을 1pt(강조 1.5)로. 표와 결정은 `docs/STYLE_UNIFY.md`, 다시 세는 도구 `scripts/style-survey.py`.
+- 못 한 것: 공유 초대로 저절로 열릴 때(단추 자리에서 퍼짐) 확인, 동작 줄이기 크로스페이드 확인, 시트가 떠 있을 때 누름, 여행 단추 높이 44·40·32 맞춤(여행 세션 변경이 합쳐진 뒤), 실기기(아이폰 11) 확인. 시트 안 화면의 모서리 변경 전후 사진은 홈 첫 화면만 찍음.
 
 ## CLM1114A01 · 337 뒤에 넣은 것 (2026-11-14 낮)
 
