@@ -1899,3 +1899,74 @@ final class MapHomeAlarmPolicyTests: XCTestCase {
         XCTAssertNil(MapHomeAlarmPolicy.wakeEvent(phases: phases(60), now: now, calendar: calendar, language: .korean), "45분 넘게 지난 기상")
     }
 }
+
+
+/// 가계부가 홈을 덮는 동안 홈 갱신을 멈추는 문(LGS1115A01).
+final class MapHomeLiveGateTests: XCTestCase {
+    func testHomeIsLiveOnlyWhenSceneIsActiveAndNothingCoversIt() {
+        XCTAssertTrue(MapHomeCoverSet.isHomeLive(isSceneActive: true, isCovered: false))
+        XCTAssertFalse(MapHomeCoverSet.isHomeLive(isSceneActive: true, isCovered: true))
+        XCTAssertFalse(MapHomeCoverSet.isHomeLive(isSceneActive: false, isCovered: false))
+        XCTAssertFalse(MapHomeCoverSet.isHomeLive(isSceneActive: false, isCovered: true))
+    }
+
+    func testCoverSetReportsOnlyRealChanges() {
+        var covers = MapHomeCoverSet()
+        XCTAssertFalse(covers.isCovered)
+        XCTAssertFalse(covers.set(.ledger, covering: false))
+        XCTAssertTrue(covers.set(.ledger, covering: true))
+        XCTAssertTrue(covers.isCovered)
+        XCTAssertFalse(covers.set(.ledger, covering: true))
+        XCTAssertTrue(covers.set(.ledger, covering: false))
+        XCTAssertFalse(covers.isCovered)
+    }
+
+    func testHeldValueFollowsLiveValueAndFreezesWhileCovered() {
+        var live = 1
+        var reads = 0
+        var held = MapHomeHeldValue(0)
+        let read: () -> Int = { reads += 1; return live }
+        XCTAssertEqual(held.read(isCovered: false, live: read), 1)
+        live = 2
+        XCTAssertEqual(held.read(isCovered: false, live: read), 2)
+        XCTAssertEqual(reads, 2)
+
+        // 덮인 동안은 붙들어 둔 값만 돌려주고 관찰 값은 읽지 않는다.
+        live = 3
+        XCTAssertEqual(held.read(isCovered: true, live: read), 2)
+        live = 4
+        XCTAssertEqual(held.read(isCovered: true, live: read), 2)
+        XCTAssertEqual(reads, 2)
+
+        // 덮개가 걷히면 첫 읽기에 최신 값으로 따라잡는다.
+        XCTAssertEqual(held.read(isCovered: false, live: read), 4)
+        XCTAssertEqual(reads, 3)
+    }
+
+    /// 같은 화면 밝기를 다시 받으면 기본 저장소를 건드리지 않는다(홈의 `@AppStorage`를 깨우지 않게).
+    func testScreenActivityStoreSkipsUnchangedWrites() {
+        PhoneScreenActivityStore.update(brightness: 0.42, isOn: true)
+        var changes = 0
+        let token = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: UserDefaults.standard, queue: nil
+        ) { _ in changes += 1 }
+        defer { NotificationCenter.default.removeObserver(token) }
+        PhoneScreenActivityStore.update(brightness: 0.42, isOn: true)
+        XCTAssertEqual(changes, 0)
+        PhoneScreenActivityStore.update(brightness: 0.5, isOn: true)
+        XCTAssertGreaterThan(changes, 0)
+        XCTAssertEqual(PhoneScreenActivityStore.snapshot().brightness, 0.5)
+        XCTAssertTrue(PhoneScreenActivityStore.snapshot().isOn)
+    }
+
+    @MainActor
+    func testLedgerPresenterDrivesTheGate() {
+        let presenter = LedgerPresenter.shared
+        let wasPresented = presenter.isPresented
+        defer { presenter.isPresented = wasPresented }
+        presenter.isPresented = true
+        XCTAssertTrue(MapHomeLiveGate.shared.isCovered)
+        presenter.isPresented = false
+        XCTAssertFalse(MapHomeLiveGate.shared.isCovered)
+    }
+}

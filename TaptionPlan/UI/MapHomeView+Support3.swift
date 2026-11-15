@@ -29,7 +29,7 @@ extension MapHomeView {
 
     /// 실시간 따라가기 중 최신 센서 속도. 오래된 값은 쓰지 않는다.
     var liveFollowSpeedMetersPerSecond: Double? {
-        guard let reading = model.latestSensorReading else { return nil }
+        guard let reading = homeLatestReading else { return nil }
         return MapHomeLiveFollowSpeed.speed(
             latestAge: Date.now.timeIntervalSince(reading.timestamp),
             latestSpeed: reading.speedMetersPerSecond
@@ -38,7 +38,7 @@ extension MapHomeView {
 
     /// 멈춰 있어 새 위치가 오지 않아도 기본 거리까지 확대를 이어 간다(2초 간격 한 걸음씩).
     func advanceStationaryZoomIfNeeded() {
-        guard scenePhase == .active,
+        guard isHomeLive,
               MapHomeUserTrackingPolicy.focusesLocationUpdates(in: userTrackingMode),
               liveFollowSpeedMetersPerSecond == 0,
               let camera = visibleMapCamera,

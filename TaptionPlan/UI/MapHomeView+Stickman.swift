@@ -157,7 +157,7 @@ extension MapHomeView {
     }
 
     func refreshHomeGrowth(at now: Date) {
-        guard model.isBootstrapped, scenePhase == .active, canWriteHomeGrowth else { return }
+        guard model.isBootstrapped, isHomeLive, canWriteHomeGrowth else { return }
         var history = homeGrowthHistory
         let calendar = MapHomeGrowthPolicy.localCalendar
         if let key = history.season.pendingDay,
@@ -193,8 +193,9 @@ extension MapHomeView {
                 calendar: calendar
             )
         }
-        guard let encoded = try? JSONEncoder().encode(history),
-              encoded != homeGrowthData else { return }
+        // 바이트가 아니라 값으로 비교한다. 사전 순서가 매번 달라 같은 값도 다시 써서 홈이 연달아 다시 그려졌다(LGS1115A01).
+        guard homeGrowthData.isEmpty || history != homeGrowthHistory,
+              let encoded = try? JSONEncoder().encode(history) else { return }
         homeGrowthData = encoded
     }
 
@@ -425,7 +426,7 @@ extension MapHomeView {
         // 임시 위치는 하루 기록만으로 정해지고 컷오프와 무관하다(컷오프는 아래에서 거른다). 매번 다시 뽑지 않는다(ARC1030A01).
         let derived = temporaryLocationsMemo.value(for: readingsSignature(sourceRevision: currentDayDataSnapshot?.sourceRevision)) {
             SubwayStationCatalog.temporaryLocations(
-                from: routeReadings + model.liveRouteState.readings + (model.latestSensorReading.map { [$0] } ?? [])
+                from: routeReadings + homeLiveRoute.readings + (homeLatestReading.map { [$0] } ?? [])
             )
         }
         let locations = derived.isEmpty ? cachedTemporaryLocations : derived

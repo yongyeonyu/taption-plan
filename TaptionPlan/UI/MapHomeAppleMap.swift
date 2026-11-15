@@ -73,6 +73,9 @@ struct MapHomeAppleMap: UIViewRepresentable {
         if mapView.accessibilityLabel != accessibilityLabel {
             mapView.accessibilityLabel = accessibilityLabel
         }
+        // 가계부가 덮는 동안은 MapKit의 (숨긴) 내 위치 점도 쉰다. 이 점이 움직이면 지도가 매 프레임 다시 그려졌다(LGS1115A01).
+        let showsUserLocation = !MapHomeLiveGate.shared.isCovered
+        if mapView.showsUserLocation != showsUserLocation { mapView.showsUserLocation = showsUserLocation }
         context.coordinator.refreshGestureAttachments(in: mapView)
         context.coordinator.applyMapStyle(to: mapView)
         context.coordinator.updateContent(in: mapView)

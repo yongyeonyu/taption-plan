@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 
 /// 본문이 읽지 않는 작업 핸들·세대 번호·시각(ARC1103A01 안 6).
 /// 관찰하지 않는 참조라 값이 바뀌어도 지도 홈을 무효화하지 않고, 뷰 값도 작아진다.
@@ -31,6 +32,9 @@ final class MapHomeViewWork {
     var lastPlaybackFocusLogUptime: TimeInterval = 0
     var lastPlaybackMarkerUptime: TimeInterval = 0
     var lastTimelineMapFocusUptime: TimeInterval = 0
+    /// 가계부가 홈을 덮기 직전의 위치·실시간 경로(LGS1115A01).
+    var heldLatestReading = MapHomeHeldValue<SensorReading?>(nil)
+    var heldLiveRoute = MapHomeHeldValue(LiveRouteState.empty)
 }
 
 // 예전 `@State` 이름을 그대로 두어 호출하는 곳을 바꾸지 않는다.

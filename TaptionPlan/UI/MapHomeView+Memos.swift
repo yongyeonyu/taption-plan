@@ -671,7 +671,7 @@ extension MapHomeView {
             pendingForecastRouteState = nil
         }
         expectedRouteRefreshTask?.cancel()
-        guard scenePhase == .active else {
+        guard isHomeLive else {
             expectedRouteRefreshTask = nil
             return
         }
@@ -683,7 +683,7 @@ extension MapHomeView {
                 return
             }
             guard !Task.isCancelled,
-                  scenePhase == .active,
+                  isHomeLive,
                   refreshGeneration == expectedRouteRefreshGeneration else {
                 return
             }
@@ -699,7 +699,7 @@ extension MapHomeView {
     func scheduleTransitPOIRefresh() {
         guard MapHomeTransitPOIRefreshPolicy.canStart(
             isBootstrapped: model.isBootstrapped,
-            isSceneActive: scenePhase == .active
+            isSceneActive: isHomeLive
         ) else { return }
         let dataGeneration = TaptionDataDeletionFence.currentGeneration()
         guard TaptionDataDeletionFence.allows(
@@ -721,7 +721,7 @@ extension MapHomeView {
             )
             guard !Task.isCancelled,
                   generation == transitPOIRefreshGeneration,
-                  scenePhase == .active,
+                  isHomeLive,
                   TaptionDataDeletionFence.allows(
                     generation: dataGeneration
                   ),
@@ -738,7 +738,7 @@ extension MapHomeView {
 
     func scheduleLiveRouteProjectionRefresh() {
         liveRouteProjectionRefreshTask?.cancel()
-        guard scenePhase == .active else {
+        guard isHomeLive else {
             liveRouteProjectionRefreshTask = nil
             return
         }
@@ -748,12 +748,12 @@ extension MapHomeView {
             } catch {
                 return
             }
-            guard !Task.isCancelled, scenePhase == .active else { return }
+            guard !Task.isCancelled, isHomeLive else { return }
             mapRenderCache.invalidateRouteData()
             requestRouteProjectionRefresh(preparingReadings: true)
             if let timestamp = [
-                model.latestSensorReading?.timestamp,
-                model.liveRouteState.readings.last?.timestamp,
+                homeLatestReading?.timestamp,
+                homeLiveRoute.readings.last?.timestamp,
             ].compactMap({ $0 }).max() {
                 removeCompletedExpectedRoutes(at: timestamp)
             }
@@ -764,7 +764,7 @@ extension MapHomeView {
     /// 경로 계산을 메인 스레드 밖에서 돌린다. 입력이 같으면 이전 결과를 그대로 쓴다.
     /// 계산이 끝났을 때 입력이 이미 바뀌었다면 결과를 버린다(늦은 결과가 최신 경로를 덮지 않도록).
     func scheduleRouteProjection() {
-        guard scenePhase == .active,
+        guard isHomeLive,
               let dayData = currentDayDataSnapshot else {
             routeProjectionSkips[0] += 1
             return

@@ -50,7 +50,7 @@ struct MapHomeHomeArtClock<Content: View>: View {
                     content(context.date, 1)
                 }
             } else {
-                TimelineView(.animation(minimumInterval: minimumInterval)) { context in
+                TimelineView(.animation(minimumInterval: minimumInterval, paused: MapHomeLiveGate.shared.isCovered)) { context in
                     content(context.date, HwarangClock.seconds(at: context.date))
                 }
             }

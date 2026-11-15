@@ -293,14 +293,14 @@ extension MapHomeView {
             )
             finishDisplayedStickmanViewportProjection()
         }
-        .onChange(of: model.latestSensorReading?.id) { _, _ in
+        .onChange(of: homeLatestReading?.id) { _, _ in
             applyInitialLocationIfAvailable(using: nil)
             guard MapHomeUserTrackingPolicy.focusesLocationUpdates(
                 in: userTrackingMode
             ) else { return }
             focusDisplayedLocation(using: nil)
         }
-        .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
+        .onChange(of: homeLiveRoute.readings.last?.id) { _, _ in
             guard MapHomeUserTrackingPolicy.focusesLocationUpdates(
                 in: userTrackingMode
             ) else { return }
@@ -388,14 +388,14 @@ extension MapHomeView {
             flushDeferredWBSPlaybackProjection()
             finishDisplayedStickmanViewportProjection()
         }
-        .onChange(of: model.latestSensorReading?.id) { _, _ in
+        .onChange(of: homeLatestReading?.id) { _, _ in
             applyInitialLocationIfAvailable(using: nil)
             guard MapHomeUserTrackingPolicy.focusesLocationUpdates(
                 in: userTrackingMode
             ) else { return }
             focusDisplayedLocation(using: nil)
         }
-        .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
+        .onChange(of: homeLiveRoute.readings.last?.id) { _, _ in
             guard MapHomeUserTrackingPolicy.focusesLocationUpdates(
                 in: userTrackingMode
             ) else { return }

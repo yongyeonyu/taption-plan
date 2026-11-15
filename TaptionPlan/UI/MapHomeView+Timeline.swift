@@ -209,7 +209,7 @@ extension MapHomeView {
             let railHeight = MapHomeOverlayLayoutMath.timeSidebarHeight(
                 availableHeight: proxy.size.height - zoomReserve
             )
-            TimelineView(.periodic(from: .now, by: 60)) { timeline in
+            TimelineView(.periodic(from: .now, by: MapHomeLiveGate.shared.isCovered ? 86_400 : 60)) { timeline in
                 let minute = timelineSelectionMinute(at: timeline.date)
                 let timeSidebarInteractionWidth =
                     MapHomeTimeSidebarMath.interactionWidth(
@@ -529,7 +529,7 @@ extension MapHomeView {
     }
 
     func refreshTimeRailSegments() {
-        guard scenePhase == .active else { return }
+        guard isHomeLive else { return }
         guard model.isBootstrapped else {
             if !timeRailSegments.isEmpty {
                 timeRailSegments = []

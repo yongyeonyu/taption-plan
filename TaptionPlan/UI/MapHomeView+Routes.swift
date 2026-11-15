@@ -81,19 +81,19 @@ extension MapHomeView {
                 scheduleExpectedRouteRefresh()
             }
         }
-        .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
+        .onChange(of: homeLiveRoute.readings.last?.id) { _, _ in
             guard Calendar.autoupdatingCurrent.isDateInToday(
                 model.selectedDate
             ) else { return }
             if refreshTransitBoardingCandidatesIfNeeded(
-                at: model.liveRouteState.readings.last?.timestamp ?? .now
+                at: homeLiveRoute.readings.last?.timestamp ?? .now
             ) {
                 scheduleTransitPOIRefresh()
             }
             scheduleLiveRouteProjectionRefresh()
             scheduleExpectedRouteRefresh()
         }
-        .onChange(of: model.liveRouteState.lastUpdatedAt) { _, _ in
+        .onChange(of: homeLiveRoute.lastUpdatedAt) { _, _ in
             guard Calendar.autoupdatingCurrent.isDateInToday(
                 model.selectedDate
             ) else { return }
@@ -105,31 +105,57 @@ extension MapHomeView {
             if startupCameraPolicy.shouldRestoreZoom(on: phase) {
                 restoreInitialMapZoom()
             }
-            if phase != .active {
-                routeReadingsPreparationTask?.cancel()
-                routeReadingsPreparationTask = nil
-                routeReadingsPreparationGeneration.advance()
-                lastPreparedRouteReadingsSignature = nil
-                liveRouteProjectionRefreshTask?.cancel()
-                liveRouteProjectionRefreshTask = nil
-                expectedRouteRefreshTask?.cancel()
-                expectedRouteRefreshTask = nil
-                expectedRouteRefreshGeneration &+= 1
-                work.expectedRouteRefreshGate.invalidate()
-                pendingForecastRouteState = nil
-                routeDocumentProjectionGate.reset()
-                transitPOIRefreshTask?.cancel()
-                transitPOIRefreshTask = nil
-                transitPOIRefreshGeneration &+= 1
-                stopDayPlayback(resetProgress: true)
-            } else {
-                refreshHomeGrowth(at: .now)
-                refreshTimeRailSegments()
-                transitBoardingReadingsRevision &+= 1
-                scheduleTransitPOIRefresh()
-                scheduleExpectedRouteRefresh()
-                prepareRouteProjectionReadings()
-            }
+            applyHomeVisibility(isLive: phase == .active && !MapHomeLiveGate.shared.isCovered)
+        }
+        .onChange(of: MapHomeLiveGate.shared.isCovered) { _, isCovered in
+            applyHomeCover(isCovered)
+        }
+    }
+
+    /// 홈이 보이지 않게 되면 화면용 작업을 멈추고, 다시 보이면 한 번에 따라잡는다.
+    /// 앱이 뒤로 갈 때와 가계부가 홈을 덮을 때가 같은 길을 쓴다(LGS1115A01).
+    func applyHomeVisibility(isLive: Bool) {
+        if !isLive {
+            routeReadingsPreparationTask?.cancel()
+            routeReadingsPreparationTask = nil
+            routeReadingsPreparationGeneration.advance()
+            lastPreparedRouteReadingsSignature = nil
+            liveRouteProjectionRefreshTask?.cancel()
+            liveRouteProjectionRefreshTask = nil
+            expectedRouteRefreshTask?.cancel()
+            expectedRouteRefreshTask = nil
+            expectedRouteRefreshGeneration &+= 1
+            work.expectedRouteRefreshGate.invalidate()
+            pendingForecastRouteState = nil
+            routeDocumentProjectionGate.reset()
+            transitPOIRefreshTask?.cancel()
+            transitPOIRefreshTask = nil
+            transitPOIRefreshGeneration &+= 1
+            stopDayPlayback(resetProgress: true)
+        } else {
+            refreshHomeGrowth(at: .now)
+            refreshTimeRailSegments()
+            transitBoardingReadingsRevision &+= 1
+            scheduleTransitPOIRefresh()
+            scheduleExpectedRouteRefresh()
+            prepareRouteProjectionReadings()
+        }
+    }
+
+    /// 가계부가 덮는 동안은 나침반도 쉬고, 닫히면 미뤄 둔 투영을 그리고 따라가던 위치로 돌아온다.
+    func applyHomeCover(_ isCovered: Bool) {
+        if compassControlState.followsHeading {
+            if isCovered { headingMonitor.stop() } else { headingMonitor.start() }
+        }
+        guard scenePhase == .active else { return }
+        applyHomeVisibility(isLive: !isCovered)
+        guard !isCovered else { return }
+        if Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) {
+            scheduleLiveRouteProjectionRefresh()
+        }
+        flushDeferredWBSPlaybackProjection()
+        if MapHomeUserTrackingPolicy.focusesLocationUpdates(in: userTrackingMode) {
+            focusDisplayedLocation(using: nil)
         }
     }
 
