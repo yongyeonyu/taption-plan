@@ -102,3 +102,38 @@ extension MapHomeView {
         MapHomeLastKnownLocationPolicy.isValid(point)
     }
 }
+
+extension MapHomeView {
+    /// 고른 날의 자료를 다 읽었는데 기록·머문 곳·이동·센서가 모두 비었다(HUX1116A02).
+    var selectedDayIsEmpty: Bool {
+        guard !isDayDataLoading, let day = currentDayDataSnapshot, day.isComplete else { return false }
+        return day.actuals.isEmpty && day.places.isEmpty && day.travel.isEmpty && day.readings.isEmpty
+    }
+
+    /// 안내 띠를 올릴 수 있는 화면 상태. 사진링이 같은 자리를 쓰므로 사진이 있는 날은 띠를 띄우지 않는다.
+    var showsStatusBandLayer: Bool {
+        !isScreenRecording && (!isMenuOpen || isWideLayout) && layoutStyle.movesActionsToBottom
+            && !isTravelMode && !isDayPlaybackRunning && !isSearchExpanded
+            && photoBrowserSelection == nil && browsablePhotos.isEmpty
+    }
+
+    /// 기록 없는 날·권한 꺼짐 안내 띠. 아래 메뉴 바로 위, 왼쪽 정렬.
+    var statusBandLayer: some View {
+        MapHomeStatusBand(
+            language: language,
+            dayKey: MapHomeStatusBandPolicy.dayKey(model.selectedDate),
+            isToday: Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
+            dayIsEmpty: selectedDayIsEmpty,
+            isHomeLive: isHomeLive,
+            permissionsReady: { sensorCollectionPermissionGate.sensorCollectionReady },
+            onCalendar: { isCalendarPresented = true },
+            onPermissions: { openMenu() }
+        )
+        .equatable()
+        .padding(.leading, MapHomeBottomBarMetrics.edgeMargin)
+        .padding(.trailing, isSidebarVisible ? timeRailWidth + 22 : MapHomeBottomBarMetrics.edgeMargin)
+        .padding(.bottom, MapHomeBottomBarMetrics.reservedHeight + 8)
+        .frame(maxWidth: MapHomeWideLayoutPolicy.actionBarWidth(viewportWidth: mapViewportSize.width).map { $0 + MapHomeBottomBarMetrics.edgeMargin * 2 } ?? .infinity, maxHeight: .infinity, alignment: .bottom)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}

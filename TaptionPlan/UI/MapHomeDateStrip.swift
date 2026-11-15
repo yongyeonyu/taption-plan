@@ -164,6 +164,8 @@ struct MapHomeDateStrip: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(day.formatted(Date.FormatStyle().month(.wide).day().weekday(.wide).locale(language.locale)))
+        .accessibilityValue(markedDays.contains(day) ? language.text("메모·일정 있음", "Has memos or events") : "")
         .disabled(minimumDay.map { day < $0 } ?? false)
         .opacity(minimumDay.map { day < $0 } ?? false ? 0.3 : 1)
     }

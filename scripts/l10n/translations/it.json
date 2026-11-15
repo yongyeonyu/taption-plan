@@ -5920,6 +5920,19 @@
 "이 날의 경로 기록을 다 불러오지 못했습니다.|Couldn't load all of this day's route records.": "Impossibile caricare tutte le registrazioni del percorso di questo giorno.",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "Come attività IA vengono inviati solo orari, differenze e scostamento dal budget. Niente coordinate né dati di pagamento.",
 "지연 {0}|Late {0}": "Ritardo {0}",
-"진행 중|ongoing": "in corso"
+"진행 중|ongoing": "in corso",
+"{0} 메모|{0} memo": "Memo: {0}",
+"{0} 일정|{0} event": "Evento: {0}",
+"드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다|Drag to move the time, double tap to open the clip editor": "Trascina per spostare l’ora, tocca due volte per aprire l’editor delle clip",
+"메모·일정 있음|Has memos or events": "Contiene memo o eventi",
+"보기|View": "Vedi",
+"시간 선택|Pick a time": "Scegli un’ora",
+"위치 권한이 모자라요|Location access is limited": "L’accesso alla posizione è limitato",
+"이 날은 기록이 없어요|No records for this day": "Nessuna registrazione per questo giorno",
+"일상|Everyday": "Quotidiano",
+"자동 기록에 필요한 권한이 꺼져 있어요|Permissions for automatic recording are off": "Le autorizzazioni per la registrazione automatica sono disattivate",
+"집으로 옮기고 하루 요약을 엽니다|Moves to home and opens the day summary": "Va a casa e apre il riepilogo del giorno",
+"한 번 누르면 오늘로 돌아갑니다|Tap to return to today": "Tocca per tornare a oggi",
+"화면 오른쪽 끝까지 끌어 시간을 선택합니다|Drag along the right edge to pick a time": "Trascina lungo il bordo destro per scegliere un’ora"
 }
 }

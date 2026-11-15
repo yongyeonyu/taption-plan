@@ -5920,6 +5920,19 @@
 "이 날의 경로 기록을 다 불러오지 못했습니다.|Couldn't load all of this day's route records.": "इस दिन के मार्ग रिकॉर्ड पूरे लोड नहीं हो सके।",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "केवल कार्यक्रम के समय, अंतर और बजट का अंतर AI कार्य के रूप में भेजे जाते हैं। निर्देशांक या भुगतान जानकारी नहीं भेजी जाती।",
 "지연 {0}|Late {0}": "देरी {0}",
-"진행 중|ongoing": "जारी"
+"진행 중|ongoing": "जारी",
+"{0} 메모|{0} memo": "मेमो: {0}",
+"{0} 일정|{0} event": "इवेंट: {0}",
+"드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다|Drag to move the time, double tap to open the clip editor": "समय बदलने के लिए खींचें, क्लिप संपादक खोलने के लिए दो बार टैप करें",
+"메모·일정 있음|Has memos or events": "मेमो या इवेंट हैं",
+"보기|View": "देखें",
+"시간 선택|Pick a time": "समय चुनें",
+"위치 권한이 모자라요|Location access is limited": "स्थान की अनुमति अधूरी है",
+"이 날은 기록이 없어요|No records for this day": "इस दिन का कोई रिकॉर्ड नहीं है",
+"일상|Everyday": "रोज़मर्रा",
+"자동 기록에 필요한 권한이 꺼져 있어요|Permissions for automatic recording are off": "अपने-आप रिकॉर्ड करने के लिए ज़रूरी अनुमतियाँ बंद हैं",
+"집으로 옮기고 하루 요약을 엽니다|Moves to home and opens the day summary": "घर पर ले जाता है और दिन का सारांश खोलता है",
+"한 번 누르면 오늘로 돌아갑니다|Tap to return to today": "आज पर लौटने के लिए टैप करें",
+"화면 오른쪽 끝까지 끌어 시간을 선택합니다|Drag along the right edge to pick a time": "समय चुनने के लिए दाएँ किनारे पर खींचें"
 }
 }

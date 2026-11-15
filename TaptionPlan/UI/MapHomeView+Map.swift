@@ -152,6 +152,7 @@ extension MapHomeView {
             TaptionBarIcon(systemImage: "magnifyingglass", size: 25)
                 .frame(width: 40, height: 40)
                 .background { TaptionStickerDisc() }
+                .taptionTouchTarget(visualWidth: 40, visualHeight: 40)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(language.text("장소 검색", "Search places"))

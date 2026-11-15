@@ -506,9 +506,11 @@ extension MapHomeView {
                     .fill(currentCoordinate == nil ? Color.tpInk.opacity(0.3) : Color.tpAccent)
                     .frame(width: 7, height: 7)
                 Text(
-                    currentCoordinate == nil
-                        ? language.text("위치 기록을 기다리는 중", "Waiting for location")
-                        : language.text("현재 위치 기록 중", "Recording current location")
+                    currentCoordinate != nil
+                        ? language.text("현재 위치 기록 중", "Recording current location")
+                        : sensorCollectionPermissionGate.sensorCollectionMissing.contains(where: { $0 == .locationAlways || $0 == .locationPrecise })
+                            ? language.text("위치 권한이 모자라요", "Location access is limited")
+                            : language.text("위치 기록을 기다리는 중", "Waiting for location")
                 )
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(.secondary)

@@ -646,7 +646,14 @@ struct MapHomeView: View {
     var layoutStyle: MapHomeLayoutStyle { .tabBar }
 
     /// 사이드바를 펼치고 접는 튕김. 펼칠 때는 위에서 아래로 쫙 내려오고, 접을 때는 아래부터 위로 줄어든다.
-    static let sidebarToggleSpring = Animation.spring(response: 0.5, dampingFraction: 0.62)
+    /// 「동작 줄이기」가 켜져 있으면 튕기지 않고 짧게 바뀐다(HUX1116A02).
+    static var sidebarToggleSpring: Animation {
+        UIAccessibility.isReduceMotionEnabled ? .easeInOut(duration: 0.2) : .spring(response: 0.5, dampingFraction: 0.62)
+    }
+
+    static var dateBadgeSpring: Animation {
+        UIAccessibility.isReduceMotionEnabled ? .easeInOut(duration: 0.15) : .spring(response: 0.3, dampingFraction: 0.85)
+    }
 
     var selectedDaySpan: TimeSpan { MapHomeCounterTimelinePolicy.daySpan(of: model.selectedDate) }
 }

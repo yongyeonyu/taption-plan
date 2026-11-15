@@ -1969,4 +1969,26 @@ final class MapHomeLiveGateTests: XCTestCase {
         presenter.isPresented = false
         XCTAssertFalse(MapHomeLiveGate.shared.isCovered)
     }
+
+    // MARK: - Status band (HUX1116A02)
+
+    func testStatusBandShowsEmptyDayOnlyOnPastDaysAndPermissionsOnlyToday() {
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: false, dayIsEmpty: true, permissionsReady: false), .emptyDay)
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: false, dayIsEmpty: false, permissionsReady: false))
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: true, permissionsReady: false), .permissions)
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: true, permissionsReady: true))
+    }
+
+    func testStatusBandDismissalIsPerKindAndDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let day = calendar.date(from: DateComponents(year: 2026, month: 11, day: 3, hour: 23))!
+        let key = MapHomeStatusBandPolicy.dayKey(day, calendar: calendar)
+        XCTAssertEqual(key, "2026-11-03")
+        XCTAssertEqual(MapHomeStatusBandPolicy.dismissalToken(.emptyDay, dayKey: key), "emptyDay:2026-11-03")
+        XCTAssertNotEqual(
+            MapHomeStatusBandPolicy.dismissalToken(.emptyDay, dayKey: key),
+            MapHomeStatusBandPolicy.dismissalToken(.permissions, dayKey: key)
+        )
+    }
 }

@@ -425,3 +425,96 @@ struct MapHomePawprintLedgerKey: Equatable {
     let lastID: UUID?
     let railSpans: [Double]
 }
+
+// MARK: - 홈 안내 띠 (HUX1116A02)
+
+/// 아래 메뉴 위 한 줄 띠에 무엇을 보일지. 순수 판정이라 따로 시험한다.
+enum MapHomeStatusBandKind: String, Equatable, Sendable {
+    /// 지난 날인데 기록이 하나도 없다.
+    case emptyDay
+    /// 오늘인데 자동 기록에 필요한 권한이 모자라다.
+    case permissions
+}
+
+enum MapHomeStatusBandPolicy {
+    static func kind(isToday: Bool, dayIsEmpty: Bool, permissionsReady: Bool) -> MapHomeStatusBandKind? {
+        if isToday { return permissionsReady ? nil : .permissions }
+        return dayIsEmpty ? .emptyDay : nil
+    }
+
+    /// 닫은 띠를 기억하는 값. 같은 날 같은 띠만 다시 안 뜬다.
+    static func dismissalToken(_ kind: MapHomeStatusBandKind, dayKey: String) -> String {
+        "\(kind.rawValue):\(dayKey)"
+    }
+
+    static func dayKey(_ date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+}
+
+/// 기록 없는 날·권한 꺼짐을 알리는 한 줄 띠. 값이 같으면 다시 그리지 않는다(권한은 홈이 다시 살아날 때 다시 읽는다).
+struct MapHomeStatusBand: View, Equatable {
+    let language: MapHomeLanguage
+    let dayKey: String
+    let isToday: Bool
+    let dayIsEmpty: Bool
+    let isHomeLive: Bool
+    let permissionsReady: () -> Bool
+    let onCalendar: () -> Void
+    let onPermissions: () -> Void
+
+    @AppStorage("mapHomeStatusBandDismissed") private var dismissedToken = ""
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.language == rhs.language && lhs.dayKey == rhs.dayKey && lhs.isToday == rhs.isToday
+            && lhs.dayIsEmpty == rhs.dayIsEmpty && lhs.isHomeLive == rhs.isHomeLive
+    }
+
+    var body: some View {
+        let kind = MapHomeStatusBandPolicy.kind(
+            isToday: isToday,
+            dayIsEmpty: dayIsEmpty,
+            permissionsReady: isToday ? permissionsReady() : true
+        )
+        if let kind, dismissedToken != MapHomeStatusBandPolicy.dismissalToken(kind, dayKey: dayKey) {
+            HStack(spacing: 8) {
+                Text(message(kind))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                    .foregroundStyle(Color.tpInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Button(action: kind == .emptyDay ? onCalendar : onPermissions) {
+                    Text(kind == .emptyDay ? language.text("달력", "Calendar") : language.text("보기", "View"))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                        .foregroundStyle(Color.tpAccent)
+                        .lineLimit(1)
+                        .frame(minWidth: TaptionMenuMetrics.minimumHitSize, minHeight: TaptionMenuMetrics.minimumHitSize)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Button {
+                    dismissedToken = MapHomeStatusBandPolicy.dismissalToken(kind, dayKey: dayKey)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
+                        .frame(width: TaptionMenuMetrics.minimumHitSize, height: TaptionMenuMetrics.minimumHitSize)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("닫기", "Close"))
+            }
+            .padding(.leading, 14)
+            .taptionRaised(.rounded(TaptionCorner.large), fill: Color.tpSurface, gloss: false)
+            .accessibilityIdentifier("mapHomeStatusBand")
+        }
+    }
+
+    private func message(_ kind: MapHomeStatusBandKind) -> String {
+        switch kind {
+        case .emptyDay: language.text("이 날은 기록이 없어요", "No records for this day")
+        case .permissions: language.text("자동 기록에 필요한 권한이 꺼져 있어요", "Permissions for automatic recording are off")
+        }
+    }
+}

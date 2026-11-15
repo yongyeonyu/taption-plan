@@ -408,6 +408,7 @@ extension MapHomeView {
                 // 집으로 옮긴 뒤 하루 요약을 바로 연다.
                 isDaySummaryPresented = true
             }
+            .accessibilityHint(language.text("집으로 옮기고 하루 요약을 엽니다", "Moves to home and opens the day summary"))
             // 재생 중에는 **같은 자리에서** 「멈춤」으로만 바뀐다. 예전에는
             // 「일시 정지」와 「종료」를 나란히 두어 하단 항목이 하나 늘었는데,
             // 재생을 끝내려는 사람이 두 단추를 헷갈렸다(대표 요청: 단추를 늘리지 말 것).
@@ -478,7 +479,11 @@ extension MapHomeView {
             }
         }
         .accessibilityLabel(language.text("날짜 \(dateTitle)", "Date \(dateTitle)"))
-        .accessibilityHint(language.text("한 번 누르면 날짜 줄을 펼칩니다", "Tap to show the date strip"))
+        .accessibilityHint(
+            Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
+                ? language.text("한 번 누르면 날짜 줄을 펼칩니다", "Tap to show the date strip")
+                : language.text("한 번 누르면 오늘로 돌아갑니다", "Tap to return to today")
+        )
         // 화면 시험에서 이 배지를 이름으로 집는다. 날짜가 든 이름은 날마다 달라진다.
         .accessibilityIdentifier("mapHomeDateBadge")
         // 사이드바가 접혀 있으면 아래에 펼치기 화살표를 붙여 날짜 배지와 한 알약으로 묶는다. 펼친 날짜 줄 동안에는 숨긴다.
@@ -511,7 +516,7 @@ extension MapHomeView {
             }
             badge
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate))
+        .animation(MapHomeView.dateBadgeSpring, value: Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate))
     }
 
     /// 메모나 계획이 있는 날(하루의 시작 시각). 날짜 줄에 점으로 보여 준다.
@@ -528,10 +533,10 @@ extension MapHomeView {
     func handleDateBadgeTap() {
         if !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { jumpToTodayAndFitRoutes() }
+            withAnimation(MapHomeView.dateBadgeSpring) { jumpToTodayAndFitRoutes() }
             return
         }
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
+        withAnimation(MapHomeView.dateBadgeSpring) { isDateWeekExpanded.toggle() }
     }
 
     var header: some View {

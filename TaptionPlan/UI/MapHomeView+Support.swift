@@ -189,6 +189,8 @@ extension MapHomeView {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .zIndex(MapHomeLayerPriority.header - 0.5)
 
+            if showsStatusBandLayer { AnyView(statusBandLayer).zIndex(MapHomeLayerPriority.header - 0.25) }
+
             if !isScreenRecording, !isMenuOpen || isWideLayout, layoutStyle.movesActionsToBottom {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)

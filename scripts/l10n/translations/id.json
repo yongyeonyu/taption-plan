@@ -5920,6 +5920,19 @@
 "이 날의 경로 기록을 다 불러오지 못했습니다.|Couldn't load all of this day's route records.": "Catatan rute hari ini tidak dapat dimuat seluruhnya.",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "Hanya waktu jadwal, selisih, dan selisih anggaran yang dikirim sebagai tugas AI. Tanpa koordinat atau data pembayaran.",
 "지연 {0}|Late {0}": "Terlambat {0}",
-"진행 중|ongoing": "berlangsung"
+"진행 중|ongoing": "berlangsung",
+"{0} 메모|{0} memo": "Memo: {0}",
+"{0} 일정|{0} event": "Acara: {0}",
+"드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다|Drag to move the time, double tap to open the clip editor": "Seret untuk memindahkan waktu, ketuk dua kali untuk membuka editor klip",
+"메모·일정 있음|Has memos or events": "Ada memo atau acara",
+"보기|View": "Lihat",
+"시간 선택|Pick a time": "Pilih waktu",
+"위치 권한이 모자라요|Location access is limited": "Akses lokasi terbatas",
+"이 날은 기록이 없어요|No records for this day": "Tidak ada catatan untuk hari ini",
+"일상|Everyday": "Harian",
+"자동 기록에 필요한 권한이 꺼져 있어요|Permissions for automatic recording are off": "Izin untuk perekaman otomatis sedang mati",
+"집으로 옮기고 하루 요약을 엽니다|Moves to home and opens the day summary": "Pindah ke rumah dan membuka ringkasan hari",
+"한 번 누르면 오늘로 돌아갑니다|Tap to return to today": "Ketuk untuk kembali ke hari ini",
+"화면 오른쪽 끝까지 끌어 시간을 선택합니다|Drag along the right edge to pick a time": "Seret di tepi kanan untuk memilih waktu"
 }
 }
