@@ -1299,7 +1299,7 @@ struct MapHomeTimeSidebar: View {
 
     /// 사이드바 패널 모양.
     private var panelShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
+        RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous)
     }
 
     var body: some View {

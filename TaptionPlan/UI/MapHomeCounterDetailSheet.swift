@@ -412,9 +412,9 @@ struct MapHomeCounterDetailSheet: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
     }

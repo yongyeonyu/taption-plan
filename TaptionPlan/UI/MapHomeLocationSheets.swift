@@ -101,7 +101,7 @@ struct MapHomeUserLocationActionSheet: View {
                     .frame(width: 34, height: 34)
                     .background(
                         locationTint.opacity(0.12),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(locationName)
@@ -282,7 +282,7 @@ struct MapHomeSearchPinLocationSheet: View {
                         .padding(.vertical, 11)
                         .background(
                             destination.tint.opacity(0.10),
-                            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                         )
                     }
                     .buttonStyle(.plain)
@@ -322,7 +322,7 @@ struct MapHomeSearchPinLocationSheet: View {
                         .padding(.vertical, 11)
                         .background(
                             Color.tpReferenceBlue.opacity(0.10),
-                            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                         )
                     }
                     .buttonStyle(.plain)

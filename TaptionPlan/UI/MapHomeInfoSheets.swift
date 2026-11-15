@@ -137,7 +137,7 @@ struct MapHomeMarkerInfoSheet: View {
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(26)), weight: .bold))
                         .foregroundStyle(Color.tpAccent)
                         .frame(width: 52, height: 52)
-                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                     Text(title)
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                         .foregroundStyle(Color.tpInk)
@@ -316,9 +316,9 @@ struct MapHomeDaySummarySheet: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
         .accessibilityElement(children: .combine)
@@ -354,9 +354,9 @@ struct MapHomeDaySummarySheet: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
         .accessibilityElement(children: .combine)

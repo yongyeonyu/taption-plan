@@ -317,7 +317,7 @@ struct MapHomeSectionEditSheet: View {
                         visibleRange: visibleRange
                     )
                 ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous)
                         .fill(Color.tpSurface)
 
                     timelineGrid(height: trackHeight)
@@ -340,9 +340,9 @@ struct MapHomeSectionEditSheet: View {
                         height: trackHeight
                     )
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous)
                         .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                 }
                 .simultaneousGesture(sectionMagnifyGesture(height: trackHeight))
@@ -385,9 +385,9 @@ struct MapHomeSectionEditSheet: View {
             }
             .padding(.horizontal, 14)
             .frame(height: 52)
-            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                     .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
             }
             .contentShape(Rectangle())
@@ -593,10 +593,10 @@ struct MapHomeSectionEditSheet: View {
                 insertedDetailID == detail.id || selectedDetailID == detail.id
                     ? category.tint.opacity(0.30)
                     : category.tint.opacity(0.13),
-                in: RoundedRectangle(cornerRadius: 9)
+                in: RoundedRectangle(cornerRadius: TaptionCorner.medium)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 9)
+                RoundedRectangle(cornerRadius: TaptionCorner.medium)
                     .stroke(category.tint, lineWidth: selectedDetailID == detail.id ? 2.5 : 0)
             }
             .simultaneousGesture(TapGesture().onEnded { selectedDetailID = detail.id })
@@ -774,7 +774,7 @@ struct MapHomeSectionEditSheet: View {
                 - yPosition(visibleStart, height: height)
         )
         return ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .fill(piece.category.tint.opacity(0.88))
             if blockHeight >= 34 {
                 VStack(spacing: 2) {

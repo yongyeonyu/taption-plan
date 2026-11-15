@@ -93,7 +93,7 @@ struct MapHomeGrowthSheet: View {
                 .scaledToFit()
                 .frame(width: 68, height: 68)
                 .padding(8)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
             VStack(alignment: .leading, spacing: 7) {
                 Text(MapHomeGrowthPolicy.homeTitle(level: season.level, language: language))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
@@ -109,7 +109,7 @@ struct MapHomeGrowthSheet: View {
             }
         }
         .padding(14)
-        .background(Color.tpSurfaceCream, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.tpSurfaceCream, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
     }
 
     @ViewBuilder
@@ -142,7 +142,7 @@ struct MapHomeGrowthSheet: View {
                                 }
                             }
                             .frame(width: 44, height: 44)
-                            .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                            .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(displayName(candidate))
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
@@ -206,7 +206,7 @@ struct MapHomeGrowthSheet: View {
                             .foregroundStyle(Color.tpAccent)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
-                            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
@@ -232,7 +232,7 @@ struct MapHomeGrowthSheet: View {
                             let key = "\(x),\(y)"
                             if occupied[key] != nil {
                                 ZStack {
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                                         .fill(Color.tpPastelMint.opacity(0.5))
                                     if x == 0 && y == 0 {
                                         Image(MapHomeGrowthPolicy.artworkName(level: season.level))
@@ -251,7 +251,7 @@ struct MapHomeGrowthSheet: View {
                                 Button {
                                     placeLand(plotID, x: x, y: y)
                                 } label: {
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                                         .strokeBorder(Color.tpAccent.opacity(0.7), style: StrokeStyle(lineWidth: 1.2, dash: [4, 3]))
                                         .overlay {
                                             Image(systemName: "plus")
@@ -293,7 +293,7 @@ struct MapHomeGrowthSheet: View {
             )
             .frame(maxWidth: .infinity)
             .frame(height: 170)
-            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             Picker(language.text("종류", "Kind"), selection: $accessoryTab) {
                 ForEach(MapHomeAccessoryKind.allCases, id: \.self) { Text(accessoryKindName($0)).tag($0) }
             }
@@ -332,11 +332,11 @@ struct MapHomeGrowthSheet: View {
                     .frame(maxWidth: .infinity, minHeight: 46)
                     .background(
                         isOwned ? Color.tpAccent.opacity(0.10) : Color.tpInk.opacity(0.04),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                     )
                     .overlay {
                         if season.isEquipped(candidate.accessoryID) {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.tpAccent, lineWidth: 1.4)
+                            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous).stroke(Color.tpAccent, lineWidth: 1.4)
                         }
                     }
                 }
@@ -382,7 +382,7 @@ struct MapHomeGrowthSheet: View {
                             .foregroundStyle(Color.tpSecondary)
                     }
                     .padding(10)
-                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 }
             }
         }

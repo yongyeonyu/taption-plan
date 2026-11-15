@@ -67,10 +67,10 @@ struct MapHomeMapMemoMarker: View {
         .padding(.vertical, 6)
         .background(
             Color.tpPastelButter.opacity(0.94),
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .stroke(Color.tpReferenceGold.opacity(0.72), lineWidth: 1)
         }
         // 말풍선 꼬리: 아래 가운데 끝이 선택한 위치(핀 끝)에 닿는다.

@@ -316,7 +316,7 @@ extension MapHomeView {
         .padding(.trailing, destination == .user ? 8 : 2)
         .background(
             destination.tint.opacity(destination == .user ? 0.10 : 0.055),
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
         )
     }
 

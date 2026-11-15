@@ -404,13 +404,13 @@ struct MapHomePlaybackMusicPicker: View {
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity, minHeight: 40)
                 .foregroundStyle(Color.tpInk)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             Button { togglePreview() } label: {
                 Image(systemName: preview.playing == nil ? "play.fill" : "stop.fill")
                     .frame(width: 40, height: 40)
                     .foregroundStyle(canPreview ? Color.tpInk : Color.tpSecondary)
-                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(!canPreview)

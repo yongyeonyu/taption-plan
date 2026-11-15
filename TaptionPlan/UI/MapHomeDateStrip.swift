@@ -57,7 +57,7 @@ struct MapHomeDateStrip: View {
             dayArea(width: dayAreaWidth)
         }
         .frame(width: width, height: MapHomeWeekStripMath.height)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
         .taptionRaised(.rounded(18), gloss: false)
     }
 

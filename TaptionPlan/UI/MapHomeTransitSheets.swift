@@ -84,7 +84,7 @@ struct MapHomeTransitBoardingCandidateSheet: View {
                     .frame(width: 38, height: 38)
                     .background(
                         Color.tpTransitDark.opacity(0.12),
-                        in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                     )
                 VStack(alignment: .leading, spacing: 3) {
                     Text(TransitPlaceName.display(candidate.name, kind: candidate.kind, point: candidate.point, language: language))
@@ -321,13 +321,13 @@ struct MapHomeTransitLocationsSheet: View {
                 }
                 .padding(.horizontal, 12)
                 .frame(height: 44)
-                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 13))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
 
                 Button(language.text("검색", "Search")) { search() }
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 64, height: 44)
-                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 13))
+                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
                     .buttonStyle(.plain)
                     .disabled(
                         searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -384,9 +384,9 @@ struct MapHomeTransitLocationsSheet: View {
                     showsTraffic: false
                 ))
                 .environment(\.colorScheme, .light)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous)
                         .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                         .allowsHitTesting(false)
                 }
@@ -440,14 +440,14 @@ struct MapHomeTransitLocationsSheet: View {
                 TextField(language.text("이름", "Name"), text: $name)
                     .padding(.horizontal, 12)
                     .frame(height: 44)
-                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 13))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
                 Button(language.text("추가", "Add")) { addLocation() }
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 64, height: 44)
                     .background(
                         Color.tpReferenceBlue,
-                        in: RoundedRectangle(cornerRadius: 13)
+                        in: RoundedRectangle(cornerRadius: TaptionCorner.medium)
                     )
                     .buttonStyle(.plain)
                     .disabled(!canAddLocation)
@@ -455,7 +455,7 @@ struct MapHomeTransitLocationsSheet: View {
             }
         }
         .padding(14)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 22))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.sheet))
     }
 
     private var savedLocationsCard: some View {
@@ -507,7 +507,7 @@ struct MapHomeTransitLocationsSheet: View {
                                 .frame(width: 38, height: 38)
                                 .background(
                                     Color.tpReferenceBlue.opacity(0.11),
-                                    in: RoundedRectangle(cornerRadius: 11)
+                                    in: RoundedRectangle(cornerRadius: TaptionCorner.medium)
                                 )
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(location.name)
@@ -573,12 +573,12 @@ struct MapHomeTransitLocationsSheet: View {
                     selectedLocationID == location.id
                         ? Color.tpReferenceBlue.opacity(0.08)
                         : Color.white.opacity(0.78),
-                    in: RoundedRectangle(cornerRadius: 15)
+                    in: RoundedRectangle(cornerRadius: TaptionCorner.medium)
                 )
             }
         }
         .padding(14)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 22))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.sheet))
     }
 
     private var canAddLocation: Bool {
@@ -690,7 +690,7 @@ struct MapHomeTransitLocationNameEditor: View {
             TextField(language.text("이름", "Name"), text: $name)
                 .padding(.horizontal, 12)
                 .frame(height: 44)
-                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 13))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
             Stepper(value: $floor, in: FloorCalibrationPrompt.range) {
                 HStack {
                     Text(language.text("층수", "Floor"))
@@ -706,7 +706,7 @@ struct MapHomeTransitLocationNameEditor: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
-                    .background(Color.tpInk.opacity(0.07), in: RoundedRectangle(cornerRadius: 13))
+                    .background(Color.tpInk.opacity(0.07), in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
                     .buttonStyle(.plain)
                 Button(language.text("저장", "Save")) {
                     let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -719,7 +719,7 @@ struct MapHomeTransitLocationNameEditor: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
-                .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 13))
+                .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
                 .buttonStyle(.plain)
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
