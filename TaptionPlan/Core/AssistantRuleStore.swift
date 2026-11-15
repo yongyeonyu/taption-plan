@@ -68,7 +68,8 @@ enum AssistantRuleStore {
     /// 사본이 바뀌면 판단에 쓰는 사본과, 결제 문자 읽기 규칙(정규식)을 맞춘다.
     static func refreshSnapshot(_ defaults: UserDefaults = .standard) {
         let rules = split(effective(defaults)).rules
-        AssistantRuleSnapshot.set(rules)
+        // 공통 규칙(SRL1116A01)은 내 규칙·내 AI 규칙 뒤에 붙인다. 결제 문자 정규식은 아래 거울에 넣지 않고 읽을 때 따로 더한다.
+        AssistantRuleSnapshot.set(rules + SharedRuleStore.active(defaults).filter { RuleType(rawValue: $0.type).map(appliedTypes.contains) ?? false })
         mirrorPaymentRules(rules, defaults: defaults)
     }
 
@@ -118,6 +119,8 @@ enum AssistantRuleStore {
         var uploaded = Set<String>()
         guard MemoPolishQueue.hasConnection(defaults), let master = env.secrets.read(.master) else { return false }
         migrateIfNeeded(defaults)
+        // 서버와 맞춘 뒤(어느 길로 끝나든) 동의한 사용자의 새 AI 규칙을 공통 규칙 후보로 올린다(SRL1116A01).
+        defer { Task { await SharedRuleStore.uploadCandidates(env: env) } }
         let pending = outbox(defaults)
         if !pending.isEmpty {
             let body = try? JSONEncoder().encode(OpsBody(baseVersion: stored(defaults).version, ops: pending))

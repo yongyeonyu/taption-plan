@@ -244,6 +244,7 @@
 		A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */; };
 		D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D15ABA1114A1500000000006 /* AssistantDigestTests.swift */; };
 		D22A1114A220000000000005 /* AssistantMoreActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D22A1114A220000000000006 /* AssistantMoreActionTests.swift */; };
+		ARL1116A01000000000003 /* SharedRuleStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRL1116A01000000000003 /* SharedRuleStoreTests.swift */; };
 		A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */; };
 		D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */; };
 		D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */; };
@@ -341,6 +342,7 @@
 		A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111X0100000000000001 /* GPXTrackExport.swift */; };
 		A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111T0100000000000001 /* LedgerTollRepeat.swift */; };
 		A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PRL1112A01000000000001 /* LedgerMessageRules.swift */; };
+		ARL1116A01000000000001 /* SharedRuleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRL1116A01000000000001 /* SharedRuleStore.swift */; };
 		A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AIX1114A01000000000001 /* AssistantRuleStore.swift */; };
 		A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PAS1113A01000000000001 /* PaymentAlertSources.swift */; };
 		A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000001 /* LedgerTransitFare.swift */; };
@@ -578,6 +580,7 @@
 		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
 		CC4A1111A010000000000002 /* FirstRunCarPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A1111A010000000000001 /* FirstRunCarPage.swift */; };
+		ARL1116A01000000000002 /* SharedRulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRL1116A01000000000002 /* SharedRulesView.swift */; };
 		A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000005 /* AssistantSafetyViews.swift */; };
 		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
 		B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */; };
@@ -1063,6 +1066,7 @@
 		F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommandEditTests.swift; sourceTree = "<group>"; };
 		D15ABA1114A1500000000006 /* AssistantDigestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDigestTests.swift; sourceTree = "<group>"; };
 		D22A1114A220000000000006 /* AssistantMoreActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMoreActionTests.swift; sourceTree = "<group>"; };
+		FRL1116A01000000000003 /* SharedRuleStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedRuleStoreTests.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPhase3Tests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLastKnownLocationPolicyTests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeExpectedRouteRefreshGateTests.swift; sourceTree = "<group>"; };
@@ -1159,6 +1163,7 @@
 		F1G1111X0100000000000001 /* GPXTrackExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPXTrackExport.swift; sourceTree = "<group>"; };
 		F1L1111T0100000000000001 /* LedgerTollRepeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollRepeat.swift; sourceTree = "<group>"; };
 		F1PRL1112A01000000000001 /* LedgerMessageRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMessageRules.swift; sourceTree = "<group>"; };
+		FRL1116A01000000000001 /* SharedRuleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedRuleStore.swift; sourceTree = "<group>"; };
 		F1AIX1114A01000000000001 /* AssistantRuleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRuleStore.swift; sourceTree = "<group>"; };
 		F1PAS1113A01000000000001 /* PaymentAlertSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentAlertSources.swift; sourceTree = "<group>"; };
 		F1TRF1113A01000000000001 /* LedgerTransitFare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTransitFare.swift; sourceTree = "<group>"; };
@@ -1386,6 +1391,7 @@
 		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
 		CC4A1111A010000000000001 /* FirstRunCarPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunCarPage.swift; sourceTree = "<group>"; };
+		FRL1116A01000000000002 /* SharedRulesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedRulesView.swift; sourceTree = "<group>"; };
 		F1A1110A0200000000000005 /* AssistantSafetyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSafetyViews.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationAlwaysPrompt.swift; sourceTree = "<group>"; };
@@ -1764,6 +1770,7 @@
 				F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */,
 				D15ABA1114A1500000000006 /* AssistantDigestTests.swift */,
 				D22A1114A220000000000006 /* AssistantMoreActionTests.swift */,
+				FRL1116A01000000000003 /* SharedRuleStoreTests.swift */,
 				F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */,
 				D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */,
 				D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */,
@@ -1976,6 +1983,7 @@
 				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
 				CC4A1111A010000000000001 /* FirstRunCarPage.swift */,
+				FRL1116A01000000000002 /* SharedRulesView.swift */,
 				F1A1110A0200000000000005 /* AssistantSafetyViews.swift */,
 				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
 				B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */,
@@ -2317,6 +2325,7 @@
 				F1G1111X0100000000000001 /* GPXTrackExport.swift */,
 				F1L1111T0100000000000001 /* LedgerTollRepeat.swift */,
 				F1PRL1112A01000000000001 /* LedgerMessageRules.swift */,
+				FRL1116A01000000000001 /* SharedRuleStore.swift */,
 				F1AIX1114A01000000000001 /* AssistantRuleStore.swift */,
 				F1PAS1113A01000000000001 /* PaymentAlertSources.swift */,
 				F1TRF1113A01000000000001 /* LedgerTransitFare.swift */,
@@ -3011,6 +3020,7 @@
 				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
 				CC4A1111A010000000000002 /* FirstRunCarPage.swift in Sources */,
+				ARL1116A01000000000002 /* SharedRulesView.swift in Sources */,
 				A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */,
 				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
 				B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */,
@@ -3281,6 +3291,7 @@
 				A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */,
 				A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */,
 				A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */,
+				ARL1116A01000000000001 /* SharedRuleStore.swift in Sources */,
 				A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */,
 				A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */,
 				A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */,
@@ -3384,6 +3395,7 @@
 				A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */,
 				D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */,
 				D22A1114A220000000000005 /* AssistantMoreActionTests.swift in Sources */,
+				ARL1116A01000000000003 /* SharedRuleStoreTests.swift in Sources */,
 				A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */,
 				D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */,
 				D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */,

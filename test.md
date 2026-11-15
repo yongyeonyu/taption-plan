@@ -9,6 +9,14 @@
 - 번역 점검: `check.py` 실패 0(긴 문구 3은 전부터 있던 것), `generate.py`로 카탈로그 다시 씀.
 - 하지 않은 것: 바뀐 화면을 시뮬레이터·기기에서 눈으로 보지 않았다(다른 세션들과 시뮬레이터를 나눠 쓰는 중). 새 동작만 보는 단위 시험은 더하지 않았다(화면 연결뿐). 전체 단위·UI 시험 미실행. 예전 지도 여행 모드(`isTravelMode`)의 코드는 들어가는 길만 끊겼고 남아 있다.
 
+## SRL1116A01 · 공통 규칙 — 서버에서 받아 쓰기와 후보 수집·검토·배포 (2026-11-16)
+
+- 설계: `docs/SHARED_RULES_PLAN.md`. 대표 객관식 답: 동의 = AI 연결 화면의 기본 꺼짐 스위치 하나(확인창 없음), 수집 범위 = 가게→분류 포함(기기 2대 이상일 때만 검토 목록), 알림 규칙 = 앱별 기본값 포함(대표가 직접 작성), 받기 = 기본 켜짐, 약관 문구 = 앱 안 「공통 규칙」 화면에도 요약(초안 표시).
+- 서버 `npm test`: 199건 통과·실패 0(새 `test/shared.test.mjs` 5건: 개인 정보 거르기 견본, 서명 묶음 받기·304, 관리 토큰·서명·판 번호·개인 정보 거절·거두기, 관리 길 닫힘, 후보 2대 이상·익명·하루 한도·만료).
+- `TaptionRules` 패키지 `swift test`: 6건 통과(새 `SharedRuleFilterTests`가 서버와 같은 `shared-rules.json`을 읽음).
+- 못 한 것: **앱 Debug 빌드와 앱 단위 시험(`SharedRuleStoreTests`·`LedgerTests`·`AssistantRelayTests`)은 실행하지 못했다.** 다른 세션들이 빌드 잠금을 쥐고 있었고, 이어 맥북 디스크가 8.2GB로 10GB 아래가 되어(공지) 대기하던 작업을 껐다. 앱 코드(`SharedRuleStore`·`SharedRulesView`·판단 순서 연결·pbxproj 등록)는 컴파일 확인이 안 된 상태다. 디스크 여유나 외장 볼륨 빌드가 정해지면 다음을 실행한다: `xcodebuild test … -only-testing:TaptionPlanTests/SharedRuleStoreTests -only-testing:TaptionPlanTests/LedgerTests -only-testing:TaptionPlanTests/AssistantRelayTests`.
+- 서버 미배포, 서명 키 미생성(`admin.mjs keygen` 미실행), 앱 공개 키 비어 있음(공통 규칙을 받지 않음), 실기기 미확인. 새 화면 문구는 12개 언어 번역 전(영어로 보임). 약관·방침은 초안이며 확정은 대표.
+
 ## APS1115A01·BGM1115A01 · 일레븐랩스로 App Store 자료와 재생 음악 (2026-11-15~16)
 
 - 일레븐랩스(대표 Chrome 로그인)로 만든 것: 배경 그림 24장(Seedream 5.5, 9:16 2K, 장당 73) 중 6장 선택 → `design/APS1115A01/source/backgrounds/`(JPEG 88). 미리보기용 음악 2곡(30초, 900). 재생 음악 20곡(1분, 곡당 2가지 1,800×10) 중 10곡 선택. 홍보 장면 3편(Gemini Omni Flash 1.2, 5초 9:16 720p, 편당 2,153; 생성 전 「사용 금지 정책」 동의는 대표 객관식 답 「동의하고 3편 생성」). Seedance 2.5는 5초에 14,004라 쓰지 않음.
