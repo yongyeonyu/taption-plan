@@ -3319,3 +3319,12 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 새 시험 `MapHomeLiveGateTests` 5건. main에 합친 뒤 전체 단위 시험 2,930건, 건너뜀 25, 실패 0(`merged-unit-1.log`). 구조 지표·import 경계 통과.
 - 닫혀 있을 때 바뀔 수 있는 곳: 나침반 모드에서 가계부를 열면 방향 센서가 멈췄다 닫으면 다시 켜짐, 재생은 가계부를 열면 멈춤.
 - 하지 않은 것: 실기기 체감·측정, Release 수치, UI 시험. 다른 전체 화면 덮개(여행 홈 등)는 아직 연결하지 않음.
+
+## LGS1115A01 · 아이폰 11 Pro 실기기 확인 (2026-11-15 오후, 대표 지시 「아이폰11로 검증」)
+
+- 같은 측정 모드(`-autoBenchLedgerScroll`, 기록 300건을 넣고 가계부를 열어 4초씩 굴린 뒤 지움)를 고치기 전 판(`cdfbdc95`)과 고친 판(`543452d3`)을 Debug로 차례로 설치해 2회씩 잼. 기기는 집에 놓여 있어 이동 없음. 아이폰 11은 60Hz라 4초 = 240프레임. 로그 `build/validation/LGS1115A01/device/bench-*.log`.
+  - 굴릴 때(3구간 × 2회): 고치기 전 그려진 프레임 129~220, 20ms 넘는 프레임 17~101, 40ms 넘는 프레임 2~36, 최대 55~93ms. 고친 뒤 238~239, 20ms 넘는 프레임 **0**, 최대 17~18ms(6구간 모두).
+  - 가만히 열어 둠 4초: 메인 스레드 CPU 고치기 전 1,346~1,451ms → 고친 뒤 88·387ms(2회째는 시작 직후 한 프레임 277ms).
+  - 닫은 뒤 5초: 20ms 넘는 프레임 9~12, 최대 84~102ms(따라잡기 비용, 줄이지 않음).
+- 기기 단위 시험(`LedgerTests`·`LedgerDayGroupingTests`·`MapHomeLiveGateTests`·`MapHomeLiveMapTests`·`AssistantRetentionRetireTests`·`AssistantRelayTests`·`TripShareLedgerTests`·`TripShareFoundationTests`): 185건, 실패 0(`device/unit.log`).
+- 아이폰 11에는 지금 HEAD의 Debug 판이 깔려 있음(이전 TestFlight 판 위에 덮음). 이동 중 측정·눈 확인(단축어 안내·AI 연결·글자 통일)은 하지 않음.
