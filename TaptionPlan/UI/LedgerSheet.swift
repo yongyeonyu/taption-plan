@@ -43,7 +43,7 @@ struct LedgerSheet: View {
                             Button { editing = entry } label: { LedgerRow(entry: entry, language: language) }
                                 .buttonStyle(.plain)
                                 .swipeActions {
-                                    Button(language.text("지우기", "Delete"), role: .destructive) { Task { await book.remove(entry) } }
+                                    Button(language.text("지우기", "Delete"), role: .destructive) { Task { await TripShareLedger.remove(entry, alertingIn: language) } }
                                     if let tripID = entry.transfer?.tripID, book.trip(tripID) != nil {
                                         Button(language.text("여행 장부", "Trip ledger")) { path = [tripID] }
                                     }
@@ -319,6 +319,8 @@ struct LedgerEntryForm: View {
     @Environment(\.dismiss) private var dismiss
     @State private var amountText = ""
     @State private var manualRateText = ""
+    @State private var shareScope = TripShareExpenseScope.ownHidden
+    @State private var shareFailure: TripShareLedger.Failure?
     private var book: LedgerBook { .shared }
     static let currencies = ["KRW", "USD", "JPY", "EUR", "CNY", "TWD", "HKD", "THB", "VND", "SGD", "PHP", "IDR", "GBP", "AUD", "CAD"]
 
@@ -339,7 +341,9 @@ struct LedgerEntryForm: View {
                 } else {
                     entrySection
                 }
-                if let members, entry.kind == .expense, entry.transfer == nil {
+                if let tripID = entry.tripID, entry.kind == .expense, TripShareLedger.handles(entry) {
+                    TripShareExpenseScopePicker(language: language, tripID: tripID, entry: entry, isNew: isNew, scope: $shareScope, payer: $entry.payer, shareNames: $entry.shareNames, failure: $shareFailure)
+                } else if let members, entry.kind == .expense, entry.transfer == nil {
                     LedgerShareSection(language: language, members: members, payer: $entry.payer, shareNames: $entry.shareNames)
                 } else if let members, !members.isEmpty, entry.kind == .income, entry.transfer == nil {
                     LedgerIncomeFromSection(language: language, members: members, payer: $entry.payer)
@@ -358,8 +362,8 @@ struct LedgerEntryForm: View {
                         Button(language.text("지우기", "Delete"), role: .destructive) {
                             let value = entry
                             Task {
-                                await book.remove(value)
-                                dismiss()
+                                shareFailure = await TripShareLedger.remove(value)
+                                if shareFailure == nil { dismiss() }
                             }
                         }
                     } footer: {
@@ -470,6 +474,12 @@ struct LedgerEntryForm: View {
             if value.transfer != nil {
                 await book.saveTransfer(value)
                 return dismiss()
+            }
+            if TripShareLedger.handles(value) {
+                // 함께 쓰는 여행: 고른 범위대로 방에 올리거나 내린 뒤에 가계부에 쓴다(TSH1114A26).
+                shareFailure = await TripShareLedger.save(value, scope: shareScope)
+                if shareFailure == nil { dismiss() }
+                return
             }
             await book.save(value)
             // 여행 기록이 바뀌면 끝난 여행의 정산 짝 기록도 다시 맞춘다.

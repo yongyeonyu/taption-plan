@@ -33,11 +33,17 @@ struct LedgerTripView: View {
                         Button { editing = entry } label: { LedgerTripRow(entry: entry, trip: trip, language: language) }
                             .buttonStyle(.plain)
                             .swipeActions {
-                                Button(language.text("지우기", "Delete"), role: .destructive) { Task { await book.remove(entry) } }
+                                Button(language.text("지우기", "Delete"), role: .destructive) { Task { await TripShareLedger.remove(entry, alertingIn: language) } }
                             }
                     }
                 }
-                LedgerTripSheetSection(trip: trip, sheet: sheet, language: language)
+                if TripShareStore.shared.isShared(tripID), let model = TripShareStore.shared.model {
+                    // 함께 쓰는 여행: 내 기준 정산 대신 모두가 같은 결과를 보는 공유 정산과 일행의 공개 지출(TSH1114A26).
+                    TripShareOpenExpensesSection(language: language, tripID: tripID)
+                    TripShareSettlementSection(model: model, language: language, tripID: tripID)
+                } else {
+                    LedgerTripSheetSection(trip: trip, sheet: sheet, language: language)
+                }
             }
             .listRowBackground(Color.tpSurface)
         }
@@ -52,7 +58,10 @@ struct LedgerTripView: View {
                         .accessibilityLabel(language.text("여행 기록 더하기", "Add trip entry"))
                 }
             }
-            .task { await book.syncTrip(tripID) }
+            .task {
+                await book.syncTrip(tripID)
+                await TripShareLedger.open(tripID: tripID)
+            }
             .sheet(isPresented: $isAdding) {
                 LedgerEntryForm(language: language, entry: LedgerEntry(occurredAt: .now, amount: 0, title: "", tripID: tripID), members: trip.members)
             }
