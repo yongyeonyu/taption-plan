@@ -3328,3 +3328,11 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
   - 닫은 뒤 5초: 20ms 넘는 프레임 9~12, 최대 84~102ms(따라잡기 비용, 줄이지 않음).
 - 기기 단위 시험(`LedgerTests`·`LedgerDayGroupingTests`·`MapHomeLiveGateTests`·`MapHomeLiveMapTests`·`AssistantRetentionRetireTests`·`AssistantRelayTests`·`TripShareLedgerTests`·`TripShareFoundationTests`): 185건, 실패 0(`device/unit.log`).
 - 아이폰 11에는 지금 HEAD의 Debug 판이 깔려 있음(이전 TestFlight 판 위에 덮음). 이동 중 측정·눈 확인(단축어 안내·AI 연결·글자 통일)은 하지 않음.
+
+## TPY1115A01 · 이체·입금 기록에 보낸 사람·받는 사람 이름 (2026-11-15 저녁, 시뮬레이터)
+
+- 변경: `LedgerMessageParser.transferParty`(`TaptionPlan/Core/LedgerCapture.swift`)가 「○○님이 보냈어요」·「○○님에게」·「○○ → 내 통장」·은행 문자의 이름 조각(문장형 안내문은 제외)에서 상대 이름을 읽음. 가게 칸이 없는 문자 규칙(AI가 보탠 은행 입금 규칙 등)과 「확인 필요」로 가는 이체에서 은행 이름 대신 그 이름을 제목으로(`LedgerIntents.swift`). 지출·수입으로 넣을지 판단과 저장 형식은 그대로. 이미 들어간 기록은 바꾸지 않음.
+- 단위 시험(지정 시뮬레이터, Debug): `LedgerReviewTests`·`LedgerMessageAccuracyTests`·`LedgerTests` 59건 통과(`build/validation/TPY1115A01/unit-3.log`). 첫 실행에서 안내문 「고객님이 요청하신 이체…」의 「요청하신」을 이름으로 읽어 1건 실패(`unit-1.log`) → 문장형 글은 조각으로 찾지 않게 고침. 두 번째 실행은 시뮬레이터 앱 실행 오류로 시험 전 중단(`unit-2.log`), 세 번째 통과.
+- 구조 지표·import 경계 통과. 새 화면 문구 없음.
+- 확인하지 못한 것: 실제 은행 문자 형식(견본은 흔한 꼴을 지어낸 것), 대표 기기에서 새 입금 문자가 이름으로 들어오는지.
+- 디스크: 시작 때 남은 공간 117MB로 명령이 돌지 않아 대표 승인(객관식 「중간 산출물만 지우기」)으로 Xcode DerivedData, `build/*-archive-dd`, `build/validation/LGS1115A01/device/dd-*`, `build/validation/TSH1114A26/reldd`, 모든 `.xcresult`를 지움 → 약 32GB 남음. 로그·보고서·xcarchive는 남김.

@@ -82,9 +82,11 @@ enum PaymentTextCapture {
         }
         // AI가 보탠 규칙이 먼저다. 앱 규칙이 못 읽거나 잘못 읽는 형식을 고치려고 넣은 것이기 때문이다.
         if let match = LedgerMessageRules.match(text, now: now) {
-            guard case let .draft(draft, income) = match else {
+            guard case .draft(var draft, let income) = match else {
                 return (language.text("가계부에 넣지 않는 문자예요.", "This kind of text is not added to the ledger."), .skipped)
             }
+            // 가게 칸이 없는 규칙(은행 입금 등)은 보낸 사람·받는 사람을 제목으로(TPY1115A01).
+            if draft.merchant == nil { draft.merchant = LedgerMessageParser.transferParty(text) }
             // 앱마다 꺼 둔 종류는 넣지 않는다(PAS1113A01).
             guard PaymentAlertSources.allows(source, income: income) else {
                 return (PaymentAlertSources.blockedMessage(source, income: income, language: language), .skipped)
@@ -156,8 +158,12 @@ enum PaymentTextCapture {
         }
         if !draft.isCancel, draft.merchant == nil || LedgerMessageParser.looksLikeCardBill(text, merchant: draft.merchant) {
             // 가게 이름을 못 읽었으면 조용히 넣지 않는다. 이체 낱말이 있으면 이체 의심, 카드사로 나간 출금은 카드 대금으로 둔다.
-            let reason: LedgerReviewStore.Reason = draft.merchant != nil ? .cardBill : LedgerMessageParser.looksLikeTransfer(text) ? .transfer : .noMerchant
-            LedgerReviewStore.shared.add(entry, reason: reason, now: now)
+            // 이체 상대를 읽었으면 은행 이름 대신 그 이름을 제목으로 둔다(TPY1115A01).
+            let party = draft.merchant == nil ? LedgerMessageParser.transferParty(text) : nil
+            let reason: LedgerReviewStore.Reason = draft.merchant != nil ? .cardBill : party != nil || LedgerMessageParser.looksLikeTransfer(text) ? .transfer : .noMerchant
+            var held = entry
+            if let party { held.title = party }
+            LedgerReviewStore.shared.add(held, reason: reason, now: now)
             return (language.text("\(money) 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.", "\(money) is waiting in Needs review. Add or discard it in Memo › Spending."), .review)
         }
         let saved = await LedgerBook.shared.save(entry)

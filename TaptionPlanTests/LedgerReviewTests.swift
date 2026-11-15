@@ -69,6 +69,25 @@ final class LedgerReviewTests: XCTestCase {
         XCTAssertNil(LedgerMessageParser.salaryDeposit("(광고) 급여 통장 입금 이벤트 10,000원", now: base))
     }
 
+    /// 이체·입금의 보낸 사람·받는 사람(TPY1115A01). 이름은 지어낸 것이다.
+    func testTransferPartyReadsSenderAndRecipient() {
+        let cases: [(String, String?)] = [
+            ("홍길동님이 140,000원을 보냈어요", "홍길동"),
+            ("김철수님에게 30,000원을 보냈어요", "김철수"),
+            ("[카카오뱅크] 입금 140,000원\n홍길동 → 내 입출금통장(1234)", "홍길동"),
+            ("[카카오뱅크] 출금 30,000원\n내 입출금통장(1234) → 김철수", "김철수"),
+            ("[KB]11/15 14:24\n801302**207\n홍*동\n입금\n140,000\n잔액1,000,000", "홍*동"),
+            ("[Web발신]\n신한 11/15 14:24 110-***-123456 입금 140,000 잔액 1,000,000 홍길동", "홍길동"),
+            ("농협 출금30,000원\n11/15 14:24 351-****-1234-56 김철수님 잔액1,000,000원", "김철수"),
+            ("고객님이 요청하신 이체 30,000원이 완료되었습니다", nil),
+            ("[카카오뱅크] 입금 140,000원 잔액 1,000,000원", nil),
+            ("스타벅스 4,500원 결제", nil),
+        ]
+        for (text, expected) in cases {
+            XCTAssertEqual(LedgerMessageParser.transferParty(text), expected, text)
+        }
+    }
+
     @MainActor
     func testSameTextWithinTwoMinutesIsHandledOnce() throws {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: "PaymentRepeat-\(UUID())"))

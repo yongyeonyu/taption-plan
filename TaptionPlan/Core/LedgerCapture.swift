@@ -397,6 +397,46 @@ enum LedgerMessageParser {
         return nil
     }
 
+    // MARK: 이체 상대 (TPY1115A01)
+
+    private static let transferSigns = ["입금", "출금", "이체", "송금", "보냈", "받았", "보낸"]
+    /// 이름 조각이 아닌 낱말. 이 낱말이 들면 상대 이름이 아니다.
+    private static let notParties = ["입금", "출금", "이체", "송금", "잔액", "통장", "계좌", "은행", "뱅크", "카드", "체크", "알림", "거래", "완료", "발신",
+                                     "고객", "회원", "결제", "승인", "취소", "안내", "보냈", "받았", "보낸", "받은", "오전", "오후", "되었", "됐", "어요",
+                                     "니다", "세요", "모임", "저금", "금고", "박스", "증권", "적금", "예금", "충전", "자동", "급여"]
+
+    /// 이체·입금 문자의 상대 이름(입금이면 보낸 사람, 출금·이체면 받는 사람). 못 찾으면 nil.
+    /// 「홍길동님이 보냈어요」·「홍길동님에게 보냈어요」·「홍길동 → 내 통장」·은행 문자의 이름 조각(「입금 140,000 홍길동」).
+    static func transferParty(_ text: String) -> String? {
+        let flat = text.replacingOccurrences(of: "\r", with: "\n")
+        guard flat.count <= 1_000, transferSigns.contains(where: flat.contains) else { return nil }
+        for match in flat.matches(of: /([^\s\[\]():]{1,20}?)\s?님(?:이|께서|으로부터|에게서|에게|께|한테)/) {
+            if let name = partyName(String(match.1)) { return name }
+        }
+        for line in flat.split(separator: "\n") {
+            guard let match = line.firstMatch(of: /(.+?)\s*(?:→|->)\s*(.+)/) else { continue }
+            let left = String(match.1), right = String(match.2)
+            let mine = { (side: String) in side.hasPrefix("내") || side.contains("통장") || side.contains("계좌") }
+            if mine(right), let word = left.split(separator: " ").last, let name = partyName(String(word)) { return name }
+            if mine(left), let word = right.split(separator: " ").first, let name = partyName(String(word)) { return name }
+        }
+        // 조각에서 고르는 것은 은행 문자 꼴만. 말로 쓴 안내(「요청하신 이체가 완료되었습니다」)는 낱말이 이름처럼 보인다.
+        guard !sentenceEnds.contains(where: flat.contains) else { return nil }
+        let words = strippingBalances(flat).split { $0 == "\n" || $0 == " " || $0 == "," || $0 == "|" || $0 == "/" }
+        return words.lazy.compactMap { partyName(String($0)) }.first
+    }
+
+    /// 사람·상호 이름으로 볼 만한 조각: 글자(가린 `*` 포함) 2~12자, 숫자 없음, 은행·문자 틀 낱말 아님.
+    private static func partyName(_ raw: String) -> String? {
+        var name = raw.trimmingCharacters(in: CharacterSet(charactersIn: " []<>:·.-"))
+        if name.hasSuffix("님") { name.removeLast() }
+        guard (2...12).contains(name.count), name.contains(where: \.isLetter),
+              name.allSatisfy({ $0.isLetter || $0 == "*" || $0 == "(" || $0 == ")" || $0 == "&" }),
+              !notParties.contains(where: name.contains), !cards.contains(name), !startsWithCardName(name),
+              !frameLetters.contains(name.uppercased()) else { return nil }
+        return name
+    }
+
     /// 말로 쓴 알림: 「가나다식당에서 12,000원 결제했어요」·「홍길동님에게 30,000원을 보냈어요」.
     private static func sentenceMerchant(_ text: String) -> String? {
         for line in text.split(separator: "\n") {
