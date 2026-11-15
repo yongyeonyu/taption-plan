@@ -24,7 +24,7 @@ struct GPXExportCard: View {
             if let preview, preview.pointCount > 0 {
                 GPXTrackPreview(track: preview.track)
                     .frame(height: 130)
-                    .background(Color.tpReferenceBlue.opacity(0.07), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.tpReferenceBlue.opacity(0.07), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 Text(verbatim: summary(preview))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11.5)), weight: .semibold))
                     .monospacedDigit()
@@ -136,7 +136,7 @@ struct GPSDataMenuSection<Row: View>: View {
                     GPXExportCard(model: model, language: language)
                 }
                 .padding(12)
-                .background(Color.tpReferenceRose.opacity(0.055), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpReferenceRose.opacity(0.055), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
         }
     }

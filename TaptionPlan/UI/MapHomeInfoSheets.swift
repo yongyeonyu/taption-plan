@@ -94,7 +94,7 @@ struct MapHomePlaceRangeEditor: View {
                 }
                 MapHomePlaceRangeMap(center: center, radiusMeters: radiusMeters, tint: UIColor(Color.tpAccent))
                 .frame(height: 170)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 HStack {
                     Text(language.text("반경", "Radius"))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))

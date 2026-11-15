@@ -552,9 +552,9 @@ struct MapHomeStickerEditorSheet: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
     }
@@ -629,7 +629,7 @@ struct MapHomeStickerEditorSheet: View {
                         .tint(Color.tpAccent)
                 }
                 .frame(height: 150)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 Text(String(format: "%.5f, %.5f", point.latitude, point.longitude))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
@@ -716,7 +716,7 @@ struct MapHomeStickerEditorSheet: View {
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                     .foregroundStyle(Color(hex: colorHex))
                     .frame(width: 60, height: 60)
-                    .background(Color(hex: "#FFF9EC"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color(hex: "#FFF9EC"), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 Text(language.text("스티커 고르기", "Choose a sticker"))
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")

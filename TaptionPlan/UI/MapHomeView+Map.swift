@@ -917,9 +917,9 @@ extension MapHomeView {
                     alignment: .top
                 )
                 .background(Color.tpSurface)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                         .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                 }
                 .contentShape(Rectangle())

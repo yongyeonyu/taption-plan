@@ -163,7 +163,7 @@ struct MapHomeCarAudioSheet: View {
         }
         .padding(.horizontal, 12)
         .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
     }
 
     private func actionButton(_ title: String, filled: Bool, action: @escaping () -> Void) -> some View {

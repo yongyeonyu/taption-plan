@@ -157,7 +157,7 @@ struct MapHomeGrowthSheet: View {
                                 .foregroundStyle(Color.tpSecondary)
                         }
                         .padding(11)
-                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
@@ -168,7 +168,7 @@ struct MapHomeGrowthSheet: View {
                     .foregroundStyle(Color.tpSecondary)
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
             }
         }
     }
@@ -494,7 +494,7 @@ struct MapHomeGrowthSheet: View {
                 .foregroundStyle(Color.tpInk)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         .buttonStyle(.plain)
     }

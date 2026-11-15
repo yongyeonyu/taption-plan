@@ -162,7 +162,7 @@ extension MapHomeView {
                 .foregroundStyle(Color.tpInk)
                 .modifier(MapHomeMenuRowPadding())
                 .padding(.horizontal, 12)
-                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -271,7 +271,7 @@ extension MapHomeView {
         .foregroundStyle(Color.primary)
         .padding(.vertical, 12)
         .padding(.horizontal, 12)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
         .accessibilityElement(children: .combine)
     }
 

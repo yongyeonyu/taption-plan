@@ -163,7 +163,7 @@ struct TravelMapVideoSection: View {
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .medium))
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .foregroundStyle(Color.tpInk)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             Button(action: start) {
@@ -171,7 +171,7 @@ struct TravelMapVideoSection: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(.white)
-                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(!(trip?.isRenderable ?? false))

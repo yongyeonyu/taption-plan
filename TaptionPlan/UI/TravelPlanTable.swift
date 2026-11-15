@@ -480,8 +480,8 @@ struct TravelPlanTable: View {
         .padding(.leading, 12)
         .padding(.trailing, 4)
         .frame(height: 44)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
-        .overlay { RoundedRectangle(cornerRadius: 12).stroke(TravelInk.border, lineWidth: 1) }
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelInk.border, lineWidth: 1) }
         .shadow(color: .black.opacity(0.15), radius: 5, y: 2)
         .padding(.horizontal, 4)
         .padding(.bottom, 6)
