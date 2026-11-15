@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## LOC1116S01 · 여행 중 동행 실시간 위치 공유 (2026-11-16, 서버 배포·실기기 확인 전)
+
+- 대표 객관식 답: 기본 꺼짐(본인이 여행마다 켬), 서버는 암호화된 마지막 위치 사람당 1건 10분(도와주세요 24시간), 도와주세요·끊김 표시 1차 포함, 기간은 시작일 0시~종료일 24시(여행지 시간대)이고 주인이 바꿀 수 있음(최대 40일).
+- 서버 `npm test` 206건 통과(`build/validation/LOC1116S01/server-test.log`). 위치 기간 창·전달·보관·도와주세요 보관·끄기/내보내기 때 지우기·잘못된 입력·모이는 곳 6건과 Swift 암호문을 Node에서 푸는 교차 벡터 포함.
+- 패키지 `TaptionTripShare` `swift test` 70건 통과(`package-test.log`). 처음 두 번은 종류 목록을 확인하는 기존 시험 2건(`ShareWireTests`·`ShareContentTests`)이 새 `meet`를 몰라 실패해 기대값을 고침.
+- 앱 Debug 빌드(generic iOS) 성공(`app-build.log`). 시뮬레이터 `TripLiveLocationTests` 7건 통과(`app-test.log`). 그 전에 이 시험 파일이 `sending 'suite' risks causing data races`로 컴파일되지 않아 다른 세션 시험을 막았음 → 해당 시험을 `@MainActor`로 고침.
+- 하지 않은 것: 서버 배포, 실기기 두 대 확인(갱신 주기·숨기기/끄기 즉시 반영·마지막 날 자정 자동 종료·도움 요청 수신·배터리) — 기기 미확인. 푸시(APNs 키 없음), 지도 길게 눌러 모이는 곳 정하기, 12개 언어 번역(한국어·영어만), 화면을 눈으로 보기. 위치정보법 검토·신고 전에는 배포하지 않음(`AGENTS.md`).
+
 ## TVX1116A01 · 여행 모드 A안 「한 화면으로 정리」 (2026-11-16, 아직 빌드에 없음)
 
 - 바꾼 것: 카드·깃발 한 번 탭으로 날아가 바로 열림(`TravelModeView.select`·`finishFlight`), 카드 ⋯ 메뉴(`cardMenu`, 길게 누르기와 같은 내용), 여행 화면 + 메뉴와 지구본 아래 「AI로 만들기」(`MapHomeTripImportSheet`를 여행 화면에서 엶), 붙여넣기 배너·중계로 받은 계획은 `TravelModeView(importText:)`로 열림(`MapHomeView+Support`·`TripClipboardBanner`·`TripRelay`), 「지도에서 일정 보기」 없앰, 코스 「순서 편집」 단추(`TravelCourseView`, 손잡이·지우기), 「지출 넣기」가 여행 장부를 만들고 바로 폼, 여행 없음 안내와 핀 없음 「곳 더하기」 단추. 새 문구 4개를 12개 언어에 더함.

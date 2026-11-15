@@ -716,6 +716,8 @@
 		T5H1114A26000000000B0008 /* TripSharePlanEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */; };
 		T5H1114A26000000000B0009 /* TripSharePlanProjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0009 /* TripSharePlanProjector.swift */; };
 		T5H1114A26000000000B0010 /* TripShareLockBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0010 /* TripShareLockBadge.swift */; };
+		L0C1116S01000000000B0003 /* TripLiveLocationBand.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0003 /* TripLiveLocationBand.swift */; };
+		L0C1116S01000000000B0002 /* TravelCompanionLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0002 /* TravelCompanionLayer.swift */; };
 		T5H1114A26000000000B0011 /* TripShareLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0011 /* TripShareLedger.swift */; };
 		T5H1114A26000000000B0012 /* TripShareExpenseScopePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0012 /* TripShareExpenseScopePicker.swift */; };
 		T5H1114A26000000000B0013 /* TripShareSettlementSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0013 /* TripShareSettlementSection.swift */; };
@@ -723,10 +725,13 @@
 		T5H1114A26000000000B0015 /* TripShareNoticeAlerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0015 /* TripShareNoticeAlerts.swift */; };
 		T5H1114A26000000000B0016 /* TripShareEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0016 /* TripShareEnvironment.swift */; };
 		T5H1114A26000000000B0017 /* TripShareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0017 /* TripShareStore.swift */; };
+		L0C1116S01000000000B0001 /* TripLiveLocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0001 /* TripLiveLocationService.swift */; };
+		L0C1116S01000000000B0000 /* TripLiveLocationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0000 /* TripLiveLocationPolicy.swift */; };
 		T5H1114A26000000000B0018 /* TripShareSidecar.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0018 /* TripShareSidecar.swift */; };
 		T5H1114A26000000000B0019 /* TripShareMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0019 /* TripShareMapping.swift */; };
 		T5H1114A26000000000B0020 /* AppModel+TripShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0020 /* AppModel+TripShare.swift */; };
 		T5H1114A26000000000B0021 /* TripShareFoundationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0021 /* TripShareFoundationTests.swift */; };
+		L0C1116S01000000000B0004 /* TripLiveLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0004 /* TripLiveLocationTests.swift */; };
 		T5H1114A26000000000B0022 /* TripShareRoomTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0022 /* TripShareRoomTests.swift */; };
 		T5H1114A26000000000B0023 /* TripSharePlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0023 /* TripSharePlanTests.swift */; };
 		T5H1114A26000000000B0024 /* TripShareLedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0024 /* TripShareLedgerTests.swift */; };
@@ -1512,6 +1517,8 @@
 		T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSharePlanEditor.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0009 /* TripSharePlanProjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSharePlanProjector.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0010 /* TripShareLockBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareLockBadge.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0003 /* TripLiveLocationBand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLiveLocationBand.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0002 /* TravelCompanionLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelCompanionLayer.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0011 /* TripShareLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareLedger.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0012 /* TripShareExpenseScopePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareExpenseScopePicker.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0013 /* TripShareSettlementSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareSettlementSection.swift; sourceTree = "<group>"; };
@@ -1519,10 +1526,13 @@
 		T5H1114A26000000000F0015 /* TripShareNoticeAlerts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareNoticeAlerts.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0016 /* TripShareEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareEnvironment.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0017 /* TripShareStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareStore.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0001 /* TripLiveLocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLiveLocationService.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0000 /* TripLiveLocationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLiveLocationPolicy.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0018 /* TripShareSidecar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareSidecar.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0019 /* TripShareMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareMapping.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0020 /* AppModel+TripShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+TripShare.swift"; sourceTree = "<group>"; };
 		T5H1114A26000000000F0021 /* TripShareFoundationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareFoundationTests.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0004 /* TripLiveLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLiveLocationTests.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0022 /* TripShareRoomTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareRoomTests.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0023 /* TripSharePlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSharePlanTests.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0024 /* TripShareLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareLedgerTests.swift; sourceTree = "<group>"; };
@@ -1834,6 +1844,7 @@
 				F40000000000000000000006 /* SensorDayStoreTests.swift */,
 				5BL1110A010000000000000F /* LedgerTests.swift */,
 				T5H1114A26000000000F0021 /* TripShareFoundationTests.swift */,
+				L0C1116S01000000000F0004 /* TripLiveLocationTests.swift */,
 				T5H1114A26000000000F0022 /* TripShareRoomTests.swift */,
 				T5H1114A26000000000F0023 /* TripSharePlanTests.swift */,
 				T5H1114A26000000000F0024 /* TripShareLedgerTests.swift */,
@@ -2079,6 +2090,8 @@
 				T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */,
 				T5H1114A26000000000F0009 /* TripSharePlanProjector.swift */,
 				T5H1114A26000000000F0010 /* TripShareLockBadge.swift */,
+				L0C1116S01000000000F0003 /* TripLiveLocationBand.swift */,
+				L0C1116S01000000000F0002 /* TravelCompanionLayer.swift */,
 				T5H1114A26000000000F0011 /* TripShareLedger.swift */,
 				T5H1114A26000000000F0012 /* TripShareExpenseScopePicker.swift */,
 				T5H1114A26000000000F0013 /* TripShareSettlementSection.swift */,
@@ -2339,6 +2352,8 @@
 				F1L1111A0500000000000001 /* LedgerTrips.swift */,
 				T5H1114A26000000000F0016 /* TripShareEnvironment.swift */,
 				T5H1114A26000000000F0017 /* TripShareStore.swift */,
+				L0C1116S01000000000F0001 /* TripLiveLocationService.swift */,
+				L0C1116S01000000000F0000 /* TripLiveLocationPolicy.swift */,
 				T5H1114A26000000000F0018 /* TripShareSidecar.swift */,
 				T5H1114A26000000000F0019 /* TripShareMapping.swift */,
 				F1L1111A0500000000000003 /* LedgerXLSX.swift */,
@@ -3113,6 +3128,8 @@
 				T5H1114A26000000000B0008 /* TripSharePlanEditor.swift in Sources */,
 				T5H1114A26000000000B0009 /* TripSharePlanProjector.swift in Sources */,
 				T5H1114A26000000000B0010 /* TripShareLockBadge.swift in Sources */,
+				L0C1116S01000000000B0003 /* TripLiveLocationBand.swift in Sources */,
+				L0C1116S01000000000B0002 /* TravelCompanionLayer.swift in Sources */,
 				T5H1114A26000000000B0011 /* TripShareLedger.swift in Sources */,
 				T5H1114A26000000000B0012 /* TripShareExpenseScopePicker.swift in Sources */,
 				T5H1114A26000000000B0013 /* TripShareSettlementSection.swift in Sources */,
@@ -3120,6 +3137,8 @@
 				T5H1114A26000000000B0015 /* TripShareNoticeAlerts.swift in Sources */,
 				T5H1114A26000000000B0016 /* TripShareEnvironment.swift in Sources */,
 				T5H1114A26000000000B0017 /* TripShareStore.swift in Sources */,
+				L0C1116S01000000000B0001 /* TripLiveLocationService.swift in Sources */,
+				L0C1116S01000000000B0000 /* TripLiveLocationPolicy.swift in Sources */,
 				T5H1114A26000000000B0018 /* TripShareSidecar.swift in Sources */,
 				T5H1114A26000000000B0019 /* TripShareMapping.swift in Sources */,
 				T5H1114A26000000000B0020 /* AppModel+TripShare.swift in Sources */,
@@ -3459,6 +3478,7 @@
 				A40000000000000000000008 /* SensorDayStoreTests.swift in Sources */,
 				5BL1110A010000000000000A /* LedgerTests.swift in Sources */,
 				T5H1114A26000000000B0021 /* TripShareFoundationTests.swift in Sources */,
+				L0C1116S01000000000B0004 /* TripLiveLocationTests.swift in Sources */,
 				T5H1114A26000000000B0022 /* TripShareRoomTests.swift in Sources */,
 				T5H1114A26000000000B0023 /* TripSharePlanTests.swift in Sources */,
 				T5H1114A26000000000B0024 /* TripShareLedgerTests.swift in Sources */,

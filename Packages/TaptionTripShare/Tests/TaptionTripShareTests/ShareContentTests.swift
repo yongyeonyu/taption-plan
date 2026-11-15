@@ -25,6 +25,7 @@ final class ShareContentTests: XCTestCase {
             .meta(ShareTripMeta(name: "봄 여행", startDay: "2031-05-05", endDay: "2031-05-09", currency: "KRW", budget: 800_000,
                                 guests: [ShareGuest(id: 1, name: "솔")], settlementOff: false, country: "가상국", region: "가상도",
                                 timeZone: "Asia/Seoul", columns: ["time", "title", "cost"], shareAllExpenses: true)),
+            .meet(ShareMeetContent(name: "가상의 광장", latitude: 10.5, longitude: 20.5, at: 1_900_000_600_000, by: 1)),
         ]
         XCTAssertEqual(contents.map(\.kind), ShareKind.allCases.map(\.rawValue))
         for content in contents {

@@ -1,0 +1,9 @@
+{
+  "note": "Swift ShareLocationTests.testSealedLocationMatchesTheFixedVector가 같은 입력으로 만든 값. root = 바이트 00..1f, nonce = 60..6b.",
+  "roomId": "AAECAwQFBgcICQoLDA0ODw",
+  "member": 2,
+  "epoch": 1,
+  "encKeyHex": "4ee0cbb81b021b165bdd98e8a318367d5cd61b88040605d7be7cc76c7a7aac7c",
+  "payload": { "v": 1, "s": "ok", "lat": 37.5, "lon": 127.25, "acc": 10, "at": 1765000000000 },
+  "cipher": "AWBhYmNkZWZnaGlqa4yW9O27Ci27V_yTotykkAEhqYpQtnpptFXXt5V-W-KANmUpqKOTDcPpY7YhpZqgQGuz3Jrk3BTuh5lY1jkh-u6_Nwf5-MdI4RVRULO2kFipCsVCCG26dyYjVS25SrYgnfBd1Ol9nZKho_zkLuD0U8YzQCIbAI7ztGwy9nDJf5j_jgTaUqslMabKkqTo64ipQg"
+}

@@ -55,6 +55,7 @@ extension AppleSensorCollector {
         )
         lastAcceptedLocationAt = now
         latestLocation = newestLocation
+        TripLiveLocationFeed.offer(newestLocation) // 여행 공유의 동행 위치(LOC1116S01): 켠 여행에서만 쓴다.
         if let precise = validLocations.last(where: {
             $0.horizontalAccuracy
                 <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
