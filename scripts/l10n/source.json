@@ -2167,7 +2167,7 @@
    "ko": "Live Activity를 시작하지 못했습니다. {0}",
    "en": "Could not start the Live Activity. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:251"
+    "AppModel+WidgetLiveActivity.swift:253"
    ],
    "args": [
     "error.localizedDescription"
@@ -3336,7 +3336,7 @@
    "ko": "{0} · {1}번째",
    "en": "{0} · #{1}",
    "files": [
-    "AssistantDataActions.swift:690"
+    "AssistantDataActions.swift:691"
    ],
    "args": [
     "visible[from].name",
@@ -3697,7 +3697,7 @@
    "ko": "{0} 여행 경비",
    "en": "{0} trip budget",
    "files": [
-    "LedgerTrips.swift:54"
+    "LedgerTrips.swift:66"
    ],
    "args": [
     "trip.name"
@@ -3711,7 +3711,7 @@
    "ko": "{0} 여행 정산",
    "en": "{0} trip refund",
    "files": [
-    "LedgerTrips.swift:63"
+    "LedgerTrips.swift:75"
    ],
    "args": [
     "trip.name"
@@ -3725,7 +3725,7 @@
    "ko": "{0} 여행 추가 경비",
    "en": "{0} extra trip cost",
    "files": [
-    "LedgerTrips.swift:66"
+    "LedgerTrips.swift:78"
    ],
    "args": [
     "trip.name"
@@ -4719,7 +4719,7 @@
    "ko": "{0}원",
    "en": "₩{0}",
    "files": [
-    "LedgerCore.swift:267",
+    "LedgerCore.swift:269",
     "MapHomeCalendarPolicies.swift:433"
    ],
    "args": [
@@ -4803,7 +4803,7 @@
    "ko": "{0}일(날짜 미정)",
    "en": "{0} day(s), no dates",
    "files": [
-    "AssistantDataActions.swift:508"
+    "AssistantDataActions.swift:509"
    ],
    "args": [
     "trip.wishDays ?? 1"
@@ -4967,7 +4967,7 @@
    "ko": "{0}층",
    "en": "Floor {0}",
    "files": [
-    "AssistantDataActions.swift:672"
+    "AssistantDataActions.swift:673"
    ],
    "args": [
     "$0"
@@ -7906,7 +7906,7 @@
    "ko": "같은 이름의 대분류가 이미 있습니다.",
    "en": "A major category with the same name already exists.",
    "files": [
-    "AppModel+Plans.swift:944"
+    "AppModel+Plans.swift:951"
    ],
    "args": [],
    "targets": [
@@ -9286,7 +9286,7 @@
    "ko": "계획을 자기 하위 루틴 안으로 옮길 수 없습니다.",
    "en": "A plan cannot be moved inside its own sub-routine.",
    "files": [
-    "AppModel+Plans.swift:188"
+    "AppModel+Plans.swift:189"
    ],
    "args": [],
    "targets": [
@@ -9922,7 +9922,7 @@
    "ko": "루틴의 하위 항목을 다시 연결할 수 없습니다.",
    "en": "A routine's sub-items cannot be relinked.",
    "files": [
-    "AppModel+Plans.swift:258"
+    "AppModel+Plans.swift:261"
    ],
    "args": [],
    "targets": [
@@ -10426,7 +10426,7 @@
    "ko": "하위 계획은 상위 루틴 기간 안에서만 옮길 수 있습니다.",
    "en": "A sub-plan can only be moved within its parent routine's period.",
    "files": [
-    "AppModel+Plans.swift:830"
+    "AppModel+Plans.swift:836"
    ],
    "args": [],
    "targets": [
@@ -11600,7 +11600,7 @@
    "ko": "상위·하위 계획의 기간을 벗어나지 않도록 길이를 조절해 주세요.",
    "en": "Adjust the length so it stays within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:885"
+    "AppModel+Plans.swift:892"
    ],
    "args": [],
    "targets": [
@@ -12544,7 +12544,7 @@
    "ko": "같은 항목에는 연결할 수 없습니다.",
    "en": "An item cannot be linked to itself.",
    "files": [
-    "AppModel+Plans.swift:362"
+    "AppModel+Plans.swift:365"
    ],
    "args": [],
    "targets": [
@@ -15039,7 +15039,7 @@
    "ko": "계획 이름과 시간을 확인해 주세요.",
    "en": "Check the plan name and time.",
    "files": [
-    "AppModel+Plans.swift:124"
+    "AppModel+Plans.swift:125"
    ],
    "args": [],
    "targets": [
@@ -15523,7 +15523,7 @@
    "ko": "상위·하위 계획의 기간 안에서 시간을 정해 주세요.",
    "en": "Choose a time within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:193"
+    "AppModel+Plans.swift:194"
    ],
    "args": [],
    "targets": [
@@ -15905,7 +15905,7 @@
    "ko": "대분류를 추가하지 못했습니다. {0}",
    "en": "Could not add the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:916"
+    "AppModel+Plans.swift:923"
    ],
    "args": [
     "error.localizedDescription"
@@ -15919,7 +15919,7 @@
    "ko": "계획을 캘린더에 추가하지 못했습니다. {0}",
    "en": "Could not add the plan to Calendar. {0}",
    "files": [
-    "AppModel+Plans.swift:772"
+    "AppModel+Plans.swift:777"
    ],
    "args": [
     "error.localizedDescription"
@@ -15933,7 +15933,7 @@
    "ko": "계획 길이를 조절하지 못했습니다.",
    "en": "Could not adjust the plan length.",
    "files": [
-    "AppModel+Plans.swift:890"
+    "AppModel+Plans.swift:897"
    ],
    "args": [],
    "targets": [
@@ -15945,7 +15945,7 @@
    "ko": "위젯 요청을 반영하지 못했습니다. {0}",
    "en": "Could not apply the widget request. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:376"
+    "AppModel+WidgetLiveActivity.swift:379"
    ],
    "args": [
     "error.localizedDescription"
@@ -16000,7 +16000,7 @@
    "ko": "대분류를 삭제하지 못했습니다. {0}",
    "en": "Could not delete the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:1031"
+    "AppModel+Plans.swift:1038"
    ],
    "args": [
     "error.localizedDescription"
@@ -16014,7 +16014,7 @@
    "ko": "대분류를 수정하지 못했습니다. {0}",
    "en": "Could not edit the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:960"
+    "AppModel+Plans.swift:967"
    ],
    "args": [
     "error.localizedDescription"
@@ -16028,7 +16028,7 @@
    "ko": "연결할 실제 기록 또는 루틴을 찾지 못했습니다.",
    "en": "Could not find the actual record or routine to link.",
    "files": [
-    "AppModel+Plans.swift:282"
+    "AppModel+Plans.swift:285"
    ],
    "args": [],
    "targets": [
@@ -16064,7 +16064,7 @@
    "ko": "캘린더로 보낼 계획을 찾지 못했습니다.",
    "en": "Could not find the plan to send to Calendar.",
    "files": [
-    "AppModel+Plans.swift:741"
+    "AppModel+Plans.swift:746"
    ],
    "args": [],
    "targets": [
@@ -16076,8 +16076,8 @@
    "ko": "연결할 루틴 또는 액션아이템을 찾지 못했습니다.",
    "en": "Could not find the routine or action item to link.",
    "files": [
-    "AppModel+Plans.swift:212",
-    "AppModel+Plans.swift:346"
+    "AppModel+Plans.swift:213",
+    "AppModel+Plans.swift:349"
    ],
    "args": [],
    "targets": [
@@ -16089,7 +16089,7 @@
    "ko": "루틴을 찾지 못했습니다.",
    "en": "Could not find the routine.",
    "files": [
-    "AppModel+Plans.swift:419"
+    "AppModel+Plans.swift:422"
    ],
    "args": [],
    "targets": [
@@ -16102,8 +16102,8 @@
    "en": "Could not find the selected plan.",
    "files": [
     "AppModel+WidgetLiveActivity.swift:174",
-    "AppModel+WidgetLiveActivity.swift:224",
-    "AppModel+WidgetLiveActivity.swift:262"
+    "AppModel+WidgetLiveActivity.swift:226",
+    "AppModel+WidgetLiveActivity.swift:264"
    ],
    "args": [],
    "targets": [
@@ -16129,7 +16129,7 @@
    "ko": "액션아이템을 루틴에 연결하지 못했습니다.",
    "en": "Could not link the action item to the routine.",
    "files": [
-    "AppModel+Plans.swift:263"
+    "AppModel+Plans.swift:266"
    ],
    "args": [],
    "targets": [
@@ -16141,7 +16141,7 @@
    "ko": "계획을 옮기지 못했습니다.",
    "en": "Could not move the plan.",
    "files": [
-    "AppModel+Plans.swift:835"
+    "AppModel+Plans.swift:841"
    ],
    "args": [],
    "targets": [
@@ -16179,7 +16179,7 @@
    "ko": "계획을 처리하지 못했습니다. {0}",
    "en": "Could not process the plan. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:215"
+    "AppModel+WidgetLiveActivity.swift:217"
    ],
    "args": [
     "error.localizedDescription"
@@ -16307,7 +16307,7 @@
    "ko": "Live Activity를 시작하지 못했습니다. {0}",
    "en": "Could not start the Live Activity. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:252"
+    "AppModel+WidgetLiveActivity.swift:254"
    ],
    "args": [
     "error.localizedDescription"
@@ -16389,7 +16389,7 @@
    "ko": "위젯 데이터를 갱신하지 못했습니다. {0}",
    "en": "Could not update widget data. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:485"
+    "AppModel+WidgetLiveActivity.swift:488"
    ],
    "args": [
     "error.localizedDescription"
@@ -16845,7 +16845,7 @@
    "ko": "매일",
    "en": "Daily",
    "files": [
-    "AppModel+Plans.swift:622"
+    "AppModel+Plans.swift:625"
    ],
    "args": [],
    "targets": [
@@ -17702,7 +17702,7 @@
    "ko": "캘린더 고정 일정은 캘린더에서 수정해 주세요.",
    "en": "Edit fixed calendar events in the Calendar app.",
    "files": [
-    "AppModel+Plans.swift:114"
+    "AppModel+Plans.swift:115"
    ],
    "args": [],
    "targets": [
@@ -18130,7 +18130,7 @@
    "ko": "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다.",
    "en": "Fixed calendar events cannot be moved here.",
    "files": [
-    "AppModel+Plans.swift:825"
+    "AppModel+Plans.swift:831"
    ],
    "args": [],
    "targets": [
@@ -25941,7 +25941,7 @@
    "ko": "캘린더 권한을 허용해 주세요.",
    "en": "Please allow Calendar access.",
    "files": [
-    "AppModel+Plans.swift:754"
+    "AppModel+Plans.swift:759"
    ],
    "args": [],
    "targets": [
@@ -26447,8 +26447,8 @@
    "ko": "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다.",
    "en": "Repeating segments and events cannot be used as link targets.",
    "files": [
-    "AppModel+Plans.swift:300",
-    "AppModel+Plans.swift:354"
+    "AppModel+Plans.swift:303",
+    "AppModel+Plans.swift:357"
    ],
    "args": [],
    "targets": [
@@ -26460,7 +26460,7 @@
    "ko": "반복 세그먼트와 루틴은 액션아이템으로 연결할 수 없습니다.",
    "en": "Repeating segments and routines cannot be linked as action items.",
    "files": [
-    "AppModel+Plans.swift:224"
+    "AppModel+Plans.swift:227"
    ],
    "args": [],
    "targets": [
@@ -28294,8 +28294,8 @@
    "ko": "수면·활동 기록은 루틴에만 연결할 수 있습니다.",
    "en": "Sleep and activity records can only be linked to routines.",
    "files": [
-    "AppModel+Plans.swift:309",
-    "AppModel+Plans.swift:378"
+    "AppModel+Plans.swift:312",
+    "AppModel+Plans.swift:381"
    ],
    "args": [],
    "targets": [
@@ -28988,7 +28988,7 @@
    "ko": "일,월,화,수,목,금,토",
    "en": "Sun,Mon,Tue,Wed,Thu,Fri,Sat",
    "files": [
-    "AppModel+Plans.swift:632"
+    "AppModel+Plans.swift:635"
    ],
    "args": [],
    "targets": [
@@ -29645,7 +29645,7 @@
    "ko": "액션아이템의 시간이 루틴 기간 안에 있어야 합니다.",
    "en": "The action item's time must fall within the routine's period.",
    "files": [
-    "AppModel+Plans.swift:253"
+    "AppModel+Plans.swift:256"
    ],
    "args": [],
    "targets": [
@@ -29657,7 +29657,7 @@
    "ko": "실제 기록 시간이 루틴 기간 안에 있어야 합니다.",
    "en": "The actual record's time must fall within the routine's period.",
    "files": [
-    "AppModel+Plans.swift:291"
+    "AppModel+Plans.swift:294"
    ],
    "args": [],
    "targets": [
@@ -31988,7 +31988,7 @@
    "ko": "주중",
    "en": "Weekdays",
    "files": [
-    "AppModel+Plans.swift:625"
+    "AppModel+Plans.swift:628"
    ],
    "args": [],
    "targets": [
@@ -32000,7 +32000,7 @@
    "ko": "주말",
    "en": "Weekends",
    "files": [
-    "AppModel+Plans.swift:628"
+    "AppModel+Plans.swift:631"
    ],
    "args": [],
    "targets": [
@@ -33462,7 +33462,7 @@
    "ko": "·",
    "en": ", ",
    "files": [
-    "AppModel+Plans.swift:638"
+    "AppModel+Plans.swift:641"
    ],
    "args": [],
    "targets": [
@@ -34273,7 +34273,7 @@
    "ko": "같은 이름의 대분류가 이미 있습니다.",
    "en": "A major category with the same name already exists.",
    "files": [
-    "AppModel+Plans.swift:943"
+    "AppModel+Plans.swift:950"
    ],
    "args": [],
    "targets": [
@@ -34310,7 +34310,7 @@
    "ko": "같은 항목에는 연결할 수 없습니다.",
    "en": "An item cannot be linked to itself.",
    "files": [
-    "AppModel+Plans.swift:361"
+    "AppModel+Plans.swift:364"
    ],
    "args": [],
    "targets": [
@@ -35396,7 +35396,7 @@
    "ko": "경비 받음",
    "en": "Budget received",
    "files": [
-    "LedgerTrips.swift:54"
+    "LedgerTrips.swift:66"
    ],
    "args": [],
    "targets": [
@@ -35480,7 +35480,7 @@
    "ko": "계절",
    "en": "Seasons",
    "files": [
-    "AssistantDataActions.swift:375",
+    "AssistantDataActions.swift:376",
     "MapHomeView+Map.swift:942"
    ],
    "args": [],
@@ -35532,7 +35532,7 @@
    "ko": "계획 길이를 조절하지 못했습니다.",
    "en": "Could not adjust the plan length.",
    "files": [
-    "AppModel+Plans.swift:889"
+    "AppModel+Plans.swift:896"
    ],
    "args": [],
    "targets": [
@@ -35584,7 +35584,7 @@
    "ko": "계획 이름과 시간을 확인해 주세요.",
    "en": "Check the plan name and time.",
    "files": [
-    "AppModel+Plans.swift:123"
+    "AppModel+Plans.swift:124"
    ],
    "args": [],
    "targets": [
@@ -35671,7 +35671,7 @@
    "ko": "계획을 옮기지 못했습니다.",
    "en": "Could not move the plan.",
    "files": [
-    "AppModel+Plans.swift:834"
+    "AppModel+Plans.swift:840"
    ],
    "args": [],
    "targets": [
@@ -35683,7 +35683,7 @@
    "ko": "계획을 자기 하위 루틴 안으로 옮길 수 없습니다.",
    "en": "A plan cannot be moved inside its own sub-routine.",
    "files": [
-    "AppModel+Plans.swift:187"
+    "AppModel+Plans.swift:188"
    ],
    "args": [],
    "targets": [
@@ -35695,7 +35695,7 @@
    "ko": "계획을 처리하지 못했습니다. {0}",
    "en": "Could not process the plan. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:214"
+    "AppModel+WidgetLiveActivity.swift:216"
    ],
    "args": [
     "error.localizedDescription"
@@ -35709,7 +35709,7 @@
    "ko": "계획을 캘린더에 추가하지 못했습니다. {0}",
    "en": "Could not add the plan to Calendar. {0}",
    "files": [
-    "AppModel+Plans.swift:771"
+    "AppModel+Plans.swift:776"
    ],
    "args": [
     "error.localizedDescription"
@@ -36915,7 +36915,7 @@
    "ko": "그 사이 다른 사람이 고쳤어요. 최신 내용을 확인하고 다시 해 주세요.",
    "en": "Someone else changed this meanwhile. Check the latest and try again.",
    "files": [
-    "TripShareLedger.swift:340"
+    "TripShareLedger.swift:401"
    ],
    "args": [],
    "targets": [
@@ -38158,8 +38158,8 @@
    "en": "Off",
    "files": [
     "LedgerMessageRules.swift:685",
-    "AssistantDataActions.swift:675",
-    "AssistantDataActions.swift:391"
+    "AssistantDataActions.swift:676",
+    "AssistantDataActions.swift:392"
    ],
    "args": [],
    "targets": [
@@ -38547,7 +38547,7 @@
    "en": "Date",
    "files": [
     "MapHomeDailyCard.swift:365",
-    "MapHomePlaceBookTools.swift:780",
+    "MapHomePlaceBookTools.swift:782",
     "TravelNewTripSheet.swift:58"
    ],
    "args": [],
@@ -38932,7 +38932,7 @@
    "ko": "내 차 아님",
    "en": "Not my car",
    "files": [
-    "AssistantDataActions.swift:597"
+    "AssistantDataActions.swift:598"
    ],
    "args": [],
    "targets": [
@@ -39007,7 +39007,7 @@
    "ko": "내 차로 등록",
    "en": "Registered as my car",
    "files": [
-    "AssistantDataActions.swift:597"
+    "AssistantDataActions.swift:598"
    ],
    "args": [],
    "targets": [
@@ -39201,7 +39201,7 @@
    "ko": "낸 사람이나 나눌 사람 가운데 이 여행에 없는 이름이 있어요.",
    "en": "Someone in Paid by or For whom isn't in this trip.",
    "files": [
-    "TripShareLedger.swift:339"
+    "TripShareLedger.swift:400"
    ],
    "args": [],
    "targets": [
@@ -39595,7 +39595,7 @@
    "ko": "다른 사람이 고치는 중이에요. 잠시 뒤에 다시 해 주세요.",
    "en": "Someone else is editing this. Try again in a moment.",
    "files": [
-    "TripShareLedger.swift:338",
+    "TripShareLedger.swift:399",
     "TripSharePlanEditor.swift:19"
    ],
    "args": [],
@@ -39647,7 +39647,7 @@
    "ko": "다시 묻지 않음",
    "en": "Won't ask again",
    "files": [
-    "AssistantDataActions.swift:580"
+    "AssistantDataActions.swift:581"
    ],
    "args": [],
    "targets": [
@@ -40186,7 +40186,7 @@
    "ko": "대분류를 삭제하지 못했습니다. {0}",
    "en": "Could not delete the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:1030"
+    "AppModel+Plans.swift:1037"
    ],
    "args": [
     "error.localizedDescription"
@@ -40200,7 +40200,7 @@
    "ko": "대분류를 수정하지 못했습니다. {0}",
    "en": "Could not edit the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:959"
+    "AppModel+Plans.swift:966"
    ],
    "args": [
     "error.localizedDescription"
@@ -40214,7 +40214,7 @@
    "ko": "대분류를 추가하지 못했습니다. {0}",
    "en": "Could not add the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:915"
+    "AppModel+Plans.swift:922"
    ],
    "args": [
     "error.localizedDescription"
@@ -41306,7 +41306,7 @@
    "ko": "루틴을 찾지 못했습니다.",
    "en": "Could not find the routine.",
    "files": [
-    "AppModel+Plans.swift:418"
+    "AppModel+Plans.swift:421"
    ],
    "args": [],
    "targets": [
@@ -41318,7 +41318,7 @@
    "ko": "루틴의 하위 항목을 다시 연결할 수 없습니다.",
    "en": "A routine's sub-items cannot be relinked.",
    "files": [
-    "AppModel+Plans.swift:257"
+    "AppModel+Plans.swift:260"
    ],
    "args": [],
    "targets": [
@@ -41626,7 +41626,7 @@
    "ko": "매일",
    "en": "Daily",
    "files": [
-    "AppModel+Plans.swift:622"
+    "AppModel+Plans.swift:625"
    ],
    "args": [],
    "targets": [
@@ -42691,7 +42691,7 @@
    "ko": "미확인",
    "en": "Unconfirmed",
    "files": [
-    "AssistantDataActions.swift:137",
+    "AssistantDataActions.swift:138",
     "MapHomeLocationPresentation.swift:311",
     "MapHomeNLEClipEditor.swift:459"
    ],
@@ -42906,7 +42906,7 @@
    "ko": "반복 세그먼트와 루틴은 액션아이템으로 연결할 수 없습니다.",
    "en": "Repeating segments and routines cannot be linked as action items.",
    "files": [
-    "AppModel+Plans.swift:223"
+    "AppModel+Plans.swift:226"
    ],
    "args": [],
    "targets": [
@@ -42918,8 +42918,8 @@
    "ko": "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다.",
    "en": "Repeating segments and events cannot be used as link targets.",
    "files": [
-    "AppModel+Plans.swift:299",
-    "AppModel+Plans.swift:353"
+    "AppModel+Plans.swift:302",
+    "AppModel+Plans.swift:356"
    ],
    "args": [],
    "targets": [
@@ -43655,7 +43655,7 @@
    "ko": "백자",
    "en": "Porcelain",
    "files": [
-    "AssistantDataActions.swift:378",
+    "AssistantDataActions.swift:379",
     "MapHomeView+Map.swift:945"
    ],
    "args": [],
@@ -44467,7 +44467,7 @@
    "ko": "분류 안 함",
    "en": "Not classified",
    "files": [
-    "AssistantDataActions.swift:606"
+    "AssistantDataActions.swift:607"
    ],
    "args": [],
    "targets": [
@@ -45509,7 +45509,7 @@
    "en": "Delete",
    "files": [
     "LedgerMessageRules.swift:263",
-    "MapHomePlaceBookTools.swift:843",
+    "MapHomePlaceBookTools.swift:845",
     "MapHomeSettingsSheets.swift:111"
    ],
    "args": [],
@@ -45690,7 +45690,7 @@
    "ko": "상위·하위 계획의 기간 안에서 시간을 정해 주세요.",
    "en": "Choose a time within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:192"
+    "AppModel+Plans.swift:193"
    ],
    "args": [],
    "targets": [
@@ -45702,7 +45702,7 @@
    "ko": "상위·하위 계획의 기간을 벗어나지 않도록 길이를 조절해 주세요.",
    "en": "Adjust the length so it stays within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:884"
+    "AppModel+Plans.swift:891"
    ],
    "args": [],
    "targets": [
@@ -46261,8 +46261,8 @@
    "en": "Could not find the selected plan.",
    "files": [
     "AppModel+WidgetLiveActivity.swift:173",
-    "AppModel+WidgetLiveActivity.swift:223",
-    "AppModel+WidgetLiveActivity.swift:261"
+    "AppModel+WidgetLiveActivity.swift:225",
+    "AppModel+WidgetLiveActivity.swift:263"
    ],
    "args": [],
    "targets": [
@@ -47070,8 +47070,8 @@
    "ko": "수면·활동 기록은 루틴에만 연결할 수 있습니다.",
    "en": "Sleep and activity records can only be linked to routines.",
    "files": [
-    "AppModel+Plans.swift:308",
-    "AppModel+Plans.swift:377"
+    "AppModel+Plans.swift:311",
+    "AppModel+Plans.swift:380"
    ],
    "args": [],
    "targets": [
@@ -47095,7 +47095,7 @@
    "ko": "수묵",
    "en": "Ink Wash",
    "files": [
-    "AssistantDataActions.swift:377",
+    "AssistantDataActions.swift:378",
     "MapHomeView+Map.swift:944"
    ],
    "args": [],
@@ -47288,7 +47288,7 @@
    "ko": "숨김",
    "en": "Hidden",
    "files": [
-    "AssistantDataActions.swift:480"
+    "AssistantDataActions.swift:481"
    ],
    "args": [],
    "targets": [
@@ -47594,7 +47594,7 @@
    "ko": "시간 사이드바",
    "en": "Time sidebar",
    "files": [
-    "AssistantDataActions.swift:388",
+    "AssistantDataActions.swift:389",
     "MapHomeScreenRecording.swift:592"
    ],
    "args": [],
@@ -48070,7 +48070,7 @@
    "ko": "실외(고대비)",
    "en": "Outdoor (high contrast)",
    "files": [
-    "AssistantDataActions.swift:374",
+    "AssistantDataActions.swift:375",
     "MapHomeView+Map.swift:941"
    ],
    "args": [],
@@ -48123,7 +48123,7 @@
    "ko": "실제 기록 시간이 루틴 기간 안에 있어야 합니다.",
    "en": "The actual record's time must fall within the routine's period.",
    "files": [
-    "AppModel+Plans.swift:290"
+    "AppModel+Plans.swift:293"
    ],
    "args": [],
    "targets": [
@@ -48438,7 +48438,7 @@
    "ko": "아직 담은 곳이 없습니다.",
    "en": "No stops yet.",
    "files": [
-    "MapHomePlaceBookTools.swift:786"
+    "MapHomePlaceBookTools.swift:788"
    ],
    "args": [],
    "targets": [
@@ -48944,7 +48944,7 @@
    "ko": "애플맵",
    "en": "Apple Maps",
    "files": [
-    "AssistantDataActions.swift:371",
+    "AssistantDataActions.swift:372",
     "MapHomeView+Map.swift:937"
    ],
    "args": [],
@@ -48997,7 +48997,7 @@
    "ko": "액션아이템을 루틴에 연결하지 못했습니다.",
    "en": "Could not link the action item to the routine.",
    "files": [
-    "AppModel+Plans.swift:262"
+    "AppModel+Plans.swift:265"
    ],
    "args": [],
    "targets": [
@@ -49009,7 +49009,7 @@
    "ko": "액션아이템의 시간이 루틴 기간 안에 있어야 합니다.",
    "en": "The action item's time must fall within the routine's period.",
    "files": [
-    "AppModel+Plans.swift:252"
+    "AppModel+Plans.swift:255"
    ],
    "args": [],
    "targets": [
@@ -49494,7 +49494,7 @@
    "ko": "야간",
    "en": "Night",
    "files": [
-    "AssistantDataActions.swift:373",
+    "AssistantDataActions.swift:374",
     "MapHomeView+Map.swift:940"
    ],
    "args": [],
@@ -49882,7 +49882,7 @@
    "ko": "여권으로 돌아가기",
    "en": "Back to passport",
    "files": [
-    "MapHomePlaceBookTools.swift:938"
+    "MapHomePlaceBookTools.swift:940"
    ],
    "args": [],
    "targets": [
@@ -50104,8 +50104,8 @@
    "ko": "여행 계획",
    "en": "Trip plan",
    "files": [
-    "MapHomePlaceBookTools.swift:778",
-    "MapHomePlaceBookTools.swift:966"
+    "MapHomePlaceBookTools.swift:780",
+    "MapHomePlaceBookTools.swift:968"
    ],
    "args": [],
    "targets": [
@@ -51342,8 +51342,8 @@
    "ko": "연결할 루틴 또는 액션아이템을 찾지 못했습니다.",
    "en": "Could not find the routine or action item to link.",
    "files": [
-    "AppModel+Plans.swift:211",
-    "AppModel+Plans.swift:345"
+    "AppModel+Plans.swift:212",
+    "AppModel+Plans.swift:348"
    ],
    "args": [],
    "targets": [
@@ -51355,7 +51355,7 @@
    "ko": "연결할 실제 기록 또는 루틴을 찾지 못했습니다.",
    "en": "Could not find the actual record or routine to link.",
    "files": [
-    "AppModel+Plans.swift:281"
+    "AppModel+Plans.swift:284"
    ],
    "args": [],
    "targets": [
@@ -53232,7 +53232,7 @@
    "ko": "위성",
    "en": "Satellite",
    "files": [
-    "AssistantDataActions.swift:372",
+    "AssistantDataActions.swift:373",
     "MapHomeView+Map.swift:938"
    ],
    "args": [],
@@ -53269,7 +53269,7 @@
    "ko": "위젯 데이터를 갱신하지 못했습니다. {0}",
    "en": "Could not update widget data. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:484"
+    "AppModel+WidgetLiveActivity.swift:487"
    ],
    "args": [
     "error.localizedDescription"
@@ -53283,7 +53283,7 @@
    "ko": "위젯 요청을 반영하지 못했습니다. {0}",
    "en": "Could not apply the widget request. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:375"
+    "AppModel+WidgetLiveActivity.swift:378"
    ],
    "args": [
     "error.localizedDescription"
@@ -55666,7 +55666,7 @@
    "ko": "일,월,화,수,목,금,토",
    "en": "Sun,Mon,Tue,Wed,Thu,Fri,Sat",
    "files": [
-    "AppModel+Plans.swift:631"
+    "AppModel+Plans.swift:634"
    ],
    "args": [],
    "targets": [
@@ -56867,7 +56867,7 @@
    "en": "Search places",
    "files": [
     "MapHomePlaceBookTools.swift:597",
-    "MapHomePlaceBookTools.swift:781",
+    "MapHomePlaceBookTools.swift:783",
     "MapHomeView+Map.swift:157"
    ],
    "args": [],
@@ -57403,7 +57403,7 @@
    "ko": "저장하지 못했어요. 잠시 뒤에 다시 해 주세요.",
    "en": "Couldn't save. Try again in a moment.",
    "files": [
-    "TripShareLedger.swift:341"
+    "TripShareLedger.swift:402"
    ],
    "args": [],
    "targets": [
@@ -57770,7 +57770,7 @@
    "ko": "정산 반납",
    "en": "Returned to daily",
    "files": [
-    "LedgerTrips.swift:63"
+    "LedgerTrips.swift:75"
    ],
    "args": [],
    "targets": [
@@ -57818,7 +57818,7 @@
    "ko": "정산을 마감해서 공동 지출은 바꿀 수 없어요.",
    "en": "Settlement is closed, so shared expenses can't be changed.",
    "files": [
-    "TripShareLedger.swift:337"
+    "TripShareLedger.swift:398"
    ],
    "args": [],
    "targets": [
@@ -57880,7 +57880,7 @@
    "en": "Not set",
    "files": [
     "LedgerMessageRules.swift:599",
-    "AssistantDataActions.swift:611",
+    "AssistantDataActions.swift:612",
     "TravelNewTripSheet.swift:74"
    ],
    "args": [],
@@ -57961,7 +57961,7 @@
    "ko": "제안한 곳",
    "en": "Suggested place",
    "files": [
-    "AssistantDataActions.swift:576"
+    "AssistantDataActions.swift:577"
    ],
    "args": [],
    "targets": [
@@ -58238,7 +58238,7 @@
    "ko": "주말",
    "en": "Weekends",
    "files": [
-    "AppModel+Plans.swift:628"
+    "AppModel+Plans.swift:631"
    ],
    "args": [],
    "targets": [
@@ -58298,7 +58298,7 @@
    "ko": "주중",
    "en": "Weekdays",
    "files": [
-    "AppModel+Plans.swift:625"
+    "AppModel+Plans.swift:628"
    ],
    "args": [],
    "targets": [
@@ -59147,7 +59147,7 @@
    "ko": "지도에 경로 선",
    "en": "Route lines on map",
    "files": [
-    "AssistantDataActions.swift:386"
+    "AssistantDataActions.swift:387"
    ],
    "args": [],
    "targets": [
@@ -59171,7 +59171,7 @@
    "ko": "지도에 발자국",
    "en": "Footprints on map",
    "files": [
-    "AssistantDataActions.swift:387"
+    "AssistantDataActions.swift:388"
    ],
    "args": [],
    "targets": [
@@ -59195,7 +59195,7 @@
    "ko": "지도에 사진",
    "en": "Photos on map",
    "files": [
-    "AssistantDataActions.swift:385"
+    "AssistantDataActions.swift:386"
    ],
    "args": [],
    "targets": [
@@ -60431,7 +60431,7 @@
    "ko": "추가 경비 받음",
    "en": "Extra budget received",
    "files": [
-    "LedgerTrips.swift:66"
+    "LedgerTrips.swift:78"
    ],
    "args": [],
    "targets": [
@@ -60456,7 +60456,7 @@
    "en": "Add",
    "files": [
     "MapHomeCalendarSheet.swift:337",
-    "MapHomePlaceBookTools.swift:944",
+    "MapHomePlaceBookTools.swift:946",
     "MapHomeSettingsSheets.swift:99"
    ],
    "args": [],
@@ -60803,7 +60803,7 @@
    "ko": "층 없음",
    "en": "No floor",
    "files": [
-    "AssistantDataActions.swift:672"
+    "AssistantDataActions.swift:673"
    ],
    "args": [],
    "targets": [
@@ -60983,7 +60983,7 @@
    "ko": "카카오 지도",
    "en": "Kakao Map",
    "files": [
-    "AssistantDataActions.swift:379",
+    "AssistantDataActions.swift:380",
     "MapHomeView+Map.swift:946"
    ],
    "args": [],
@@ -61045,7 +61045,7 @@
    "ko": "캘린더 고정 일정은 캘린더에서 수정해 주세요.",
    "en": "Edit fixed calendar events in the Calendar app.",
    "files": [
-    "AppModel+Plans.swift:113"
+    "AppModel+Plans.swift:114"
    ],
    "args": [],
    "targets": [
@@ -61057,7 +61057,7 @@
    "ko": "캘린더 권한을 허용해 주세요.",
    "en": "Please allow Calendar access.",
    "files": [
-    "AppModel+Plans.swift:753"
+    "AppModel+Plans.swift:758"
    ],
    "args": [],
    "targets": [
@@ -61194,7 +61194,7 @@
    "ko": "캘린더로 보낼 계획을 찾지 못했습니다.",
    "en": "Could not find the plan to send to Calendar.",
    "files": [
-    "AppModel+Plans.swift:740"
+    "AppModel+Plans.swift:745"
    ],
    "args": [],
    "targets": [
@@ -61220,7 +61220,7 @@
    "ko": "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다.",
    "en": "Fixed calendar events cannot be moved here.",
    "files": [
-    "AppModel+Plans.swift:824"
+    "AppModel+Plans.swift:830"
    ],
    "args": [],
    "targets": [
@@ -61324,8 +61324,8 @@
    "en": "On",
    "files": [
     "LedgerMessageRules.swift:685",
-    "AssistantDataActions.swift:675",
-    "AssistantDataActions.swift:391"
+    "AssistantDataActions.swift:676",
+    "AssistantDataActions.swift:392"
    ],
    "args": [],
    "targets": [
@@ -61590,7 +61590,7 @@
    "ko": "탈것 표시",
    "en": "Show vehicles",
    "files": [
-    "AssistantDataActions.swift:389",
+    "AssistantDataActions.swift:390",
     "MapHomeView+Menu2.swift:21"
    ],
    "args": [],
@@ -61855,7 +61855,7 @@
    "ko": "판타지",
    "en": "Fantasy",
    "files": [
-    "AssistantDataActions.swift:376",
+    "AssistantDataActions.swift:377",
     "MapHomeView+Map.swift:943"
    ],
    "args": [],
@@ -62556,7 +62556,7 @@
    "ko": "하위 계획은 상위 루틴 기간 안에서만 옮길 수 있습니다.",
    "en": "A sub-plan can only be moved within its parent routine's period.",
    "files": [
-    "AppModel+Plans.swift:829"
+    "AppModel+Plans.swift:835"
    ],
    "args": [],
    "targets": [
@@ -63267,7 +63267,7 @@
    "ko": "현실 모드로 돌아가기",
    "en": "Back to everyday mode",
    "files": [
-    "MapHomePlaceBookTools.swift:965"
+    "MapHomePlaceBookTools.swift:967"
    ],
    "args": [],
    "targets": [

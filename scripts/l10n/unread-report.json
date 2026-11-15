@@ -76,7 +76,7 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerCore.swift",
-   "line": 264,
+   "line": 266,
    "ko": "_ amount: Double",
    "en": "String = \"KRW\""
   },
@@ -172,13 +172,13 @@
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 728,
+   "line": 729,
    "ko": "stop.kind.title",
    "en": "stop.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 155,
+   "line": 156,
    "ko": "before.amount",
    "en": "before.currency"
   },
