@@ -103,7 +103,8 @@ private final class TravelModeTransitionDriver {
         transaction.disablesAnimations = true
         UIView.setAnimationsEnabled(false)
         withTransaction(transaction) { isCoverShown = shown }
-        DispatchQueue.main.async { UIView.setAnimationsEnabled(true) }
+        // 덮개 안 화면이 나타나면 되돌린다. 나타나지 않는 경우를 위해 0.5초 뒤에도 되돌린다.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { UIView.setAnimationsEnabled(true) }
     }
 }
 
@@ -147,7 +148,11 @@ private struct TravelModeReveal<Content: View>: View {
             // 움직이는 동안에는 아래 화면이 눌리지 않게 한다.
             .allowsHitTesting(driver.phase == .open)
             // 올리는 순간의 「애니메이션 끔」 거래 밖에서 퍼지기 시작해야 움직임이 보인다.
-            .task { try? await Task.sleep(for: .milliseconds(40)); driver.isRevealed = true }
+            .task {
+                try? await Task.sleep(for: .milliseconds(40))
+                UIView.setAnimationsEnabled(true)
+                driver.isRevealed = true
+            }
             .onChange(of: driver.isRevealed, initial: true) { _, revealed in animate(revealed) }
     }
 
