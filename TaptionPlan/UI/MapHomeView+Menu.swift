@@ -244,8 +244,8 @@ extension MapHomeView {
 
     /// 오늘을 보고 있거나 재생 중이면 카운터 값이 흐른다. 지난 날은 값이 변하지 않는다.
     var isCounterLive: Bool {
-        isDayPlaybackRunning
-            || MapHomeGrowthPolicy.localCalendar.isDateInToday(model.selectedDate)
+        (isDayPlaybackRunning
+            || MapHomeGrowthPolicy.localCalendar.isDateInToday(model.selectedDate)) && !MapHomeLiveGate.shared.isCovered
     }
 
     /// 창에 넣을 값. `now`는 시계가 준 순간이라 연봉과 나머지 줄이 같은 박자로 갱신된다.

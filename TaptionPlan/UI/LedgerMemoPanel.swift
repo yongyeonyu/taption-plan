@@ -26,14 +26,15 @@ enum LedgerMemoFilter: String, CaseIterable, Identifiable {
 @Observable
 final class LedgerPresenter {
     static let shared = LedgerPresenter()
-    var isPresented = false
+    /// 열려 있는 동안 아래 깔린 홈 화면은 갱신을 멈춘다(LGS1115A01).
+    var isPresented = false { didSet { MapHomeLiveGate.shared.set(.ledger, covering: isPresented) } }
 }
 
 struct LedgerSheetHost: View {
     let language: MapHomeLanguage
     var tripID: String?
-    /// 앱 여행 계획에서 가져온 여행. 창을 열 때만 계산한다.
-    var plannedTrips: () -> [LedgerTrip] = { [] }
+    /// 여행 계획은 창을 열 때만 읽는다. 클로저로 받으면 홈이 다시 그려질 때마다 이 화면도 다시 돌았다(LGS1115A01).
+    let model: AppModel
     @Bindable private var presenter = LedgerPresenter.shared
     /// 열 때 한 번만 만든다. 지도 화면이 다시 그려질 때마다 만들어 넘기면 가계부도 매번 다시 그려졌다(LGP1113A01).
     @State private var trips: [LedgerTrip] = []
@@ -41,7 +42,7 @@ struct LedgerSheetHost: View {
     var body: some View {
         Color.clear
             .allowsHitTesting(false)
-            .onChange(of: presenter.isPresented) { _, open in if open { trips = plannedTrips() } }
+            .onChange(of: presenter.isPresented) { _, open in if open { trips = LedgerBook.plannedTrips(stops: model.settings.travelPlanStops, items: model.settings.travelTripItems ?? [], trips: model.settings.travelTrips ?? []) } }
             .sheet(isPresented: $presenter.isPresented) { LedgerSheet(language: language, tripID: tripID, plannedTrips: trips) }
     }
 }

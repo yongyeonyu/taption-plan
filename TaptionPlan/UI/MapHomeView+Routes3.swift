@@ -8,7 +8,7 @@ import TaptionPlanCore
 
 extension MapHomeView {
     func prepareRouteProjectionReadings() {
-        guard scenePhase == .active else { return }
+        guard isHomeLive else { return }
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
@@ -19,17 +19,17 @@ extension MapHomeView {
             String(transitBoardingReadingsRevision),
             String(routeReadings.count),
             routeReadings.last?.id.uuidString ?? "none",
-            String(model.liveRouteState.readings.count),
-            model.liveRouteState.readings.last?.id.uuidString ?? "none",
-            model.liveRouteState.lastUpdatedAt.map {
+            String(homeLiveRoute.readings.count),
+            homeLiveRoute.readings.last?.id.uuidString ?? "none",
+            homeLiveRoute.lastUpdatedAt.map {
                 String($0.timeIntervalSinceReferenceDate)
             } ?? "none",
-            model.latestSensorReading?.id.uuidString ?? "none",
-            model.latestSensorReading.map {
+            homeLatestReading?.id.uuidString ?? "none",
+            homeLatestReading.map {
                 String($0.timestamp.timeIntervalSinceReferenceDate)
             } ?? "none",
             MapHomeRouteReadingsPreparation.latestRouteInputSignature(
-                model.latestSensorReading
+                homeLatestReading
             ),
         ].joined(separator: "|")
         guard preparationSignature != lastPreparedRouteReadingsSignature else {
@@ -42,8 +42,8 @@ extension MapHomeView {
         routeReadingsPreparationTask?.cancel()
         let preparationID = routeReadingsPreparationGeneration.advance()
         let routeReadingsSnapshot = routeReadings
-        let liveReadingsSnapshot = model.liveRouteState.readings
-        let latestReading = model.latestSensorReading
+        let liveReadingsSnapshot = homeLiveRoute.readings
+        let latestReading = homeLatestReading
         routeReadingsPreparationTask = Task { @MainActor in
             let worker = Task.detached(priority: .utility) {
                 try MapHomeRouteReadingsPreparation.prepare(
@@ -73,7 +73,7 @@ extension MapHomeView {
             guard !Task.isCancelled,
                   routeReadingsPreparationGeneration.accepts(preparationID),
                   lastPreparedRouteReadingsSignature == preparationSignature,
-                  scenePhase == .active else { return }
+                  isHomeLive else { return }
             normalizedRouteReadings = prepared.normalized
             if currentMapLocationReading != prepared.latestTrustedReading {
                 currentMapLocationReading = prepared.latestTrustedReading

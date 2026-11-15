@@ -39,7 +39,7 @@ extension MapHomeView {
     var compassRotationDegrees: Double {
         headingMonitor.rotationDegrees
             ?? MapHomeCompassControlState.iconRotationDegrees(
-                for: model.latestSensorReading?.courseDegrees ?? 0
+                for: homeLatestReading?.courseDegrees ?? 0
             )
     }
 
@@ -437,7 +437,7 @@ extension MapHomeView {
         // 연봉을 넣었으면 30초마다 오늘 근무 시간을 다시 센다(사이 값은 지도 라벨이 표시 간격마다 더한다).
         // 기록을 다 불러오기 전(앱 시작 직후)에 센 0을 붙들지 않게, 기록 개수가 바뀌면 처음부터 다시 센다.
         .task(id: salaryTaskID) {
-            guard scenePhase == .active else { return }
+            guard isHomeLive else { return }
             var monthComputedAt: Date?
             while !Task.isCancelled {
                 let needsMonth = monthComputedAt.map { Date.now.timeIntervalSince($0) >= 300 } ?? true
@@ -514,7 +514,7 @@ extension MapHomeView {
                 },
                 language: language,
                 // 달력 빠른 갱신은 15초 단위로만 다시 계산한다(달 전체 재계산 부담을 줄임).
-                liveToken: ((model.latestSensorReading?.timestamp.timeIntervalSince1970 ?? 0) / 15).rounded(.down)
+                liveToken: ((homeLatestReading?.timestamp.timeIntervalSince1970 ?? 0) / 15).rounded(.down)
             )
         }
         .sheet(item: $selectedLocationDestination) { destination in
@@ -874,14 +874,14 @@ extension MapHomeView {
         .task(id: routeReadingsTaskKey) { await runRouteReadingsTask() }
         .onChange(
             of: MapHomeRouteReadingsPreparation.latestRouteInputSignature(
-                model.latestSensorReading
+                homeLatestReading
             )
         ) { _, _ in
             guard Calendar.autoupdatingCurrent.isDateInToday(
                 model.selectedDate
             ) else { return }
             if refreshTransitBoardingCandidatesIfNeeded(
-                at: model.latestSensorReading?.timestamp ?? .now
+                at: homeLatestReading?.timestamp ?? .now
             ) {
                 scheduleTransitPOIRefresh()
             }
@@ -1062,7 +1062,7 @@ extension MapHomeView {
     }
 
     func runDaySourceTask() async {
-        guard model.isBootstrapped, scenePhase == .active else { return }
+        guard model.isBootstrapped, isHomeLive else { return }
         let date = model.selectedDate
         guard let prepared = await model.planDaySourceSnapshot(for: date, reusing: dayDataSnapshot),
               !Task.isCancelled, prepared.sourceRevision == model.dayProjectionRevision,
@@ -1087,7 +1087,7 @@ extension MapHomeView {
             day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
             revision: model.dayProjectionRevision,
             isReady: model.isBootstrapped,
-            isActive: scenePhase == .active
+            isActive: isHomeLive
         )
     }
 

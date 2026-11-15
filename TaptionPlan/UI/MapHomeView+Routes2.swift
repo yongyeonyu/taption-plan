@@ -26,8 +26,8 @@ extension MapHomeView {
         var seen = Set<UUID>()
         return (
             routeReadings
-                + model.liveRouteState.readings
-                + (model.latestSensorReading.map { [$0] } ?? [])
+                + homeLiveRoute.readings
+                + (homeLatestReading.map { [$0] } ?? [])
         )
         .filter {
             RouteTimelineTimestamp.isValid($0.timestamp)
@@ -97,7 +97,7 @@ extension MapHomeView {
     }
 
     func refreshTransitBoardingCandidatesIfNeeded(at date: Date) -> Bool {
-        guard scenePhase == .active else { return false }
+        guard isHomeLive else { return false }
         guard MapHomeTransitBoardingRefreshPolicy.shouldRefresh(
             lastRefresh: lastTransitBoardingLiveRefreshAt,
             at: date
@@ -201,8 +201,8 @@ extension MapHomeView {
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: selectedDay)
             ?? selectedDay.addingTimeInterval(24 * 60 * 60)
         let dayData = currentDayDataSnapshot
-        let liveReadings = model.liveRouteState.readings
-        let latestReading = model.latestSensorReading
+        let liveReadings = homeLiveRoute.readings
+        let latestReading = homeLatestReading
         return MapHomeExpectedRouteInputKey(
             selectedDay: selectedDay,
             dayEnd: dayEnd,
@@ -222,7 +222,7 @@ extension MapHomeView {
             liveReadings: MapHomeDayCacheReadingsFingerprint(
                 readings: liveReadings
             ),
-            liveLastUpdatedAt: model.liveRouteState.lastUpdatedAt,
+            liveLastUpdatedAt: homeLiveRoute.lastUpdatedAt,
             liveLastRouteInputSignature:
                 MapHomeRouteReadingsPreparation.latestRouteInputSignature(
                     liveReadings.last
@@ -239,13 +239,13 @@ extension MapHomeView {
         inputKey: MapHomeExpectedRouteInputKey
     ) -> Bool {
         !Task.isCancelled
-            && scenePhase == .active
+            && isHomeLive
             && generation == expectedRouteRefreshGeneration
             && inputKey == currentExpectedRouteInputKey()
     }
 
     func refreshExpectedRouteOverlays(generation: UInt64) async {
-        guard scenePhase == .active, !Task.isCancelled,
+        guard isHomeLive, !Task.isCancelled,
               generation == expectedRouteRefreshGeneration else { return }
         let inputKey = currentExpectedRouteInputKey()
         let selectedDay = inputKey.selectedDay
@@ -709,8 +709,8 @@ extension MapHomeView {
         // 새 분의 값은 뒤에서 만든다(ARC1030A01).
         let travel = dayData?.travel ?? []
         let stored = routeReadings
-        let live = model.liveRouteState.readings
-        let latest = model.latestSensorReading
+        let live = homeLiveRoute.readings
+        let latest = homeLatestReading
         subwayOverlayDerived.onUpdate = { [mapRenderCache] in
             mapRenderCache.invalidateRouteBounds()
             // 재생 중에는 0.25초마다 오는 분 알림이 화면을 다시 그린다. 재생이 아닐 때만 직접 깨운다.
@@ -1064,7 +1064,7 @@ extension MapHomeView {
     func requestRouteProjectionRefresh(
         preparingReadings: Bool = false
     ) {
-        guard scenePhase == .active else { return }
+        guard isHomeLive else { return }
         guard !isTimelineInteractionActive || isDayPlaybackRunning else {
             routeDocumentProjectionGate.deferRefresh(
                 preparingReadings: preparingReadings

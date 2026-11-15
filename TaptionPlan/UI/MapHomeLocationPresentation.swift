@@ -1072,7 +1072,7 @@ struct MapHomeStickmanMarker: View {
         TimelineView(
             .animation(
                 minimumInterval: 1.0 / 30,
-                paused: isStatic || animationPhase != nil
+                paused: isStatic || animationPhase != nil || MapHomeLiveGate.shared.isCovered
             )
         ) { context in
             let clock = animationPhase.map { Double($0) * MapHomeStickmanAnimationEngine.frameDuration }
@@ -1172,7 +1172,7 @@ struct MapHomeStickmanGlyph: View {
         let ribbon = MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
         // 같은 화면의 화랑이들이 동시에 같은 자세로 겹치지 않게 분류별로 시작을 어긋낸다.
         let offset = Double(MapHomeStickmanAction.allCases.firstIndex(of: action) ?? 0) * 3.7
-        TimelineView(.animation(minimumInterval: 1.0 / 24, paused: isStatic)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 24, paused: isStatic || MapHomeLiveGate.shared.isCovered)) { context in
             HwarangSceneView(
                 scene: action.hwarangScene,
                 sec: isStatic ? 0 : HwarangClock.seconds(at: context.date) + offset,

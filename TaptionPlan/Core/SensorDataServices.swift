@@ -20,9 +20,11 @@ enum PhoneScreenActivityStore {
     private static let isOnKey = "TaptionPlan.screenIsOn"
 
     static func update(brightness: Double, isOn: Bool) {
+        // 값이 같으면 쓰지 않는다. 위치마다 쓰면 `@AppStorage`를 가진 화면(홈)이 그때마다 다시 그려졌다(LGS1115A01).
         let defaults = UserDefaults.standard
-        defaults.set(min(1, max(0, brightness)), forKey: brightnessKey)
-        defaults.set(isOn, forKey: isOnKey)
+        let value = min(1, max(0, brightness))
+        if defaults.object(forKey: brightnessKey) as? Double != value { defaults.set(value, forKey: brightnessKey) }
+        if defaults.object(forKey: isOnKey) as? Bool != isOn { defaults.set(isOn, forKey: isOnKey) }
     }
 
     static func snapshot() -> PhoneScreenSnapshot {

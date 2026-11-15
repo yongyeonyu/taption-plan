@@ -272,7 +272,7 @@ extension MapHomeView {
     var salaryTaskID: String {
         let parts: [String] = [
             "\(salaryAnnualPay)", "\(allowanceIsSelected)", "\(salaryMonthlyPay)", "\(salaryIsNetInput)", "\(salaryShowsNet)",
-            "\(salaryMonthAccum)", "\(salaryPayHistoryRaw)", "\(scenePhase == .active)",
+            "\(salaryMonthAccum)", "\(salaryPayHistoryRaw)", "\(isHomeLive)",
             "\(model.selectedDate.timeIntervalSince1970)", "\(model.snapshot.actuals.count)", "\(model.snapshot.places.count)",
         ]
         return parts.joined(separator: "|")
@@ -933,8 +933,8 @@ extension MapHomeView {
     /// GPS를 아직 못 받았을 때 화랑이가 있을 가장 최근 위치(최신 센서 → 실시간 경로 → 오늘 경로 마지막 점).
     var lastKnownCoordinate: CLLocationCoordinate2D? {
         let candidates: [() -> GeoPoint?] = [
-            { model.latestSensorReading?.point },
-            { model.liveRouteState.readings.last?.point },
+            { homeLatestReading?.point },
+            { homeLiveRoute.readings.last?.point },
             { displayRouteReadings.last(where: { $0.point != nil })?.point },
             { currentDayReadings.last(where: { $0.point != nil })?.point },
         ]
@@ -998,16 +998,16 @@ extension MapHomeView {
         let start = calendar.startOfDay(for: model.selectedDate)
         let key = MapHomeDayReadingsCache.Key(
             day: start, sourceRevision: dayData.sourceRevision, storedCount: dayData.readings.count,
-            liveCount: model.liveRouteState.readings.count, liveLastID: model.liveRouteState.readings.last?.id,
-            latestID: model.latestSensorReading?.id
+            liveCount: homeLiveRoute.readings.count, liveLastID: homeLiveRoute.readings.last?.id,
+            latestID: homeLatestReading?.id
         )
         if let cached = dayReadingsCache.value(for: key) { return cached }
         let end = calendar.date(byAdding: .day, value: 1, to: start)
             ?? start.addingTimeInterval(24 * 60 * 60)
         let merged = MapHomeRouteReadingsPolicy.merging(
             existing: dayData.readings,
-            loaded: model.liveRouteState.readings
-                + (model.latestSensorReading.map { [$0] } ?? []),
+            loaded: homeLiveRoute.readings
+                + (homeLatestReading.map { [$0] } ?? []),
             in: TimeSpan(start: start, end: end)
         )
         dayReadingsCache.store(merged, for: key)
@@ -1020,8 +1020,8 @@ extension MapHomeView {
             day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
             sourceRevision: sourceRevision,
             storedCount: routeReadings.count, storedLastID: routeReadings.last?.id,
-            liveCount: model.liveRouteState.readings.count, liveLastID: model.liveRouteState.readings.last?.id,
-            latestID: model.latestSensorReading?.id
+            liveCount: homeLiveRoute.readings.count, liveLastID: homeLiveRoute.readings.last?.id,
+            latestID: homeLatestReading?.id
         )
     }
 

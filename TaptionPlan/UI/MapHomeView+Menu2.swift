@@ -431,7 +431,7 @@ extension MapHomeView {
                 readings: historicalPlaybackReadings
             )
         }
-        return model.latestSensorReading?.speedMetersPerSecond
+        return homeLatestReading?.speedMetersPerSecond
     }
 
     /// 화랑이 동작. 한 화면을 그리는 동안 여러 번 불리고, 마지막 분기는 하루 기록 전체를 이어 붙여 복사한다. 입력이 같으면(초 단위)
@@ -445,7 +445,7 @@ extension MapHomeView {
             frequentPlaceCount: model.settings.frequentPlaces.count,
             legCount: wbsPlaybackProjection?.legs.count ?? 0,
             expectedCount: expectedRouteOverlays.count,
-            latestID: model.latestSensorReading?.id,
+            latestID: homeLatestReading?.id,
             hasSelection: selectedTimelineMinute != nil,
             calendarEventCount: model.snapshot.calendarEvents.count
         )

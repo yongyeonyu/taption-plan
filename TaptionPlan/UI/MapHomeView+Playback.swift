@@ -66,7 +66,7 @@ extension MapHomeView {
                     ?? MapHomeApplePlaybackMath.heading(
                     at: displayedLocationDate,
                     readings: historicalPlaybackReadings
-                ) ?? model.latestSensorReading?.courseDegrees
+                ) ?? homeLatestReading?.courseDegrees
                     ?? headingMonitor.headingDegrees
                     ?? 0
             )
@@ -291,7 +291,7 @@ extension MapHomeView {
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(24 * 60 * 60)
         let readingRanges = dayPlaybackReadingRanges(
-            from: routeReadings + model.liveRouteState.readings,
+            from: routeReadings + homeLiveRoute.readings,
             dayStart: dayStart,
             dayEnd: dayEnd
         )
@@ -414,7 +414,7 @@ extension MapHomeView {
     /// 재생 구동기를 세운다. 프레임 계산은 구동기, 화면 갱신은 정수 분마다(PLY1029A03).
     func makePlaybackZoomPlan(movingRanges: [MapHomePlaybackMovementRange]) -> MapHomePlaybackZoomPlan {
         let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate)
-        let readings = routeReadings + model.liveRouteState.readings
+        let readings = routeReadings + homeLiveRoute.readings
         let places = model.settings.frequentPlaces.compactMap(\.point)
         return MapHomePlaybackZoomPlan(
             inputs: MapHomePlaybackZoomInputBuilder.inputs(
@@ -803,8 +803,8 @@ extension MapHomeView {
             return MapHomeStickmanActionResolver.sleepStageAction(at: displayedLocationDate, actuals: actuals, sleepSessions: sleepSessions)
         }
         let transitReadings = (currentDayDataSnapshot?.readings ?? routeReadings)
-            + model.liveRouteState.readings
-            + (model.latestSensorReading.map { [$0] } ?? [])
+            + homeLiveRoute.readings
+            + (homeLatestReading.map { [$0] } ?? [])
         let hasManualRecord = actuals.contains {
             ($0.manuallyCorrected || $0.source == .manual) && $0.startedAt <= displayedLocationDate && displayedLocationDate < ($0.endedAt ?? .distantFuture)
         }
@@ -855,7 +855,7 @@ extension MapHomeView {
             sleepSessions: sleepSessions
         )
         guard resolved == .activity, selectedTimelineMinute == nil else { return resolved }
-        return MapHomeStickmanActionResolver.action(atCurrent: model.latestSensorReading?.point, frequentPlaces: model.settings.frequentPlaces) ?? resolved
+        return MapHomeStickmanActionResolver.action(atCurrent: homeLatestReading?.point, frequentPlaces: model.settings.frequentPlaces) ?? resolved
     }
 
     var historicalPlaybackAccessibilityLabel: String {
@@ -868,7 +868,7 @@ extension MapHomeView {
     }
 
     func requestWBSPlaybackProjectionRefresh() {
-        guard scenePhase == .active else {
+        guard isHomeLive else {
             hasDeferredWBSPlaybackRefresh = true
             return
         }
@@ -894,7 +894,7 @@ extension MapHomeView {
     }
 
     func refreshWBSPlaybackProjection() {
-        guard scenePhase == .active else {
+        guard isHomeLive else {
             hasDeferredWBSPlaybackRefresh = true
             return
         }

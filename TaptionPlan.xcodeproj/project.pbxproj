@@ -566,6 +566,7 @@
 		A1L1110A0100000000000002 /* LedgerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000002 /* LedgerSheet.swift */; };
 		C5BA1111A010000000000002 /* BokkiShortcutsGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5BA1111A010000000000001 /* BokkiShortcutsGuide.swift */; };
 		A1L1110A0100000000000003 /* MapHomeView+Ledger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */; };
+		A1LGS1115A01000000000001 /* MapHomeLiveGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1LGS1115A01000000000001 /* MapHomeLiveGate.swift */; };
 		A1L1111A0300000000000001 /* LedgerMemoChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000001 /* LedgerMemoChip.swift */; };
 		A1L1111A0300000000000003 /* LedgerMemoPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000003 /* LedgerMemoPanel.swift */; };
 		A1HWY1111A01000000000010 /* LedgerHighwayShield.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1HWY1111A01000000000010 /* LedgerHighwayShield.swift */; };
@@ -1373,6 +1374,7 @@
 		F1L1110A0100000000000002 /* LedgerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerSheet.swift; sourceTree = "<group>"; };
 		C5BA1111A010000000000001 /* BokkiShortcutsGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BokkiShortcutsGuide.swift; sourceTree = "<group>"; };
 		F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Ledger.swift"; sourceTree = "<group>"; };
+		F1LGS1115A01000000000001 /* MapHomeLiveGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveGate.swift; sourceTree = "<group>"; };
 		F1L1111A0300000000000001 /* LedgerMemoChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoChip.swift; sourceTree = "<group>"; };
 		F1L1111A0300000000000003 /* LedgerMemoPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoPanel.swift; sourceTree = "<group>"; };
 		F1HWY1111A01000000000010 /* LedgerHighwayShield.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerHighwayShield.swift; sourceTree = "<group>"; };
@@ -1962,6 +1964,7 @@
 				F1L1110A0100000000000002 /* LedgerSheet.swift */,
 				C5BA1111A010000000000001 /* BokkiShortcutsGuide.swift */,
 				F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */,
+				F1LGS1115A01000000000001 /* MapHomeLiveGate.swift */,
 				F1L1111A0300000000000001 /* LedgerMemoChip.swift */,
 				F1L1111A0300000000000003 /* LedgerMemoPanel.swift */,
 				F1HWY1111A01000000000010 /* LedgerHighwayShield.swift */,
@@ -2996,6 +2999,7 @@
 				A1L1110A0100000000000002 /* LedgerSheet.swift in Sources */,
 				C5BA1111A010000000000002 /* BokkiShortcutsGuide.swift in Sources */,
 				A1L1110A0100000000000003 /* MapHomeView+Ledger.swift in Sources */,
+				A1LGS1115A01000000000001 /* MapHomeLiveGate.swift in Sources */,
 				A1L1111A0300000000000001 /* LedgerMemoChip.swift in Sources */,
 				A1L1111A0300000000000003 /* LedgerMemoPanel.swift in Sources */,
 				A1HWY1111A01000000000010 /* LedgerHighwayShield.swift in Sources */,

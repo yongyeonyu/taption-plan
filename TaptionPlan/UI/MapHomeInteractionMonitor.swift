@@ -188,6 +188,8 @@ enum LedgerScrollBench {
             if index % 3 == 0 { entry.source = .message }
             seeded.append(await book.save(entry).id)
         }
+        print("LGSBENCH opening")
+        try? await Task.sleep(for: .seconds(1))
         LedgerPresenter.shared.isPresented = true
         try? await Task.sleep(for: .seconds(4))
         MapHomeInteractionMonitor.shared.begin("bench_ledger_scroll_idle")
@@ -213,6 +215,11 @@ enum LedgerScrollBench {
             try? await Task.sleep(for: .seconds(1))
         }
         LedgerPresenter.shared.isPresented = false
+        // 닫은 뒤 홈이 따라잡는 구간도 잰다. 바깥 스크립트가 이 줄을 보고 화면을 찍는다.
+        print("LGSBENCH closed")
+        MapHomeInteractionMonitor.shared.begin("bench_ledger_after_close")
+        try? await Task.sleep(for: .seconds(5))
+        MapHomeInteractionMonitor.shared.end("bench_ledger_after_close")
         for id in seeded { await book.delete(id) }
         print("LGSBENCH done")
     }
