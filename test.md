@@ -3310,3 +3310,12 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - UIF1115A01: AI가 할 수 있는 일·AI가 한 일·AI 규칙·단축어·Siri·받은 문자 화면에 다른 설정 목록과 같은 `.font(.taptionStyle(.subheadline))`(AI 규칙은 `tpListStyle`·줄 배경도), 「되돌리기」는 footnote 굵게.
 - 시험: `AssistantRetentionRetireTests` 2건 등 Assistant 관련 70건 통과(`build/validation/SCG1115A01/test-asm2.log`). 전체 단위 시험 2,925건 중 1건 실패 — `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`(66초 걸려 지도 스타일 재로딩을 못 봄). 그 묶음만 다시 돌리니 0.7초에 통과(`test-uif-route.log`) → 간헐 실패로 보고 이번 변경과 무관(지도 코드 안 건드림).
 - 구조 지표 통과. 화면 눈 확인은 대표 기기 몫.
+
+## LGS1115A01 · 가계부가 덮는 동안 홈 갱신 멈추기 (2026-11-15 오후, 시뮬레이터 Debug)
+
+- 해결: `MapHomeLiveGate`(덮개 묶음, 지금은 가계부만)로 `isHomeLive`를 두고, 홈이 읽던 `latestSensorReading`·`liveRouteState` 45곳을 접근자로 바꿔 덮인 동안은 덮이기 직전 값을 읽게 함(관찰 무효화 끊김). 화면용 갱신 가드·카운터 시계·시간 레일·화랑이·하늘 그림·Apple 지도 내 위치 점을 덮인 동안 멈춤. 닫으면 `applyHomeVisibility`가 한 번에 따라잡음(경로 준비·투영·예상 경로·성장·초점). 곁 원인 둘: 위치마다 화면 밝기를 같은 값으로 다시 저장하던 것, 집 성장 기록을 매번 다시 쓰던 것 → 값이 바뀔 때만 씀. 센서 원본 저장은 계속(덮인 동안 `gps_fix` 25건 확인).
+- 전후(이동 중, `simctl location` 초당 1회, `-autoBenchLedgerScroll`): 가만히 4초 CPU 1,458~1,843ms → 29~42ms, 40ms 넘는 프레임 23~24 → 0, 최대 128~216ms → 17ms. 굴릴 때 CPU 1,925~2,283ms → 626~692ms, 40ms 넘는 프레임 35~46 → 0~2. 위치 변화 없을 때 굴림 670~740ms → 590~612ms. 로그 `build/validation/LGS1115A01/gate4-*.log`(작업 가지에서 잼).
+- 닫은 뒤: 5초 안에 경로 준비 9·예상 경로 8·카메라 5건이 돌고, 스크린샷에서 화랑이·경로·카운터가 최신 위치(`gate4-m3-after-close.png`). 닫은 뒤 1초 안의 따라잡기 프레임(최대 180~298ms)은 줄이지 않음.
+- 새 시험 `MapHomeLiveGateTests` 5건. main에 합친 뒤 전체 단위 시험 2,930건, 건너뜀 25, 실패 0(`merged-unit-1.log`). 구조 지표·import 경계 통과.
+- 닫혀 있을 때 바뀔 수 있는 곳: 나침반 모드에서 가계부를 열면 방향 센서가 멈췄다 닫으면 다시 켜짐, 재생은 가계부를 열면 멈춤.
+- 하지 않은 것: 실기기 체감·측정, Release 수치, UI 시험. 다른 전체 화면 덮개(여행 홈 등)는 아직 연결하지 않음.
