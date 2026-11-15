@@ -543,6 +543,11 @@ extension MapHomeView {
             displayGroupHeader(language.text("사이드바", "Sidebar"), systemImage: "sidebar.right", isExpanded: $isSidebarGroupExpanded)
             if isSidebarGroupExpanded {
                 displayToggle(
+                    language.text("날짜 줄 늘 펼치기", "Date strip from any day"),
+                    systemImage: "calendar.day.timeline.leading",
+                    isOn: $dateBadgeAlwaysStrip
+                )
+                displayToggle(
                     language.text("날씨", "Weather"),
                     systemImage: "cloud.sun.fill",
                     isOn: Binding(

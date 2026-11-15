@@ -5933,6 +5933,8 @@
 "자동 기록에 필요한 권한이 꺼져 있어요|Permissions for automatic recording are off": "สิทธิ์ที่ต้องใช้สำหรับการบันทึกอัตโนมัติปิดอยู่",
 "집으로 옮기고 하루 요약을 엽니다|Moves to home and opens the day summary": "ไปที่บ้านและเปิดสรุปของวัน",
 "한 번 누르면 오늘로 돌아갑니다|Tap to return to today": "แตะเพื่อกลับไปวันนี้",
-"화면 오른쪽 끝까지 끌어 시간을 선택합니다|Drag along the right edge to pick a time": "ลากตามขอบขวาเพื่อเลือกเวลา"
+"화면 오른쪽 끝까지 끌어 시간을 선택합니다|Drag along the right edge to pick a time": "ลากตามขอบขวาเพื่อเลือกเวลา",
+"날짜 줄 늘 펼치기|Date strip from any day": "แถบวันที่จากทุกวัน",
+"오늘로 돌아가기|Back to today": "กลับไปวันนี้"
 }
 }

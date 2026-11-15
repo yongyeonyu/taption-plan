@@ -136,4 +136,16 @@ extension MapHomeView {
         .frame(maxWidth: MapHomeWideLayoutPolicy.actionBarWidth(viewportWidth: mapViewportSize.width).map { $0 + MapHomeBottomBarMetrics.edgeMargin * 2 } ?? .infinity, maxHeight: .infinity, alignment: .bottom)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    /// 달력에서 날짜를 고르면 그날 경로가 지도에 맞춰지게 한다(HUX1116A03).
+    var calendarSelectedDateBinding: Binding<Date> {
+        Binding(
+            get: { model.selectedDate },
+            set: { day in
+                guard day != model.selectedDate else { return }
+                shouldFitRoutesAfterDateChange = true
+                model.selectedDate = day
+            }
+        )
+    }
 }

@@ -183,6 +183,9 @@ struct MapHomeView: View {
 
     @AppStorage("mapHomeShowsFootprints") var showsFootprintsOnMap = true
 
+    /// 시험 옵션(HUX1116A03): 날짜 배지를 누르면 어느 날에서든 날짜 줄을 펼치고, 오늘이 아니면 줄 맨 앞에 「오늘」 칸을 둔다. 기본은 끔.
+    @AppStorage("mapHomeDateBadgeAlwaysStrip") var dateBadgeAlwaysStrip = false
+
     @AppStorage(MapHomeSidebarTimeFormat.storageKey) var sidebarTimeFormatRaw = MapHomeSidebarTimeFormat.twentyFourHour.rawValue
 
 

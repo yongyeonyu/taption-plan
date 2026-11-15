@@ -469,7 +469,7 @@ extension MapHomeView {
         }
         .mapHomeWidePanel(isPresented: $isCalendarPresented, kind: .calendar, title: language.text("달력", "Calendar"), viewportWidth: mapViewportSize.width, language: language) {
             MapHomeCalendarSheet(
-                selectedDate: $model.selectedDate,
+                selectedDate: calendarSelectedDateBinding,
                 starredDays: travelPlanDays,
                 minimumDay: travelModeMinimumDay,
                 holidayName: { date in

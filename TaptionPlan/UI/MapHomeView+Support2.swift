@@ -480,7 +480,7 @@ extension MapHomeView {
         }
         .accessibilityLabel(language.text("날짜 \(dateTitle)", "Date \(dateTitle)"))
         .accessibilityHint(
-            Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
+            dateBadgeAlwaysStrip || Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
                 ? language.text("한 번 누르면 날짜 줄을 펼칩니다", "Tap to show the date strip")
                 : language.text("한 번 누르면 오늘로 돌아갑니다", "Tap to return to today")
         )
@@ -506,7 +506,10 @@ extension MapHomeView {
                     selectedDate: model.selectedDate,
                     markedDays: dataDayStarts,
                     starredDays: travelPlanDays,
-                    minimumDay: travelModeMinimumDay
+                    minimumDay: travelModeMinimumDay,
+                    onToday: dateBadgeAlwaysStrip && !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
+                        ? { withAnimation(MapHomeView.dateBadgeSpring) { jumpToTodayAndFitRoutes() } }
+                        : nil
                 ) { day in
                     shouldFitRoutesAfterDateChange = true
                     model.selectedDate = day
@@ -531,7 +534,7 @@ extension MapHomeView {
 
     /// 오늘이 아니면 한 번 눌러 오늘로 돌아가고, 오늘이면 옆으로 날짜 줄을 펼친다.
     func handleDateBadgeTap() {
-        if !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) {
+        if !dateBadgeAlwaysStrip, !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(MapHomeView.dateBadgeSpring) { jumpToTodayAndFitRoutes() }
             return

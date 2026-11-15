@@ -13,6 +13,8 @@ struct MapHomeDateStrip: View {
     /// 여행 모드에서 고를 수 있는 첫 날.
     var minimumDay: Date?
     /// 날짜가 정해졌을 때. 부모가 선택일을 바꾸고 그날 데이터를 불러온다.
+    /// 오늘이 아닐 때 줄 맨 앞에 「오늘」 칸을 둔다(시험 옵션). nil이면 칸이 없다.
+    var onToday: (() -> Void)?
     let onSelect: (Date) -> Void
 
     /// 기준 날짜 앞뒤로 스크롤할 수 있는 날 수. 끝에 가까워지면 기준을 옮긴다.
@@ -50,8 +52,23 @@ struct MapHomeDateStrip: View {
     }
 
     private func strip(width: CGFloat) -> some View {
-        let dayAreaWidth = width - MapHomeWeekStripMath.monthLabelWidth
+        let todayWidth = onToday == nil ? 0 : MapHomeWeekStripMath.todayCellWidth
+        let dayAreaWidth = width - MapHomeWeekStripMath.monthLabelWidth - todayWidth
         return HStack(spacing: 0) {
+            if let onToday {
+                Button(action: onToday) {
+                    Text(language.text("오늘", "Today"))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                        .foregroundStyle(Color.tpAccent)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(width: todayWidth, height: MapHomeWeekStripMath.height)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("오늘로 돌아가기", "Back to today"))
+                .accessibilityIdentifier("mapHomeDateStripToday")
+            }
             monthLabel
                 .frame(width: MapHomeWeekStripMath.monthLabelWidth)
             dayArea(width: dayAreaWidth)
@@ -184,6 +201,8 @@ enum MapHomeWeekStripMath {
     static let visibleDays = 7
     /// 줄 맨 왼쪽의 달 표시 칸 너비.
     static let monthLabelWidth: CGFloat = 36
+    /// 「오늘」 칸의 폭(시험 옵션).
+    static let todayCellWidth: CGFloat = 44
     /// 선택일 앞뒤로 보여 줄 날 수(창 반폭).
     static let windowRadius = visibleDays / 2
     /// 보이는 7칸의 폭.

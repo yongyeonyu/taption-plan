@@ -9,6 +9,10 @@ struct MapHomeCalendarSheet: View {
     private static let riseDuration: TimeInterval = 0.45
 
     @Binding private var selectedDate: Date
+    /// 날짜를 골라 낮춘 시트 높이. nil이면 처음 열린 높이를 따른다.
+    @State private var pickedDetent: PresentationDetent?
+    static let peekDetent = PresentationDetent.fraction(0.42)
+    @Environment(\.mapHomeIsWidePanel) private var isWidePanel
     private let holidayName: (Date) -> String?
     private let logStatuses: (Date) async -> [Date: MapHomeCalendarLogStatus]
     private let timeTotals: (Date) async -> [Date: [String: TimeInterval]]
@@ -155,7 +159,15 @@ struct MapHomeCalendarSheet: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.tpBackground)
         // 추가한 지표까지 내용에 딱 맞춰 연다. 화면보다 길면 스크롤로 이어진다.
-        .presentationDetents(contentHeight > 0 ? [.height(contentHeight), .large] : [.medium, .large])
+        // 날짜를 고르면 시트를 낮춰 지도에 그날 경로가 보이게 한다(HUX1116A03). 낮춘 동안은 뒤 지도도 만질 수 있다.
+        .presentationDetents(
+            contentHeight > 0 ? [Self.peekDetent, .height(contentHeight), .large] : [Self.peekDetent, .medium, .large],
+            selection: Binding(
+                get: { pickedDetent ?? (contentHeight > 0 ? .height(contentHeight) : .medium) },
+                set: { pickedDetent = $0 }
+            )
+        )
+        .presentationBackgroundInteraction(.enabled(upThrough: Self.peekDetent))
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.tpBackground)
         .task {
@@ -570,6 +582,7 @@ struct MapHomeCalendarSheet: View {
 
         return Button {
             selectedDate = date
+            if !isWidePanel { pickedDetent = Self.peekDetent }
         } label: {
             VStack(spacing: 2) {
                 Text(String(day))

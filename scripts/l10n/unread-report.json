@@ -1,5 +1,5 @@
 {
- "ui": 5178,
+ "ui": 5180,
  "catalog": 504,
  "unread": [
   {
@@ -478,19 +478,19 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
-   "line": 276,
+   "line": 288,
    "ko": "kind",
    "en": "chipSeconds(of: kind)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
-   "line": 351,
+   "line": 363,
    "ko": "value",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
-   "line": 382,
+   "line": 394,
    "ko": "\"\\(calendar.component(.month, from: selected))월 \\(calendar.component(.day, from: selected)",
    "en": "selected.formatted(Date.FormatStyle().month(.abbreviated).day().locale(language.locale))"
   },
@@ -514,7 +514,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeDateStrip.swift",
-   "line": 67,
+   "line": 84,
    "ko": "\"\\(month)월\"",
    "en": "monthAbbreviation(for: visibleDay)"
   },
@@ -766,13 +766,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1071,
+   "line": 1076,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1079,
+   "line": 1084,
    "ko": "fogStrength.koreanLabel",
    "en": "fogStrength.englishLabel"
   },
