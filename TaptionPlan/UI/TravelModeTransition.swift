@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// 일상 ↔ 여행 전환(STY1116A01)의 순수 계산: 단계와 원 반지름.
 enum TravelModeTransition {
@@ -96,10 +97,13 @@ private final class TravelModeTransitionDriver {
         }
     }
 
+    /// 덮개를 움직임 없이 올리고 내린다. 시스템 기본 올라오는 움직임을 끄고, 다음 틱에 되돌려 안쪽 애니메이션은 살린다.
     private func setCover(_ shown: Bool) {
         var transaction = Transaction()
         transaction.disablesAnimations = true
+        UIView.setAnimationsEnabled(false)
         withTransaction(transaction) { isCoverShown = shown }
+        DispatchQueue.main.async { UIView.setAnimationsEnabled(true) }
     }
 }
 
@@ -142,7 +146,8 @@ private struct TravelModeReveal<Content: View>: View {
             .mask { mask.ignoresSafeArea() }
             // 움직이는 동안에는 아래 화면이 눌리지 않게 한다.
             .allowsHitTesting(driver.phase == .open)
-            .onAppear { driver.isRevealed = true }
+            // 올리는 순간의 「애니메이션 끔」 거래 밖에서 퍼지기 시작해야 움직임이 보인다.
+            .task { try? await Task.sleep(for: .milliseconds(40)); driver.isRevealed = true }
             .onChange(of: driver.isRevealed, initial: true) { _, revealed in animate(revealed) }
     }
 
