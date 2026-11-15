@@ -279,6 +279,7 @@ extension AssistantOperations.PlanQuickAction: AssistantOperation {
         case .postponeThirtyMinutes, .moveToNextFreeTime:
             // 시각을 옮기는 것은 사용자가 만든 일정만(캘린더·루틴은 그쪽에서).
             guard AssistantPlanLookup.isEditable(plan), !GoalRecordPolicy.isGoal(plan) else { return .rejected("not_editable") }
+            guard !model.isSharedTripPlan(plan.id) else { return .rejected("shared_trip") }
         case .stopCurrentActivity:
             guard plan.status == .running else { return .rejected("not_running") }
         case .complete:

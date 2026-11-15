@@ -638,6 +638,25 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(sheet.cashLeft, 300_000, "500k + 100k from A − 300k paid")
     }
 
+    /// TSF1115A01: 같은 여행의 짝 기록 맞추기가 동시에 여러 번 돌아도 예산 이체·정산 짝은 하나씩이다.
+    func testSyncTripRunningAtOnceKeepsOnePairEach() async {
+        let book = LedgerBook(store: { nil })
+        book.trips = [trip(budget: 500_000)]
+        let now = at(12, day: 10), cal = calendar
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<6 { group.addTask { await book.syncTrip("t1", now: now, calendar: cal) } }
+        }
+        for kind in [LedgerTransfer.Kind.funding, .settlement] {
+            let pair = book.entries.filter { $0.transfer == LedgerTransfer(kind: kind, tripID: "t1") }
+            XCTAssertEqual(pair.count, 2, "\(kind): 일상 쪽 하나, 여행 쪽 하나")
+            XCTAssertEqual(pair.filter { $0.tripID == nil }.count, 1)
+            XCTAssertEqual(pair.filter { $0.tripID == "t1" }.count, 1)
+        }
+        XCTAssertTrue(book.tripSyncs.isEmpty, "끝나면 줄을 비운다")
+        await book.syncTrip("t1", now: now, calendar: calendar)
+        XCTAssertEqual(book.entries.filter { $0.transfer != nil }.count, 4, "다시 불러도 그대로다")
+    }
+
     func testTripBudgetAndSettlementPairs() async {
         let book = LedgerBook(store: { nil })
         await book.saveTrip(trip(budget: 500_000), now: at(12, day: 7), calendar: calendar)

@@ -45,7 +45,19 @@ extension LedgerBook {
     }
 
     /// 여행의 짝 기록을 맞춘다: 예산 이체는 늘, 정산은 여행이 끝난 뒤에(대표 결정: 자동 정산·모자라면 추가 이체).
+    /// 같은 여행은 한 번에 하나씩 돈다. 짝 기록은 「있는지 보고 → 저장」 사이에 쉬므로, 겹쳐 돌면 둘 다 없다고 보고 둘 다 만든다(TSF1115A01).
     func syncTrip(_ id: String, now: Date = .now, calendar: Calendar = .autoupdatingCurrent) async {
+        let previous = tripSyncs[id]
+        let task = Task { [weak self] in
+            await previous?.value
+            await self?.syncTripInTurn(id, now: now, calendar: calendar)
+        }
+        tripSyncs[id] = task
+        await task.value
+        if tripSyncs[id] == task { tripSyncs[id] = nil }
+    }
+
+    private func syncTripInTurn(_ id: String, now: Date, calendar: Calendar) async {
         await load()
         guard let trip = trip(id) else { return }
         let budget = max(0, trip.budgetKRW ?? 0)

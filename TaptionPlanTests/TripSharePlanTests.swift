@@ -142,6 +142,13 @@ final class TripSharePlanTests: XCTestCase {
         XCTAssertTrue(model.snapshot.plans.contains { $0.id == local.planID })
         XCTAssertEqual(model.settings.travelPlanStops.map(\.latitude), [1.25])
         await eventually("넣은 일정이 다른 참여자에게") { await other.item(itemID) != nil }
+        // 일상 시간표에서는 이 계획 기록을 옮기거나 지우지 못한다(TSF1115A01). 아래의 여행 화면 편집은 그대로 된다.
+        let linkedPlanID = try XCTUnwrap(local.planID)
+        model.movePlan(linkedPlanID, by: 1_800)
+        await model.deletePlan(linkedPlanID)
+        XCTAssertEqual(model.userFacingError, TripShareText.editBlocked(.current))
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == linkedPlanID }?.span.start, stamp("2031-10-01T01:00:00Z"))
+        model.userFacingError = nil
         let sentPlan = await plan(other, itemID)
         let sent = try XCTUnwrap(sentPlan)
         XCTAssertEqual([sent.title, sent.place, sent.day], ["성 구경", "성", "2031-10-01"])

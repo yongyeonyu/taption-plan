@@ -289,6 +289,100 @@ final class TripShareLedgerTests: XCTestCase {
         XCTAssertEqual(book.entries.map(\.id), [lunch.id])
     }
 
+    // MARK: 꺼진 동안 방에서 지워진 공동 지출(TSF1115A01)
+
+    /// 앱을 껐다 켠 것처럼 만든다. 곁 파일의 방 사본은 `stale`(그 지출이 담기기 전에 꺼진 경우)로 되돌린다.
+    private func relaunch(with stale: ShareRoomSnapshot) async throws {
+        // 늦게 도는 사본 저장(1초 뒤)이 되돌린 사본을 덮지 않게 먼저 끝나기를 기다린다.
+        try await Task.sleep(for: .milliseconds(1_300))
+        await store.close(tripID: tripID)
+        try store.environment.sidecar.save(stale)
+        TripShareLedger.forgetMemory()
+        store = TripShareStore(environment: store.environment)
+        TripShareStore.shared = store
+        store.attach(model)
+    }
+
+    private func friendAdds(_ friend: ShareRoomSession, _ title: String) async throws -> (entryID: UUID, roomItemID: String) {
+        let entryID = UUID(), roomItemID = TripShareMapping.roomItemID(entryID: entryID)
+        let content = ShareExpenseContent(title: title, amount: 12_000, currency: "KRW", amountKRW: 12_000, payer: .member(2), split: [.member(1), .member(2)], category: "transport", at: 1_950_000_100_000, by: 2)
+        _ = try await friend.write([.create(id: roomItemID, content: .sharedExpense(content), group: nil)])
+        await waitUntil("투영 \(title)") { self.book.entries.contains { $0.id == entryID } }
+        return (entryID, roomItemID)
+    }
+
+    func testExpenseDeletedWhileTheAppWasOffIsSweptOnlyAfterTheRoomIsFullyReceived() async throws {
+        let session = try await openRoom()
+        let friend = try await join("봄")
+        // 방에 올리지 않은 내 지출.
+        let snack = expense("간식", 3_000)
+        let hidden = await TripShareLedger.save(snack, scope: .ownHidden)
+        XCTAssertNil(hidden)
+        let dinner = try await friendAdds(friend, "저녁")
+        let early = await session.snapshot()
+        let taxi = try await friendAdds(friend, "택시")
+        let sidecar = store.environment.sidecar
+        XCTAssertEqual(sidecar.projectedExpenses(roomID: roomID), [dinner.roomItemID, taxi.roomItemID], "가계부에 넣은 방 지출은 곁 파일에 적어 둔다")
+
+        // 택시가 방 사본에 담기기 전에 앱이 꺼졌고, 꺼진 동안 방에서 택시가 지워진다.
+        try await relaunch(with: early)
+        try await friend.lock(items: [taxi.roomItemID])
+        _ = try await friend.write([.delete(id: taxi.roomItemID)])
+
+        // 인터넷 없이 켜면 덜 받은 상태다: 지우지 않는다.
+        await server.setOffline(true)
+        let opened = await store.open(tripID: tripID)
+        let reopened = try XCTUnwrap(opened)
+        await waitUntil("인터넷 없음") { await reopened.view().status == .offline }
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertTrue(book.entries.contains { $0.id == taxi.entryID }, "덜 받은 동안에는 지우지 않는다")
+
+        // 연결돼 끝까지 받으면 방에 없는 「방에서 온」 지출만 정리된다.
+        await server.setOffline(false)
+        await waitUntil("다 받은 뒤 정리") { !self.book.entries.contains { $0.id == taxi.entryID } }
+        XCTAssertTrue(book.entries.contains { $0.id == dinner.entryID }, "방에 남아 있는 공동 지출은 그대로")
+        XCTAssertTrue(book.entries.contains { $0.id == snack.id }, "방에 올리지 않은 내 지출은 건드리지 않는다")
+        XCTAssertEqual(sidecar.projectedExpenses(roomID: roomID), [dinner.roomItemID])
+    }
+
+    func testSweepLeavesEverythingUntilTheRoomIsFullyReadable() async throws {
+        try await openRoom()
+        let friend = try await join("봄")
+        let snack = expense("간식", 3_000)
+        _ = await TripShareLedger.save(snack, scope: .ownHidden)
+        let taxi = try await friendAdds(friend, "택시")
+        let link = try XCTUnwrap(store.link(tripID: tripID))
+        // 방 사본에 택시가 아직 없는 화면 값(덜 받았거나, 정말 지워졌거나).
+        var view = try XCTUnwrap(store.view(tripID: tripID))
+        view.items.removeAll { $0.id == taxi.roomItemID }
+        let kept = { self.book.entries.contains { $0.id == taxi.entryID } }
+
+        for status in [ShareSessionStatus.connecting, .offline, .needsRekey, .replaced] {
+            view.status = status
+            await TripShareLedger.sweep(tripID: tripID, roomID: roomID, view: view)
+            XCTAssertTrue(kept(), "\(status)에서는 지우지 않는다")
+        }
+        view.status = .live
+        view.unreadable = [try JSONDecoder().decode(ShareUnreadableItem.self, from: Data(#"{"id":"\#(taxi.roomItemID)","kind":"expenseShared","rev":3}"#.utf8))]
+        await TripShareLedger.sweep(tripID: tripID, roomID: roomID, view: view)
+        XCTAssertTrue(kept(), "풀지 못한 항목이 있으면 지우지 않는다")
+        view.unreadable = []
+
+        // 연결만 된 때(`.live` 직후)와 올리는 중에는 정리하지 않는다. 다 받았다는 알림에서만 한다.
+        TripShareLedger.forgetMemory()
+        await TripShareLedger.roomChanged(model: model, link: link, view: view, event: .status(.live))
+        XCTAssertTrue(kept(), "연결 직후에는 지우지 않는다")
+        var uploading = link
+        uploading.phase = .uploading
+        await TripShareLedger.roomChanged(model: model, link: uploading, view: view, event: .caughtUp)
+        XCTAssertTrue(kept(), "올리는 중에는 지우지 않는다")
+
+        await TripShareLedger.roomChanged(model: model, link: link, view: view, event: .caughtUp)
+        XCTAssertFalse(kept(), "다 받은 뒤에는 방에 없는 방 지출을 지운다")
+        XCTAssertTrue(book.entries.contains { $0.id == snack.id }, "방에 올리지 않은 내 지출은 건드리지 않는다")
+        XCTAssertEqual(store.environment.sidecar.projectedExpenses(roomID: roomID), [])
+    }
+
     // MARK: 정산·예산
 
     func testSettlementIsTheSameOnEveryDeviceAndClosingBlocksSharedExpenses() async throws {

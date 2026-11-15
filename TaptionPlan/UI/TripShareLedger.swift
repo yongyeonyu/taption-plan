@@ -54,6 +54,8 @@ enum TripShareLedger {
     private static var known: [String: Set<String>] = [:]
     /// 지금 내가 방에서 내리거나 옮기는 기록. 그 사이의 투영이 먼저 지우지 않게 한다.
     private static var moving: Set<UUID> = []
+    /// 가계부에 넣어 둔 방 지출(방 번호 → 항목 id). 곁 파일에도 적어, 앱이 꺼진 동안 방에서 지워진 것을 다 받은 뒤 가려 지운다(TSF1115A01).
+    private static var projected: [String: Set<String>] = [:]
 
     private static var store: TripShareStore { .shared }
 
@@ -160,6 +162,7 @@ enum TripShareLedger {
         moving.insert(entry.id)
         defer { moving.remove(entry.id) }
         if let failure = await send(edits, locking: current == .shared ? [oldID] : [], session: room.session, tripID: tripID) { return failure }
+        if scope != .ownHidden, let roomID = store.link(tripID: tripID)?.roomID { setProjected(projectedIDs(roomID).union([newID]), roomID: roomID) }
         if value.id != entry.id { await book.delete(entry.id) }
         await keep(value)
         return nil
@@ -247,18 +250,69 @@ enum TripShareLedger {
     static func roomChanged(model: AppModel, link: TripShareLink, view: ShareRoomView, event: ShareSessionEvent) async {
         guard link.phase != .ended else {
             known[link.roomID] = nil
+            projected[link.roomID] = nil
             return
         }
         var removed: [String] = []
+        var complete = false
         switch event {
         case .locks: return
         case .status(let status) where status != .live:
             if known[link.roomID] == nil { known[link.roomID] = expenseIDs(view) }
             return
         case .items(_, let gone): removed = gone
+        case .caughtUp: complete = true
         default: break
         }
         await project(tripID: link.tripID, roomID: link.roomID, view: view, removed: removed)
+        if complete, link.phase == .sharing { await sweep(tripID: link.tripID, roomID: link.roomID, view: view) }
+    }
+
+    /// 방을 **다 받은 뒤에만** 부른다: 가계부에 넣어 둔 방 지출 가운데 방에 더는 없는 것을 지운다(TSF1115A01).
+    /// 앱이 꺼진 동안 지워진 것은 「지워졌다」는 알림이 오지 않을 수 있다(곁 파일의 방 사본이 그 지출을 담기 전에 꺼진 경우).
+    /// 덜 받았을 수 있으면(연결이 살아 있지 않음·풀지 못한 항목이 있음) 아무것도 지우지 않는다.
+    /// 지우는 것은 곁 파일에 적어 둔 「방에서 온」 기록뿐이다. 방에 올린 적 없는 내 기록은 건드리지 않는다.
+    static func sweep(tripID: String, roomID: String, view: ShareRoomView) async {
+        // 기다리는 사이 내가 방에 올린 것이 있으면 창구의 더 새 값으로 본다.
+        var view = view
+        if let newer = store.view(tripID: tripID), newer.generation > view.generation { view = newer }
+        guard view.status == .live, view.unreadable.isEmpty else { return }
+        let live = expenseIDs(view)
+        var kept = projectedIDs(roomID)
+        let stale = kept.subtracting(live)
+        guard !stale.isEmpty else { return }
+        await book.load()
+        var touched = false
+        for roomItemID in stale.sorted() {
+            let id = TripShareMapping.entryID(roomItemID: roomItemID)
+            if let id, moving.contains(id) { continue }
+            kept.remove(roomItemID)
+            guard let id, book.entries.contains(where: { $0.id == id && $0.tripID == tripID }) else { continue }
+            await book.delete(id)
+            touched = true
+        }
+        setProjected(kept, roomID: roomID)
+        if touched, book.trip(tripID)?.hasEnded(asOf: .now, calendar: .autoupdatingCurrent) == true { await book.syncTrip(tripID) }
+    }
+
+    private static func projectedIDs(_ roomID: String) -> Set<String> {
+        if let ids = projected[roomID] { return ids }
+        let ids = store.environment.sidecar.projectedExpenses(roomID: roomID)
+        projected[roomID] = ids
+        return ids
+    }
+
+    private static func setProjected(_ ids: Set<String>, roomID: String) {
+        guard ids != projectedIDs(roomID) else { return }
+        projected[roomID] = ids
+        try? store.environment.sidecar.saveProjectedExpenses(ids, roomID: roomID)
+    }
+
+    /// 메모리에 든 것을 잊는다(시험이 앱을 껐다 켠 것처럼 만든다). 곁 파일은 그대로다.
+    static func forgetMemory() {
+        known = [:]
+        projected = [:]
+        moving = []
     }
 
     private static func expenseIDs(_ view: ShareRoomView) -> Set<String> {
@@ -293,13 +347,20 @@ enum TripShareLedger {
             touched = true
         }
         let live = expenseIDs(view)
-        let gone = (known[roomID] ?? []).subtracting(live).union(removed).subtracting(live)
+        // 풀지 못하게 된 항목은 방에 그대로 있다. 지워진 것으로 보지 않는다.
+        let gone = (known[roomID] ?? []).subtracting(live).union(removed).subtracting(live).subtracting(view.unreadable.map(\.id))
         known[roomID] = live
-        for id in gone.compactMap(TripShareMapping.entryID(roomItemID:)) where !moving.contains(id) {
+        // 가계부에 넣기 전에 「방에서 온 것」으로 적어 둔다. 방이 지웠다고 알린 것은 아래에서 지우고 뺀다.
+        var marked = projectedIDs(roomID).union(live)
+        for roomItemID in gone {
+            guard let id = TripShareMapping.entryID(roomItemID: roomItemID) else { continue }
+            guard !moving.contains(id) else { continue }
+            marked.remove(roomItemID)
             guard let entry = book.entries.first(where: { $0.id == id && $0.tripID == tripID }) else { continue }
             await book.delete(entry.id)
             touched = true
         }
+        setProjected(marked, roomID: roomID)
         // 방에 없는 지출은 내 것이다: 「다 같이」로 비어 있으면 나만으로 고정한다.
         for entry in book.tripEntries(tripID) where entry.shareNames == nil && canShare(entry) && !moving.contains(entry.id)
             && !live.contains(TripShareMapping.roomItemID(entryID: entry.id)) {

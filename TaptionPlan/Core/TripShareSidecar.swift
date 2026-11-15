@@ -94,8 +94,30 @@ struct TripShareSidecar: ShareSnapshotStore {
     func remove(roomID: String) throws {
         guard ShareIdentifiers.isRoomID(roomID) else { return }
         try Self.gate.withLock { _ in
+            try? FileManager.default.removeItem(at: expensesURL(roomID))
             guard FileManager.default.fileExists(atPath: url(roomID).path) else { return }
             try FileManager.default.removeItem(at: url(roomID))
+        }
+    }
+
+    // MARK: 가계부에 넣은 방 지출(TSF1115A01)
+
+    /// 작은 파일을 따로 둔다: 방 사본과 함께 두면 지출 하나에 사본 전체를 다시 쓰게 된다.
+    private func expensesURL(_ roomID: String) -> URL { directory.appendingPathComponent(roomID + ".expenses") }
+
+    /// 방에서 가계부로 투영해 넣은 지출의 방 항목 id. 가계부 기록에는 「방에서 왔다」는 표지가 없어 여기에 둔다.
+    func projectedExpenses(roomID: String) -> Set<String> {
+        guard ShareIdentifiers.isRoomID(roomID), let data = try? Data(contentsOf: expensesURL(roomID)),
+              let ids = try? JSONDecoder().decode([String].self, from: data) else { return [] }
+        return Set(ids)
+    }
+
+    /// 연결을 지운 방이면 쓰지 않는다(늦게 온 투영이 파일을 되살리지 않게).
+    func saveProjectedExpenses(_ ids: Set<String>, roomID: String) throws {
+        guard ShareIdentifiers.isRoomID(roomID) else { throw ShareError.invalidResponse }
+        try Self.gate.withLock { _ in
+            guard FileManager.default.fileExists(atPath: url(roomID).path) else { return }
+            try JSONEncoder().encode(ids.sorted()).write(to: expensesURL(roomID), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         }
     }
 }

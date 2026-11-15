@@ -242,6 +242,7 @@ extension AppModel {
         case let .deleteSchedule(target):
             guard let plan = AssistantPlanLookup.plan(target, in: snapshot.plans) else { return .rejected("no_plan") }
             guard AssistantPlanLookup.isEditable(plan) else { return .rejected("not_editable") }
+            guard !isSharedTripPlan(plan.id) else { return .rejected("shared_trip") }
             // 루틴은 루틴 동작으로만 지운다. 「루틴 지우기」를 꺼 두면 이 길로도 지워지지 않는다(REV1110A06).
             guard !GoalRecordPolicy.isGoal(plan) else { return .rejected("is_goal") }
             // 하위 일정까지 함께 지워지는 루틴은 앱에서 직접 지우게 한다.
@@ -388,6 +389,8 @@ extension AppModel {
         if extras.clearPlace, plan.place == nil { return .rejected("no_place") }
         if newTitle != plan.title || span != plan.span || newCategory != plan.categoryID || important != plan.isImportant || parentID != plan.parentID
             || spotChanged {
+            // 함께 쓰는 여행의 일정은 메모만 받는다(TSF1115A01).
+            guard !isSharedTripPlan(plan.id) else { return .rejected("shared_trip") }
             let errorBefore = userFacingError
             updatePlan(
                 plan.id, title: newTitle, categoryID: newCategory,
