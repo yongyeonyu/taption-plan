@@ -15,7 +15,7 @@ final class SharedRuleStoreTests: XCTestCase {
         return store
     }
 
-    private func bundle(_ version: Int, rules: String, signedBy key: Curve25519.Signing.PrivateKey? = nil) throws -> SharedRuleStore.Bundle {
+    private func bundle(_ version: Int, rules: String, signedBy key: Curve25519.Signing.PrivateKey? = nil) throws -> SharedRuleStore.SignedBundle {
         let payload = #"{"format":"bokki-shared-rules","version":\#(version),"engine":1,"issuedAt":"2026-11-16","rules":[\#(rules)]}"#
         let signature = try (key ?? signer).signature(for: Data(payload.utf8)).base64EncodedString()
         return .init(version: version, payload: payload, signature: signature)
@@ -25,7 +25,7 @@ final class SharedRuleStoreTests: XCTestCase {
     private let card = #"{"id":"s_card","type":"payment_text","match":{"pattern":"(?<merchant>.+) (?<amount>[\\d,]+)원 승인","sample":"가게 12,000원 승인"},"result":{"kind":"expense","name":"카드"}}"#
     private let skipSwitch = #"{"id":"s_own","type":"own_account","match":{"name":"비상금"},"result":{}}"#
 
-    private func save(_ bundle: SharedRuleStore.Bundle, _ store: UserDefaults) {
+    private func save(_ bundle: SharedRuleStore.SignedBundle, _ store: UserDefaults) {
         store.set(try? JSONEncoder().encode(bundle), forKey: SharedRuleStore.bundleKey)
     }
 
@@ -42,7 +42,7 @@ final class SharedRuleStoreTests: XCTestCase {
         renumbered.version = 9
         XCTAssertTrue(SharedRuleStore.rules(in: renumbered, publicKey: publicKey).isEmpty, "the version must match the signed payload")
         let futureEngine = try bundle(4, rules: cafe).payload.replacingOccurrences(of: #""engine":1"#, with: #""engine":2"#)
-        let signed = SharedRuleStore.Bundle(version: 4, payload: futureEngine, signature: try signer.signature(for: Data(futureEngine.utf8)).base64EncodedString())
+        let signed = SharedRuleStore.SignedBundle(version: 4, payload: futureEngine, signature: try signer.signature(for: Data(futureEngine.utf8)).base64EncodedString())
         XCTAssertTrue(SharedRuleStore.rules(in: signed, publicKey: publicKey).isEmpty, "a newer engine than this app reads")
     }
 

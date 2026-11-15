@@ -5,7 +5,7 @@ import Foundation
 /// 설계는 `docs/SHARED_RULES_PLAN.md`. 우선순위는 내가 정한 규칙 → 내 AI가 만든 규칙 → 공통 규칙 → 코드의 표다.
 @MainActor
 enum SharedRuleStore {
-    struct Bundle: Codable, Equatable {
+    struct SignedBundle: Codable, Equatable {
         var version: Int
         var payload: String
         var signature: String
@@ -56,14 +56,14 @@ enum SharedRuleStore {
 
     // MARK: 받은 묶음
 
-    static func stored(_ defaults: UserDefaults = .standard) -> Bundle? {
-        defaults.data(forKey: bundleKey).flatMap { try? JSONDecoder().decode(Bundle.self, from: $0) }
+    static func stored(_ defaults: UserDefaults = .standard) -> SignedBundle? {
+        defaults.data(forKey: bundleKey).flatMap { try? JSONDecoder().decode(SignedBundle.self, from: $0) }
     }
 
     static var version: Int { stored()?.version ?? 0 }
 
     /// 서명이 맞는 묶음 안에서 이 앱이 읽을 수 있고 공통으로 허용된 종류의 규칙. 서명이 틀리면 빈 목록.
-    nonisolated static func rules(in bundle: Bundle, publicKey: String?) -> [Rule] {
+    nonisolated static func rules(in bundle: SignedBundle, publicKey: String?) -> [Rule] {
         guard let publicKey, verified(bundle, publicKey: publicKey),
               let data = bundle.payload.data(using: .utf8), let payload = try? JSONDecoder().decode(Payload.self, from: data),
               payload.format == "bokki-shared-rules", payload.engine <= RuleEngine.version, payload.version == bundle.version else { return [] }
@@ -76,7 +76,7 @@ enum SharedRuleStore {
         }
     }
 
-    nonisolated static func verified(_ bundle: Bundle, publicKey: String) -> Bool {
+    nonisolated static func verified(_ bundle: SignedBundle, publicKey: String) -> Bool {
         guard let raw = Data(base64Encoded: publicKey), let key = try? Curve25519.Signing.PublicKey(rawRepresentation: raw),
               let signature = Data(base64Encoded: bundle.signature), let message = bundle.payload.data(using: .utf8) else { return false }
         return key.isValidSignature(signature, for: message)
@@ -126,9 +126,9 @@ enum SharedRuleStore {
 
     private struct Reply: Decodable { let version: Int; let payload: String?; let signature: String? }
 
-    nonisolated static func decode(_ data: Data) -> Bundle? {
+    nonisolated static func decode(_ data: Data) -> SignedBundle? {
         guard let reply = try? JSONDecoder().decode(Reply.self, from: data), let payload = reply.payload, let signature = reply.signature else { return nil }
-        return Bundle(version: reply.version, payload: payload, signature: signature)
+        return SignedBundle(version: reply.version, payload: payload, signature: signature)
     }
 
     // MARK: 올리기 (사용자가 동의한 때만)

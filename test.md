@@ -14,7 +14,8 @@
 - 설계: `docs/SHARED_RULES_PLAN.md`. 대표 객관식 답: 동의 = AI 연결 화면의 기본 꺼짐 스위치 하나(확인창 없음), 수집 범위 = 가게→분류 포함(기기 2대 이상일 때만 검토 목록), 알림 규칙 = 앱별 기본값 포함(대표가 직접 작성), 받기 = 기본 켜짐, 약관 문구 = 앱 안 「공통 규칙」 화면에도 요약(초안 표시).
 - 서버 `npm test`: 199건 통과·실패 0(새 `test/shared.test.mjs` 5건: 개인 정보 거르기 견본, 서명 묶음 받기·304, 관리 토큰·서명·판 번호·개인 정보 거절·거두기, 관리 길 닫힘, 후보 2대 이상·익명·하루 한도·만료).
 - `TaptionRules` 패키지 `swift test`: 6건 통과(새 `SharedRuleFilterTests`가 서버와 같은 `shared-rules.json`을 읽음).
-- 못 한 것: **앱 Debug 빌드와 앱 단위 시험(`SharedRuleStoreTests`·`LedgerTests`·`AssistantRelayTests`)은 실행하지 못했다.** 다른 세션들이 빌드 잠금을 쥐고 있었고, 이어 맥북 디스크가 8.2GB로 10GB 아래가 되어(공지) 대기하던 작업을 껐다. 앱 코드(`SharedRuleStore`·`SharedRulesView`·판단 순서 연결·pbxproj 등록)는 컴파일 확인이 안 된 상태다. 디스크 여유나 외장 볼륨 빌드가 정해지면 다음을 실행한다: `xcodebuild test … -only-testing:TaptionPlanTests/SharedRuleStoreTests -only-testing:TaptionPlanTests/LedgerTests -only-testing:TaptionPlanTests/AssistantRelayTests`.
+- 앱 시험(`build/validation/SRL1116A01/test-4.log`, 지정 시뮬레이터 BOKKI-STL, `-parallel-testing-enabled NO`, 외장 볼륨 DerivedData): `SharedRuleStoreTests` 4건·`LedgerTests` 34건·`AssistantRelayTests` 21건 등 59건 통과·실패 0, `TEST SUCCEEDED`(앱 Debug 빌드 포함). 첫 실행은 내부 구조체 `Bundle`이 Foundation `Bundle`을 가려 컴파일 실패해 `SignedBundle`로 고쳤고(`test-2.log`), 다음 실행은 다른 세션의 미커밋 `TripLiveLocationTests.swift` 오류로 막혀 HEAD에 이 수정만 얹은 깨끗한 사본(외장 볼륨 worktree)에서 돌렸다. 이 작업 폴더 전체의 앱 시험은 그 파일이 고쳐진 뒤 다시 필요하다.
+- 못 한 것: 실기기·아이폰 11 확인 없음(시뮬레이터 결과만).
 - 서버 미배포, 서명 키 미생성(`admin.mjs keygen` 미실행), 앱 공개 키 비어 있음(공통 규칙을 받지 않음), 실기기 미확인. 새 화면 문구는 12개 언어 번역 전(영어로 보임). 약관·방침은 초안이며 확정은 대표.
 
 ## APS1115A01·BGM1115A01 · 일레븐랩스로 App Store 자료와 재생 음악 (2026-11-15~16)
