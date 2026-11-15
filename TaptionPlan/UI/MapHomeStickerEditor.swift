@@ -35,7 +35,7 @@ struct MapHomeMapStickerMarker: View {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(Color.white.opacity(0.94), in: Capsule())
-                .overlay { Capsule().stroke(Color.black, lineWidth: 1) }
+                .overlay { Capsule().stroke(Color.black, lineWidth: TaptionBorder.width) }
         }
         .taptionShadow(.floating)
         .fixedSize()

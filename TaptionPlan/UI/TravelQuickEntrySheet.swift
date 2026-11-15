@@ -232,7 +232,7 @@ struct TravelQuickEntrySheet: View {
                     .font(.footnote.monospacedDigit())
                     .padding(.horizontal, 10).frame(height: 34)
                     .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionCorner.small))
-                    .overlay { RoundedRectangle(cornerRadius: TaptionCorner.small).stroke(TravelInk.border, lineWidth: 1) }
+                    .overlay { RoundedRectangle(cornerRadius: TaptionCorner.small).stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
                     .onChange(of: plannedSpend) { _, value in
                         let digits = Self.spendDigits(value)
                         if digits != value { plannedSpend = digits }
@@ -353,7 +353,7 @@ struct TravelQuickEntrySheet: View {
                         Text(title).font(.footnote).lineLimit(1)
                             .padding(.horizontal, 10).frame(height: 28)
                             .foregroundStyle(TravelInk.plan)
-                            .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+                            .overlay { Capsule().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
                     }
                     .buttonStyle(.plain)
                 }
@@ -371,7 +371,7 @@ struct TravelQuickEntrySheet: View {
             .onSubmit { Task { await save() } }
             .padding(.horizontal, 10).frame(height: 44)
             .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
-            .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelInk.border, lineWidth: 1) }
+            .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
             .accessibilityIdentifier("travelEntryTitle")
     }
 

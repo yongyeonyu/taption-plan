@@ -81,7 +81,7 @@ struct TravelMapVideoSection: View {
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
-                .stroke(Color.tpLine, lineWidth: 1)
+                .stroke(Color.tpLine, lineWidth: TaptionBorder.width)
         }
     }
 

@@ -119,7 +119,7 @@ struct LocationTimelineView: View {
                     .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
                     .overlay {
                         RoundedRectangle(cornerRadius: TaptionRadius.compact)
-                            .stroke(Color.tpControlStroke, lineWidth: 1)
+                            .stroke(Color.tpControlStroke, lineWidth: TaptionBorder.width)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)

@@ -481,7 +481,7 @@ struct TravelPlanTable: View {
         .padding(.trailing, 4)
         .frame(height: 44)
         .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
-        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelInk.border, lineWidth: 1) }
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
         .shadow(color: .black.opacity(0.15), radius: 5, y: 2)
         .padding(.horizontal, 4)
         .padding(.bottom, 6)
@@ -707,7 +707,7 @@ struct TravelMiniRail: View {
         }
         .frame(width: 40)
         .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: TaptionCorner.large))
-        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: 1) }
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
     }
 }
 

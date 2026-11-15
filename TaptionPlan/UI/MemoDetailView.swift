@@ -431,7 +431,7 @@ struct MemoDetailView: View {
         .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
         .overlay {
             RoundedRectangle(cornerRadius: TaptionCorner.medium)
-                .stroke(Color.tpControlStroke, lineWidth: 1)
+                .stroke(Color.tpControlStroke, lineWidth: TaptionBorder.width)
         }
         .shadow(color: .black.opacity(0.07), radius: 8, y: 5)
     }
