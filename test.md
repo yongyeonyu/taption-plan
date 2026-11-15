@@ -3342,3 +3342,9 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 담긴 것: LGS1115A01(가계부 스크롤 멈칫), SCG1115A01(단축어 안내 하단), ASM1115A01(AI 연결 화면 정리), UIF1115A01(설정 목록 글자 통일), TPY1115A01(이체 상대 이름).
 - `release.sh --yes --request-id TFB1115A346` 종료 코드 0: 처리 상태 VALID, 「TP Taption Plan 내부 테스트」 그룹 연결 확인, 테스터 1명(`build/validation/TFB1115A346/testflight-report.json`). 서버 변경 없음.
 - 기기 설치·화면 확인은 하지 않음.
+
+## TPY1115A01 · 아이폰 11 Pro 기기 시험 (2026-11-15 저녁)
+
+- 기기: 아이폰 11 Pro(실기기, 잠금 `/tmp/bokki-device-…lock` 잡고 시험 뒤 풂). 코드: `ee3b93ca`(빌드 346과 같은 코드)의 Debug.
+- 단위 시험 66건 통과, 실패 0(`build/validation/TPY1115A01/device/unit-iphone11.log`): `LedgerReviewTests` 8(이체 상대 이름 포함)·`LedgerMessageAccuracyTests` 17·`LedgerTests` 34·`MapHomeLiveGateTests` 5·`AssistantRetentionRetireTests` 2.
+- 시험 때문에 기기의 앱이 Debug 판으로 바뀜(TestFlight 346이 깔려 있었다면 그 위에 덮어씀). 실제 은행 문자 수신·화면 눈 확인은 하지 않음. 기기용 중간 빌드 폴더는 디스크 때문에 지움.
