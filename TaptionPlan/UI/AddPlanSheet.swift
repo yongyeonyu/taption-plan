@@ -1683,7 +1683,7 @@ private struct CustomCategoryScreen: View {
                         Spacer()
                     }
                     .padding(13)
-                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 15))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
 
                     HStack {
                         Text("이름")

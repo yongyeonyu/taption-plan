@@ -401,7 +401,7 @@ struct LocationTimelineView: View {
         .foregroundStyle(.white)
         .padding(.horizontal, 9)
         .padding(.vertical, 10)
-        .background(Color(red: 0.09, green: 0.09, blue: 0.10), in: RoundedRectangle(cornerRadius: 15))
+        .background(Color(red: 0.09, green: 0.09, blue: 0.10), in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
         .shadow(color: .black.opacity(0.16), radius: 9, y: 6)
     }
 

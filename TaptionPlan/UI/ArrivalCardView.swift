@@ -85,7 +85,7 @@ struct ArrivalCardView: View {
         .foregroundStyle(Color.tpInk)
         .padding(14)
         .frame(maxWidth: 420, alignment: .leading)
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
         .padding(.horizontal, 16)
         .task(id: "\(card.id)|\(checked.count)") {
             try? await Task.sleep(for: .seconds(60))
@@ -164,7 +164,7 @@ struct ArrivalCardSettingRow: View {
         .onChange(of: isEnabled) { _, _ in ArrivalCardManager.shared.scheduleAlertSync() }
         .padding(.vertical, 8)
         .padding(.horizontal, 14)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
     }
 }
 
