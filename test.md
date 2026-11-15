@@ -3336,3 +3336,9 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 구조 지표·import 경계 통과. 새 화면 문구 없음.
 - 확인하지 못한 것: 실제 은행 문자 형식(견본은 흔한 꼴을 지어낸 것), 대표 기기에서 새 입금 문자가 이름으로 들어오는지.
 - 디스크: 시작 때 남은 공간 117MB로 명령이 돌지 않아 대표 승인(객관식 「중간 산출물만 지우기」)으로 Xcode DerivedData, `build/*-archive-dd`, `build/validation/LGS1115A01/device/dd-*`, `build/validation/TSH1114A26/reldd`, 모든 `.xcresult`를 지움 → 약 32GB 남음. 로그·보고서·xcarchive는 남김.
+
+## TFB1115A346 · TestFlight 346 (2026-11-15 저녁)
+
+- 담긴 것: LGS1115A01(가계부 스크롤 멈칫), SCG1115A01(단축어 안내 하단), ASM1115A01(AI 연결 화면 정리), UIF1115A01(설정 목록 글자 통일), TPY1115A01(이체 상대 이름).
+- `release.sh --yes --request-id TFB1115A346` 종료 코드 0: 처리 상태 VALID, 「TP Taption Plan 내부 테스트」 그룹 연결 확인, 테스터 1명(`build/validation/TFB1115A346/testflight-report.json`). 서버 변경 없음.
+- 기기 설치·화면 확인은 하지 않음.
