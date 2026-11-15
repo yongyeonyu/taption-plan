@@ -222,7 +222,7 @@ public actor ShareRoomSession {
             absorb(state)
             guard shouldRun else { return }
             setStatus(.live)
-            if state.rev > rev || needsFullSync { try await catchUp() }
+            if state.rev > rev || needsFullSync { try await catchUp() } else { emit(.caughtUp) }
         } catch {}
     }
 
@@ -233,7 +233,7 @@ public actor ShareRoomSession {
             absorb(state)
             guard shouldRun else { return await client.disconnect() }
             setStatus(.live)
-            if state.rev > rev || needsFullSync { try? await catchUp() }
+            if state.rev > rev || needsFullSync { try? await catchUp() } else { emit(.caughtUp) }
         case .items(let event):
             applyAll(event.items)
             advance(to: event.rev, by: event.items.count)
@@ -408,6 +408,7 @@ public actor ShareRoomSession {
                 needsFullSync = false
             }
         } while pendingRev > rev
+        emit(.caughtUp)
     }
 
     /// 처음부터 받았는데 오지 않은 항목은 서버에 없는 것이다(처음 받기에는 묘비가 오지 않는다).

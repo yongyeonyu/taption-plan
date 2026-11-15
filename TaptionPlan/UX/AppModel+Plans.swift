@@ -109,6 +109,7 @@ extension AppModel {
             )
             return
         }
+        guard !rejectsSharedTripPlanEdit([planID]) else { return }
         guard !snapshot.plans[index].isFixed else {
             userFacingError = AppLanguagePreference.text(
                 korean: "캘린더 고정 일정은 캘린더에서 수정해 주세요.",
@@ -214,6 +215,8 @@ extension AppModel {
             )
             return
         }
+        // 루틴에 넣으면 루틴을 옮기거나 지울 때 함께 바뀐다(TSF1115A01).
+        guard !rejectsSharedTripPlanEdit([planID]) else { return }
         let plan = snapshot.plans[planIndex]
         guard plan.origin != .repeatRule,
               !GoalRecordPolicy.isGoal(plan),
@@ -647,12 +650,14 @@ extension AppModel {
         let wanted = Set(planIDs)
         let roots = snapshot.plans.filter { wanted.contains($0.id) }
         guard !roots.isEmpty else { return }
-        clearUserEditRedoHistory()
-        let previous = snapshot
         let descendants = roots.flatMap { plan in
             (try? PlanHierarchy.descendants(of: plan.id, in: snapshot.plans)) ?? []
         }
         let deletedIDs = Set(roots.map(\.id) + descendants.map(\.id))
+        // 함께 쓰는 여행의 일정에 묶인 계획 기록은 여행 화면(방)에서만 지운다(TSF1115A01).
+        guard !rejectsSharedTripPlanEdit(deletedIDs) else { return }
+        clearUserEditRedoHistory()
+        let previous = snapshot
         invalidateReviewArchives(
             spans: (roots + descendants).map(\.span),
             dates: snapshot.memos.compactMap { memo in
@@ -799,6 +804,7 @@ extension AppModel {
                 of: planID,
                 in: snapshot.plans
             )
+            guard !rejectsSharedTripPlanEdit([planID] + descendants.map(\.id)) else { return }
             let appliedDelta = moved.span.start.timeIntervalSince(
                 snapshot.plans[index].span.start
             )
@@ -848,6 +854,7 @@ extension AppModel {
         }) else {
             return
         }
+        guard !rejectsSharedTripPlanEdit([planID]) else { return }
         let plan = snapshot.plans[index]
         do {
             let resized = try ScheduleEditEngine.resize(

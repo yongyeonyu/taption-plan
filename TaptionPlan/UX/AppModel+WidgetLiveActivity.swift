@@ -176,6 +176,8 @@ extension AppModel {
             )
             return
         }
+        // 시각을 옮기는 동작은 함께 쓰는 여행의 일정에 쓰지 못한다(TSF1115A01).
+        if action == .postponeThirtyMinutes || action == .moveToNextFreeTime, rejectsSharedTripPlanEdit([planID]) { return }
         let plan = snapshot.plans[index]
         do {
             switch action {
@@ -366,6 +368,7 @@ extension AppModel {
             guard command.appliedToSharedRepository != true else {
                 continue
             }
+            if command.kind == .postponeThirtyMinutes || command.kind == .moveToNextFreeTime, isSharedTripPlan(command.planID) { continue }
             do {
                 snapshot = try TaptionWidgetCommandEngine.apply(
                     command,

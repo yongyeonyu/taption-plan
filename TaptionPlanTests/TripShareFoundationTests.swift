@@ -429,6 +429,85 @@ final class TripShareFoundationTests: XCTestCase {
         XCTAssertTrue(shiftedAfter)
     }
 
+    /// TSF1115A01: 일상 시간표·계획 편집기·빠른 동작·AI는 함께 쓰는 여행의 일정에 묶인 계획 기록을 고치거나 지우지 못한다.
+    /// 방에서 온 투영은 그대로 통과한다(여행 화면 편집의 왕복은 `TripSharePlanTests`).
+    func testDailyPlanPathsCannotEditOrDeleteASharedTripPlan() async throws {
+        let model = await makeModel()
+        let saved = await model.saveTravelTrip(TravelTrip(id: "t1", title: "여행", startDay: "2031-10-01", endDay: "2031-10-02"))
+        XCTAssertTrue(saved)
+        let addedID = await model.addTripItem(
+            tripID: "t1", kind: .sight, title: "산책", start: stamp("2031-10-01T01:00:00Z"), end: stamp("2031-10-01T02:00:00Z"), offsetSeconds: 32_400
+        )
+        let itemID = try XCTUnwrap(addedID)
+        let planID = try XCTUnwrap(model.settings.travelTripItems?.first?.planID)
+        let dailyID = try XCTUnwrap(model.addPlan(title: "장보기", categoryID: "activity", startAt: stamp("2031-10-01T05:00:00Z"), duration: 3_600))
+        let plan = try XCTUnwrap(model.snapshot.plans.first { $0.id == planID })
+        XCTAssertFalse(model.rejectsSharedTripPlanEdit([planID]), "공유 전에는 보통 계획이다")
+        _ = try shareTrip()
+        XCTAssertTrue(model.isSharedTripPlan(planID))
+        XCTAssertFalse(model.isSharedTripPlan(dailyID))
+        let plans = model.snapshot.plans, items = model.settings.travelTripItems
+
+        func assertBlocked(_ what: String, line: UInt = #line) {
+            XCTAssertEqual(model.userFacingError, TripShareText.editBlocked(.current), what, line: line)
+            XCTAssertEqual(model.snapshot.plans, plans, what, line: line)
+            XCTAssertEqual(model.settings.travelTripItems, items, what, line: line)
+            model.userFacingError = nil
+        }
+        model.updatePlan(planID, title: "다른 이름", categoryID: plan.categoryID, span: plan.span, parentID: nil, isImportant: true)
+        assertBlocked("계획 편집기의 저장")
+        model.movePlan(planID, by: 1_800)
+        assertBlocked("시간표에서 끌어 옮기기")
+        model.resizePlan(planID, endDelta: 600)
+        assertBlocked("시간표에서 길이 바꾸기")
+        await model.performQuickAction(.postponeThirtyMinutes, planID: planID)
+        assertBlocked("30분 미루기")
+        await model.performQuickAction(.moveToNextFreeTime, planID: planID)
+        assertBlocked("다음 빈 시간으로")
+        await model.deletePlan(planID)
+        assertBlocked("계획 지우기")
+        await model.deletePlans([dailyID, planID])
+        assertBlocked("여럿을 함께 지울 때도 통째로 막는다")
+
+        // AI의 일정 고치기·지우기·미루기는 `shared_trip`으로 거절한다.
+        let name = "TripShareFoundationTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        func reason(_ action: String, _ extra: [String: Any]) async throws -> String? {
+            let command: [String: Any] = ["format": "bokki-command", "version": 1, "id": "c-\(UUID().uuidString)", "action": action].merging(extra) { $1 }
+            let data = try JSONSerialization.data(withJSONObject: ["commands": [command]])
+            let batch = try XCTUnwrap(AssistantCommandParser.parse(data, now: stamp("2031-09-01T00:00:00Z"), calendar: .autoupdatingCurrent))
+            XCTAssertEqual(batch.invalidIDs, [], action)
+            let applied = await model.applyAssistantCommands(batch, defaults: defaults)
+            return try XCTUnwrap(applied).results.first?.reason
+        }
+        let renamed = try await reason("updateSchedule", ["planId": planID.uuidString, "title": "밤 산책"])
+        let deleted = try await reason("deleteSchedule", ["planId": planID.uuidString])
+        let postponed = try await reason("planQuickAction", ["planId": planID.uuidString, "quickAction": "postpone30"])
+        XCTAssertEqual([renamed, deleted, postponed], ["shared_trip", "shared_trip", "shared_trip"])
+        XCTAssertEqual(model.snapshot.plans, plans)
+        XCTAssertEqual(model.settings.travelTripItems, items)
+        model.userFacingError = nil
+
+        // 공유 여행과 상관없는 계획은 그대로 고치고 지운다.
+        model.movePlan(dailyID, by: 1_800)
+        XCTAssertNil(model.userFacingError)
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == dailyID }?.span.start, stamp("2031-10-01T05:30:00Z"))
+        await model.deletePlan(dailyID)
+        XCTAssertFalse(model.snapshot.plans.contains { $0.id == dailyID })
+
+        // 방에서 온 투영은 통과한다: 고치고, 지운다(딸린 계획 기록까지).
+        var changed = try XCTUnwrap(items?.first)
+        changed.title = "밤 산책"
+        let projected = await model.applySharedPlanChanges(tripID: "t1", upserts: [TripShareMapping.PlanDraft(item: changed, place: nil)])
+        XCTAssertTrue(projected)
+        XCTAssertEqual(model.snapshot.plans.first { $0.id == planID }?.title, "밤 산책")
+        let removed = await model.applySharedPlanChanges(tripID: "t1", removedItemIDs: [itemID])
+        XCTAssertTrue(removed)
+        XCTAssertFalse(model.snapshot.plans.contains { $0.id == planID }, "방이 지운 일정의 계획 기록은 지워진다")
+        XCTAssertNil(model.userFacingError)
+    }
+
     func testEditorPassesUnsharedTripsAndBlocksUndoAndOfflineOnSharedOnes() async throws {
         let model = await makeModel()
         var ran = 0

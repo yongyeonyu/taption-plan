@@ -62,6 +62,7 @@ extension AppModel {
             return await updateAssistantTripStop(stopID, title: title, day: day, order: order, status: status)
         case let .deleteTripStop(stopID):
             guard let stop = assistantStop(stopID) else { return .rejected("no_stop") }
+            if let tripID = stop.tripID, isSharedTrip(tripID) { return .rejected("shared_trip") }
             await removeTravelStop(stop.id)
             guard !snapshot.settings.travelPlanStops.contains(where: { $0.id == stop.id }) else { return .rejected("trip_failed") }
             return AssistantEditResult(before: AssistantDataText.stop(stop), after: language.text("지움", "Deleted"))

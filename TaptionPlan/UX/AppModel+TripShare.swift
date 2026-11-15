@@ -52,6 +52,31 @@ extension AppModel {
         return true
     }
 
+    /// 함께 쓰는 여행의 일정(·핀)에 묶인 계획 기록(TSF1115A01).
+    func sharedTripPlanIDs(in planIDs: some Sequence<UUID>) -> Set<UUID> {
+        let wanted = Set(planIDs)
+        guard !wanted.isEmpty, TripShareStore.shared.links.contains(where: { $0.phase != .ended }) else { return [] }
+        var linked: Set<UUID> = []
+        for item in snapshot.settings.travelTripItems ?? [] {
+            if let planID = item.planID, wanted.contains(planID), isSharedTrip(item.tripID) { linked.insert(planID) }
+        }
+        for stop in snapshot.settings.travelPlanStops {
+            if let planID = stop.planID, let tripID = stop.tripID, wanted.contains(planID), isSharedTrip(tripID) { linked.insert(planID) }
+        }
+        return linked
+    }
+
+    func isSharedTripPlan(_ planID: UUID) -> Bool { !sharedTripPlanIDs(in: [planID]).isEmpty }
+
+    /// 함께 쓰는 여행의 일정에 묶인 계획 기록이 섞여 있으면 안내 글을 남기고 true(TSF1115A01).
+    /// 일상 시간표·계획 편집기·위젯·AI처럼 방을 거치지 않는 계획 편집은 모델의 고치기·지우기가 이것으로 거절한다.
+    /// 방의 투영(`applySharedPlanChanges`)과 여행 화면 편집은 계획 기록을 직접 놓거나 일정을 먼저 떼므로 걸리지 않는다.
+    func rejectsSharedTripPlanEdit(_ planIDs: some Sequence<UUID>) -> Bool {
+        guard !sharedTripPlanIDs(in: planIDs).isEmpty else { return false }
+        userFacingError = TripShareText.editBlocked(.current)
+        return true
+    }
+
     /// 방에서 받은 일정 변화를 로컬 정본에 **한 번에** 투영한다: 여러 건을 고치고 저장은 한 번.
     /// 서버가 받아 준 내 편집과 남의 변경이 모두 이 길로 들어온다. 값이 그대로면 저장하지 않는다.
     /// - Parameters:

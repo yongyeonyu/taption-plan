@@ -37,6 +37,9 @@ public enum ShareSessionEvent: Sendable, Equatable {
     /// 마감·기한·세대.
     case room
     case status(ShareSessionStatus)
+    /// 방을 끝까지 받았다(처음부터든 이어서든). 이 순간의 로컬 사본에 없는 항목은 서버에도 없다.
+    /// 연결만 된 때(`.status(.live)`)는 아직 덜 받았을 수 있으므로, 「방에 없으니 지운다」는 판단은 이것을 받은 뒤에만 한다.
+    case caughtUp
 }
 
 /// 로컬 사본의 항목 하나(복호화된 내용).

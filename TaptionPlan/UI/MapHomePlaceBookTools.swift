@@ -694,6 +694,8 @@ extension AppModel {
 
     func removeTravelStop(_ id: UUID) async {
         guard acceptsDataMutation(), let stop = snapshot.settings.travelPlanStops.first(where: { $0.id == id }) else { return }
+        // 함께 쓰는 여행의 핀은 일정과 계획 기록에 묶여 있다. 여행 화면에서 지운다(TSF1115A01).
+        if let tripID = stop.tripID, rejectsSharedTripEdit(tripID) { return }
         snapshot.settings.travelPlanStops.removeAll { $0.id == id }
         snapshot.settings.travelPlanStops = TravelPlanSchedule.renumbered(snapshot.settings.travelPlanStops)
         if let planID = stop.planID { await deletePlan(planID) } else { await persist() }

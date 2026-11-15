@@ -81,6 +81,8 @@ final class LedgerBook {
     @ObservationIgnored private var loading: Task<Void, Never>?
     /// 메모마다 이어진 기록 맞추기를 차례로 한다(리뷰: 빨리 두 번 고치면 기록이 둘 생기던 것).
     @ObservationIgnored var memoQueues: [UUID: Task<Void, Never>] = [:]
+    /// 여행마다 짝 기록 맞추기를 차례로 한다(TSF1115A01: 동시에 두 번 돌면 예산 이체 짝이 겹쳐 생기던 것).
+    @ObservationIgnored var tripSyncs: [String: Task<Void, Never>] = [:]
     /// `reset()`마다 늘린다. 그 전에 시작한 읽기는 결과를 버린다.
     @ObservationIgnored private var generation = 0
     /// 환율을 마지막으로 받으려 한 때. 실패해도 10분 안에는 다시 기다리지 않는다.
