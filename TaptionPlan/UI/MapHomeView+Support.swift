@@ -644,7 +644,7 @@ extension MapHomeView {
             .presentationDragIndicator(.visible)
         }
         .onChange(of: TripShareInbox.shared.pending != nil, initial: true) { _, invited in if invited { isTravelHomePresented = true } }
-        .fullScreenCover(isPresented: $isTravelHomePresented) {
+        .travelModeCover(isPresented: $isTravelHomePresented) {
             TravelModeView(model: model, language: language) { day in
                 // 일정 편집은 계획표가 생길 때까지 지도 여행 모드에서 한다.
                 isTravelHomePresented = false
