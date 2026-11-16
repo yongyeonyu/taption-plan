@@ -35,7 +35,7 @@ extension AppModel {
                 tripID: plan.tripID, itemID: item.id, kind: item.kind.rawValue, title: item.title,
                 start: item.start, end: item.end,
                 startOffsetSeconds: item.timeZone.secondsFromGMT(for: item.start),
-                endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: item.status.stored,
+                endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: visitStatus(item, kept),
                 note: item.note.isEmpty ? nil : item.note,
                 colorHex: kept[item.id]?.colorHex, plannedSpendKRW: kept[item.id]?.plannedSpendKRW, parentItemID: kept[item.id]?.parentItemID
             ))
@@ -45,7 +45,7 @@ extension AppModel {
             stops.append(TravelPlanStop(
                 id: UUID(), title: item.title, latitude: coordinate.latitude, longitude: coordinate.longitude,
                 day: day, order: TravelPlanSchedule.stops(on: day, in: stops).count, planID: planID,
-                tripID: plan.tripID, itemID: item.id, status: item.status.stored
+                tripID: plan.tripID, itemID: item.id, status: visitStatus(item, kept)
             ))
         }
         snapshot.settings.travelPlanStops = stops

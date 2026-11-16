@@ -693,6 +693,8 @@
 		B1TV11120000000000000102 /* ne-regions.bin in Resources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000002 /* ne-regions.bin */; };
 		B1TV11120000000000000101 /* TravelModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000001 /* TravelModeView.swift */; };
 		B1TV11120000000000000103 /* TravelPlanTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000003 /* TravelPlanTable.swift */; };
+		B1TVZ1116C0100000000B002 /* TravelTodayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TVZ1116C0100000000F002 /* TravelTodayCard.swift */; };
+		B1TVZ1116C0100000000B001 /* TravelTodayLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TVZ1116C0100000000F001 /* TravelTodayLogic.swift */; };
 		B1TV11120000000000000104 /* TravelQuickEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */; };
 		B1TV11120000000000000105 /* TravelNewTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000005 /* TravelNewTripSheet.swift */; };
 		B1TV11120000000000000106 /* TravelRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000006 /* TravelRoutes.swift */; };
@@ -731,6 +733,7 @@
 		T5H1114A260000000000P005 /* TaptionTripShareTesting in Frameworks */ = {isa = PBXBuildFile; productRef = T5H1114A260000000000P003 /* TaptionTripShareTesting */; };
 		B1080700000000000000010A /* ne-cities.tsv in Resources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000A /* ne-cities.tsv */; };
 		B1080700000000000000010B /* TravelMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000B /* TravelMapTests.swift */; };
+		B1TVZ1116C0100000000B003 /* TravelTodayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TVZ1116C0100000000F003 /* TravelTodayTests.swift */; };
 		B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000C /* TravelMapVideoRenderTests.swift */; };
 		A1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */; };
 		A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */; };
@@ -1486,6 +1489,8 @@
 		B1TV11120000000000000002 /* ne-regions.bin */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ne-regions.bin"; path = "MapData/ne-regions.bin"; sourceTree = "<group>"; };
 		B1TV11120000000000000001 /* TravelModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeView.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000003 /* TravelPlanTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlanTable.swift; sourceTree = "<group>"; };
+		B1TVZ1116C0100000000F002 /* TravelTodayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTodayCard.swift; sourceTree = "<group>"; };
+		B1TVZ1116C0100000000F001 /* TravelTodayLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTodayLogic.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelQuickEntrySheet.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000005 /* TravelNewTripSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelNewTripSheet.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000006 /* TravelRoutes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelRoutes.swift; sourceTree = "<group>"; };
@@ -1522,6 +1527,7 @@
 		T5H1114A26000000000F0024 /* TripShareLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareLedgerTests.swift; sourceTree = "<group>"; };
 		B1080700000000000000000A /* ne-cities.tsv */ = {isa = PBXFileReference; lastKnownFileType = text; name = ne-cities.tsv; path = MapData/ne-cities.tsv; sourceTree = "<group>"; };
 		B1080700000000000000000B /* TravelMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTests.swift; sourceTree = "<group>"; };
+		B1TVZ1116C0100000000F003 /* TravelTodayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTodayTests.swift; sourceTree = "<group>"; };
 		B1080700000000000000000C /* TravelMapVideoRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoRenderTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangePlaybackTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangeRenderBenchTests.swift; sourceTree = "<group>"; };
@@ -1813,6 +1819,7 @@
 				F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */,
 				F1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift */,
 				B1080700000000000000000B /* TravelMapTests.swift */,
+				B1TVZ1116C0100000000F003 /* TravelTodayTests.swift */,
 				B1080700000000000000000C /* TravelMapVideoRenderTests.swift */,
 				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
@@ -2077,6 +2084,8 @@
 				T5H1114A26000000000F0014 /* TripShareNoticeViews.swift */,
 				T5H1114A26000000000F0015 /* TripShareNoticeAlerts.swift */,
 				B1TV11120000000000000003 /* TravelPlanTable.swift */,
+				B1TVZ1116C0100000000F002 /* TravelTodayCard.swift */,
+				B1TVZ1116C0100000000F001 /* TravelTodayLogic.swift */,
 				B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */,
 				B1TV11120000000000000005 /* TravelNewTripSheet.swift */,
 				B1TV11120000000000000006 /* TravelRoutes.swift */,
@@ -3114,6 +3123,8 @@
 				T5H1114A26000000000B0019 /* TripShareMapping.swift in Sources */,
 				T5H1114A26000000000B0020 /* AppModel+TripShare.swift in Sources */,
 				B1TV11120000000000000103 /* TravelPlanTable.swift in Sources */,
+				B1TVZ1116C0100000000B002 /* TravelTodayCard.swift in Sources */,
+				B1TVZ1116C0100000000B001 /* TravelTodayLogic.swift in Sources */,
 				B1TV11120000000000000104 /* TravelQuickEntrySheet.swift in Sources */,
 				B1TV11120000000000000105 /* TravelNewTripSheet.swift in Sources */,
 				B1TV11120000000000000106 /* TravelRoutes.swift in Sources */,
@@ -3433,6 +3444,7 @@
 				A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */,
 				A1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift in Sources */,
 				B1080700000000000000010B /* TravelMapTests.swift in Sources */,
+				B1TVZ1116C0100000000B003 /* TravelTodayTests.swift in Sources */,
 				B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */,
 				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,
