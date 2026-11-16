@@ -1,5 +1,5 @@
 {
- "ui": 5315,
+ "ui": 5314,
  "catalog": 504,
  "unread": [
   {
@@ -597,18 +597,6 @@
    "en": "englishTitle ?? title"
   },
   {
-   "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
-   "line": 263,
-   "ko": "_ korean: UIPhrase",
-   "en": "_ english: UIPhrase"
-  },
-  {
-   "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
-   "line": 264,
-   "ko": "korean",
-   "en": "english"
-  },
-  {
    "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
    "line": 48,
    "ko": "transitLocation.kind.title",
@@ -735,6 +723,18 @@
    "en": "entry.englishName"
   },
   {
+   "file": "TaptionPlan/UI/MapHomeStickmanAction.swift",
+   "line": 133,
+   "ko": "_ korean: UIPhrase",
+   "en": "_ english: UIPhrase"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeStickmanAction.swift",
+   "line": 134,
+   "ko": "korean",
+   "en": "english"
+  },
+  {
    "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
    "line": 418,
    "ko": "value.title",
@@ -850,13 +850,13 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeSupport.swift",
-   "line": 834,
+   "line": 852,
    "ko": "planned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 658,
+   "line": 651,
    "ko": "money.amount",
    "en": "language"
   },
@@ -880,13 +880,13 @@
   },
   {
    "file": "TaptionPlan/UI/TravelPlanTable.swift",
-   "line": 574,
+   "line": 575,
    "ko": "money.amount",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelTodayCard.swift",
-   "line": 66,
+   "line": 67,
    "ko": "headline.amount",
    "en": "language"
   },
