@@ -148,6 +148,10 @@
 		A10000000000000000000005 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* AppShellView.swift */; };
 		A10000000000000000000006 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000006 /* ScheduleView.swift */; };
 		A10000000000000000000007 /* GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000007 /* GoalsView.swift */; };
+		A555E510ADEA5505DC2F5A79 /* GoalDetailParts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */; };
+		8588E42DD2C1DE6268A73D68 /* GoalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */; };
+		B519210965A8995AF81BD1F8 /* RoutineTimeRangeSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */; };
+		01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */; };
 		A10000000000000000000008 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* ReviewView.swift */; };
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
@@ -1022,6 +1026,10 @@
 		F10000000000000000000005 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
 		F10000000000000000000006 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
 		F10000000000000000000007 /* GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsView.swift; sourceTree = "<group>"; };
+		2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailParts.swift; sourceTree = "<group>"; };
+		0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailView.swift; sourceTree = "<group>"; };
+		BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineTimeRangeSlider.swift; sourceTree = "<group>"; };
+		2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000008 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		F10000000000000000000009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
@@ -2192,6 +2200,10 @@
 				F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */,
 				F1FA11013C73958F69782D38 /* TimelineSelection.swift */,
 				F10000000000000000000007 /* GoalsView.swift */,
+				2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */,
+				0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */,
+				BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */,
+				2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */,
 				F10000000000000000000008 /* ReviewView.swift */,
 				F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */,
 				F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */,
@@ -3239,6 +3251,10 @@
 				CA1A1111A010000000000004 /* AITaskPanel.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
+				A555E510ADEA5505DC2F5A79 /* GoalDetailParts.swift in Sources */,
+				8588E42DD2C1DE6268A73D68 /* GoalDetailView.swift in Sources */,
+				B519210965A8995AF81BD1F8 /* RoutineTimeRangeSlider.swift in Sources */,
+				01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,
 				A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */,
 				A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */,
