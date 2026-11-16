@@ -289,12 +289,20 @@
 		A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001C /* SleepAnalysisEngine.swift */; };
 		A1000000000000000000001D /* SensorDataServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* SensorDataServices.swift */; };
 		A1000000000000000000001E /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		F32C48963B1D5E07B587FC7D /* WidgetSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */; };
+		6841D0B0114051799D6AA131 /* WidgetCatEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */; };
+		B27429155CC7CC376B544969 /* SensorCollectionActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */; };
+		1477619E42A2F3CC7281493E /* LiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */; };
 		A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000001A70002 /* WidgetAppOnly.swift */; };
 		A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000020 /* TaptionPlanWidget.swift */; };
 		C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */; };
 		C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */; };
 		C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */; };
 		A10000000000000000000020 /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		D2C8AB6C7FF62427C50ED178 /* WidgetSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */; };
+		166D7D35AD9FD04EEC99786E /* WidgetCatEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */; };
+		1E7F5C045ECD177F3E6A63F0 /* SensorCollectionActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */; };
+		22F40BBCC048CD0A2461AD02 /* LiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */; };
 		A10000000000000000000021 /* TaptionPlanWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* TaptionPlanWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000022 /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
 		A10000000000000000000024 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
@@ -1131,6 +1139,10 @@
 		F1000000000000000000001D /* SensorDataServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataServices.swift; sourceTree = "<group>"; };
 		F1000000000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000000000000000000001F /* WidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetShared.swift; sourceTree = "<group>"; };
+		54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedStore.swift; sourceTree = "<group>"; };
+		908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCatEngines.swift; sourceTree = "<group>"; };
+		197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionActivityShared.swift; sourceTree = "<group>"; };
+		046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityShared.swift; sourceTree = "<group>"; };
 		F10000000000000001A70002 /* WidgetAppOnly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAppOnly.swift; sourceTree = "<group>"; };
 		F10000000000000000000020 /* TaptionPlanWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWidget.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionLiveActivity.swift; sourceTree = "<group>"; };
@@ -2347,6 +2359,10 @@
 				F10000000000000000CA2004 /* SubwayAlighting.swift */,
 				F10000000000000000000041 /* ScreenTimeUsageService.swift */,
 				F1000000000000000000001F /* WidgetShared.swift */,
+				54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */,
+				908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */,
+				197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */,
+				046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */,
 				B10816000000000000000001 /* LiveActivityDaySummaryState.swift */,
 				F10000000000000001A70002 /* WidgetAppOnly.swift */,
 				F1000000000000000000003B /* WidgetPayloadFactory.swift */,
@@ -3312,6 +3328,10 @@
 				A10000000000000000CA2003 /* HwarangCoat.swift in Sources */,
 				A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */,
 				A1000000000000000000001E /* WidgetShared.swift in Sources */,
+				F32C48963B1D5E07B587FC7D /* WidgetSharedStore.swift in Sources */,
+				6841D0B0114051799D6AA131 /* WidgetCatEngines.swift in Sources */,
+				B27429155CC7CC376B544969 /* SensorCollectionActivityShared.swift in Sources */,
+				1477619E42A2F3CC7281493E /* LiveActivityShared.swift in Sources */,
 				B10816000000000000000002 /* LiveActivityDaySummaryState.swift in Sources */,
 				A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */,
 				A10000000000000000000026 /* StoreKitSupport.swift in Sources */,
@@ -3534,6 +3554,10 @@
 				C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */,
 				C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */,
 				A10000000000000000000020 /* WidgetShared.swift in Sources */,
+				D2C8AB6C7FF62427C50ED178 /* WidgetSharedStore.swift in Sources */,
+				166D7D35AD9FD04EEC99786E /* WidgetCatEngines.swift in Sources */,
+				1E7F5C045ECD177F3E6A63F0 /* SensorCollectionActivityShared.swift in Sources */,
+				22F40BBCC048CD0A2461AD02 /* LiveActivityShared.swift in Sources */,
 				B10816000000000000000003 /* LiveActivityDaySummaryState.swift in Sources */,
 				A10000000000000000000022 /* FeatureModels.swift in Sources */,
 				A1FA115BFD9ADB6D5F57D8C1 /* SensorReadingModels.swift in Sources */,
