@@ -677,6 +677,7 @@ extension MapHomeView {
                 }
             )
         }
+        .mapHomeUsageGuide(isPresented: $isHomeGuidePresented, language: language)
         .sheet(isPresented: $isMapAttributionPresented) {
             MapHomeAttributionSheet(language: language)
                 .presentationDetents([.height(360), .large])

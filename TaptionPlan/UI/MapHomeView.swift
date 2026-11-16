@@ -215,6 +215,11 @@ struct MapHomeView: View {
 
     @State var isMapAttributionPresented = false
 
+    /// 홈 사용법 한 장과 메뉴 찾기·최근에 연 줄(HUX1116A05).
+    @State var isHomeGuidePresented = false
+    @State var menuSearchQuery = ""
+    @AppStorage("mapHomeMenuRecent") var menuRecentRaw = ""
+
     @State var isAlarmSettingsPresented = false
 
     @State var pendingAlarm: (kind: MapHomeAlarmKind, at: Date)?

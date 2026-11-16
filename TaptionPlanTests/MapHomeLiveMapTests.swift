@@ -1979,6 +1979,35 @@ final class MapHomeLiveGateTests: XCTestCase {
         XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: true, permissionsReady: true))
     }
 
+    func testStatusBandHomeTipOnlyFirstThreeLaunchesTodayAfterPermissions() {
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: true, tipLaunches: 0))
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: true, tipLaunches: 1), .homeTip)
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: true, tipLaunches: 3), .homeTip)
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: true, tipLaunches: 4))
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: false, tipLaunches: 1), .permissions)
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: false, dayIsEmpty: false, permissionsReady: true, tipLaunches: 1))
+    }
+
+    func testMenuFinderMatchesBothLanguagesAndKeywords() {
+        let all = MapHomeMenuShortcut.allCases
+        XCTAssertEqual(MapHomeMenuFinder.matches("카운터", in: all), [.counter])
+        XCTAssertTrue(MapHomeMenuFinder.matches("COUNTER", in: all).contains(.counter))
+        XCTAssertTrue(MapHomeMenuFinder.matches("백업", in: all).contains(.dataProtection))
+        XCTAssertTrue(MapHomeMenuFinder.matches("  ", in: all).isEmpty)
+        XCTAssertTrue(MapHomeMenuFinder.matches("단축어Siri", in: all).contains(.shortcuts))
+    }
+
+    func testMenuRecentsKeepsNewestThreeWithoutDuplicates() {
+        var raw = ""
+        for shortcut in [MapHomeMenuShortcut.alerts, .dayCard, .alerts, .ledger, .car] {
+            raw = MapHomeMenuFinder.recents(raw, adding: shortcut)
+        }
+        XCTAssertEqual(MapHomeMenuFinder.recentShortcuts(raw), [.car, .ledger, .alerts])
+        XCTAssertEqual(MapHomeMenuFinder.recentShortcuts("alerts,unknown,car"), [.alerts, .car])
+        XCTAssertFalse(MapHomeMenuShortcut.counter.opensSheet)
+        XCTAssertTrue(MapHomeMenuShortcut.placeBook.opensSheet)
+    }
+
     func testStatusBandDismissalIsPerKindAndDay() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!

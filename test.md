@@ -3383,3 +3383,10 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 단위 시험: `MapHomeLiveMapTests` 96개 + `LedgerTests` 34개, 합 130개 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A04/unit-1.log`.
 - 구조 지표 통과, l10n `check.py` 실패 0.
 - 제한: 탭 줄 모양·긴 언어 잘림 여부는 눈으로 보지 않음(기기·화면 시험 없음). 「AI」 탭 개수는 넣지 않음.
+
+## HUX1116A05 — 홈 제안 6·7 (홈 사용법·첫 세 번 길잡이·₩ ＋·메뉴 찾기·최근·시트 전 메뉴 닫기)
+- 단위 시험: `MapHomeLiveGateTests` 10 + `MapHomeLiveMapTests` 96 + `LedgerTests` 34 = 140개 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔, 파생 데이터는 워크트리 `build/dd-hux`). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A05/unit-4.log`.
+- 앞선 실행: unit-1(LiveMap·Ledger 130개 통과, LiveGate 빠짐), unit-2(LiveGate 10개 중 메뉴 찾기 1개 실패 — 「·」 기호를 거르지 않음 → 글자·숫자·₩만 비교하게 고침), unit-3(외장 볼륨 공간 없음으로 결과 저장 실패, 시험 결과 아님).
+- 바로잡음: HUX1116A02~A04 기록의 단위 시험에는 `MapHomeLiveGateTests`(안내 띠 시험 2개 포함)가 빠져 있었음. 이번 unit-4에서 그 2개를 포함해 통과.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 화면·기기 눈 확인 없음(찾기 칸·최근 줄·사용법 시트·₩ ＋·길잡이 띠 모두 보지 않음).

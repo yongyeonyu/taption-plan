@@ -127,7 +127,8 @@ extension MapHomeView {
             isHomeLive: isHomeLive,
             permissionsReady: { sensorCollectionPermissionGate.sensorCollectionReady },
             onCalendar: { isCalendarPresented = true },
-            onPermissions: { openMenu() }
+            onPermissions: { openMenu() },
+            onGuide: { isHomeGuidePresented = true }
         )
         .equatable()
         .padding(.leading, MapHomeBottomBarMetrics.edgeMargin)
