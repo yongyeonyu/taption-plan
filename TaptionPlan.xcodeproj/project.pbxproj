@@ -151,6 +151,10 @@
 		A10000000000000000000008 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* ReviewView.swift */; };
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
+		5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */; };
+		F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */; };
+		27AB5D5D8EA08049CE1DEDAC /* MiniTimeSliceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */; };
+		C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */; };
 		5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F1 /* PlanTextSuggestion.swift */; };
 		A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F1 /* MemoTextPolish.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
@@ -1018,6 +1022,10 @@
 		F10000000000000000000008 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		F10000000000000000000009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
+		3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSliderScreen.swift; sourceTree = "<group>"; };
+		71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AddPlanSheet+CategoryPickers.swift"; sourceTree = "<group>"; };
+		C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniTimeSliceEditor.swift; sourceTree = "<group>"; };
+		3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalRepeatRulesEditor.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F1 /* PlanTextSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTextSuggestion.swift; sourceTree = "<group>"; };
 		F1A11102A0100000000000F1 /* MemoTextPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolish.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -2195,6 +2203,10 @@
 				F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
+				3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */,
+				71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */,
+				C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */,
+				3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */,
 				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
 				F1A11102A0100000000000F1 /* MemoTextPolish.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
@@ -3235,6 +3247,10 @@
 				A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
+				5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */,
+				F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */,
+				27AB5D5D8EA08049CE1DEDAC /* MiniTimeSliceEditor.swift in Sources */,
+				C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
 				A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
