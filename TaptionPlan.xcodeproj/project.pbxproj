@@ -461,6 +461,9 @@
 		A40000000000000000000001 /* TaptionActivityEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000002 /* TaptionActivityEngine */; };
 		A40000000000000000000002 /* TaptionRouteEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000004 /* TaptionRouteEngine */; };
 		A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */; };
+		E23F65D234B3FBCC31C3EBA0 /* ActivityClassificationLockEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EC8A4E1C38FC3EA94CA6F0 /* ActivityClassificationLockEngine.swift */; };
+		3FDE6F78D83F0443F159C9F2 /* TaptionActivityEngineAdapter+Overrides.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68764F937E5A4C8384AADD10 /* TaptionActivityEngineAdapter+Overrides.swift */; };
+		D1DA8BE663C5819F68C209DB /* TaptionActivityEngineAdapter+TravelMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CFE220A1AC2E0D576BE73E /* TaptionActivityEngineAdapter+TravelMatching.swift */; };
 		AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1A55000000000000000001 /* ClassifierAdapter.swift */; };
 		A10000000000000003C90002 /* ClassificationBackfill.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90002 /* ClassificationBackfill.swift */; };
 		A10000000000000003C90001 /* AppleWatchNapPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90001 /* AppleWatchNapPolicy.swift */; };
@@ -1299,6 +1302,9 @@
 		F2000000000000000000000D /* LocalizationCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationCatalogTests.swift; sourceTree = "<group>"; };
 		F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupportTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionActivityEngineAdapter.swift; sourceTree = "<group>"; };
+		53EC8A4E1C38FC3EA94CA6F0 /* ActivityClassificationLockEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityClassificationLockEngine.swift; sourceTree = "<group>"; };
+		68764F937E5A4C8384AADD10 /* TaptionActivityEngineAdapter+Overrides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TaptionActivityEngineAdapter+Overrides.swift"; sourceTree = "<group>"; };
+		43CFE220A1AC2E0D576BE73E /* TaptionActivityEngineAdapter+TravelMatching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TaptionActivityEngineAdapter+TravelMatching.swift"; sourceTree = "<group>"; };
 		FC1A55000000000000000001 /* ClassifierAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassifierAdapter.swift; sourceTree = "<group>"; };
 		F10000000000000003C90002 /* ClassificationBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassificationBackfill.swift; sourceTree = "<group>"; };
 		F10000000000000003C90001 /* AppleWatchNapPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchNapPolicy.swift; sourceTree = "<group>"; };
@@ -2449,6 +2455,9 @@
 				F10000000000000000000093 /* WatchDayDatabase.swift */,
 				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
 				F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */,
+				53EC8A4E1C38FC3EA94CA6F0 /* ActivityClassificationLockEngine.swift */,
+				68764F937E5A4C8384AADD10 /* TaptionActivityEngineAdapter+Overrides.swift */,
+				43CFE220A1AC2E0D576BE73E /* TaptionActivityEngineAdapter+TravelMatching.swift */,
 				FC1A55000000000000000001 /* ClassifierAdapter.swift */,
 				F10000000000000003C90002 /* ClassificationBackfill.swift */,
 				F10000000000000003C90001 /* AppleWatchNapPolicy.swift */,
@@ -3427,6 +3436,9 @@
 				A51002000000000000000007 /* MapHomeNLEClipEditor.swift in Sources */,
 				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 				A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */,
+				E23F65D234B3FBCC31C3EBA0 /* ActivityClassificationLockEngine.swift in Sources */,
+				3FDE6F78D83F0443F159C9F2 /* TaptionActivityEngineAdapter+Overrides.swift in Sources */,
+				D1DA8BE663C5819F68C209DB /* TaptionActivityEngineAdapter+TravelMatching.swift in Sources */,
 				AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */,
 				A10000000000000003C90002 /* ClassificationBackfill.swift in Sources */,
 				A10000000000000003C90001 /* AppleWatchNapPolicy.swift in Sources */,
