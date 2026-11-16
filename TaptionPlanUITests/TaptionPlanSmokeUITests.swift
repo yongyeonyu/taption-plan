@@ -611,10 +611,11 @@ final class TaptionPlanPlaybackHUDUITests: XCTestCase {
         XCTAssertFalse(hud.exists, "재생 중 상단 진행 바는 지웠다")
         XCTAssertFalse(app.buttons["재생"].exists, "재생 중인데 「재생」이 남아 있다")
         XCTAssertFalse(app.buttons["종료"].exists, "재생 중에 「종료」가 또 있다(단추를 늘리지 않기로 했다)")
-        XCTAssertEqual(
+        // 홈 안내 띠·할 일 판 탭처럼 재생 중에 숨는 아래쪽 단추가 있어(HUX1116A02~A05) 수가 줄 수는 있다. 늘면 안 된다.
+        XCTAssertLessThanOrEqual(
             bottomBarLabels(app).count,
             idleLabels.count,
-            "재생 중에 하단 항목 수가 달라졌다(단추를 늘리지 않기로 했다): \(bottomBarLabels(app))"
+            "재생 중에 하단 항목이 늘었다(단추를 늘리지 않기로 했다): 전 \(idleLabels) → 중 \(bottomBarLabels(app))"
         )
 
         // 같은 자리를 다시 누르면 재생이 멈추고 「재생」으로 돌아온다.
@@ -1068,13 +1069,13 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
         app.launchWithoutPrompts()
-        let travel = app.buttons["여행 계획"]
+        let travel = app.buttons["여행으로 가기"]
         XCTAssertTrue(travel.waitForExistence(timeout: 40))
         let later = app.buttons["나중에 확인"]
         if later.waitForExistence(timeout: 3) { later.tap() }
         travel.tap()
         // 여행 화면 전체에 식별자가 하나 붙어 있어 안쪽은 읽기 이름으로 찾는다.
-        let raise = app.buttons["계획표 올리기"]
+        let raise = app.buttons["계획표 올리기"].firstMatch
         try XCTSkipUnless(raise.waitForExistence(timeout: 20), "열 여행이 없는 기기")
         raise.tap()
         let handle = app.descendants(matching: .any)["계획표 내리기"]
@@ -1100,9 +1101,13 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
             sleep(1)
             app.buttons["계획표"].tap()
             // 날을 바꿨다 돌아오면 재생 헤드가 그날 첫 일정으로 돌아간다(아래 단계의 누를 자리를 맞추려고).
-            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "2일차")).firstMatch.tap()
-            sleep(1)
-            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "1일차")).firstMatch.tap()
+            // 당일 여행(예: 견본 여행)이 먼저 열리면 2일차가 없으니 날 바꾸기를 건너뛴다.
+            let secondDay = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "2일차")).firstMatch
+            if secondDay.waitForExistence(timeout: 2) {
+                secondDay.tap()
+                sleep(1)
+                app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "1일차")).firstMatch.tap()
+            }
         }
         sleep(1)
         shot(app, "1-table")
@@ -1255,14 +1260,14 @@ final class TaptionPlanTravelScreensUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
         app.launchWithoutPrompts()
-        let travel = app.buttons["여행 계획"]
+        let travel = app.buttons["여행으로 가기"]
         XCTAssertTrue(travel.waitForExistence(timeout: 40))
         let later = app.buttons["나중에 확인"]
         if later.waitForExistence(timeout: 3) { later.tap() }
         travel.tap()
         sleep(3)
         note(app, "a-travel-opened")
-        let raise = app.buttons["계획표 올리기"]
+        let raise = app.buttons["계획표 올리기"].firstMatch
         try XCTSkipUnless(raise.waitForExistence(timeout: 20), "열 여행이 없는 기기")
         raise.tap()
         sleep(1)
@@ -1304,12 +1309,12 @@ final class TaptionPlanTravelScreensUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
         app.launchWithoutPrompts()
-        let travel = app.buttons["여행 계획"]
+        let travel = app.buttons["여행으로 가기"]
         XCTAssertTrue(travel.waitForExistence(timeout: 40))
         let later = app.buttons["나중에 확인"]
         if later.waitForExistence(timeout: 3) { later.tap() }
         travel.tap()
-        let raise = app.buttons["계획표 올리기"]
+        let raise = app.buttons["계획표 올리기"].firstMatch
         try XCTSkipUnless(raise.waitForExistence(timeout: 20), "열 여행이 없는 기기")
         raise.tap()
         let move = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "니시테츠 전철")).firstMatch
@@ -1327,7 +1332,7 @@ final class TaptionPlanTravelScreensUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
         app.launchWithoutPrompts()
-        let travel = app.buttons["여행 계획"]
+        let travel = app.buttons["여행으로 가기"]
         XCTAssertTrue(travel.waitForExistence(timeout: 40))
         let later = app.buttons["나중에 확인"]
         if later.waitForExistence(timeout: 3) { later.tap() }
@@ -1413,7 +1418,7 @@ final class TaptionPlanPolishScreensUITests: XCTestCase {
     /// 「언젠가 갈 여행」을 하나 만들어 아래 판을 남기고, 끝나면 만든 여행을 지운다.
     func testWishTripFooterForTheRecord() throws {
         let app = launch()
-        app.buttons["여행 계획"].tap()
+        app.buttons["여행으로 가기"].tap()
         let list = app.buttons["여행 목록으로"]
         if list.waitForExistence(timeout: 20) { list.tap() }
         let new = app.buttons["새 여행"]

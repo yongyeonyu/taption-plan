@@ -5827,15 +5827,16 @@ final class HealthPurposeStringContractTests: XCTestCase {
 /// The design tokens replaced hard-coded literals, so each token must keep the
 /// exact value it replaced.
 final class DesignTokenValueTests: XCTestCase {
+    /// 옛 모서리 이름은 네 단계(8·12·16·24)로 모였다(STY1116A01, 대표 객관식 답).
     func testRadiusTokensKeepReplacedValues() {
-        XCTAssertEqual(TaptionRadius.tight, 7)
+        XCTAssertEqual(TaptionRadius.tight, 8)
         XCTAssertEqual(TaptionRadius.small, 8)
-        XCTAssertEqual(TaptionRadius.control, 9)
-        XCTAssertEqual(TaptionRadius.field, 10)
-        XCTAssertEqual(TaptionRadius.compact, 11)
+        XCTAssertEqual(TaptionRadius.control, 12)
+        XCTAssertEqual(TaptionRadius.field, 12)
+        XCTAssertEqual(TaptionRadius.compact, 12)
         XCTAssertEqual(TaptionRadius.panel, 12)
-        XCTAssertEqual(TaptionRadius.tile, 13)
-        XCTAssertEqual(TaptionRadius.card, 14)
+        XCTAssertEqual(TaptionRadius.tile, 12)
+        XCTAssertEqual(TaptionRadius.card, 12)
     }
 
     func testSpacingTokensKeepReplacedValues() {

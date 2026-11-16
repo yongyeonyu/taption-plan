@@ -2,6 +2,21 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## MRG1116A01 · 2026-11-16 세션 작업을 모두 합친 main 전체 시험 (실기기 없음)
+
+- 합친 것: 여행 A안(`84e2abc7`)·B안(`1096a311`)·C안(`db5564de`), 공통 규칙(`99ebe678`·`b7f10e96`), 위치 공유(`73310087`), AI 튜토리얼·조각 맞추기(`4866007f`), 재생 음악·App Store 도구(`3697d4b3`), 전환 효과·스타일(`c2fe5b90`), 홈 UX 1~8(`cc00207c`), 리팩토링 13개(`e942df71`), 성능(`770b3198`). 합친 뒤 번역 추출기가 옮겨 간 위젯 영어 제목 표를 읽게 고침(`1b3844d7`, 안 고치면 위젯 활동 이름 9개 번역이 빠짐).
+- 앱 Debug 빌드(시뮬레이터 99AC6F35): 성공(`build/validation/MRG1116A01/debug-build.log`).
+- 서버 `npm test` 206건 통과. 패키지 `swift test`: TaptionPlanCore 89+11·TaptionPlanStore 27+32·TaptionActivityEngine 47+2·TaptionRouteEngine 105·TaptionWatchSync 49·TaptionAssistant 10·TaptionTripShare 70 통과, TaptionPlanEngine 0건, TaptionLedgerCore는 시험 대상 없음. **TaptionClassifierEngine 38건 중 2건 실패**(`testTaxonomyV3HasHealthRunningAndSplitStudy`: 분류표 버전 5인데 시험은 3을 기대) — 오늘 합친 어느 것도 이 패키지를 고치지 않아 전부터 있던 실패.
+- 번역 `check.py` 실패 0(긴 문구 3은 전부터). import 경계 통과. **구조 점검 실패**: 총 줄 수 225,717 → 250,477(+10% 초과). 합치기 전 main에서도 넘어 있었고 기준선은 바꾸지 않음(대표 판단 필요).
+- 앱 단위 시험 전체(`-only-testing:TaptionPlanTests`, 병렬 끔): 2,996개 중 실패 1·건너뜀 25(`unit.log`). 실패는 `DesignTokenValueTests.testRadiusTokensKeepReplacedValues` — STY1116A01이 모서리를 네 단계(8·12·16·24)로 모은 것과 옛 값 시험이 어긋남 → 시험을 새 값으로 고침, 다시 돌려 통과(`retest.log`).
+- 앱 UI 시험 전체(`-only-testing:TaptionPlanUITests`): 51개 중 실패 10·건너뜀 7(`ui.log`). 원인과 조치:
+  - 튜토리얼 3개: AI 연결이 2단계로 옮겨짐(AIT1116A01) → 시험을 새 순서·「지금 연결」·「나중에」에 맞춤, 3개 통과.
+  - 여행 화면 5개: 여행 단추 읽기 이름이 「여행 계획」→「여행으로 가기」(STY1116A01) → 시험 이름 고침. 그다음 C안 오늘 카드에도 「계획표 올리기」가 있어 단추가 둘 → `.firstMatch`로 고침. 4개 통과.
+  - 재생 HUD 1개: 재생 전 아래쪽 단추 수가 실행마다 13·12로 다름(홈 안내 띠·할 일 판 탭이 재생 중 숨음) → 시험의 뜻 「재생 중 단추를 늘리지 않는다」대로 `≤`로 고침, 통과.
+  - 전체 덮기 1개: 첫 실행 실패, 다시 돌리니 통과(실행마다 갈리는 시험).
+  - **남은 실패 1개** `TaptionPlanTravelPlanUITests.testEmptyCellSelectsThenPlusOpensEntryAndBlockTapShowsSelectionBar`: 시뮬레이터에 C안 세션이 남긴 당일 견본 여행 「견본 서울 산책」이 첫 여행으로 열려, 좌표로 누르는 칸이 비어 선택 막대·편집기가 안 뜸(`retest3.log`). 2일차가 없을 때 날 바꾸기를 건너뛰게만 고침. 견본 여행을 지우고 다시 돌려야 확인됨.
+- 하지 않은 것: 실기기(아이폰 11) 시험, 화면 눈 확인, 푸시.
+
 ## PRF1116A01 · 아이폰 11 Pro 성능 측정과 최적화 (2026-11-16)
 
 - 기기: 아이폰 11 Pro(60Hz, `devicectl` physical·available), Release + `-D BENCH`, `-autoBenchPerf` 종합 측정 3회 + 하루 재생 3회. 시뮬레이터 수치는 없다. 실제 기록 데이터로만 쟀고 로그에는 숫자만 남겼다. 결과 `build/validation/PRF1116A01/`(git 무시).
