@@ -329,6 +329,7 @@
 		A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */; };
 		A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002A /* WatchConnectivitySupport.swift */; };
+		817838D7A6AD39CBCE82FCAF /* AppleWatchConnectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54098A0F6E26340F8C3FF63A /* AppleWatchConnectionModels.swift */; };
 		C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000032 /* WatchActivityReplay.swift */; };
 		A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000060 /* WatchLaunchDiagnostics.swift */; };
 		A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002B /* TaptionPlanWatchApp.swift */; };
@@ -1179,6 +1180,7 @@
 		F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSummaryAccumulator.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchMenuPolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000000002A /* WatchConnectivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivitySupport.swift; sourceTree = "<group>"; };
+		54098A0F6E26340F8C3FF63A /* AppleWatchConnectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchConnectionModels.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000032 /* WatchActivityReplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActivityReplay.swift; sourceTree = "<group>"; };
 		F1000000000000000000002B /* TaptionPlanWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchApp.swift; sourceTree = "<group>"; };
 		F1000000000000000000002C /* WatchConnectivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityController.swift; sourceTree = "<group>"; };
@@ -2435,6 +2437,7 @@
 				F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */,
 				F10000000000000000000029 /* WatchSyncModels.swift */,
 				F1000000000000000000002A /* WatchConnectivitySupport.swift */,
+				54098A0F6E26340F8C3FF63A /* AppleWatchConnectionModels.swift */,
 				F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */,
 				C0FFEE000000000000000032 /* WatchActivityReplay.swift */,
 				F10000000000000000000072 /* WatchSensorQueryPlan.swift */,
@@ -3382,6 +3385,7 @@
 				A1000000000000000000002A /* WatchSyncModels.swift in Sources */,
 				A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
+				817838D7A6AD39CBCE82FCAF /* AppleWatchConnectionModels.swift in Sources */,
 				A1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift in Sources */,
 				C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */,
 				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
