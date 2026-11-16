@@ -48,6 +48,23 @@
 - 앱 미리보기 영상(886×1920, 앱 화면 녹화만): 만들지 못함. 스크립트 `preview.sh`만 있음. 녹화는 시뮬레이터가 빌 때.
 - BGM1115A01: `TaptionPlan/Audio/PlaybackMusic/*.m4a` 10개를 같은 이름으로 교체(AAC 44.1kHz 스테레오 192k, 57~60초, -13.7~-14.4 LUFS; 끝이 줄어드는 2곡은 57초로 자름). 고른 기준은 시작·중간·끝 음량(반복 이음새)으로, 귀로 듣지 않음 — 가사가 섞였는지 확인 못 함. build-for-testing 성공(`build/validation/BGM1115A01/build-for-testing.log`). `MapHomePlaybackMusicTests` 1차는 「test runner hung before establishing connection」(`music-tests-1-hung.log`), 2차는 시뮬레이터가 꺼지고 맥 프로세스 한도·디스크 부족(여유 1.9GB) 때문에 멈춰 중단. **음악 단위 시험 통과는 아직 근거 없음.**
 - 디스크 공지에 따라 스크래치 DerivedData 등 약 3.6GB 지움 → 다음 빌드·시험은 처음부터 다시 빌드해야 함.
+- **2026-11-16 이어서**
+  - 대표 객관식 답: ASC에는 iPhone·Duo·iPad 모두 올리고 미리보기도 넣음, 「헤더·검색 결과」는 앞 3장을 이어지는 한 장면으로, AI 장은 그대로.
+  - 넓은 배경 1장 추가 생성(Seedream 5.5 16:9 2K 4장, 장당 73) → `source/backgrounds/bg-pano.jpg`. `compose.py`가 1~3번을 이 배경과 점선 길로 이어 그림.
+  - ASC 칸 확인(API 오류 메시지의 허용값 읽기, 아무것도 만들지 않음): `APP_IPHONE_DUO`·미리보기 `IPHONE_DUO` 있음. Duo 크기는 시뮬레이터 프로필의 펼친 화면 2007×2853로 만듦(ASC가 받는지는 올릴 때 확인).
+  - 가계부 캡처: 빌드 347 Debug `-ledgerPreview` 견본 7건으로 찍음(`captures/03-ledger.png`). 기록 시각이 지금 시각 기준이라 「아침 라떼 오전 3:01」처럼 보임.
+  - 스크린샷 18장 `output/{iphone,duo,ipad}/01~06`(1290×2796·2007×2853·2064×2752). Duo·iPad는 iPhone 화면을 얹은 것.
+  - 앱 미리보기 `output/preview/app-preview-iphone.mp4`: 886×1920, 30fps, H.264 High, AAC 44.1k 스테레오, 25.2초, -15.5 LUFS, 프레임 756개 확인. 홈·다시보기·가계부는 시뮬레이터 화면 녹화. 여행·도장은 시뮬레이터 조작 도구가 계속 「hook did not respond」로 막혀 앱 화면 캡처를 천천히 확대한 장면으로 넣음(앱 화면 그대로, 앱 밖 그림 없음).
+  - 홍보 영상 다시 만듦(가계부 장 포함, 27.0초).
+  - 5번 AI 장 캡처에 시작 화면 로고가 희미하게 겹쳐 있던 것을 다시 찍어(`captures/raw-ai-r3.png`) 18장·홍보 영상(27.0초)을 다시 만듦.
+- BGM1115A01 시험(2026-11-16):
+  - `music-tests-3.log`: 12건 중 11건 통과, `testLoopLengthDropsTrailingSilence` 실패. 원인은 새 곡이 끝까지 소리가 있어 반복 길이 = 파일 길이(시험이 옛 합성곡의 무음 꼬리를 전제). 꼬리 2.5초 미만·반복 지점 소리 있음은 10곡 모두 통과.
+  - 시험을 「같거나 짧다」로 고치고, 무음 꼬리 자르기를 합성 파일(소리 1초+무음 1초)로 따로 확인하는 `testAudibleLengthCutsSyntheticSilentTail` 추가.
+  - 다시 빌드 실패 두 번: ① 옮긴 DerivedData 경로 문제(MapLibre xcframework 못 찾음) ② 새 경로 전체 빌드에서 다른 세션 소관 `TripLiveLocationTests.swift:64` 「sending 'suite' risks causing data races」(`build-for-testing-5.log`).
+  - 그 세션이 고친 뒤 시험용 빌드 성공(`build-for-testing-6.log`). `music-tests-6.log`: 13건 중 12건 통과, 새 합성 파일 시험만 실패 — 기대 44,100프레임인데 44,032(1024의 배수)로, 시험 파일 쓰기·읽기가 끝을 블록 단위로 다루는 것으로 보임(확인 못 함). 같은 원인이면 실제 곡의 반복 지점이 최대 한 블록(약 23ms) 일찍 끝날 수 있음.
+  - 합성 신호를 0을 지나지 않는 사각파로, 허용 범위를 「소리 끝 − 2,048프레임 초과 ~ 소리 끝 이하」로 바꿈. `music-tests-7.log`: **`MapHomePlaybackMusicTests` 13건 통과·실패 0**(BOKKI-STL 시뮬레이터, 병렬 끔, 빌드 `TEST BUILD SUCCEEDED`). 실기기 재생·대표 청취는 아직.
+- ASC 올리기(대표 객관식 답 「아이폰, 듀오, 패드, 애플 커넥티드에 헤더 및 검색결과 부분 이미지 추가해줘」, `design/APS1115A01/asc_upload.py`): 1.0 한국어에 `APP_IPHONE_67` 6장·`APP_IPHONE_DUO` 6장(2007×2853 받아짐)·`APP_IPAD_PRO_3GEN_129` 6장 모두 `COMPLETE`, 미리보기 `IPHONE_67` 1편 업로드 `COMPLETE`(영상 처리는 읽을 때 `PROCESSING`). 옛 iPhone 2장(`03-home.jpg`·`04-menu.jpg`)은 대표 객관식 답 「옛 2장 지우기」로 지움 → iPhone 칸은 새 6장만. 미리보기 영상 처리 `COMPLETE`. 다시 읽은 결과 `build/validation/APS1115A01/asc-readback.txt`·`asc-upload.json`. 심사 제출은 하지 않음.
+- 디스크: 스크래치 DerivedData 2.7GB를 맥북에서 지우고 외장 HFS+ 볼륨(`/Volumes/외장형HDD/APS1115A01-work/work-hfs.sparsebundle` → `/Volumes/APSWork`)으로 옮김. 처음 시도한 APFS 번들 둘(`/Volumes/외장형HDD/APSWork.sparsebundle`, `APS1115A01-work/work.sparsebundle`)은 마운트 실패한 빈 번들로, 안전 검사 때문에 지우지 못함. 작업이 끝나 `/Volumes/APSWork`를 분리하고 `work-hfs.sparsebundle`(빌드 산출물·녹화·시험 결과 약 5.4GB)과 `work.sparsebundle`을 지움. 남은 것: 드라이브 맨 위의 빈 번들 `APSWork.sparsebundle`(36MB)과 빈 폴더 `APS1115A01-work` — 대표가 지워야 함.
 
 ## CLM1114A01 · 337 뒤에 넣은 것 (2026-11-14 낮)
 

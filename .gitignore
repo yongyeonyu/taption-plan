@@ -44,3 +44,7 @@ TaptionPlan/AppSecrets.local.xcconfig
 # Cloudflare 계정에 묶인 배포 설정(KV id 등)은 저장소에 올리지 않는다.
 server/*/wrangler.local.toml
 server/*/.wrangler/
+
+# APS1115A01 산출물(다시 만들 수 있음)
+design/APS1115A01/output/
+design/APS1115A01/source/promo-clips/
