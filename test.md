@@ -60,6 +60,14 @@
 - 하지 않은 것: 카드에서 연 「계획과 실제」 화면 사진(다른 세션이 같은 시뮬레이터에 자기 빌드를 깔아 중단), 자동 기록이 맞아 「갔음」을 미리 고른 모습(견본에 머문 기록 없음 — 단위 시험으로만 확인), 일정 없는 날·남은 돈 줄 화면(견본에 여행 장부 없음), 공유 여행 경로 실제 시험, 실기기(아이폰 11) 확인.
 - 제한: 옛 빌드(이 변경 전)는 `visited` 값을 모르는 값으로 보고 계획으로 읽음(예약 표시는 사라짐). 공유 여행에서 옛 빌드 동행이 그 일정을 고치면 확정이 지워질 수 있음. 오늘 카드가 보이는 동안(판 내림)은 발판 「+」 메뉴가 숨고, 판을 올리면 보임(대표 객관식 답 「카드만 보이기」).
 
+## RFT1116A03 · `performSensorTimelineRefresh` 534줄 쪼개기 (2026-11-16~17, 작업 공간 브랜치, 메인 머지 전)
+
+- 먼저 고정 시험(`12ba302c`): `SensorTimelineRefreshTests` 7개 — 가상의 시골 좌표로 만든 하루(집에서 잠 → 걸어서 출근 → 점심 → 복귀 → 귀가)를 주입한 `archivedReadingsLoader`로 넣고 분류 기록·이동·장소 요약 21줄을 고정(`testFullRefreshPinsClassificationTravelAndPlaces`), 같은 입력 두 번이 같은 결과, 지문이 같으면 이동을 다시 만들지 않고 원본이 늘면 다시 만듦, 근거 없는 날은 기록 유지·지문 저장, 읽기 실패는 갱신이 바꾼 것(숨긴 기록 걸러 내기)을 되돌리고 오류 표시, 밤 구간 읽기 중 취소는 snapshot·revision·앞선 지문까지 그대로 되돌림, 갱신 밖 편집 뒤 취소는 편집을 남기고 지문을 지우고 정리 표시를 켬. 지금 코드에서 7개 통과(`07-pin-new`).
+- 리팩토링(`f964d2a3`): 되돌리기 값 `SensorRefreshRollbackPoint`, 근거 `SensorRefreshEvidence`·`SensorRouteEvidence`, 계산 결과 `SensorDayDerivation`. 파일 6개(갱신 진입·되돌리기 160줄 / 근거 읽기 223 / 지문 같은 날·다시 만드는 날 491 / 하루 자동 분류 377 / 수면 149 / 기록 이름 47). 가장 긴 함수 534 → 109줄(옮기기만 한 수면 판정), 갱신 경로는 74줄. 진단 기록 이름·필드 키는 전후 같음(문자열 집계 비교).
+- 시험(시뮬레이터 `99AC6F35…`, 로그 `build/validation/RFT1116A03/`): 관련 묶음(새 시험·`FeatureEngineTests`·`ClassificationBackfillTests`·`ClassifierMigrationTests`·`ClassifierGoldenReplayTests`·`UserEditRollbackTests` XCTest 751개 + `TaptionActivityEngineAdapterTests` Swift Testing 28개) 0 실패(`11-after-related`), Debug 빌드(generic iOS) 성공(`12-debug-build`), 앱 단위 시험 전체 XCTest 3,003개(25개 건너뜀 — 원본 재생·HealthKit 등 자료 없으면 건너뛰는 시험) + Swift Testing 52개 0 실패(`13-app-unit-all`). 구조 점검·import 경계 통과.
+- 시험 환경: 시뮬레이터가 「test runner hung」·「failed to launch」로 앱을 못 띄운 적이 여러 번 있어 잠금 안에서 시뮬레이터를 껐다 켜고 다시 돌림(`*.launchfail*.log`). 코드 실패 아님.
+- 못 한 것: Core Motion 동작 기록·HealthKit 경로·Watch 요약·다시 계산(`recomputing`) 분기는 시뮬레이터에서 원본을 넣을 길이 없어 새 시험이 붙잡지 못함(코드는 옮기기만 함). 실기기 확인 없음.
+
 ## RFT1116A01 · 리팩토링 상위 20개 중 겹치지 않는 14개 (2026-11-16, 메인 머지 전)
 
 - 결과: 완료 13개(파일마다 커밋 하나), 보류 1개(`AppModel+Classification`), 합친 뒤 6개. 원본 14개 24,706줄 → 10,383줄, 새 파일 40개. 표와 이유는 `docs/REFACTOR_TOP20.md`.
