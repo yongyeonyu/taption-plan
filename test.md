@@ -2,6 +2,18 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## AIT1116A01 · 튜토리얼 AI 연결을 앞으로 + 「조각 맞추기」 1차 (2026-11-16, 메인 머지 전)
+
+- 바꾼 것: 튜토리얼 순서 `welcome → aiConnect → …`(전에는 「연결과 보호」 장 안쪽). AI 연결 장면은 3컷 시연(대화 → AI가 올림 → 일정표·지도·가계부)·할 수 있는 일 3가지·주 단추 「지금 연결」(AI 고르기 창)·작은 「나중에」. 건너뛴 사람에게 AI로 만들기 창에서 한 번만 안내(`AIConnectNudge.swift`, 키 `aiConnectNudgeShown`). 연결 키·PIN 보안은 그대로.
+- 조각 맞추기 1차(대표 객관식 답 「가+다 조합」): 여행 계획 시트의 「조각」 서랍(미정 일정 → 끼우기/되돌리기, 시간 겹침 경고, 새 조각 딸깍 효과), 프롬프트 한 줄. 저장 형식 변경 없음.
+- `add_trip_item` 선택 칸 `status`(대표 답 「더한다, 배포는 따로 지시」): 서버 `actions.js`·시험·기준표, 앱 패키지 명세·적용. **서버 배포 안 함.**
+- 서버: `node --test test/actions.test.mjs` 17건 통과. `npm run actions`로 기준표 다시 만듦. 서버 전체 `npm test`는 다시 돌리지 않았다.
+- 앱 시뮬레이터 단위 시험(지정 시뮬레이터, 외장 볼륨 DerivedData): `FirstRunTutorialTests` 23건·`TravelPuzzleTests` 5건 통과(`build/validation/AIT1116A01/test2.log`). `AssistantCommandEditTests` 31건 중 지문 시험은 새 `addTripItem` 지문·안내문 지문으로 고친 뒤 통과. 다만 `testBoardingCandidatesAreSharedWithoutCoordinatesAndResolved`가 2차 실행에서 실패(1차에서는 통과, 이 작업은 해당 코드를 안 건드림; 지도 화면이 공유 정적 `AssistantBoardingCandidates.current`를 덮어쓰는 경쟁으로 추정, **미확인**). 재실행은 세션 종료로 못 함.
+- 앱 Debug 빌드(시뮬레이터): 성공(`build-debug.log`).
+- 번역: 12개 언어에 새 문구 30개, `check.py` 실패 0(긴 문구 3은 전부터). `generate.py`는 돌리지 않음(메인 세션 몫).
+- 하지 않은 것: 튜토리얼 새 순서·AI 연결 장면 시뮬레이터 사진, 실기기, 실제 AI 왕복, 서버 배포. `project.pbxproj`는 손으로 4개 파일을 등록.
+- 시안: `docs/AI_PUZZLE_PLAN.md`(세 안 견주기·권고·설계만 항목), `design/AIT1116A01/preview.html`(브라우저에서 렌더 확인).
+
 ## LOC1116S01 · 여행 중 동행 실시간 위치 공유 (2026-11-16, 서버 배포·실기기 확인 전)
 
 - 대표 객관식 답: 기본 꺼짐(본인이 여행마다 켬), 서버는 암호화된 마지막 위치 사람당 1건 10분(도와주세요 24시간), 도와주세요·끊김 표시 1차 포함, 기간은 시작일 0시~종료일 24시(여행지 시간대)이고 주인이 바꿀 수 있음(최대 40일).

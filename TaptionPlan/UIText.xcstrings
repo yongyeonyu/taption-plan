@@ -1387,6 +1387,83 @@
         }
       }
     },
+    "11:00 해운대 산책|11:00 Haeundae walk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 海雲台を散歩"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 海云台散步"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 海雲臺散步"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 Spaziergang am Haeundae"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 Balade à Haeundae"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 Passeggiata a Haeundae"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 Paseo por Haeundae"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 Passeio em Haeundae"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 Đi dạo Haeundae"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 Jalan-jalan di Haeundae"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 เดินเล่นที่แฮอุนแด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "11:00 हैउंदे में सैर"
+          }
+        }
+      }
+    },
     "12,300원|₩12,300" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1537,6 +1614,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "12 घंटे"
+          }
+        }
+      }
+    },
+    "13:00 국밥|13:00 Soup lunch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 クッパでランチ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 喝汤饭"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 吃湯飯"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 Suppe zum Mittag"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 Soupe au déjeuner"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 Zuppa a pranzo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 Sopa para almorzar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 Almoço com sopa"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 Ăn trưa món canh"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 Makan siang sup"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 มื้อเที่ยงซุป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13:00 दोपहर में सूप"
           }
         }
       }
@@ -2538,6 +2692,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1 दिन"
+          }
+        }
+      }
+    },
+    "1일차는 해운대 산책 뒤 점심은 국밥 어때요?|Day 1: a walk at Haeundae, then soup for lunch?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1日目は海雲台を散歩して、昼はクッパはどう?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第1天先逛海云台，午饭吃汤饭怎么样？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第1天先逛海雲臺，午餐吃湯飯如何？"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag 1: Spaziergang am Haeundae, mittags Suppe?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jour 1 : balade à Haeundae, puis soupe au déjeuner ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giorno 1: passeggiata a Haeundae, poi zuppa a pranzo?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Día 1: paseo por Haeundae y sopa para almorzar, ¿te parece?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dia 1: passeio em Haeundae e sopa no almoço?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngày 1: đi dạo Haeundae rồi ăn trưa món canh nhé?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari 1: jalan di Haeundae, lalu makan siang sup?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันที่ 1 เดินเล่นแฮอุนแด แล้วมื้อเที่ยงกินซุปดีไหม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पहला दिन: हैउंदे में सैर, फिर दोपहर में सूप?"
           }
         }
       }
@@ -5930,83 +6161,6 @@
         }
       }
     },
-    "AI 연결|Connect an AI" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI連携"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连接 AI"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連接 AI"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "KI verbinden"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connecter une IA"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collega un'IA"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conectar una IA"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conectar uma IA"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kết nối AI"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hubungkan AI"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เชื่อมต่อ AI"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI कनेक्ट करें"
-          }
-        }
-      }
-    },
     "AI 연결이 없거나 내용이 비어 있어요.|No AI is connected, or the text is empty." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6234,6 +6388,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कोई AI कनेक्शन नहीं"
+          }
+        }
+      }
+    },
+    "AI 연결하기|Connect an AI" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIを接続する"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接 AI"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連接 AI"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI verbinden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecter une IA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collega un'IA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar una IA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar uma IA"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết nối AI"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan AI"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อ AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI कनेक्ट करें"
           }
         }
       }
@@ -7162,83 +7393,6 @@
         }
       }
     },
-    "AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.|Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AIが1日の記録を読み、予定やメモを代わりに整理します。あとで「メニュー > 連携」からも設定できます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "让 AI 读取你一天的记录，代你整理日程和备忘。之后也可在“菜单 > 连接”中设置。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "讓 AI 讀取你一天的記錄，代你整理行程和備忘。之後也可在「選單 > 連線」中設定。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lass eine KI deinen Tag lesen und Pläne und Memos für dich ordnen. Das geht auch später unter Menü > Verbindungen."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Laissez une IA lire votre journée et organiser plans et notes pour vous. Vous pourrez aussi le faire plus tard dans Menu > Connexions."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lascia che un'IA legga la tua giornata e riordini piani e note per te. Puoi farlo anche più tardi in Menu > Connessioni."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Una IA puede leer el registro del día y ordenar planes y notas. También se puede hacer más tarde en Menú > Conexiones."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deixe uma IA ler seu dia e organizar planos e notas para você. Também dá para fazer isso depois em Menu > Conexões."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI đọc nhật ký trong ngày và sắp xếp lịch trình, ghi chú giúp bạn. Bạn cũng có thể làm việc này sau trong Menu > Kết nối."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI membaca catatan harian Anda dan merapikan jadwal serta memo. Anda juga bisa melakukannya nanti di Menu > Koneksi."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ให้ AI อ่านบันทึกประจำวันและจัดแผนกับโน้ตแทนคุณ ทำภายหลังได้ที่ เมนู > การเชื่อมต่อ"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI आपके दिन का रिकॉर्ड पढ़कर योजनाएँ और मेमो व्यवस्थित करता है। बाद में मेनू > कनेक्शन से भी कर सकते हैं।"
-          }
-        }
-      }
-    },
     "AI가 한 일|What the AI did" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7697,6 +7851,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI के साथ यात्रा योजना बनाएँ"
+          }
+        }
+      }
+    },
+    "AI를 연결하면 대화로 짠 일정이 이 앱에 바로 와요|Connect an AI and plans you chat out arrive here directly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIを接続すると、会話で作った予定がこのアプリにそのまま届きます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接 AI 后，聊出来的行程会直接送到这个应用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連接 AI 後，聊出來的行程會直接送到這個 App"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit verbundener KI landen im Chat entstandene Pläne direkt in dieser App"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avec une IA connectée, les plans créés en discutant arrivent directement ici"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con un'IA collegata, i piani creati in chat arrivano direttamente qui"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con una IA conectada, los planes que charlas llegan directamente aquí"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Com uma IA conectada, os planos criados na conversa chegam direto aqui"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi kết nối AI, lịch trình trò chuyện xong sẽ đến thẳng ứng dụng này"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dengan AI terhubung, rencana hasil mengobrol langsung masuk ke aplikasi ini"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อเชื่อมต่อ AI แผนที่คุยกันจะส่งมาที่แอปนี้โดยตรง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI कनेक्ट करने पर बातचीत से बनी योजना सीधे इस ऐप में आ जाती है"
           }
         }
       }
@@ -8471,6 +8702,237 @@
         }
       }
     },
+    "AI와 대화로 짠 일정과 정리한 기록을 이 앱이 일정표·지도·가계부로 보여 줍니다. 연결하면 앱을 더 알차게 쓸 수 있어요.|Chat a plan out with an AI and this app shows it as schedule, map and ledger. Connect one to get more out of the app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIとの会話で作った予定や整理した記録を、このアプリがスケジュール・地図・家計簿で見せます。接続するとアプリをより活用できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与 AI 聊出的行程和整理好的记录，本应用会以日程表、地图和账本呈现。连接后可以更充分地使用本应用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "與 AI 聊出的行程和整理好的記錄，本 App 會以日程表、地圖和帳本呈現。連接後可以更充分地使用本 App。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Chat mit einer KI entstandene Pläne und aufgeräumte Einträge zeigt diese App als Zeitplan, Karte und Haushaltsbuch. Mit Verbindung nutzt du die App besser."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les plans et notes organisés avec une IA s'affichent ici en planning, carte et budget. Connectez-en une pour mieux profiter de l'app."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I piani e i registri sistemati con un'IA appaiono qui come programma, mappa e registro spese. Collegane una per sfruttare meglio l'app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los planes y registros ordenados con una IA se muestran aquí como agenda, mapa y libro de gastos. Conecta una para aprovechar mejor la app."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planos e registros organizados com uma IA aparecem aqui como agenda, mapa e livro de gastos. Conecte uma para aproveitar melhor o app."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lịch trình và ghi chép đã được AI sắp xếp sẽ hiện ở đây dưới dạng lịch, bản đồ và sổ chi tiêu. Kết nối để dùng ứng dụng đầy đủ hơn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rencana dan catatan yang dirapikan AI ditampilkan di sini sebagai jadwal, peta, dan buku kas. Hubungkan AI agar aplikasi lebih bermanfaat."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แผนและบันทึกที่คุยและจัดระเบียบกับ AI จะแสดงในแอปนี้เป็นตารางเวลา แผนที่ และสมุดบัญชี เชื่อมต่อเพื่อใช้แอปได้คุ้มขึ้น"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI के साथ बनी योजना और व्यवस्थित रिकॉर्ड यह ऐप शेड्यूल, नक्शे और खाता-बही में दिखाता है। कनेक्ट करने से ऐप का बेहतर उपयोग होता है।"
+          }
+        }
+      }
+    },
+    "AI와 대화로 짠 일정이 일정표·지도로 바로 와요.|Plans you chat out with an AI arrive as a schedule and map." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIとの会話で作った予定がスケジュールと地図にそのまま届きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与 AI 聊出的行程会直接变成日程表和地图。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "與 AI 聊出的行程會直接變成日程表和地圖。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Chat mit einer KI erstellte Pläne erscheinen als Zeitplan und Karte."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les plans créés en discutant avec une IA arrivent en planning et sur la carte."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I piani creati in chat con un'IA arrivano come programma e mappa."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los planes que charlas con una IA llegan como agenda y mapa."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os planos criados na conversa com uma IA chegam como agenda e mapa."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lịch trình trò chuyện với AI sẽ đến thẳng dưới dạng lịch và bản đồ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rencana hasil mengobrol dengan AI langsung masuk sebagai jadwal dan peta."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แผนที่คุยกับ AI จะมาเป็นตารางเวลาและแผนที่ทันที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI से बातचीत में बनी योजना सीधे शेड्यूल और नक्शे पर आ जाती है।"
+          }
+        }
+      }
+    },
+    "AI와 대화하고, AI가 정리해 올리면, 앱이 일정표·지도·가계부로 보여 줘요.|Chat with an AI, it sends the result, and the app shows it as schedule, map and ledger." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIと会話し、AIが整理して送ると、アプリがスケジュール・地図・家計簿で見せます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与 AI 聊天，AI 整理后发送，应用以日程表、地图和账本呈现。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "與 AI 聊天，AI 整理後送出，App 以日程表、地圖和帳本呈現。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit einer KI chatten, sie schickt das Ergebnis, die App zeigt es als Zeitplan, Karte und Haushaltsbuch."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Discutez avec une IA, elle envoie le résultat, l'app l'affiche en planning, carte et budget."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chatta con un'IA, lei invia il risultato e l'app lo mostra come programma, mappa e registro spese."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charla con una IA, ella envía el resultado y la app lo muestra como agenda, mapa y libro de gastos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Converse com uma IA, ela envia o resultado e o app mostra como agenda, mapa e livro de gastos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trò chuyện với AI, AI gửi kết quả và ứng dụng hiển thị dưới dạng lịch, bản đồ và sổ chi tiêu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngobrol dengan AI, AI mengirim hasilnya, lalu aplikasi menampilkannya sebagai jadwal, peta, dan buku kas."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คุยกับ AI แล้ว AI ส่งผลลัพธ์มา แอปจะแสดงเป็นตารางเวลา แผนที่ และสมุดบัญชี"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI से बात करें, AI नतीजा भेजता है, और ऐप उसे शेड्यूल, नक्शे और खाता-बही में दिखाता है।"
+          }
+        }
+      }
+    },
     "AI와 대화하기|Talk with an AI" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8544,6 +9006,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI से बात करें"
+          }
+        }
+      }
+    },
+    "AI와 함께 쓰기|Use it with an AI" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIと一緒に使う"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与 AI 一起使用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "與 AI 一起使用"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit einer KI nutzen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser avec une IA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa con un'IA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usar con una IA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usar com uma IA"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dùng cùng AI"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gunakan bersama AI"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใช้ร่วมกับ AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI के साथ इस्तेमाल करें"
           }
         }
       }
@@ -20248,6 +20787,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} · #{1}"
+          }
+        }
+      }
+    },
+    "{0} · 「{1}」와 겹쳐요|{0} · overlaps \"{1}\"" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · 「{1}」と重なります"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · 与「{1}」时间重叠"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · 與「{1}」時間重疊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · überschneidet sich mit „{1}“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · chevauche « {1} »"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · si sovrappone a «{1}»"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · se solapa con «{1}»"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · sobrepõe «{1}»"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · trùng giờ với “{1}”"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · bentrok dengan \"{1}\""
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · ทับซ้อนกับ “{1}”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · “{1}” से समय टकराता है"
           }
         }
       }
@@ -208825,6 +209441,237 @@
         }
       }
     },
+    "① AI와 대화|① Chat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① AIと会話"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① 与 AI 聊天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① 與 AI 聊天"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① Chatten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① Discuter"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① Chatta"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① Charlar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① Conversar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① Trò chuyện"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① Mengobrol"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① คุย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "① बातचीत"
+          }
+        }
+      }
+    },
+    "② 정리해 올림|② AI sends" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② AIが送信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② AI 发送"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② AI 送出"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② KI sendet"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② L'IA envoie"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② L'IA invia"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② La IA envía"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② A IA envia"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② AI gửi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② AI mengirim"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② AI ส่งมา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "② AI भेजता है"
+          }
+        }
+      }
+    },
+    "③ 앱에서 보기|③ See it here" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ アプリで見る"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ 在应用中查看"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ 在 App 中查看"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ Hier ansehen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ Voir ici"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ Guarda qui"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ Verlo aquí"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ Ver aqui"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ Xem trong ứng dụng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ Lihat di sini"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ ดูในแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "③ यहाँ देखें"
+          }
+        }
+      }
+    },
     "「BOKKI 결제 알림」 스위치를 켜요. 내 은행·카드 앱이 빠져 있으면 이 줄을 눌러 앱 이름 옆 「+」로 넣어요.|Turn on the BOKKI Payment Alerts switch. If your bank or card app is missing, tap the row and add it with + next to the app names." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -209441,6 +210288,83 @@
         }
       }
     },
+    "「{0}」을(를) 끼웠어요|Fitted \"{0}\"" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「{0}」をはめました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已嵌入「{0}」"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已嵌入「{0}」"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„{0}“ eingefügt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« {0} » ajouté"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«{0}» inserito"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«{0}» encajado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«{0}» encaixado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã ghép “{0}”"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"{0}\" dipasang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใส่ “{0}” แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“{0}” जोड़ दिया"
+          }
+        }
+      }
+    },
     "「{0}」이(가) 든 글은 넣지 않게 해 두었어요.|Texts containing “{0}” are set to be skipped." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -209976,6 +210900,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ऑटोमेशन › “सूचना”"
+          }
+        }
+      }
+    },
+    "「점심을 한 시간 늦춰 줘」처럼 말하면 일정이 바뀌어요.|Say \"push lunch back an hour\" and the plan changes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「昼食を1時間遅らせて」と言うと予定が変わります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "说「把午饭推迟一小时」，行程就会改变。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "說「把午餐延後一小時」，行程就會改變。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag „Verschieb das Mittagessen um eine Stunde“, und der Plan ändert sich."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dites « décale le déjeuner d'une heure » et le plan change."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di' «sposta il pranzo di un'ora» e il piano cambia."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di «retrasa el almuerzo una hora» y el plan cambia."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diga «adie o almoço em uma hora» e o plano muda."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nói “dời bữa trưa trễ một giờ” là lịch trình đổi ngay."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ucapkan \"mundurkan makan siang satu jam\" dan rencana berubah."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "พูดว่า “เลื่อนมื้อเที่ยงไปหนึ่งชั่วโมง” แผนก็เปลี่ยนตาม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कहें “दोपहर का खाना एक घंटा आगे कर दो” और योजना बदल जाती है।"
           }
         }
       }
@@ -229769,6 +230770,83 @@
         }
       }
     },
+    "그래도 끼우기|Fit anyway" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "それでもはめる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍然嵌入"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍然嵌入"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trotzdem einfügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter quand même"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inserisci comunque"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encajar igualmente"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encaixar mesmo assim"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vẫn ghép"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tetap pasang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใส่ต่อไป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "फिर भी जोड़ें"
+          }
+        }
+      }
+    },
     "그루밍|Grooming" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -237619,6 +238697,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "समाप्त"
+          }
+        }
+      }
+    },
+    "끼우기|Fit in" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はめる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "嵌入"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "嵌入"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einfügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inserisci"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encajar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encaixar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ghép vào"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใส่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जोड़ें"
           }
         }
       }
@@ -264034,6 +265189,83 @@
         }
       }
     },
+    "못 읽은 결제 문자와 애매한 기록을 AI가 정리해 줘요.|The AI sorts payment texts and unclear records the app couldn't read." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリが読めなかった決済メッセージやあいまいな記録をAIが整理します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用读不懂的支付短信和含糊的记录，由 AI 帮你整理。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 讀不懂的付款簡訊和含糊的記錄，由 AI 幫你整理。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die KI sortiert Zahlungs-SMS und unklare Einträge, die die App nicht lesen konnte."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'IA trie les SMS de paiement et les notes floues que l'app n'a pas pu lire."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'IA sistema gli SMS di pagamento e i registri poco chiari che l'app non ha capito."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La IA ordena los SMS de pago y los registros dudosos que la app no pudo leer."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A IA organiza SMS de pagamento e registros confusos que o app não conseguiu ler."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI sắp xếp tin nhắn thanh toán và ghi chép mơ hồ mà ứng dụng không đọc được."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI merapikan SMS pembayaran dan catatan tidak jelas yang tidak bisa dibaca aplikasi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI ช่วยจัดการข้อความชำระเงินและบันทึกที่ไม่ชัดเจนซึ่งแอปอ่านเองไม่ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऐप जो भुगतान संदेश और अस्पष्ट रिकॉर्ड नहीं पढ़ पाता, उन्हें AI व्यवस्थित करता है।"
+          }
+        }
+      }
+    },
     "못 한 것 {0}개|{0} not done" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -276350,6 +277582,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पहचान की पुष्टि पूरी नहीं हुई।"
+          }
+        }
+      }
+    },
+    "부산 1박 2일, 바다 보고 국밥 먹고 싶어|A night in Busan — sea view and a good soup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "釜山で1泊2日、海を見てクッパが食べたい"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "釜山两天一夜，想看海、吃汤饭"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "釜山兩天一夜，想看海、吃湯飯"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Nacht in Busan – Meerblick und eine gute Suppe"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une nuit à Busan : vue sur mer et une bonne soupe"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una notte a Busan: vista mare e una buona zuppa"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una noche en Busan: mar y una buena sopa"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uma noite em Busan: mar e uma boa sopa"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busan 2 ngày 1 đêm, muốn ngắm biển và ăn canh"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menginap semalam di Busan: lihat laut dan makan sup"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปูซาน 2 วัน 1 คืน อยากดูทะเลและกินซุป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बुसान में एक रात: समुद्र देखना और अच्छा सूप"
           }
         }
       }
@@ -307539,6 +308848,83 @@
         }
       }
     },
+    "어떤 AI를 쓰세요?|Which AI do you use?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どのAIを使っていますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你用哪个 AI？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你用哪個 AI？"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche KI nutzt du?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quelle IA utilisez-vous ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quale IA usi?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué IA usas?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qual IA você usa?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn dùng AI nào?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI mana yang Anda pakai?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คุณใช้ AI ตัวไหน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आप कौन-सा AI इस्तेमाल करते हैं?"
+          }
+        }
+      }
+    },
     "어제 하루 요약 카드|Yesterday's day card" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -312540,6 +313926,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "यात्रा के पड़ाव जोड़ें"
+          }
+        }
+      }
+    },
+    "여행 일정 받기|Get trip plans" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行の予定を受け取る"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接收旅行行程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接收旅行行程"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reisepläne erhalten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recevoir des plans de voyage"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ricevi piani di viaggio"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recibir planes de viaje"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Receber planos de viagem"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhận lịch trình du lịch"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terima rencana perjalanan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รับแผนการเดินทาง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यात्रा योजना पाएँ"
           }
         }
       }
@@ -318704,6 +320167,83 @@
         }
       }
     },
+    "연결하지 않아도 앱은 쓸 수 있어요. 다만 이 기능들은 쓸 수 없어요. 나중에 메뉴 › 연결에서도 할 수 있어요.|The app works without it, but these features won't. You can also connect later in Menu › Connections." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続しなくてもアプリは使えますが、これらの機能は使えません。あとでメニュー › 接続からもできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不连接也能使用应用，但无法使用这些功能。之后也可以在菜单 › 连接中进行。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不連接也能使用 App，但無法使用這些功能。之後也可以在選單 › 連接中進行。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die App funktioniert auch ohne, aber diese Funktionen nicht. Du kannst später unter Menü › Verbindungen verbinden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'app fonctionne sans, mais pas ces fonctions. Vous pouvez aussi connecter plus tard dans Menu › Connexions."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'app funziona anche senza, ma queste funzioni no. Puoi collegare più tardi da Menu › Connessioni."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La app funciona sin ello, pero estas funciones no. También puedes conectar luego en Menú › Conexiones."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O app funciona sem isso, mas esses recursos não. Você também pode conectar depois em Menu › Conexões."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng vẫn dùng được khi chưa kết nối, nhưng các tính năng này thì không. Bạn cũng có thể kết nối sau trong Menu › Kết nối."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aplikasi tetap bisa dipakai tanpa ini, tetapi fitur-fitur ini tidak. Anda juga bisa menghubungkan nanti di Menu › Koneksi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่เชื่อมต่อก็ใช้แอปได้ แต่จะใช้ฟีเจอร์เหล่านี้ไม่ได้ เชื่อมต่อภายหลังได้ที่เมนู › การเชื่อมต่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कनेक्ट किए बिना भी ऐप चलता है, पर ये सुविधाएँ नहीं मिलतीं। बाद में मेनू › कनेक्शन में भी कर सकते हैं।"
+          }
+        }
+      }
+    },
     "연결할 루틴 또는 액션아이템을 찾지 못했습니다.|Could not find the routine or action item to link." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -323012,6 +324552,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अनुमानित किराया ₩{0}"
+          }
+        }
+      }
+    },
+    "예상 지출 12,000원|Estimated ₩12,000" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "予想支出 12,000ウォン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预计支出 12,000 韩元"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "預計支出 12,000 韓元"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geschätzt 12.000 ₩"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimé : 12 000 ₩"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stimati 12.000 ₩"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimado 12.000 ₩"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimado 12.000 ₩"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dự kiến chi 12.000 ₩"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perkiraan 12.000 ₩"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ประมาณการ 12,000 วอน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अनुमानित ₩12,000"
           }
         }
       }
@@ -346578,6 +348195,83 @@
         }
       }
     },
+    "일정 고치기|Edit plans by chatting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会話で予定を直す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聊天改行程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聊天改行程"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pläne per Chat ändern"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier les plans en discutant"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifica i piani in chat"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar planes charlando"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar planos conversando"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sửa lịch trình bằng trò chuyện"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah rencana lewat obrolan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แก้แผนด้วยการคุย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बातचीत से योजना बदलें"
+          }
+        }
+      }
+    },
     "일정 고치기|Edit schedules" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -348422,6 +350116,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "यात्रा में कोई आइटम नहीं है।"
+          }
+        }
+      }
+    },
+    "일정표|Schedule" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スケジュール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日程表"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日程表"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeitplan"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planning"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Programma"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agenda"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agenda"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lịch"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jadwal"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตารางเวลา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शेड्यूल"
           }
         }
       }
@@ -358051,6 +359822,83 @@
         }
       }
     },
+    "정리해서 BOKKI Plan으로 올릴게요|I'll tidy it up and send it to BOKKI Plan" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理してBOKKI Planに送りますね"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我整理好后发送到 BOKKI Plan"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我整理好後送到 BOKKI Plan"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich ordne das und schicke es an BOKKI Plan"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je range tout ça et l'envoie à BOKKI Plan"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo sistemo e lo invio a BOKKI Plan"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo ordeno y lo envío a BOKKI Plan"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vou organizar e enviar para o BOKKI Plan"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mình sẽ sắp xếp rồi gửi sang BOKKI Plan"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya rapikan lalu kirim ke BOKKI Plan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ฉันจะจัดให้เรียบร้อยแล้วส่งไป BOKKI Plan"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मैं इसे व्यवस्थित करके BOKKI Plan में भेज देता हूँ"
+          }
+        }
+      }
+    },
     "정산 다시 열기|Reopen settlement" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -359745,6 +361593,83 @@
         }
       }
     },
+    "조각 {0}개 · 눌러서 일정에 끼우세요|{0} pieces · tap to fit into the plan" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ピース{0}個 · タップして予定にはめましょう"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 个拼块 · 点按嵌入行程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 個拼塊 · 點一下嵌入行程"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Teile · zum Einfügen in den Plan antippen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} pièces · touchez pour les ajouter au plan"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} pezzi · tocca per inserirli nel piano"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} piezas · toca para encajarlas en el plan"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} peças · toque para encaixar no plano"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} mảnh · chạm để ghép vào lịch trình"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} keping · ketuk untuk memasang ke rencana"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} ชิ้น · แตะเพื่อใส่ในแผน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} टुकड़े · योजना में जोड़ने के लिए टैप करें"
+          }
+        }
+      }
+    },
     "조각 합침 검토|Merge review" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -360588,6 +362513,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पूरे दिन"
+          }
+        }
+      }
+    },
+    "좋아, 그렇게 짜 줘|Great, plan it that way" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いいね、そうして"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好，就这样安排"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好，就這樣安排"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Super, plane es so"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parfait, fais comme ça"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perfetto, organizza così"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genial, plánalo así"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ótimo, planeje assim"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tuyệt, lên lịch như vậy nhé"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus, susun seperti itu"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ดีเลย จัดแบบนั้นเลย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बढ़िया, ऐसे ही बना दो"
           }
         }
       }
@@ -363206,6 +365208,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "आपकी दर पहले से बेस के 90% से नीचे है; ज़्यादा घंटे इसे और घटाते हैं।"
+          }
+        }
+      }
+    },
+    "지금 연결|Connect now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今すぐ接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即連接"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt verbinden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecter maintenant"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collega ora"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar ahora"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar agora"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết nối ngay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan sekarang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อตอนนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अभी कनेक्ट करें"
           }
         }
       }
@@ -368519,6 +370598,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "खर्च हुआ"
+          }
+        }
+      }
+    },
+    "지출·기록 정리|Tidy spending and records" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支出と記録の整理"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理支出和记录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理支出和記錄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgaben und Einträge ordnen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ranger dépenses et notes"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sistema spese e registri"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordenar gastos y registros"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Organizar gastos e registros"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sắp xếp chi tiêu và ghi chép"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapikan pengeluaran dan catatan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จัดระเบียบรายจ่ายและบันทึก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "खर्च और रिकॉर्ड व्यवस्थित करें"
           }
         }
       }

@@ -226,11 +226,23 @@
    ]
   },
   {
+   "key": "11:00 해운대 산책|11:00 Haeundae walk",
+   "ko": "11:00 해운대 산책",
+   "en": "11:00 Haeundae walk",
+   "files": [
+    "FirstRunAIConnectPage.swift:139"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "12,300원|₩12,300",
    "ko": "12,300원",
    "en": "₩12,300",
    "files": [
-    "FirstRunTutorialView.swift:838"
+    "FirstRunTutorialView.swift:861"
    ],
    "args": [],
    "targets": [
@@ -243,6 +255,18 @@
    "en": "12-hour",
    "files": [
     "MapHomeTimeSidebar.swift:2651"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "13:00 국밥|13:00 Soup lunch",
+   "ko": "13:00 국밥",
+   "en": "13:00 Soup lunch",
+   "files": [
+    "FirstRunAIConnectPage.swift:140"
    ],
    "args": [],
    "targets": [
@@ -380,7 +404,7 @@
    "ko": "1시간 5분",
    "en": "1h 5m",
    "files": [
-    "FirstRunTutorialView.swift:836"
+    "FirstRunTutorialView.swift:859"
    ],
    "args": [],
    "targets": [
@@ -406,6 +430,18 @@
    "files": [
     "AssistantRelay.swift:17",
     "MapHomePlaybackVideoSheet.swift:390"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "1일차는 해운대 산책 뒤 점심은 국밥 어때요?|Day 1: a walk at Haeundae, then soup for lunch?",
+   "ko": "1일차는 해운대 산책 뒤 점심은 국밥 어때요?",
+   "en": "Day 1: a walk at Haeundae, then soup for lunch?",
+   "files": [
+    "FirstRunAIConnectPage.swift:118"
    ],
    "args": [],
    "targets": [
@@ -489,7 +525,7 @@
    "ko": "25분",
    "en": "25m",
    "files": [
-    "FirstRunTutorialView.swift:837"
+    "FirstRunTutorialView.swift:860"
    ],
    "args": [],
    "targets": [
@@ -538,7 +574,7 @@
    "ko": "3시간 12분",
    "en": "3h 12m",
    "files": [
-    "FirstRunTutorialView.swift:834"
+    "FirstRunTutorialView.swift:857"
    ],
    "args": [],
    "targets": [
@@ -550,7 +586,7 @@
    "ko": "42분",
    "en": "42m",
    "files": [
-    "FirstRunTutorialView.swift:835"
+    "FirstRunTutorialView.swift:858"
    ],
    "args": [],
    "targets": [
@@ -599,7 +635,7 @@
    "ko": "6자리 숫자를 두 칸에 모두 입력해 주세요.",
    "en": "Enter 6 digits in both fields.",
    "files": [
-    "FirstRunTutorialView.swift:361"
+    "FirstRunTutorialView.swift:384"
    ],
    "args": [],
    "targets": [
@@ -824,7 +860,7 @@
    "ko": "AI 비서가 앱으로 바로 보내기",
    "en": "Let the AI send it to the app",
    "files": [
-    "TripImportSheet.swift:641"
+    "TripImportSheet.swift:642"
    ],
    "args": [],
    "targets": [
@@ -898,7 +934,7 @@
    "ko": "AI 앱이 열리면 객관식 질문에 답하며 항공편·숙소·관광지를 정해요. 마지막에 나오는 JSON을 복사해 돌아오세요.",
    "en": "In the AI app, answer multiple-choice questions to pick flights, hotels and places. Copy the JSON it gives you at the end and come back.",
    "files": [
-    "TripImportSheet.swift:614"
+    "TripImportSheet.swift:615"
    ],
    "args": [],
    "targets": [
@@ -957,18 +993,6 @@
    ]
   },
   {
-   "key": "AI 연결|Connect an AI",
-   "ko": "AI 연결",
-   "en": "Connect an AI",
-   "files": [
-    "FirstRunTutorialView.swift:181"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "AI 연결이 없거나 내용이 비어 있어요.|No AI is connected, or the text is empty.",
    "ko": "AI 연결이 없거나 내용이 비어 있어요.",
    "en": "No AI is connected, or the text is empty.",
@@ -1005,6 +1029,18 @@
    ]
   },
   {
+   "key": "AI 연결하기|Connect an AI",
+   "ko": "AI 연결하기",
+   "en": "Connect an AI",
+   "files": [
+    "AIConnectNudge.swift:29"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI 연동|AI link",
    "ko": "AI 연동",
    "en": "AI link",
@@ -1021,7 +1057,7 @@
    "ko": "AI 위치가 지도 검색과 {0} 달라요",
    "en": "AI location is {0} from the map search",
    "files": [
-    "TripImportSheet.swift:739"
+    "TripImportSheet.swift:740"
    ],
    "args": [
     "distanceText(mismatch.meters)"
@@ -1161,18 +1197,6 @@
    ]
   },
   {
-   "key": "AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.|Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections.",
-   "ko": "AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.",
-   "en": "Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections.",
-   "files": [
-    "FirstRunTutorialView.swift:207"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "AI가 한 일|What the AI did",
    "ko": "AI가 한 일",
    "en": "What the AI did",
@@ -1243,6 +1267,18 @@
    "en": "Plan a trip with AI",
    "files": [
     "TripImportSheet.swift:553"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI를 연결하면 대화로 짠 일정이 이 앱에 바로 와요|Connect an AI and plans you chat out arrive here directly",
+   "ko": "AI를 연결하면 대화로 짠 일정이 이 앱에 바로 와요",
+   "en": "Connect an AI and plans you chat out arrive here directly",
+   "files": [
+    "AIConnectNudge.swift:25"
    ],
    "args": [],
    "targets": [
@@ -1371,11 +1407,59 @@
    ]
   },
   {
+   "key": "AI와 대화로 짠 일정과 정리한 기록을 이 앱이 일정표·지도·가계부로 보여 줍니다. 연결하면 앱을 더 알차게 쓸 수 있어요.|Chat a plan out with an AI and this app shows it as schedule, map and ledger. Connect one to get more out of the app.",
+   "ko": "AI와 대화로 짠 일정과 정리한 기록을 이 앱이 일정표·지도·가계부로 보여 줍니다. 연결하면 앱을 더 알차게 쓸 수 있어요.",
+   "en": "Chat a plan out with an AI and this app shows it as schedule, map and ledger. Connect one to get more out of the app.",
+   "files": [
+    "FirstRunTutorialView.swift:213"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI와 대화로 짠 일정이 일정표·지도로 바로 와요.|Plans you chat out with an AI arrive as a schedule and map.",
+   "ko": "AI와 대화로 짠 일정이 일정표·지도로 바로 와요.",
+   "en": "Plans you chat out with an AI arrive as a schedule and map.",
+   "files": [
+    "FirstRunAIConnectPage.swift:49"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI와 대화하고, AI가 정리해 올리면, 앱이 일정표·지도·가계부로 보여 줘요.|Chat with an AI, it sends the result, and the app shows it as schedule, map and ledger.",
+   "ko": "AI와 대화하고, AI가 정리해 올리면, 앱이 일정표·지도·가계부로 보여 줘요.",
+   "en": "Chat with an AI, it sends the result, and the app shows it as schedule, map and ledger.",
+   "files": [
+    "FirstRunAIConnectPage.swift:101"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI와 대화하기|Talk with an AI",
    "ko": "AI와 대화하기",
    "en": "Talk with an AI",
    "files": [
-    "TripImportSheet.swift:613"
+    "TripImportSheet.swift:614"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI와 함께 쓰기|Use it with an AI",
+   "ko": "AI와 함께 쓰기",
+   "en": "Use it with an AI",
+   "files": [
+    "FirstRunTutorialView.swift:187"
    ],
    "args": [],
    "targets": [
@@ -2217,7 +2301,7 @@
    "ko": "JSON 일부가 잘렸거나 형식이 달라요. AI에게 JSON을 다시 출력해 달라고 해 주세요.",
    "en": "Part of the JSON is cut off or malformed. Ask the AI to output the JSON again.",
    "files": [
-    "TripImportSheet.swift:921"
+    "TripImportSheet.swift:922"
    ],
    "args": [],
    "targets": [
@@ -3409,6 +3493,21 @@
    ]
   },
   {
+   "key": "{0} · 「{1}」와 겹쳐요|{0} · overlaps \"{1}\"",
+   "ko": "{0} · 「{1}」와 겹쳐요",
+   "en": "{0} · overlaps \"{1}\"",
+   "files": [
+    "TravelPuzzleDrawer.swift:111"
+   ],
+   "args": [
+    "time",
+    "first.title"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0} · 다 같이|{0} · everyone",
    "ko": "{0} · 다 같이",
    "en": "{0} · everyone",
@@ -4003,7 +4102,7 @@
    "ko": "{0} 채팅창에 붙여 넣고 보내 주세요. 연결 키가 들어 있어 계획이 앱으로 바로 와요. 클립보드는 10분 뒤 지워져요.",
    "en": "Paste it into the {0} chat and send. It includes a connection key, so the plan comes straight to the app. The clipboard is cleared in 10 minutes.",
    "files": [
-    "TripImportSheet.swift:574"
+    "TripImportSheet.swift:575"
    ],
    "args": [
     "guide.name"
@@ -4018,7 +4117,7 @@
    "en": "Paste it into the {0} chat and send.",
    "files": [
     "AssistantConnectView.swift:655",
-    "TripImportSheet.swift:576"
+    "TripImportSheet.swift:577"
    ],
    "args": [
     "name"
@@ -4062,7 +4161,7 @@
    "ko": "{0} 항목의 시각을 읽지 못했어요.",
    "en": "Couldn't read the time of item {0}.",
    "files": [
-    "TripImportSheet.swift:927"
+    "TripImportSheet.swift:928"
    ],
    "args": [
     "itemID"
@@ -4712,7 +4811,7 @@
    "ko": "{0}에 넣을 연결 키를 만들어요. 취소하면 키 없이 복사해요.",
    "en": "Creates a connection key for {0}. Cancel to copy without a key.",
    "files": [
-    "TripImportSheet.swift:587"
+    "TripImportSheet.swift:588"
    ],
    "args": [
     "name"
@@ -4770,7 +4869,7 @@
    "ko": "{0}에서 계획 세우기",
    "en": "Plan in {0}",
    "files": [
-    "TripImportSheet.swift:622"
+    "TripImportSheet.swift:623"
    ],
    "args": [
     "name"
@@ -4942,7 +5041,7 @@
    "files": [
     "TravelDayBoard.swift:41",
     "TravelModeView.swift:809",
-    "TravelModeView.swift:955"
+    "TravelModeView.swift:956"
    ],
    "args": [
     "index + 1"
@@ -33698,6 +33797,42 @@
    ]
   },
   {
+   "key": "① AI와 대화|① Chat",
+   "ko": "① AI와 대화",
+   "en": "① Chat",
+   "files": [
+    "FirstRunAIConnectPage.swift:170"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "② 정리해 올림|② AI sends",
+   "ko": "② 정리해 올림",
+   "en": "② AI sends",
+   "files": [
+    "FirstRunAIConnectPage.swift:171"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "③ 앱에서 보기|③ See it here",
+   "ko": "③ 앱에서 보기",
+   "en": "③ See it here",
+   "files": [
+    "FirstRunAIConnectPage.swift:172"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "♥︎ 대기|♥︎ Waiting",
    "ko": "♥︎ 대기",
    "en": "♥︎ Waiting",
@@ -33813,6 +33948,20 @@
    ]
   },
   {
+   "key": "「{0}」을(를) 끼웠어요|Fitted \"{0}\"",
+   "ko": "「{0}」을(를) 끼웠어요",
+   "en": "Fitted \"{0}\"",
+   "files": [
+    "TravelPuzzleDrawer.swift:95"
+   ],
+   "args": [
+    "piece.title"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "「{0}」이(가) 든 글은 넣지 않게 해 두었어요.|Texts containing “{0}” are set to be skipped.",
    "ko": "「{0}」이(가) 든 글은 넣지 않게 해 두었어요.",
    "en": "Texts containing “{0}” are set to be skipped.",
@@ -33892,6 +34041,18 @@
    "en": "Automation › Notification",
    "files": [
     "BokkiShortcutsGuide.swift:278"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "「점심을 한 시간 늦춰 줘」처럼 말하면 일정이 바뀌어요.|Say \"push lunch back an hour\" and the plan changes.",
+   "ko": "「점심을 한 시간 늦춰 줘」처럼 말하면 일정이 바뀌어요.",
+   "en": "Say \"push lunch back an hour\" and the plan changes.",
+   "files": [
+    "FirstRunAIConnectPage.swift:53"
    ],
    "args": [],
    "targets": [
@@ -34066,7 +34227,7 @@
    "files": [
     "AssistantDataCommands.swift:483",
     "AssistantDigest.swift:80",
-    "LedgerSheet.swift:65"
+    "FirstRunAIConnectPage.swift:141"
    ],
    "args": [],
    "targets": [
@@ -34325,7 +34486,7 @@
    "ko": "같은 여행이 있어 바꿉니다 · 추가 {0} · 변경 {1} · 삭제 {2}",
    "en": "Replaces the same trip · added {0} · changed {1} · removed {2}",
    "files": [
-    "TripImportSheet.swift:680"
+    "TripImportSheet.swift:681"
    ],
    "args": [
     "diff.added",
@@ -34817,7 +34978,7 @@
    "en": "Skip",
    "files": [
     "AITaskPanel.swift:423",
-    "FirstRunTutorialView.swift:82",
+    "FirstRunTutorialView.swift:88",
     "PermissionOnboardingSheet.swift:280"
    ],
    "args": [],
@@ -35083,7 +35244,7 @@
    "ko": "검색 위치로",
    "en": "Use search",
    "files": [
-    "TripImportSheet.swift:742"
+    "TripImportSheet.swift:743"
    ],
    "args": [],
    "targets": [
@@ -35282,7 +35443,7 @@
    "ko": "결제 문자·앱 알림이 오면 가계부에 저절로 들어가게 하고, Siri로 말해서 바로 넣습니다. 나중에 메뉴 › 연결에서도 볼 수 있습니다.",
    "en": "Let payment texts and app alerts flow into the ledger, and add things by talking to Siri. Also in Menu › Connections.",
    "files": [
-    "FirstRunTutorialView.swift:208"
+    "FirstRunTutorialView.swift:214"
    ],
    "args": [],
    "targets": [
@@ -35560,7 +35721,8 @@
    "ko": "계속",
    "en": "Continue",
    "files": [
-    "FirstRunTutorialView.swift:311"
+    "FirstRunTutorialView.swift:325",
+    "FirstRunTutorialView.swift:327"
    ],
    "args": [],
    "targets": [
@@ -36013,7 +36175,7 @@
    "ko": "고양이 고르기",
    "en": "Pick your cat",
    "files": [
-    "FirstRunTutorialView.swift:171"
+    "FirstRunTutorialView.swift:177"
    ],
    "args": [],
    "targets": [
@@ -36696,7 +36858,7 @@
    "ko": "구글 지도에서 보기",
    "en": "Open in Google Maps",
    "files": [
-    "TripImportSheet.swift:754"
+    "TripImportSheet.swift:755"
    ],
    "args": [],
    "targets": [
@@ -36928,7 +37090,7 @@
    "ko": "권한 허용",
    "en": "Permissions",
    "files": [
-    "FirstRunTutorialView.swift:165"
+    "FirstRunTutorialView.swift:171"
    ],
    "args": [],
    "targets": [
@@ -37122,6 +37284,18 @@
    "files": [
     "LedgerMemoPanel.swift:129",
     "LedgerMemoPanel.swift:264"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "그래도 끼우기|Fit anyway",
+   "ko": "그래도 끼우기",
+   "en": "Fit anyway",
+   "files": [
+    "TravelPuzzleDrawer.swift:80"
    ],
    "args": [],
    "targets": [
@@ -37797,7 +37971,7 @@
    "ko": "기록을 마친 날이 쌓이면 집이 자랍니다.",
    "en": "Your home grows as you complete days.",
    "files": [
-    "FirstRunTutorialView.swift:203"
+    "FirstRunTutorialView.swift:209"
    ],
    "args": [],
    "targets": [
@@ -37821,7 +37995,7 @@
    "ko": "기록을 일정·루틴에 잇기",
    "en": "Link records to plans or routines",
    "files": [
-    "AssistantOperations+Plans.swift:148"
+    "AssistantOperations+Plans.swift:152"
    ],
    "args": [],
    "targets": [
@@ -37882,7 +38056,7 @@
    "ko": "기본 설정",
    "en": "Setup",
    "files": [
-    "FirstRunTutorialView.swift:155"
+    "FirstRunTutorialView.swift:161"
    ],
    "args": [],
    "targets": [
@@ -38288,7 +38462,7 @@
    "ko": "끄면 비밀번호는 백업에만 쓰입니다.",
    "en": "When off, the password is used only for backups.",
    "files": [
-    "FirstRunTutorialView.swift:681"
+    "FirstRunTutorialView.swift:704"
    ],
    "args": [],
    "targets": [
@@ -38437,6 +38611,18 @@
    "en": "Expired",
    "files": [
     "AssistantSafetyViews.swift:112"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "끼우기|Fit in",
+   "ko": "끼우기",
+   "en": "Fit in",
+   "files": [
+    "TravelPuzzleDrawer.swift:80"
    ],
    "args": [],
    "targets": [
@@ -38624,7 +38810,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:700"
+    "FirstRunTutorialView.swift:301"
    ],
    "args": [],
    "targets": [
@@ -39259,7 +39445,7 @@
    "en": "My car",
    "files": [
     "AssistantDataCommands.swift:487",
-    "FirstRunTutorialView.swift:169"
+    "FirstRunTutorialView.swift:175"
    ],
    "args": [],
    "targets": [
@@ -40177,7 +40363,7 @@
    "files": [
     "AssistantDataCommands.swift:481",
     "BokkiShortcutsGuide.swift:69",
-    "FirstRunTutorialView.swift:182"
+    "FirstRunTutorialView.swift:188"
    ],
    "args": [],
    "targets": [
@@ -40252,9 +40438,9 @@
    "ko": "닫기",
    "en": "Close",
    "files": [
+    "AIConnectNudge.swift:40",
     "AppShellView.swift:1131",
-    "ArrivalCardView.swift:67",
-    "AssistantBeforeAfterView.swift:84"
+    "ArrivalCardView.swift:67"
    ],
    "args": [],
    "targets": [
@@ -40369,7 +40555,7 @@
    "en": "Day trip",
    "files": [
     "TravelModeView.swift:580",
-    "TravelModeView.swift:954",
+    "TravelModeView.swift:955",
     "TravelNewTripSheet.swift:53"
    ],
    "args": [],
@@ -40964,7 +41150,7 @@
    "ko": "도착 뒤 입국·짐 찾기로 {0}분은 두세요",
    "en": "Allow {0} min after landing for arrival",
    "files": [
-    "TripImportSheet.swift:767"
+    "TripImportSheet.swift:768"
    ],
    "args": [
     "need"
@@ -40978,7 +41164,7 @@
    "ko": "도착한 계획 불러오기",
    "en": "Load the delivered plan",
    "files": [
-    "TripImportSheet.swift:648"
+    "TripImportSheet.swift:649"
    ],
    "args": [],
    "targets": [
@@ -40990,7 +41176,7 @@
    "ko": "도착한 계획이 없어요.",
    "en": "No plan has arrived.",
    "files": [
-    "TripImportSheet.swift:856"
+    "TripImportSheet.swift:857"
    ],
    "args": [],
    "targets": [
@@ -41418,7 +41604,7 @@
    "ko": "등록된 비밀번호가 있습니다",
    "en": "A password is already set",
    "files": [
-    "FirstRunTutorialView.swift:644"
+    "FirstRunTutorialView.swift:667"
    ],
    "args": [],
    "targets": [
@@ -41752,7 +41938,7 @@
    "ko": "마무리",
    "en": "Done",
    "files": [
-    "FirstRunTutorialView.swift:158"
+    "FirstRunTutorialView.swift:164"
    ],
    "args": [],
    "targets": [
@@ -42382,7 +42568,7 @@
    "ko": "메모 · 지도 메모",
    "en": "Memos · Map memos",
    "files": [
-    "FirstRunTutorialView.swift:176"
+    "FirstRunTutorialView.swift:182"
    ],
    "args": [],
    "targets": [
@@ -42820,6 +43006,18 @@
    ]
   },
   {
+   "key": "못 읽은 결제 문자와 애매한 기록을 AI가 정리해 줘요.|The AI sorts payment texts and unclear records the app couldn't read.",
+   "ko": "못 읽은 결제 문자와 애매한 기록을 AI가 정리해 줘요.",
+   "en": "The AI sorts payment texts and unclear records the app couldn't read.",
+   "files": [
+    "FirstRunAIConnectPage.swift:51"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "못 한 것 {0}개|{0} not done",
    "ko": "못 한 것 {0}개",
    "en": "{0} not done",
@@ -43180,7 +43378,7 @@
    "ko": "바꾸지 않으면 그대로 씁니다.",
    "en": "It stays as is unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:646"
+    "FirstRunTutorialView.swift:669"
    ],
    "args": [],
    "targets": [
@@ -43192,7 +43390,7 @@
    "ko": "바꾸지 않으면 이 번호로 시작합니다.",
    "en": "This is used unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:658"
+    "FirstRunTutorialView.swift:681"
    ],
    "args": [],
    "targets": [
@@ -43264,7 +43462,7 @@
    "ko": "바로 시작",
    "en": "Start now",
    "files": [
-    "FirstRunTutorialView.swift:294"
+    "FirstRunTutorialView.swift:309"
    ],
    "args": [],
    "targets": [
@@ -43288,7 +43486,7 @@
    "ko": "반경",
    "en": "Radius",
    "files": [
-    "FirstRunTutorialView.swift:582",
+    "FirstRunTutorialView.swift:605",
     "MapHomeInfoSheets.swift:99"
    ],
    "args": [],
@@ -43429,7 +43627,7 @@
    "ko": "받은 JSON 붙여 넣기",
    "en": "Paste the JSON",
    "files": [
-    "TripImportSheet.swift:657"
+    "TripImportSheet.swift:658"
    ],
    "args": [],
    "targets": [
@@ -43876,7 +44074,7 @@
    "en": "Backup password",
    "files": [
     "FirstRunTutorialGuides.swift:709",
-    "FirstRunTutorialView.swift:183",
+    "FirstRunTutorialView.swift:189",
     "MapHomeSettingsSheets.swift:557"
    ],
    "args": [],
@@ -44849,6 +45047,18 @@
    ]
   },
   {
+   "key": "부산 1박 2일, 바다 보고 국밥 먹고 싶어|A night in Busan — sea view and a good soup",
+   "ko": "부산 1박 2일, 바다 보고 국밥 먹고 싶어",
+   "en": "A night in Busan — sea view and a good soup",
+   "files": [
+    "FirstRunAIConnectPage.swift:117"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "분급|Per minute",
    "ko": "분급",
    "en": "Per minute",
@@ -45128,7 +45338,7 @@
    "ko": "비밀번호 확인",
    "en": "Confirm password",
    "files": [
-    "FirstRunTutorialView.swift:666",
+    "FirstRunTutorialView.swift:689",
     "MapHomeSettingsSheets.swift:347"
    ],
    "args": [],
@@ -45141,7 +45351,7 @@
    "ko": "비밀번호 확인이 일치하지 않습니다.",
    "en": "Passwords do not match.",
    "files": [
-    "FirstRunTutorialView.swift:364",
+    "FirstRunTutorialView.swift:387",
     "MapHomeSettingsSheets.swift:690"
    ],
    "args": [],
@@ -45340,7 +45550,7 @@
    "ko": "비밀번호를 잊으면 백업을 복구할 수 없습니다. 예전 iCloud 백업은 그때 쓴 비밀번호로 열립니다.",
    "en": "Without the password, backups can't be restored. Older iCloud backups open with the password used then.",
    "files": [
-    "FirstRunTutorialView.swift:684"
+    "FirstRunTutorialView.swift:707"
    ],
    "args": [],
    "targets": [
@@ -45508,7 +45718,7 @@
    "ko": "사용 불가",
    "en": "Unavailable",
    "files": [
-    "FirstRunTutorialPolicy.swift:192",
+    "FirstRunTutorialPolicy.swift:193",
     "MapHomeAppleWatchMenuItem.swift:164",
     "AppModelSupportTypes.swift:268"
    ],
@@ -45693,7 +45903,7 @@
    "ko": "사이드바와 달력",
    "en": "Sidebar and calendar",
    "files": [
-    "FirstRunTutorialView.swift:174"
+    "FirstRunTutorialView.swift:180"
    ],
    "args": [],
    "targets": [
@@ -46223,7 +46433,7 @@
    "ko": "새 비밀번호(6자리)",
    "en": "New password (6 digits)",
    "files": [
-    "FirstRunTutorialView.swift:663"
+    "FirstRunTutorialView.swift:686"
    ],
    "args": [],
    "targets": [
@@ -46235,7 +46445,7 @@
    "ko": "새 비밀번호",
    "en": "New password",
    "files": [
-    "FirstRunTutorialView.swift:665",
+    "FirstRunTutorialView.swift:688",
     "TripShareHost.swift:337",
     "TripShareHost.swift:354"
    ],
@@ -46423,7 +46633,7 @@
    "ko": "생각과 장소를 그 시각에 남깁니다.",
    "en": "Keep thoughts and places at the moment they happen.",
    "files": [
-    "FirstRunTutorialView.swift:202"
+    "FirstRunTutorialView.swift:208"
    ],
    "args": [],
    "targets": [
@@ -47387,7 +47597,7 @@
    "ko": "손목의 움직임까지 더해 하루를 기록합니다.",
    "en": "Adds movement from your wrist to your day.",
    "files": [
-    "FirstRunTutorialView.swift:206"
+    "FirstRunTutorialView.swift:212"
    ],
    "args": [],
    "targets": [
@@ -48078,7 +48288,7 @@
    "ko": "시간 있는 여행 일정 고치기",
    "en": "Edit timed trip items",
    "files": [
-    "AssistantOperations+Plans.swift:76"
+    "AssistantOperations+Plans.swift:80"
    ],
    "args": [],
    "targets": [
@@ -48102,7 +48312,7 @@
    "ko": "시간 있는 여행 일정 지우기",
    "en": "Delete timed trip items",
    "files": [
-    "AssistantOperations+Plans.swift:110"
+    "AssistantOperations+Plans.swift:114"
    ],
    "args": [],
    "targets": [
@@ -48389,7 +48599,7 @@
    "ko": "시작",
    "en": "Start",
    "files": [
-    "FirstRunTutorialView.swift:154",
+    "FirstRunTutorialView.swift:160",
     "LedgerTripView.swift:272",
     "MapHomeSectionEditSheet.swift:206"
    ],
@@ -48403,7 +48613,7 @@
    "ko": "시작하기",
    "en": "Get started",
    "files": [
-    "FirstRunTutorialView.swift:310",
+    "FirstRunTutorialView.swift:326",
     "PermissionOnboardingSheet.swift:156"
    ],
    "args": [],
@@ -48822,7 +49032,7 @@
    "ko": "아래에 적고 다음을 누르면 저장됩니다.",
    "en": "Enter one below and tap Next to save it.",
    "files": [
-    "FirstRunTutorialView.swift:650"
+    "FirstRunTutorialView.swift:673"
    ],
    "args": [],
    "targets": [
@@ -48994,7 +49204,7 @@
    "ko": "아직 비밀번호가 없습니다",
    "en": "No password yet",
    "files": [
-    "FirstRunTutorialView.swift:648"
+    "FirstRunTutorialView.swift:671"
    ],
    "args": [],
    "targets": [
@@ -49006,7 +49216,7 @@
    "ko": "아직 안 물음",
    "en": "Not asked",
    "files": [
-    "FirstRunTutorialPolicy.swift:186"
+    "FirstRunTutorialPolicy.swift:187"
    ],
    "args": [],
    "targets": [
@@ -49378,7 +49588,7 @@
    "ko": "앞에서 이동 {0}분",
    "en": "{0} min from previous",
    "files": [
-    "TripImportSheet.swift:727"
+    "TripImportSheet.swift:728"
    ],
    "args": [
     "Int(minutes)"
@@ -49649,7 +49859,7 @@
    "ko": "앱 사용 중에만",
    "en": "While using",
    "files": [
-    "FirstRunTutorialPolicy.swift:196"
+    "FirstRunTutorialPolicy.swift:197"
    ],
    "args": [],
    "targets": [
@@ -49771,7 +49981,7 @@
    "ko": "앱 잠금과 iCloud 백업에 같은 비밀번호를 씁니다.",
    "en": "App lock and iCloud backup share this password.",
    "files": [
-    "FirstRunTutorialView.swift:209"
+    "FirstRunTutorialView.swift:215"
    ],
    "args": [],
    "targets": [
@@ -49831,7 +50041,7 @@
    "ko": "앱보다 새 형식이에요. 앱을 업데이트해 주세요.",
    "en": "This format is newer than the app. Please update the app.",
    "files": [
-    "TripImportSheet.swift:923"
+    "TripImportSheet.swift:924"
    ],
    "args": [],
    "targets": [
@@ -49881,7 +50091,7 @@
    "ko": "앱을 열 때마다 잠금",
    "en": "Lock whenever the app opens",
    "files": [
-    "FirstRunTutorialView.swift:676",
+    "FirstRunTutorialView.swift:699",
     "MapHomeSettingsSheets.swift:374"
    ],
    "args": [],
@@ -49954,7 +50164,7 @@
    "ko": "앱의 첫 화면입니다. 하루가 지도 위에 그려집니다.",
    "en": "This is the main screen. Your day is drawn on the map.",
    "files": [
-    "FirstRunTutorialView.swift:198"
+    "FirstRunTutorialView.swift:204"
    ],
    "args": [],
    "targets": [
@@ -50035,6 +50245,18 @@
    ]
   },
   {
+   "key": "어떤 AI를 쓰세요?|Which AI do you use?",
+   "ko": "어떤 AI를 쓰세요?",
+   "en": "Which AI do you use?",
+   "files": [
+    "FirstRunAIConnectPage.swift:189"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "어제 하루 요약 카드|Yesterday's day card",
    "ko": "어제 하루 요약 카드",
    "en": "Yesterday's day card",
@@ -50063,7 +50285,7 @@
    "ko": "어제 하루를 담은 카드를 알림으로 보낼 시각을 고릅니다.",
    "en": "Choose when yesterday's card arrives as a notification.",
    "files": [
-    "FirstRunTutorialView.swift:192"
+    "FirstRunTutorialView.swift:198"
    ],
    "args": [],
    "targets": [
@@ -50222,7 +50444,7 @@
    "ko": "업무 시간에만 번 돈이 쌓입니다. 금액은 이 기기에만 저장됩니다.",
    "en": "Earnings grow only during work time. Stored only on this device.",
    "files": [
-    "FirstRunTutorialView.swift:196"
+    "FirstRunTutorialView.swift:202"
    ],
    "args": [],
    "targets": [
@@ -50275,7 +50497,7 @@
    "ko": "업무와 학습 시간을 구분하는 기준이 됩니다.",
    "en": "Used to tell work and study time apart.",
    "files": [
-    "FirstRunTutorialView.swift:194"
+    "FirstRunTutorialView.swift:200"
    ],
    "args": [],
    "targets": [
@@ -50576,7 +50798,7 @@
    "ko": "여행 계획 JSON이 아니에요. AI가 마지막에 준 JSON 전체를 복사해 주세요.",
    "en": "This isn't trip JSON. Copy the whole JSON the AI gave at the end.",
    "files": [
-    "TripImportSheet.swift:919"
+    "TripImportSheet.swift:920"
    ],
    "args": [],
    "targets": [
@@ -50613,7 +50835,7 @@
    "ko": "여행 계획에 반영",
    "en": "Add to trip plan",
    "files": [
-    "TripImportSheet.swift:695"
+    "TripImportSheet.swift:696"
    ],
    "args": [],
    "targets": [
@@ -50834,6 +51056,18 @@
    "en": "Add trip stops",
    "files": [
     "AssistantCommandEdits.swift:21"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여행 일정 받기|Get trip plans",
+   "ko": "여행 일정 받기",
+   "en": "Get trip plans",
+   "files": [
+    "FirstRunAIConnectPage.swift:48"
    ],
    "args": [],
    "targets": [
@@ -51543,7 +51777,7 @@
    "en": "Connect and protect",
    "files": [
     "FirstRunTutorialGuides.swift:82",
-    "FirstRunTutorialView.swift:157",
+    "FirstRunTutorialView.swift:163",
     "FirstRunTutorialGuides.swift:82"
    ],
    "args": [],
@@ -51858,6 +52092,18 @@
    ]
   },
   {
+   "key": "연결하지 않아도 앱은 쓸 수 있어요. 다만 이 기능들은 쓸 수 없어요. 나중에 메뉴 › 연결에서도 할 수 있어요.|The app works without it, but these features won't. You can also connect later in Menu › Connections.",
+   "ko": "연결하지 않아도 앱은 쓸 수 있어요. 다만 이 기능들은 쓸 수 없어요. 나중에 메뉴 › 연결에서도 할 수 있어요.",
+   "en": "The app works without it, but these features won't. You can also connect later in Menu › Connections.",
+   "files": [
+    "FirstRunAIConnectPage.swift:32"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "연결할 루틴 또는 액션아이템을 찾지 못했습니다.|Could not find the routine or action item to link.",
    "ko": "연결할 루틴 또는 액션아이템을 찾지 못했습니다.",
    "en": "Could not find the routine or action item to link.",
@@ -51961,7 +52207,7 @@
    "ko": "연봉 설정",
    "en": "Salary",
    "files": [
-    "FirstRunTutorialView.swift:170"
+    "FirstRunTutorialView.swift:176"
    ],
    "args": [],
    "targets": [
@@ -52023,7 +52269,7 @@
    "ko": "연봉 카운터",
    "en": "Salary counter",
    "files": [
-    "FirstRunTutorialView.swift:791",
+    "FirstRunTutorialView.swift:814",
     "MapHomeAlarm.swift:25",
     "MapHomeSalarySettingsSheet.swift:124"
    ],
@@ -52087,7 +52333,7 @@
    "ko": "연봉을 적으면 나타납니다",
    "en": "Appears once you enter a salary",
    "files": [
-    "FirstRunTutorialView.swift:793"
+    "FirstRunTutorialView.swift:816"
    ],
    "args": [],
    "targets": [
@@ -52583,11 +52829,23 @@
    "ko": "예상 요금 {0}원",
    "en": "Estimated fare ₩{0}",
    "files": [
-    "TripImportSheet.swift:730"
+    "TripImportSheet.swift:731"
    ],
    "args": [
     "fare.formatted()"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "예상 지출 12,000원|Estimated ₩12,000",
+   "ko": "예상 지출 12,000원",
+   "en": "Estimated ₩12,000",
+   "files": [
+    "FirstRunAIConnectPage.swift:141"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -52611,7 +52869,7 @@
    "ko": "예시",
    "en": "Example",
    "files": [
-    "FirstRunTutorialView.swift:773"
+    "FirstRunTutorialView.swift:796"
    ],
    "args": [],
    "targets": [
@@ -53031,7 +53289,7 @@
    "ko": "오른쪽 시간 막대로 하루를, 달력으로 지난 날을 봅니다.",
    "en": "See the day on the right time bar and past days in the calendar.",
    "files": [
-    "FirstRunTutorialView.swift:200"
+    "FirstRunTutorialView.swift:206"
    ],
    "args": [],
    "targets": [
@@ -53728,7 +53986,7 @@
    "ko": "웹 요청을 할 수 있는 AI 비서는 복사하지 않아도 계획을 보낼 수 있어요. AI를 고르면 그 AI의 연결 키가 프롬프트에 들어가고, 없으면 PIN을 물어 만들어요. 계획은 서버에 최대 3일 머물고 앱이 받으면 바로 지워져요.",
    "en": "AI assistants that can make web requests can send the plan without copying. Pick an AI and its connection key goes into the prompt; if it has none, you're asked for your PIN to make one. Plans stay on the server for up to 3 days and are deleted as soon as the app receives them.",
    "files": [
-    "TripImportSheet.swift:644"
+    "TripImportSheet.swift:645"
    ],
    "args": [],
    "targets": [
@@ -54312,7 +54570,7 @@
    "ko": "위치를 찾지 못해 지도에는 표시되지 않아요",
    "en": "Location not found; not shown on the map",
    "files": [
-    "TripImportSheet.swift:749"
+    "TripImportSheet.swift:750"
    ],
    "args": [],
    "targets": [
@@ -54324,7 +54582,7 @@
    "ko": "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.",
    "en": "Couldn't find it. Try another name.",
    "files": [
-    "FirstRunTutorialView.swift:555"
+    "FirstRunTutorialView.swift:578"
    ],
    "args": [],
    "targets": [
@@ -54336,7 +54594,7 @@
    "ko": "위치를 허용하면 현재 위치로도 저장할 수 있습니다.",
    "en": "Allow location to use your current position.",
    "files": [
-    "FirstRunTutorialView.swift:577"
+    "FirstRunTutorialView.swift:600"
    ],
    "args": [],
    "targets": [
@@ -55229,7 +55487,7 @@
    "ko": "이 안에 있으면 이 장소로 봐요. 나중에 장소 정보에서 바꿀 수 있어요.",
    "en": "Inside this range counts as this place. You can change it later in the place details.",
    "files": [
-    "FirstRunTutorialView.swift:584"
+    "FirstRunTutorialView.swift:607"
    ],
    "args": [],
    "targets": [
@@ -55610,7 +55868,7 @@
    "ko": "이동 시간이 빠듯해요(약 {0}분 필요)",
    "en": "Tight move (about {0} min needed)",
    "files": [
-    "TripImportSheet.swift:766"
+    "TripImportSheet.swift:767"
    ],
    "args": [
     "need"
@@ -56263,7 +56521,7 @@
    "files": [
     "AssistantConnectGuide.swift:173",
     "BokkiShortcutsGuide.swift:225",
-    "FirstRunTutorialView.swift:71"
+    "FirstRunTutorialView.swift:77"
    ],
    "args": [],
    "targets": [
@@ -56397,7 +56655,7 @@
    "ko": "일부 허용",
    "en": "Partly allowed",
    "files": [
-    "FirstRunTutorialPolicy.swift:190"
+    "FirstRunTutorialPolicy.swift:191"
    ],
    "args": [],
    "targets": [
@@ -56519,6 +56777,18 @@
    "args": [],
    "targets": [
     "TaptionPlanWidget"
+   ]
+  },
+  {
+   "key": "일정 고치기|Edit plans by chatting",
+   "ko": "일정 고치기",
+   "en": "Edit plans by chatting",
+   "files": [
+    "FirstRunAIConnectPage.swift:52"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -56788,7 +57058,7 @@
    "ko": "일정을 하루 기록과 함께 봅니다. 읽기만 합니다.",
    "en": "See events with your day. Read only.",
    "files": [
-    "FirstRunTutorialView.swift:205"
+    "FirstRunTutorialView.swift:211"
    ],
    "args": [],
    "targets": [
@@ -56812,7 +57082,19 @@
    "ko": "일정이 비어 있어요.",
    "en": "The trip has no items.",
    "files": [
-    "TripImportSheet.swift:925"
+    "TripImportSheet.swift:926"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "일정표|Schedule",
+   "ko": "일정표",
+   "en": "Schedule",
+   "files": [
+    "FirstRunAIConnectPage.swift:139"
    ],
    "args": [],
    "targets": [
@@ -57094,7 +57376,7 @@
    "ko": "자동 기록이 틀렸으면 영상 편집처럼 고칩니다.",
    "en": "Fix automatic records the way you edit a video.",
    "files": [
-    "FirstRunTutorialView.swift:201"
+    "FirstRunTutorialView.swift:207"
    ],
    "args": [],
    "targets": [
@@ -57860,7 +58142,7 @@
    "ko": "재생과 녹화",
    "en": "Play and record",
    "files": [
-    "FirstRunTutorialView.swift:173"
+    "FirstRunTutorialView.swift:179"
    ],
    "args": [],
    "targets": [
@@ -57974,8 +58256,8 @@
    "en": "Saved",
    "files": [
     "FirstRunTutorialGuides.swift:670",
-    "FirstRunTutorialView.swift:474",
-    "FirstRunTutorialView.swift:484"
+    "FirstRunTutorialView.swift:497",
+    "FirstRunTutorialView.swift:507"
    ],
    "args": [],
    "targets": [
@@ -58386,6 +58668,18 @@
    ]
   },
   {
+   "key": "정리해서 BOKKI Plan으로 올릴게요|I'll tidy it up and send it to BOKKI Plan",
+   "ko": "정리해서 BOKKI Plan으로 올릴게요",
+   "en": "I'll tidy it up and send it to BOKKI Plan",
+   "files": [
+    "FirstRunAIConnectPage.swift:125"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "정산 다시 열기|Reopen settlement",
    "ko": "정산 다시 열기",
    "en": "Reopen settlement",
@@ -58668,6 +58962,20 @@
    ]
   },
   {
+   "key": "조각 {0}개 · 눌러서 일정에 끼우세요|{0} pieces · tap to fit into the plan",
+   "ko": "조각 {0}개 · 눌러서 일정에 끼우세요",
+   "en": "{0} pieces · tap to fit into the plan",
+   "files": [
+    "TravelPuzzleDrawer.swift:55"
+   ],
+   "args": [
+    "count"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "조각 합침 검토|Merge review",
    "ko": "조각 합침 검토",
    "en": "Merge review",
@@ -58808,6 +59116,18 @@
    ]
   },
   {
+   "key": "좋아, 그렇게 짜 줘|Great, plan it that way",
+   "ko": "좋아, 그렇게 짜 줘",
+   "en": "Great, plan it that way",
+   "files": [
+    "FirstRunAIConnectPage.swift:119"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "좋은 꿈 꾸세요 💤|Sweet dreams 💤",
    "ko": "좋은 꿈 꾸세요 💤",
    "en": "Sweet dreams 💤",
@@ -58933,7 +59253,7 @@
    "ko": "주소나 장소 이름 검색",
    "en": "Search address or place",
    "files": [
-    "FirstRunTutorialView.swift:504"
+    "FirstRunTutorialView.swift:527"
    ],
    "args": [],
    "targets": [
@@ -59029,7 +59349,7 @@
    "ko": "준비됐습니다",
    "en": "You're ready",
    "files": [
-    "FirstRunTutorialView.swift:184"
+    "FirstRunTutorialView.swift:190"
    ],
    "args": [],
    "targets": [
@@ -59226,7 +59546,7 @@
    "ko": "지금 상태입니다. 비어 있는 것은 나중에 해도 됩니다.",
    "en": "Here's where things stand. Anything open can wait.",
    "files": [
-    "FirstRunTutorialView.swift:210"
+    "FirstRunTutorialView.swift:216"
    ],
    "args": [],
    "targets": [
@@ -59239,6 +59559,18 @@
    "en": "Your rate is already under 90% of base; more hours lower it further.",
    "files": [
     "MapHomeAlarm.swift:377"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지금 연결|Connect now",
+   "ko": "지금 연결",
+   "en": "Connect now",
+   "files": [
+    "FirstRunTutorialView.swift:325"
    ],
    "args": [],
    "targets": [
@@ -59376,7 +59708,7 @@
    "ko": "지금은 반영하지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't add it right now. Try again in a moment.",
    "files": [
-    "TripImportSheet.swift:704"
+    "TripImportSheet.swift:705"
    ],
    "args": [],
    "targets": [
@@ -59497,7 +59829,7 @@
    "ko": "지도 보는 법",
    "en": "Reading the map",
    "files": [
-    "FirstRunTutorialView.swift:172"
+    "FirstRunTutorialView.swift:178"
    ],
    "args": [],
    "targets": [
@@ -59583,7 +59915,7 @@
    "ko": "지도 위 고양이 곁에 보여 줄 것을 고릅니다.",
    "en": "Choose what appears next to the cat on the map.",
    "files": [
-    "FirstRunTutorialView.swift:204"
+    "FirstRunTutorialView.swift:210"
    ],
    "args": [],
    "targets": [
@@ -59744,9 +60076,9 @@
    "ko": "지도",
    "en": "Map",
    "files": [
+    "FirstRunAIConnectPage.swift:140",
     "MapHomeScreenRecording.swift:580",
-    "MapHomeStickerEditor.swift:668",
-    "MapHomeView+Menu2.swift:13"
+    "MapHomeStickerEditor.swift:668"
    ],
    "args": [],
    "targets": [
@@ -59903,7 +60235,7 @@
    "ko": "지도에서 저장됨",
    "en": "Saved from the map",
    "files": [
-    "FirstRunTutorialView.swift:496"
+    "FirstRunTutorialView.swift:519"
    ],
    "args": [],
    "targets": [
@@ -59927,7 +60259,7 @@
    "ko": "지도에서 하루를 함께 걸을 고양이입니다.",
    "en": "This cat walks through your day on the map.",
    "files": [
-    "FirstRunTutorialView.swift:197"
+    "FirstRunTutorialView.swift:203"
    ],
    "args": [],
    "targets": [
@@ -60111,6 +60443,18 @@
    "files": [
     "LedgerSheet.swift:237",
     "MapHomeInteractionPolicy.swift:460"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지출·기록 정리|Tidy spending and records",
+   "ko": "지출·기록 정리",
+   "en": "Tidy spending and records",
+   "files": [
+    "FirstRunAIConnectPage.swift:50"
    ],
    "args": [],
    "targets": [
@@ -60314,7 +60658,7 @@
    "ko": "직접 넣은 기록 지우기",
    "en": "Delete records I added",
    "files": [
-    "AssistantOperations+Plans.swift:132"
+    "AssistantOperations+Plans.swift:136"
    ],
    "args": [],
    "targets": [
@@ -60525,7 +60869,7 @@
    "ko": "집 위치",
    "en": "Home",
    "files": [
-    "FirstRunTutorialView.swift:167"
+    "FirstRunTutorialView.swift:173"
    ],
    "args": [],
    "targets": [
@@ -60595,7 +60939,7 @@
    "ko": "집에 머문 시간을 자동으로 구분합니다.",
    "en": "Time at home is recognized automatically.",
    "files": [
-    "FirstRunTutorialView.swift:193"
+    "FirstRunTutorialView.swift:199"
    ],
    "args": [],
    "targets": [
@@ -60682,7 +61026,7 @@
    "ko": "차근차근 따라 하기",
    "en": "Walk me through",
    "files": [
-    "FirstRunTutorialView.swift:309"
+    "FirstRunTutorialView.swift:324"
    ],
    "args": [],
    "targets": [
@@ -60718,7 +61062,7 @@
    "ko": "차에 블루투스로 연결되면 그 이동을 자동차로 기록합니다. 이어폰은 고르지 마세요.",
    "en": "Trips with your car's Bluetooth connected are recorded as car. Don't pick earphones.",
    "files": [
-    "FirstRunTutorialView.swift:195"
+    "FirstRunTutorialView.swift:201"
    ],
    "args": [],
    "targets": [
@@ -60852,7 +61196,7 @@
    "ko": "초기 비밀번호",
    "en": "Default password",
    "files": [
-    "FirstRunTutorialView.swift:652"
+    "FirstRunTutorialView.swift:675"
    ],
    "args": [],
    "targets": [
@@ -61668,7 +62012,7 @@
    "ko": "카운터",
    "en": "Counters",
    "files": [
-    "FirstRunTutorialView.swift:178",
+    "FirstRunTutorialView.swift:184",
     "MapHomeView+Menu2.swift:49"
    ],
    "args": [],
@@ -61817,7 +62161,7 @@
    "ko": "캘린더 연결",
    "en": "Connect calendars",
    "files": [
-    "FirstRunTutorialView.swift:179"
+    "FirstRunTutorialView.swift:185"
    ],
    "args": [],
    "targets": [
@@ -62177,7 +62521,7 @@
    "ko": "클립 편집",
    "en": "Clip editor",
    "files": [
-    "FirstRunTutorialView.swift:175",
+    "FirstRunTutorialView.swift:181",
     "MapHomeSectionEditSheet.swift:369",
     "MapHomeSectionEditSheet.swift:396"
    ],
@@ -62337,7 +62681,7 @@
    "ko": "탑승 확인·거절",
    "en": "Confirm or reject boardings",
    "files": [
-    "AssistantOperations+Plans.swift:166"
+    "AssistantOperations+Plans.swift:170"
    ],
    "args": [],
    "targets": [
@@ -62811,7 +63155,7 @@
    "ko": "프롬프트를 복사했어요. {0}에 붙여 넣고 보내 주세요.",
    "en": "The prompt is copied. Paste it into {0} and send.",
    "files": [
-    "TripImportSheet.swift:627"
+    "TripImportSheet.swift:628"
    ],
    "args": [
     "name"
@@ -62825,7 +63169,7 @@
    "ko": "프롬프트를 복사했어요. 피클에 붙여 넣고 보내 주세요.",
    "en": "The prompt is copied. Paste it into Pickle and send.",
    "files": [
-    "TripImportSheet.swift:835"
+    "TripImportSheet.swift:836"
    ],
    "args": [],
    "targets": [
@@ -62837,7 +63181,7 @@
    "ko": "프롬프트를 복사했어요.",
    "en": "Prompt copied.",
    "files": [
-    "TripImportSheet.swift:633"
+    "TripImportSheet.swift:634"
    ],
    "args": [],
    "targets": [
@@ -62849,7 +63193,7 @@
    "ko": "프롬프트를 복사했어요",
    "en": "Prompt copied",
    "files": [
-    "TripImportSheet.swift:567"
+    "TripImportSheet.swift:568"
    ],
    "args": [],
    "targets": [
@@ -62861,7 +63205,7 @@
    "ko": "프롬프트만 복사",
    "en": "Copy prompt only",
    "files": [
-    "TripImportSheet.swift:629"
+    "TripImportSheet.swift:630"
    ],
    "args": [],
    "targets": [
@@ -62873,7 +63217,7 @@
    "ko": "프롬프트와 피클 연결 키를 복사했어요. 피클 채팅창에 붙여 넣으면 계획이 앱으로 바로 와요.",
    "en": "The prompt and Pickle's connection key are copied. Paste them into the Pickle chat and the plan comes straight to the app.",
    "files": [
-    "TripImportSheet.swift:834"
+    "TripImportSheet.swift:835"
    ],
    "args": [],
    "targets": [
@@ -62897,7 +63241,7 @@
    "ko": "피클 열기 / 받기",
    "en": "Open / Get Pickle",
    "files": [
-    "TripImportSheet.swift:650"
+    "TripImportSheet.swift:651"
    ],
    "args": [],
    "targets": [
@@ -62921,7 +63265,7 @@
    "ko": "피클에서 계획 세우기 (자동 연동)",
    "en": "Plan in Pickle (Auto Sync)",
    "files": [
-    "TripImportSheet.swift:621"
+    "TripImportSheet.swift:622"
    ],
    "args": [],
    "targets": [
@@ -62933,7 +63277,7 @@
    "ko": "피클이 없어서 App Store를 열었어요. 설치한 뒤 다시 눌러 주세요.",
    "en": "Pickle isn't installed, so the App Store opened. Install it and tap again.",
    "files": [
-    "TripImportSheet.swift:832"
+    "TripImportSheet.swift:833"
    ],
    "args": [],
    "targets": [
@@ -63043,7 +63387,7 @@
    "ko": "하루 요약과 집 성장",
    "en": "Day summary and home growth",
    "files": [
-    "FirstRunTutorialView.swift:177"
+    "FirstRunTutorialView.swift:183"
    ],
    "args": [],
    "targets": [
@@ -63127,7 +63471,7 @@
    "ko": "하루 카드 시각",
    "en": "Day card time",
    "files": [
-    "FirstRunTutorialView.swift:166"
+    "FirstRunTutorialView.swift:172"
    ],
    "args": [],
    "targets": [
@@ -63242,7 +63586,7 @@
    "ko": "하루를 다시 보고 영상으로 남깁니다.",
    "en": "Replay your day and keep it as a video.",
    "files": [
-    "FirstRunTutorialView.swift:199"
+    "FirstRunTutorialView.swift:205"
    ],
    "args": [],
    "targets": [
@@ -63254,7 +63598,7 @@
    "ko": "하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.",
    "en": "Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.",
    "files": [
-    "FirstRunTutorialView.swift:191"
+    "FirstRunTutorialView.swift:197"
    ],
    "args": [],
    "targets": [
@@ -63806,7 +64150,7 @@
    "ko": "항상 허용",
    "en": "Always",
    "files": [
-    "FirstRunTutorialPolicy.swift:195"
+    "FirstRunTutorialPolicy.swift:196"
    ],
    "args": [],
    "targets": [
@@ -63938,7 +64282,7 @@
    "ko": "허용 안 함",
    "en": "Not allowed",
    "files": [
-    "FirstRunTutorialPolicy.swift:188"
+    "FirstRunTutorialPolicy.swift:189"
    ],
    "args": [],
    "targets": [
@@ -63951,7 +64295,7 @@
    "en": "Allowed",
    "files": [
     "AppShellView.swift:1024",
-    "FirstRunTutorialPolicy.swift:197"
+    "FirstRunTutorialPolicy.swift:198"
    ],
    "args": [],
    "targets": [
@@ -64143,7 +64487,7 @@
    "ko": "현재 위치로 저장",
    "en": "Use current location",
    "files": [
-    "FirstRunTutorialView.swift:566"
+    "FirstRunTutorialView.swift:589"
    ],
    "args": [],
    "targets": [
@@ -64155,7 +64499,7 @@
    "ko": "현재 위치로 저장됨",
    "en": "Saved from current location",
    "files": [
-    "FirstRunTutorialView.swift:563"
+    "FirstRunTutorialView.swift:586"
    ],
    "args": [],
    "targets": [
@@ -64179,7 +64523,7 @@
    "ko": "현재 위치를 받는 중입니다. 검색으로도 저장할 수 있습니다.",
    "en": "Waiting for your location. You can also search.",
    "files": [
-    "FirstRunTutorialView.swift:576"
+    "FirstRunTutorialView.swift:599"
    ],
    "args": [],
    "targets": [
@@ -64353,7 +64697,7 @@
    "en": "Learn the screen",
    "files": [
     "FirstRunTutorialGuides.swift:81",
-    "FirstRunTutorialView.swift:156",
+    "FirstRunTutorialView.swift:162",
     "FirstRunTutorialGuides.swift:81"
    ],
    "args": [],
@@ -64497,7 +64841,7 @@
    "en": "Check",
    "files": [
     "LedgerMemoPanel.swift:13",
-    "TripImportSheet.swift:668"
+    "TripImportSheet.swift:669"
    ],
    "args": [],
    "targets": [
@@ -64536,7 +64880,7 @@
    "ko": "확인하고 반영하기",
    "en": "Review and add",
    "files": [
-    "TripImportSheet.swift:677"
+    "TripImportSheet.swift:678"
    ],
    "args": [],
    "targets": [
@@ -64739,7 +65083,7 @@
    "ko": "회사 · 학교",
    "en": "Work · School",
    "files": [
-    "FirstRunTutorialView.swift:168"
+    "FirstRunTutorialView.swift:174"
    ],
    "args": [],
    "targets": [
