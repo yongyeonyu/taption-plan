@@ -39,7 +39,7 @@
 | 13 | `TaptionPlan/Core/WatchConnectivitySupport.swift` | 1,154 | 254 `receiveEnvelope` | 11 | 25 | 88.3 | 정책·저장소 10개와 서비스 881줄, 수신 함수 254줄 | 정책·저장소 파일, 수신 함수를 종류별로 | 중 | 없음 | 완료(파일만) `46a96957` — `receiveEnvelope` 254줄은 그대로 | 884 |
 | 14 | `TaptionPlan/UI/AppShellView.swift` (동결) | 1,420 | 106 `body` | 5 | 71 | 88.1 | 한도 초과, 수정 71회 | 시작 관문·잠금 화면 분리 | 중 | mode-transition | 성능 작업 뒤(RFT1116A02 때 성능 세션이 고치는 중) | |
 | 15 | `TaptionPlan/UI/MapHomeLocationPresentation.swift` | 1,199 | 102 | 11 | 63 | 86.4 | 한도 1줄 앞, 타입 11개 | 타입별 파일 | 하 | 홈 영역 | 완료 `4a319fc8`(RFT1116A02) | 168 |
-| 16 | `TaptionPlan/UX/AppModel+Classification.swift` | 1,160 | 534 `performSensorTimelineRefresh` | 1 | 27 | 86.3 | 함수 하나가 534줄 | 단계별 함수로 쪼개기 | 상(하루 갱신 본줄기) | 없음 | 보류 — 534줄 함수가 지역 되돌리기 상태와 취소 확인을 끝까지 함께 쓰고 직접 시험이 없어, 쪼개면 하루 갱신 결과가 달라질 위험 | 1,160 |
+| 16 | `TaptionPlan/UX/AppModel+Classification.swift` | 1,160 | 534 `performSensorTimelineRefresh` | 1 | 27 | 86.3 | 함수 하나가 534줄 | 단계별 함수로 쪼개기 | 상(하루 갱신 본줄기) | 없음 | 완료(RFT1116A03) — 먼저 `SensorTimelineRefreshTests` 7개로 결과·되돌리기·취소를 고정한 뒤, 되돌리기 값은 `SensorRefreshRollbackPoint`, 근거는 `SensorRefreshEvidence`·`SensorRouteEvidence`, 계산 결과는 `SensorDayDerivation`으로 묶어 단계 함수로 나눔. 파일: 갱신 진입·되돌리기 / `+SensorRefreshEvidence`(근거 읽기) / `+SensorRefreshRebuild`(지문 같은 날·다시 만드는 날) / `+ClassifierOutput`(하루 자동 분류) / `+SleepClassification` / `+RecordNaming`. 가장 긴 함수 534→109줄(`applyChargingInactivitySleepRecords`, 옮기기만 함), 갱신 경로에서는 74줄(`deriveSensorDay`) | 160 |
 | 17 | `TaptionPlan/Core/TravelModeClassifier.swift` (동결) | 1,368 | 839 `classify` | 1 | 4 | 84.2 | 함수 하나가 839줄 | 판정 단계별 함수로 쪼개기 | 상(분류 결과) | 없음 | 완료(파일만) `bcf9f3e6` — `classify` 839줄은 그대로(판정 순서가 결과라 시험을 먼저 늘린 뒤) | 864 |
 | 18 | `TaptionPlanWidget/TaptionPlanWidget.swift` | 1,162 | 148 `body` | 13 | 39 | 83.1 | 제공자·뷰·트랙·고양이·인텐트 동거 | 뷰·트랙·인텐트 파일(위젯 타깃) | 하 | 없음 | 완료 `3bbb1c97` | 175 |
 | 19 | `TaptionPlanWatch/WatchConnectivityController.swift` (동결) | 1,620 | 122 | 2 | 16 | 79.6 | 클래스 하나가 1,612줄, 중복 15 | 기능 extension 파일 | 중(Watch는 빌드로만 확인) | 없음 | 완료 `078ff6ef` | 888 |
@@ -54,6 +54,7 @@
 - 방법: 줄 범위를 그대로 새 파일로 옮기고, 클래스·actor는 `extension`으로 감쌌습니다. 저장 속성은 원래 타입에 남겼습니다. 다른 파일에서 쓰게 된 `private` 이름만 컴파일러가 알려 준 만큼 internal로 풀었습니다(공개 API·저장 형식·문구·접근성 식별자·번역 키 변경 없음). `extension` 안에 둘 수 없는 저장 상수 하나(`pendingAccelerationChunksFile`)는 같은 값을 돌려주는 계산 속성으로 바꿨습니다.
 - 확인: 앱 시험 890개(7개 건너뜀 — 원본 기록 재생용, 자료가 없으면 건너뜀)+103개, `TaptionPlanCore` 패키지 XCTest 89개·Swift Testing 11개(저장 바이트 고정 시험 포함), Watch 스킴 빌드, 구조 점검·import 경계. 14개 묶음을 합친 상태에서 한 번에 돌렸고 중간 커밋 하나하나를 따로 빌드하지는 않았습니다. 실기기 확인 없음.
 - 함수 쪼개기는 `AppModel.init`만 했습니다. `classify`(839줄)·`receiveEnvelope`(254줄)·`performSensorTimelineRefresh`(534줄)는 결과를 고정하는 시험을 먼저 늘린 뒤 따로 합니다.
+- RFT1116A03(2026-11-16): `performSensorTimelineRefresh`를 시험을 먼저 더하고 갈랐습니다(16번 줄). 남긴 것: 동작 기록(Core Motion) 분기·HealthKit 경로·Watch 요약·다시 계산(`recomputing`) 분기는 시뮬레이터에서 원본을 넣을 길이 없어 새 시험이 붙잡지 못하고, 코드를 옮기기만 했습니다. 이 파일은 동결 목록에 없어 낮출 예산이 없습니다.
 
 ## 결과 2 (RFT1116A02, 2026-11-16)
 
