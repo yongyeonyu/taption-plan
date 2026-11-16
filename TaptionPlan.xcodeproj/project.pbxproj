@@ -338,6 +338,9 @@
 		A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000060 /* WatchLaunchDiagnostics.swift */; };
 		A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002B /* TaptionPlanWatchApp.swift */; };
 		A1000000000000000000002D /* WatchConnectivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002C /* WatchConnectivityController.swift */; };
+		7707DAEE983BE30C78C07F7E /* WatchConnectivityController+PendingQueues.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BC68E0457B7860E195FA2F6 /* WatchConnectivityController+PendingQueues.swift */; };
+		3CA5516D1AC2C321B4908457 /* WatchConnectivityController+AmbientOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43F0175ACF24B52B149A152 /* WatchConnectivityController+AmbientOutbox.swift */; };
+		91D631C8C0BFBC8129833933 /* WatchConnectivityController+Purge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F5BF821F457319D8F0F104 /* WatchConnectivityController+Purge.swift */; };
 		A1000000000000000000002E /* WatchWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* WatchWorkoutManager.swift */; };
 		FE065DB4C04A97C20DA0A5F9 /* WatchWorkoutManager+Sensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C769A089E8740CFD112FFEC2 /* WatchWorkoutManager+Sensors.swift */; };
 		739E80FAE7B22494F3870331 /* WatchWorkoutManager+WorkoutPurge.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDE1D9B2A763F8F32341095F /* WatchWorkoutManager+WorkoutPurge.swift */; };
@@ -1192,6 +1195,9 @@
 		C0FFEE000000000000000032 /* WatchActivityReplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActivityReplay.swift; sourceTree = "<group>"; };
 		F1000000000000000000002B /* TaptionPlanWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchApp.swift; sourceTree = "<group>"; };
 		F1000000000000000000002C /* WatchConnectivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityController.swift; sourceTree = "<group>"; };
+		0BC68E0457B7860E195FA2F6 /* WatchConnectivityController+PendingQueues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchConnectivityController+PendingQueues.swift"; sourceTree = "<group>"; };
+		C43F0175ACF24B52B149A152 /* WatchConnectivityController+AmbientOutbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchConnectivityController+AmbientOutbox.swift"; sourceTree = "<group>"; };
+		85F5BF821F457319D8F0F104 /* WatchConnectivityController+Purge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchConnectivityController+Purge.swift"; sourceTree = "<group>"; };
 		F10000000000000000000060 /* WatchLaunchDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLaunchDiagnostics.swift; sourceTree = "<group>"; };
 		F1000000000000000000002D /* WatchWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWorkoutManager.swift; sourceTree = "<group>"; };
 		C769A089E8740CFD112FFEC2 /* WatchWorkoutManager+Sensors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchWorkoutManager+Sensors.swift"; sourceTree = "<group>"; };
@@ -2518,6 +2524,9 @@
 				F10000000000000000000033 /* Assets.xcassets */,
 				F1000000000000000000002B /* TaptionPlanWatchApp.swift */,
 				F1000000000000000000002C /* WatchConnectivityController.swift */,
+				0BC68E0457B7860E195FA2F6 /* WatchConnectivityController+PendingQueues.swift */,
+				C43F0175ACF24B52B149A152 /* WatchConnectivityController+AmbientOutbox.swift */,
+				85F5BF821F457319D8F0F104 /* WatchConnectivityController+Purge.swift */,
 				F10000000000000000000060 /* WatchLaunchDiagnostics.swift */,
 				F1000000000000000000002D /* WatchWorkoutManager.swift */,
 				C769A089E8740CFD112FFEC2 /* WatchWorkoutManager+Sensors.swift */,
@@ -3646,6 +3655,9 @@
 				A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */,
 				A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */,
 				A1000000000000000000002D /* WatchConnectivityController.swift in Sources */,
+				7707DAEE983BE30C78C07F7E /* WatchConnectivityController+PendingQueues.swift in Sources */,
+				3CA5516D1AC2C321B4908457 /* WatchConnectivityController+AmbientOutbox.swift in Sources */,
+				91D631C8C0BFBC8129833933 /* WatchConnectivityController+Purge.swift in Sources */,
 				A1000000000000000000002E /* WatchWorkoutManager.swift in Sources */,
 				FE065DB4C04A97C20DA0A5F9 /* WatchWorkoutManager+Sensors.swift in Sources */,
 				739E80FAE7B22494F3870331 /* WatchWorkoutManager+WorkoutPurge.swift in Sources */,
