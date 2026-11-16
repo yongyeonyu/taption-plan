@@ -48,6 +48,8 @@ struct TravelStreetMap: UIViewRepresentable {
     }
     /// 빈 지도를 길게 누르면 그 자리(경도, 위도)를 알린다(Trip 원본: 그 자리에 일정 만들기).
     var onLongPress: (SIMD2<Double>) -> Void = { _ in }
+    /// 공유 여행의 동행 위치·모이는 곳(LOC1116S01). 그림은 `TravelCompanionLayer`가 맡는다.
+    var companions: [TravelCompanionMark] = []
 
     /// 핀들을 품는 상자. 한 점이면 둘레를 조금 넓힌다. 핀이 없으면 nil.
     static func bounds(_ pins: [Pin]) -> (west: Double, south: Double, east: Double, north: Double)? {
@@ -110,6 +112,7 @@ struct TravelStreetMap: UIViewRepresentable {
         private var routeLayer: MLNLineStyleLayer?
         private var pinAnnotations: [NumberPin] = []
         private var actorAnnotation: ActorPin?
+        private let companionLayer = TravelCompanionLayer()
         private var actorView: UIImageView?
         private var shownRoute: [SIMD2<Double>] = []
         private var fitted = ""
@@ -145,6 +148,7 @@ struct TravelStreetMap: UIViewRepresentable {
             if let style = mapView.style { installRoute(style) }
             drawRoute(map)
             moveActor(mapView, map)
+            companionLayer.sync(mapView, marks: map.companions)
             // 지도가 준비되고 크기가 잡힌 뒤에만 맞춘다(그 전에 걸면 세계 지도로 남는다).
             if fitted != map.fitKey, asking != map.fitKey {
                 asking = map.fitKey
@@ -305,6 +309,7 @@ struct TravelStreetMap: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
+            if let companion = companionLayer.view(for: annotation) { return companion }
             if annotation is ActorPin {
                 let view = MLNAnnotationView(annotation: annotation, reuseIdentifier: nil)
                 view.frame = CGRect(x: 0, y: 0, width: 52, height: 52)

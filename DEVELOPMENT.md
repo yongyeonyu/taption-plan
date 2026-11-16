@@ -359,3 +359,8 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 - `docs/TESTFLIGHT.md`(배포), `docs/TRAVEL_MODE_PLAN.md`·`docs/COURSE_FIRST_PLAN.md`(여행 모드·코스 먼저), `docs/IPAD_UI.md`(넓은 화면), `docs/STRUCTURE_PERFORMANCE.md`(구조 성능), `docs/DATA_PIPELINE.md`(저장소 파이프라인), `docs/ARCHITECTURE_ROADMAP.md`(구조 로드맵·ADR), `docs/HOME_EVOLUTION_LIST.md`(집 성장 366일 목록, 생성물).
 - 2026-10-24 진단·설계 자료: `docs/CLIENT_REPORT.md`(요약), `docs/UX_ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`(중국어 원문). 당시 기준입니다. 위젯 딥링크(0a)는 DLK1024B12에서 코드로 고쳤고 실기기 확인이 남았습니다.
 - `scripts/l10n/README.md`: 12개 언어 팩 절차.
+
+## 공통 규칙 (SRL1116A01)
+
+운영자가 서명한 규칙 묶음을 앱이 서버에서 받아 쓴다(서버 `server/trip-relay/src/shared.js`, 앱 `TaptionPlan/Core/SharedRuleStore.swift`·`UI/SharedRulesView.swift`, 개인 정보 거르기 `Packages/TaptionAssistant/Sources/TaptionRules/SharedRuleFilter.swift`). 판단 순서는 내가 정한 규칙 → 내 AI 규칙 → 공통 규칙 → 코드 표. 서버와 앱의 거르기 표는 `server/trip-relay/test/fixtures/shared-rules.json` 하나로 맞춘다(바꿀 때 양쪽 시험을 같이 돌린다). 앱의 서명 확인용 공개 키는 `AppSecrets.local.xcconfig`의 `SHARED_RULES_PUBLIC_KEY`이며 비어 있으면 공통 규칙을 쓰지 않는다. 검토·배포는 `scripts/shared-rules/admin.mjs`. 자세한 것은 `docs/SHARED_RULES_PLAN.md`.
+

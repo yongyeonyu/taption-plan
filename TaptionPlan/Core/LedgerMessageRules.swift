@@ -43,9 +43,10 @@ enum LedgerMessageRules {
 
     /// 새 규칙이 먼저다(나중에 넣은 것이 앞선 실수를 고친다).
     static func match(_ text: String, now: Date = .now, calendar: Calendar = .autoupdatingCurrent,
-                      defaults: UserDefaults = .standard) -> Match? {
+                      defaults: UserDefaults = .standard, shared: [Rule] = []) -> Match? {
         guard text.count <= 1_000 else { return nil }
-        for rule in rules(defaults).reversed() {
+        // 내 AI 규칙(새것부터) 다음에 공통 규칙(SRL1116A01).
+        for rule in rules(defaults).reversed() + shared {
             guard let regex = try? NSRegularExpression(pattern: rule.pattern, options: [.dotMatchesLineSeparators]),
                   let found = fields(regex, in: text) else { continue }
             if rule.kind == .ignore { return .ignore }

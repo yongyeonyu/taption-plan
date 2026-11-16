@@ -142,14 +142,36 @@ final class MapHomePlaybackMusicTests: XCTestCase {
         XCTAssertEqual(MapHomePlaybackMusicStream.fadeGain(frame: 999, total: 1_000, fadeFrames: 100), 0)
     }
 
-    /// 끝의 무음 꼬리를 잘라 반복하므로, 모든 곡의 반복 길이가 파일보다 짧고 마지막 표본이 들린다.
+    /// 소리 1초 뒤 무음 1초가 붙은 파일은 소리가 끝나는 곳에서 반복 길이가 끝난다.
+    func testAudibleLengthCutsSyntheticSilentTail() throws {
+        let rate = 44_100.0
+        let format = try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: rate, channels: 1, interleaved: false))
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("tail-\(UUID().uuidString).caf")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(rate * 2)))
+        buffer.frameLength = buffer.frameCapacity
+        let data = try XCTUnwrap(buffer.floatChannelData)[0]
+        for frame in 0..<Int(rate * 2) { data[frame] = frame < Int(rate) ? (frame / 50 % 2 == 0 ? 0.5 : -0.5) : 0 }
+        do {
+            let writer = try AVAudioFile(forWriting: url, settings: format.settings, commonFormat: .pcmFormatFloat32, interleaved: false)
+            try writer.write(from: buffer)
+        }
+        let file = try AVAudioFile(forReading: url, commonFormat: .pcmFormatFloat32, interleaved: true)
+        let loop = try MapHomePlaybackMusicStream.audibleLength(of: file)
+        // 파일 쓰기가 블록 단위로 끝을 다룰 수 있어 한 블록 남짓만 허용하고, 1초짜리 무음 꼬리는 잘려야 한다.
+        XCTAssertGreaterThan(loop, AVAudioFramePosition(rate) - 2_048)
+        XCTAssertLessThanOrEqual(loop, AVAudioFramePosition(rate))
+    }
+
+    /// 끝의 무음 꼬리를 잘라 반복하므로, 모든 곡의 반복 길이가 파일보다 길지 않고 마지막 표본이 들린다.
+    /// 일레븐랩스 곡은 끝까지 소리가 있어 꼬리가 없을 수 있다(BGM1115A01).
     func testLoopLengthDropsTrailingSilence() throws {
         for track in MapHomePlaybackMusicTrack.allCases {
             let url = try XCTUnwrap(track.url)
             let file = try AVAudioFile(forReading: url, commonFormat: .pcmFormatFloat32, interleaved: true)
             let loop = try MapHomePlaybackMusicStream.audibleLength(of: file)
             let tail = Double(file.length - loop) / file.processingFormat.sampleRate
-            XCTAssertLessThan(loop, file.length, track.rawValue)
+            XCTAssertLessThanOrEqual(loop, file.length, track.rawValue)
             XCTAssertLessThan(tail, 2.5, "\(track.rawValue) 꼬리가 너무 길게 잘림")
             let channels = Int(file.processingFormat.channelCount)
             let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 64))

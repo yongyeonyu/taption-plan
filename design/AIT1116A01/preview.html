@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 조각 맞추기 시안 (AIT1116A01)</title>
+<style>
+:root{--bg:#f6efe4;--card:#fff;--ink:#2b2622;--sub:#7a6f66;--acc:#c8623f;--line:#e3d9ca;--soft:#fbf6ee}
+@media (prefers-color-scheme:dark){:root{--bg:#1d1a17;--card:#2a2622;--ink:#f1e9de;--sub:#a99d91;--line:#433b34;--soft:#231f1c}}
+*{box-sizing:border-box}
+body{margin:0;background:#ddd2c2;font-family:-apple-system,"Apple SD Gothic Neo",sans-serif;color:var(--ink);display:flex;flex-direction:column;align-items:center;padding:24px 12px 48px}
+@media (prefers-color-scheme:dark){body{background:#0f0d0b}}
+h1{font-size:18px;margin:0 0 4px}p.lead{margin:0 0 16px;color:var(--sub);font-size:13px;text-align:center;max-width:420px}
+.tabs{display:flex;gap:6px;margin-bottom:16px}
+.tabs button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:20px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--acc);color:#fff;border-color:var(--acc)}
+.phone{width:320px;height:620px;border-radius:40px;border:10px solid #111;background:var(--bg);overflow:hidden;position:relative;box-shadow:0 18px 40px rgba(0,0,0,.28)}
+.phone:before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:100px;height:22px;background:#111;border-radius:0 0 14px 14px;z-index:5}
+.screen{padding:34px 14px 14px;height:100%;display:flex;flex-direction:column;gap:10px}
+.title{font-weight:800;font-size:16px}.sub{font-size:11px;color:var(--sub)}
+.day{font-size:12px;font-weight:800;color:var(--acc);margin-top:2px}
+.slot{height:44px;border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:12px;font-weight:600;background:var(--card);border:1px solid var(--line)}
+.slot .t{color:var(--sub);font-size:11px;width:38px}
+.slot.tent{background:transparent;border:1.5px dashed var(--sub);color:var(--sub)}
+.slot.empty{background:var(--soft);border:2px dashed var(--acc);color:var(--acc);justify-content:center;cursor:pointer}
+.slot.pop{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:translateY(-24px) scale(.9);opacity:0}70%{transform:translateY(2px) scale(1.02);opacity:1}100%{transform:none}}
+.tray{margin-top:auto;border-top:1px solid var(--line);padding-top:8px}
+.tray h4{margin:0 0 6px;font-size:11px;color:var(--sub)}
+.pieces{display:flex;gap:6px;flex-wrap:wrap}
+.piece{display:flex;align-items:center;gap:5px;background:var(--card);border:1.5px solid var(--acc);border-radius:10px;padding:7px 9px;font-size:11px;font-weight:700;cursor:pointer;position:relative}
+.piece:before{content:"";position:absolute;right:-6px;top:50%;width:8px;height:8px;border-radius:50%;background:var(--card);border:1.5px solid var(--acc);transform:translateY(-50%);clip-path:inset(0 0 0 50%)}
+.piece.sel{background:var(--acc);color:#fff}
+.btn{border:0;background:var(--acc);color:#fff;border-radius:12px;padding:10px;font-weight:700;font-size:13px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--sub);font-weight:600;font-size:11px;padding:4px}
+.chat{display:flex;flex-direction:column;gap:6px;font-size:11px;margin-top:auto}
+.b{max-width:85%;padding:7px 10px;border-radius:12px;background:var(--card);border:1px solid var(--line)}.b.me{align-self:flex-end;background:var(--acc);color:#fff;border:0}
+.note{max-width:420px;margin-top:16px;font-size:12px;color:var(--sub);line-height:1.6}
+.note b{color:var(--ink)}
+.row{display:flex;gap:8px;align-items:center}
+.spin{width:12px;height:12px;border-radius:50%;border:2px solid var(--acc);border-right-color:transparent;animation:r 1s linear infinite;display:inline-block}
+@keyframes r{to{transform:rotate(360deg)}}
+.toast{position:absolute;left:14px;right:14px;bottom:14px;background:var(--ink);color:var(--bg);border-radius:12px;padding:9px 12px;font-size:11px;display:flex;justify-content:space-between;align-items:center}
+.toast u{cursor:pointer;font-weight:700}
+</style>
+</head>
+<body>
+<h1>AI와 조각 맞추기 — 세 안 시안</h1>
+<p class="lead">손으로 눌러 보세요. 실제 앱이 아닌 모형이며, 모든 일정은 지어낸 견본입니다.</p>
+<div class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-t="a">가 조각 판</button>
+  <button role="tab" aria-selected="false" data-t="b">나 빈 자리 채우기</button>
+  <button role="tab" aria-selected="false" data-t="c">다 한 턴 = 조각 하나</button>
+</div>
+<div class="phone"><div class="screen" id="screen"></div></div>
+<div class="note" id="note"></div>
+
+<script>
+const $=s=>document.querySelector(s), screen=$('#screen'), note=$('#note');
+const tabs=[...document.querySelectorAll('.tabs button')];
+let t='a';
+tabs.forEach(b=>b.onclick=()=>{t=b.dataset.t;tabs.forEach(x=>x.setAttribute('aria-selected',x===b));render()});
+
+function A(){
+  screen.innerHTML=`<div class="title">부산 1박 2일</div><div class="sub">조각 3개가 서랍에 있어요</div>
+  <div class="day">1일차</div>
+  <div class="slot"><span class="t">10:00</span>🚇 해운대로 이동</div>
+  <div class="slot"><span class="t">11:00</span>🌊 해운대 산책</div>
+  <div class="slot empty" id="hole">＋ 점심 자리 (12:30–14:00) — 조각을 끼우세요</div>
+  <div class="slot"><span class="t">15:00</span>☕ 카페</div>
+  <div class="tray"><h4>조각 서랍 · 점선은 후보(미정)</h4><div class="pieces" id="pieces"></div>
+  <div class="row" style="margin-top:8px"><button class="btn" id="fit" style="flex:1;opacity:.4">끼우기</button></div></div>`;
+  const list=[['🍲','돼지국밥 12,000원'],['🍜','밀면 9,000원'],['🐟','회센터 30,000원']];
+  const p=$('#pieces'); let sel=null;
+  list.forEach((x,i)=>{const e=document.createElement('div');e.className='piece';e.textContent=x[0]+' '+x[1];e.onclick=()=>{sel=i;[...p.children].forEach((c,j)=>c.classList.toggle('sel',j===i));$('#fit').style.opacity=1};p.appendChild(e)});
+  $('#fit').onclick=()=>{if(sel==null)return;const h=$('#hole');h.className='slot pop';h.innerHTML=`<span class="t">12:30</span>${list[sel][0]} ${list[sel][1]}`;p.children[sel].remove();sel=null;$('#fit').style.opacity=.4;
+    screen.insertAdjacentHTML('beforeend','<div class="toast"><span>조각을 끼웠어요</span><u>되돌리기</u></div>');setTimeout(()=>{const x=$('.toast');x&&x.remove()},2200)};
+  note.innerHTML='<b>가 조각 판</b> — AI가 올린 후보가 서랍에 쌓이고, 눌러 빈 자리에 끼운 것만 계획이 됩니다. 저장 형식 변경 없음(후보 = 미정 일정). 서버 변경 없음.';
+}
+function B(){
+  screen.innerHTML=`<div class="title">부산 1박 2일</div><div class="sub">빈 자리를 누르면 AI가 후보를 찾아요</div>
+  <div class="day">1일차</div>
+  <div class="slot"><span class="t">11:00</span>🌊 해운대 산책</div>
+  <div class="slot empty" id="gap">🧩 12:30–14:00 비어 있어요 — AI에게 물어볼까요?</div>
+  <div class="slot"><span class="t">15:00</span>☕ 카페</div>
+  <div class="slot empty" style="opacity:.6">🧩 17:00–19:00 비어 있어요</div>
+  <div id="area" class="tray" style="display:none"></div>`;
+  $('#gap').onclick=()=>{
+    const a=$('#area');a.style.display='block';a.innerHTML='<h4>AI 확인 목록에 올렸어요</h4><div class="row"><span class="spin"></span><span class="sub">AI가 후보를 찾는 중… (연결된 AI가 확인할 때까지)</span></div>';
+    setTimeout(()=>{a.innerHTML='<h4>AI가 후보 3개를 가져왔어요</h4><div class="pieces" id="c"></div><div class="sub" style="margin-top:6px">하나를 고르면 끼워지고 나머지는 사라져요</div>';
+      [['🍲','돼지국밥'],['🍜','밀면'],['🐟','회센터']].forEach(x=>{const e=document.createElement('div');e.className='piece';e.textContent=x[0]+' '+x[1];e.onclick=()=>{const g=$('#gap');g.className='slot pop';g.innerHTML='<span class="t">12:30</span>'+x[0]+' '+x[1];a.style.display='none'};$('#c').appendChild(e)})},1600)};
+  note.innerHTML='<b>나 빈 자리 채우기</b> — 앱이 빈 시간을 조각 모양 칸으로 보이고, 누르면 AI에게 후보를 묻습니다(좌표 없이 이름만). 저장·서버 변경 없음(정식 일 종류는 2차). 연결된 AI가 있어야 하고 답은 분 단위로 늦을 수 있어요.';
+}
+function C(){
+  screen.innerHTML=`<div class="title">부산 1박 2일</div><div class="sub">AI와 대화하면 일정표가 자라요</div>
+  <div id="list" style="display:flex;flex-direction:column;gap:6px"></div>
+  <div class="chat" id="chat"></div>
+  <button class="btn ghost" id="again">다시 보기</button>`;
+  const steps=[['나','부산 1박 2일, 바다 보고 국밥'],['AI','1일차는 해운대 산책부터 어때요?','🌊 11:00 해운대 산책'],['나','좋아, 점심은 국밥으로'],['AI','점심은 돼지국밥으로 할게요','🍲 13:00 돼지국밥'],['나','저녁은 회!'],['AI','광안리 회센터로 넣을게요','🐟 19:00 광안리 회']];
+  let timers=[];const run=()=>{timers.forEach(clearTimeout);$('#list').innerHTML='';$('#chat').innerHTML='';
+    steps.forEach((s,i)=>timers.push(setTimeout(()=>{
+      $('#chat').insertAdjacentHTML('beforeend',`<div class="b ${s[0]==='나'?'me':''}">${s[1]}</div>`);
+      if(s[2]){$('#list').insertAdjacentHTML('beforeend',`<div class="slot pop">딸깍 · ${s[2]}</div>`)}
+      const c=$('#chat');while(c.children.length>3)c.firstChild.remove();
+    },700*(i+1))))};
+  $('#again').onclick=run;run();
+  note.innerHTML='<b>다 한 턴 = 조각 하나</b> — AI가 통째 JSON 대신 한 턴에 하나씩 올리고, 앱은 올 때마다 딸깍 끼워 넣습니다(되돌리기는 「AI가 한 일」). 저장·서버 변경 없음. 한 번에 미정으로 올리려면 <code>add_trip_item</code>의 status 칸(서버 배포)이 필요해요.';
+}
+function render(){({a:A,b:B,c:C})[t]()}
+render();
+</script>
+</body>
+</html>

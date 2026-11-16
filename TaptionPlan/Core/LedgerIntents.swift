@@ -81,7 +81,7 @@ enum PaymentTextCapture {
             return (language.text("내 계좌 사이에서 옮긴 돈이라 넣지 않았어요.", "A transfer between your own accounts, so nothing was added."), .skipped)
         }
         // AI가 보탠 규칙이 먼저다. 앱 규칙이 못 읽거나 잘못 읽는 형식을 고치려고 넣은 것이기 때문이다.
-        if let match = LedgerMessageRules.match(text, now: now) {
+        if let match = LedgerMessageRules.match(text, now: now, shared: SharedRuleStore.paymentRules()) {
             guard case .draft(var draft, let income) = match else {
                 return (language.text("가계부에 넣지 않는 문자예요.", "This kind of text is not added to the ledger."), .skipped)
             }
