@@ -1056,6 +1056,7 @@ struct MapHomeStickmanMarker: View {
     var equippedAccessoryID: String? = nil
     var facesLeft = false
     var rideLabel: String? = nil
+    var rendersAsynchronously = false // 지도 위에서만 켠다(영상 렌더러는 끈 채로, PRF1116A01).
     @AppStorage(MapHomeStickmanAction.vehicleDisplayKey) private var showsVehicles = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
@@ -1102,7 +1103,7 @@ struct MapHomeStickmanMarker: View {
                     hatAssetName: hat,
                     scarf: scarf,
                     ribbon: ribbon,
-                    showsBackdrop: false
+                    showsBackdrop: false, rendersAsynchronously: rendersAsynchronously
                 )
                 .rotationEffect(.degrees(facesLeft ? -tier.leanDegrees * 0.5 : tier.leanDegrees * 0.5))
                 // 피카츄 구간 — 번개 스파크.
@@ -1162,6 +1163,7 @@ struct MapHomeStickmanGlyph: View {
     let action: MapHomeStickmanAction
     var size: CGFloat = 30
     var equippedAccessoryID: String? = nil
+    var rendersAsynchronously = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
@@ -1182,7 +1184,7 @@ struct MapHomeStickmanGlyph: View {
                 scarf: scarf,
                 ribbon: ribbon,
                 showsBackdrop: size >= 36,
-                keepsBodySize: false
+                keepsBodySize: false, rendersAsynchronously: rendersAsynchronously
             )
         }
         .frame(width: size, height: size)
