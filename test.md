@@ -2,6 +2,13 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## PRF1116A02 · 지도 끌기: 시간 막대 장식만 한 장으로 합치기 (2026-11-16 밤)
+
+- 바꾼 것: `MapHomeTimeSidebar`에서 숫자 칸·구간·눈금·시각 글자 층만 `drawingGroup`. 유리 바탕(`TaptionRaisedFace`)·터치 면·손잡이는 그대로. 비교용 실행 인자 `-benchHide=flat`(합치지 않음).
+- 시뮬레이터(`99AC6F35…`, Debug): `MapHomeTimeRailCardTests`·`TimeScaleTests`·`RouteTimelineDataTests`·`TripItemStatusTests` 336개 통과, 빌드 통과. 완전히 불러온 뒤 전후 사진의 시간 막대 화소 차이 평균 0.26/255 — 눈으로 같음(`build/validation/PRF1116A02/sim2-*.png`, `bar-compare.png`).
+- 아이폰 11 Pro(Release + BENCH, `-autoBenchPerf -autoBenchMapPan`): 같은 판으로 후·전 번갈아 3회씩, 23:28~23:50, 맥 부하 28~215(높음). 가운데 값(전 → 후): 지도 끌기 12초 348 → **717**프레임(합격선 648), 40ms 넘는 끊김 122 → **0**, 최대 간격 118 → 약 40ms 아래; 시간 끌기 6초 205 → **345**프레임(합격선 342), 40ms 넘는 끊김 40 → 2; 대기 10초 메인 CPU 2,991 → 2,651ms; 콜드 실행 3,799 → 3,997ms(3회, 부하 차이로 오차 안으로 봄). 결과 `build/validation/PRF1116A02/{after,before}-*.txt`(git 무시).
+- 제한: 대표 눈 확인 없음(아이폰 11에서 시간 막대 모양 확인 필요).
+
 ## TBH1116A01 · 여행 단추 높이 44·40·32와 머리 둥근 단추 한 가지 (2026-11-16, 시뮬레이터, 실기기 없음)
 
 - 바꾼 것: `Theme.swift`에 `TaptionControl`(주 44·둥근 40·칩 32·둥근 그림 17pt 굵게). 여행 묶음 11개 파일에서 칩 28·30·34·36 → 32, 주 단추 46·48 → 44, 아이콘 단추 36 → 40, 작아진 단추는 `taptionTouchTarget`으로 누르는 영역 44. 머리 둥근 단추 다섯은 `TravelRoundButtonLabel`(보이는 40·누르는 44·테두리 1·그림 글꼴 하나). 문구·접근성 이름·식별자·동작은 그대로. 자세한 목록은 `docs/STYLE_UNIFY.md` 7절.

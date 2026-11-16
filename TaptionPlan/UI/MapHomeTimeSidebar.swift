@@ -8,6 +8,10 @@ extension View {
             .background(.ultraThinMaterial, in: shape)
             .overlay(shape.stroke(Color.tpBorder, lineWidth: TaptionBorder.width))
     }
+
+    @ViewBuilder func flattened(_ isOn: Bool) -> some View {
+        if isOn { drawingGroup() } else { self }
+    }
 }
 
 private func mapHomeWeatherSymbolColor(
@@ -1297,6 +1301,9 @@ struct MapHomeTimeSidebar: View {
         ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-benchHide=") && $0.contains(name) }
     }
 
+    /// 전후 비교용: `-benchHide=flat`이면 막대 장식 층을 합치지 않는다(PRF1116A02).
+    private static let keepsRailLayersSeparate = benchHidden("flat")
+
     /// 사이드바 패널 모양.
     private var panelShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous)
@@ -1396,6 +1403,7 @@ struct MapHomeTimeSidebar: View {
                         // 길게 누르면 상세 무늬 범례(DTP1111A01).
                         .simultaneousGesture(LongPressGesture(minimumDuration: 0.6, maximumDistance: 8).onEnded { _ in isPatternLegendPresented = true })
 
+                    ZStack(alignment: .topLeading) {
                     Rectangle()
                     .fill(MapHomeTimeSidebarStyle.numericColumnBackground)
                     // Keep the existing white numeric gutter continuous past
@@ -1592,6 +1600,12 @@ struct MapHomeTimeSidebar: View {
                         .allowsHitTesting(false)
                     }
                 }
+                    }
+                    .frame(width: totalWidth, height: railHeight, alignment: .topLeading)
+                    // 숫자 칸·구간·눈금·시각 글자를 한 장으로 합쳐 지도 위에서 조각마다 따로 합성되지 않게 한다.
+                    // 유리 바탕은 지도를 비춰야 해서 밖에 둔다(대표 결정 「유리는 두고 위만 합침」, PRF1116A02).
+                    .flattened(!Self.keepsRailLayersSeparate)
+                    .allowsHitTesting(false)
 
                     selectionHandle(
                         minute: minute,
