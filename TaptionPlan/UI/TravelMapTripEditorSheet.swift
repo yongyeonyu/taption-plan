@@ -81,9 +81,10 @@ struct TravelMapTripEditorSheet: View {
                         }
                     } label: {
                         Image(systemName: stop.wrappedValue.arrivalMode.symbolName)
-                            .frame(width: 32, height: 32)
+                            .frame(width: TaptionControl.chip, height: TaptionControl.chip)
                             .foregroundStyle(Color.tpAccent)
                             .background(Color.tpSurface, in: Circle())
+                            .taptionTouchTarget(visualWidth: TaptionControl.chip, visualHeight: TaptionControl.chip)
                     }
                     .accessibilityLabel(stop.wrappedValue.arrivalMode.title(language))
                 }

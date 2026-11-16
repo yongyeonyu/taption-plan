@@ -140,9 +140,10 @@ struct TravelQuickEntrySheet: View {
             Button { isPickingPlace = true } label: {
                 Label(place?.name ?? sharedPlaceName ?? language.text("장소 붙이기", "Add a place"), systemImage: place == nil ? "mappin.and.ellipse" : "mappin.circle.fill")
                     .font(.footnote.weight(.medium)).lineLimit(1)
-                    .padding(.horizontal, 10).frame(height: 30)
+                    .padding(.horizontal, 10).frame(height: TaptionControl.chip)
                     .foregroundStyle(place == nil ? TravelInk.plan : TravelInk.land)
                     .background(place == nil ? TravelInk.planTint : TravelInk.plan, in: Capsule())
+                    .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("travelEntryPlace")
@@ -213,7 +214,8 @@ struct TravelQuickEntrySheet: View {
                     }
                 }
             } label: {
-                Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(TravelInk.plan).frame(width: 40, height: 32)
+                Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(TravelInk.plan).frame(width: TaptionControl.round, height: TaptionControl.chip)
+                    .taptionTouchTarget(visualWidth: TaptionControl.round, visualHeight: TaptionControl.chip)
             }
             .accessibilityLabel(language.text("더 보기", "More"))
             .accessibilityIdentifier("travelEntryMore")
@@ -322,9 +324,10 @@ struct TravelQuickEntrySheet: View {
                 ForEach(Self.kinds, id: \.self) { option in
                     Button { choose(option) } label: {
                         Label(option.planName, systemImage: option.symbol).font(.footnote.weight(.medium))
-                            .padding(.horizontal, 10).frame(height: 34)
+                            .padding(.horizontal, 10).frame(height: TaptionControl.chip)
                             .foregroundStyle(option == kind ? TravelInk.land : TravelInk.plan)
                             .background(option == kind ? TravelInk.plan : TravelInk.planTint, in: Capsule())
+                            .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(option == kind ? .isSelected : [])
@@ -360,9 +363,10 @@ struct TravelQuickEntrySheet: View {
                 ForEach(suggestions, id: \.self) { title in
                     Button { text = title } label: {
                         Text(title).font(.footnote).lineLimit(1)
-                            .padding(.horizontal, 10).frame(height: 28)
+                            .padding(.horizontal, 10).frame(height: TaptionControl.chip)
                             .foregroundStyle(TravelInk.plan)
                             .overlay { Capsule().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
+                            .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
                     }
                     .buttonStyle(.plain)
                 }

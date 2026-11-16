@@ -346,6 +346,15 @@ enum TaptionCorner {
     static let sheet: CGFloat = 24
 }
 
+/// 단추 높이 세 가지(STY1116A01 6번, 대표 결정): 주 단추 44, 둥근 단추 40, 칩 32. 작은 것도 누르는 영역은 `taptionTouchTarget`으로 44.
+enum TaptionControl {
+    static let primary: CGFloat = 44
+    static let round: CGFloat = 40
+    static let chip: CGFloat = 32
+    /// 둥근 단추 안 그림 한 가지(STY1116A01 5번).
+    static let roundSymbol = Font.system(size: 17, weight: .semibold)
+}
+
 /// 그림자 세 높이(UIR1111A01): 지도 위에 뜬 것, 시트 안 카드, 없음.
 enum TaptionShadowLevel {
     case floating, card, none

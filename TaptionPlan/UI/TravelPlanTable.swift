@@ -479,7 +479,7 @@ struct TravelPlanTable: View {
         .foregroundStyle(TravelInk.plan)
         .padding(.leading, 12)
         .padding(.trailing, 4)
-        .frame(height: 44)
+        .frame(height: TaptionControl.primary)
         .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
         .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
         .shadow(color: .black.opacity(0.15), radius: 5, y: 2)
@@ -500,14 +500,15 @@ struct TravelPlanTable: View {
             .font(.caption.weight(.medium).monospacedDigit())
             .buttonStyle(.plain)
             .padding(.horizontal, 7)
-            .frame(height: 30)
+            .frame(height: TaptionControl.chip)
             .background(TravelInk.planTint, in: Capsule())
+            .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
             .opacity(isOn ? 1 : 0.35)
             .disabled(!isOn)
     }
 
     private func barIcon(_ symbol: String, _ label: String, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 16, weight: .medium)).frame(width: 36, height: 40) }
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 16, weight: .medium)).frame(width: TaptionControl.round, height: TaptionControl.round).taptionTouchTarget(visualWidth: TaptionControl.round, visualHeight: TaptionControl.round) }
             .buttonStyle(.plain)
             .accessibilityLabel(label)
             .accessibilityIdentifier("travelPlanSelection" + id)

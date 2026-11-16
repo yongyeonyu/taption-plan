@@ -196,6 +196,20 @@ enum TravelPlanSheetHeight {
     }
 }
 
+/// 지구본·여행 화면 머리의 둥근 단추 그림(STY1116A01 5번): 보이는 40, 누르는 44, 테두리 1, 그림 글꼴 한 가지.
+struct TravelRoundButtonLabel: View {
+    let symbol: String
+    let fill: Color
+
+    var body: some View {
+        Image(systemName: symbol).font(TaptionControl.roundSymbol)
+            .frame(width: TaptionControl.round, height: TaptionControl.round)
+            .background(fill, in: Circle())
+            .overlay { Circle().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
+            .taptionTouchTarget(visualWidth: TaptionControl.round, visualHeight: TaptionControl.round)
+    }
+}
+
 /// 계획표 판 위의 막대: 가운데 손잡이(누르면 내리고 끌면 높이 조절), 오른쪽에 「지도 접기 / 지도 펼치기」.
 struct TravelPlanHandleBar: View {
     let language: MapHomeLanguage
@@ -264,9 +278,10 @@ struct TravelDayChips: View {
                         Text(day.label)
                             .font(.caption.weight(.medium))
                             .padding(.horizontal, 10)
-                            .frame(height: 28)
+                            .frame(height: TaptionControl.chip)
                             .foregroundStyle(day.key == selected ? TravelInk.land : TravelInk.plan)
                             .background(day.key == selected ? TravelInk.plan : TravelInk.planTint, in: Capsule())
+                            .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
                     }
                     .buttonStyle(.plain)
                     .travelDayChipDrop(day.key)
@@ -431,7 +446,7 @@ struct TravelPlanHistoryBar: View {
     }
 
     private func button(_ symbol: String, _ label: String, isOn: Bool, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 14, weight: .medium)).frame(width: 40, height: 32) }
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 14, weight: .medium)).frame(width: TaptionControl.round, height: TaptionControl.chip) }
             .buttonStyle(.plain)
             .opacity(isOn ? 1 : 0.3)
             .disabled(!isOn)
@@ -578,14 +593,14 @@ struct TravelCourseView: View {
                         Spacer(minLength: 0)
                         Text(TravelQuickEntrySheet.durationText(detail.endMinute - detail.startMinute, language: language)).font(.caption2).opacity(0.6)
                     }
-                    .frame(height: 30)
+                    .frame(height: TaptionControl.chip)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
             Button { onAddDetail(parent) } label: {
                 Label(language.text("세부 더하기", "Add detail"), systemImage: "plus").font(.caption.weight(.medium))
-                    .frame(maxWidth: .infinity, alignment: .leading).frame(height: 30).contentShape(Rectangle())
+                    .frame(maxWidth: .infinity, alignment: .leading).frame(height: TaptionControl.chip).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("travelCourseAddDetail")
@@ -607,8 +622,9 @@ struct TravelCourseView: View {
     private var addStopButton: some View {
         Button(action: onAddStop) {
             Label(language.text("곳 더하기", "Add a stop"), systemImage: "plus").font(.footnote.weight(.medium))
-                .padding(.horizontal, 14).frame(height: 36)
+                .padding(.horizontal, 14).frame(height: TaptionControl.chip)
                 .foregroundStyle(TravelInk.land).background(TravelInk.plan, in: Capsule())
+                .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("travelCourseAddStop")
@@ -633,9 +649,10 @@ struct TravelCourseView: View {
                     if blocks.count > 1 {
                         Button { withAnimation(.snappy(duration: 0.2)) { isEditing.toggle() } } label: {
                             Text(isEditing ? language.text("완료", "Done") : language.text("순서 편집", "Reorder")).font(.caption.weight(.medium))
-                                .padding(.horizontal, 10).frame(height: 28)
+                                .padding(.horizontal, 10).frame(height: TaptionControl.chip)
                                 .foregroundStyle(isEditing ? TravelInk.land : TravelInk.plan)
                                 .background(isEditing ? TravelInk.plan : TravelInk.planTint, in: Capsule())
+                                .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("travelCourseEdit")
@@ -652,8 +669,9 @@ struct TravelCourseView: View {
 
     private func step(_ symbol: String, _ label: String, to minute: Int?) -> some View {
         Button { if let minute { onScrub(minute) } } label: {
-            Image(systemName: symbol).font(.system(size: 14, weight: .medium)).frame(width: 40, height: 28)
+            Image(systemName: symbol).font(.system(size: 14, weight: .medium)).frame(width: TaptionControl.round, height: TaptionControl.chip)
                 .background(TravelInk.planTint, in: Capsule())
+                .taptionTouchTarget(visualWidth: TaptionControl.round, visualHeight: TaptionControl.chip)
         }
         .buttonStyle(.plain)
         .opacity(minute == nil ? 0.3 : 1)
@@ -673,7 +691,7 @@ struct TravelCourseView: View {
             Spacer(minLength: 0)
             if let tripID = items.first?.tripID { TripShareLockBadge(tripID: tripID, itemID: block.id, language: language) }
             if isCurrent { Image(systemName: "chart.bar.fill").font(.system(size: 13)).accessibilityHidden(true) }
-            Button { onEdit(block) } label: { Image(systemName: "slider.horizontal.3").font(.system(size: 14, weight: .medium)).frame(width: 36, height: 36) }
+            Button { onEdit(block) } label: { Image(systemName: "slider.horizontal.3").font(.system(size: 14, weight: .medium)).frame(width: TaptionControl.round, height: TaptionControl.round).taptionTouchTarget(visualWidth: TaptionControl.round, visualHeight: TaptionControl.round) }
                 .buttonStyle(.plain)
                 .accessibilityLabel(language.text("속성", "Details"))
         }
@@ -839,7 +857,7 @@ struct TravelTripFooter: View {
             Menu {
                 ForEach(actions) { action in Button(action.id, systemImage: action.symbol, action: action.run) }
             } label: {
-                Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: 44, height: 44)
+                Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: TaptionControl.primary, height: TaptionControl.primary)
                     .background(TravelInk.plan, in: Circle())
             }
             .accessibilityLabel(language.text("추가", "Add"))

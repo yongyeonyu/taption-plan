@@ -116,9 +116,10 @@ struct TravelModeView: View {
                 Button { courseAdding = focused } label: {
                     Label(language.text("곳을 더하면 지도에 나옵니다", "Add a stop to see it on the map"), systemImage: "plus")
                         .font(.footnote.weight(.medium)).foregroundStyle(TravelInk.plan)
-                        .padding(.horizontal, 14).frame(height: 36)
+                        .padding(.horizontal, 14).frame(height: TaptionControl.chip)
                         .background(TravelInk.panel, in: Capsule())
-                        .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+                        .overlay { Capsule().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
+                        .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
                 }
                 .buttonStyle(.plain)
                 .disabled(focused.state == .someday)
@@ -592,22 +593,14 @@ struct TravelModeView: View {
     private func cardColumn(_ entries: [TravelTripDirectory.Entry]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Button { dismiss() } label: {
-                    Image(systemName: "house.fill").font(.system(size: 17, weight: .semibold)).frame(width: 40, height: 40)
-                        .background(TravelInk.panel, in: Circle())
-                        .overlay { Circle().stroke(TravelInk.border, lineWidth: 1) }
-                }
+                Button { dismiss() } label: { TravelRoundButtonLabel(symbol: "house.fill", fill: TravelInk.panel) }
                 .accessibilityLabel(language.text("일상으로 돌아가기", "Back to everyday"))
                 // 확대하면 바탕이 밝은 땅이 된다. 어느 바탕에서도 읽히게 판 위에 쓴다.
-                Text(language.text("여행", "Trips")).font(.headline).padding(.horizontal, 12).frame(height: 34)
+                Text(language.text("여행", "Trips")).font(.headline).padding(.horizontal, 12).frame(height: TaptionControl.chip)
                     .background(TravelInk.panel, in: Capsule())
-                    .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+                    .overlay { Capsule().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
                 if TripShareStore.shared.isAvailable {
-                    Button { shareRoute = .join(nil) } label: {
-                        Image(systemName: "person.badge.plus").font(.system(size: 16, weight: .medium)).frame(width: 40, height: 40)
-                            .background(TravelInk.panel, in: Circle())
-                            .overlay { Circle().stroke(TravelInk.border, lineWidth: 1) }
-                    }
+                    Button { shareRoute = .join(nil) } label: { TravelRoundButtonLabel(symbol: "person.badge.plus", fill: TravelInk.panel) }
                     .accessibilityLabel(language.text("초대로 참여", "Join with an invite"))
                     .accessibilityIdentifier("travelShareJoin")
                 }
@@ -714,9 +707,9 @@ struct TravelModeView: View {
                 footerButton("plus", language.text("새 여행", "New trip")) { newTripDraft = .init(isDayTrip: false) }
                 footerButton("sun.max", language.text("오늘 당일치기", "Day trip today")) { newTripDraft = .init(isDayTrip: true) }
                 Button { isImportPresented = true } label: {
-                    Image(systemName: "sparkles").font(.system(size: 17, weight: .medium)).frame(width: 46, height: 46)
+                    Image(systemName: "sparkles").font(.system(size: 17, weight: .medium)).frame(width: TaptionControl.primary, height: TaptionControl.primary)
                         .background(TravelInk.panel, in: Circle())
-                        .overlay { Circle().stroke(TravelInk.border, lineWidth: 1) }
+                        .overlay { Circle().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(TravelInk.plan)
@@ -741,9 +734,9 @@ struct TravelModeView: View {
 
     private func footerButton(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(label, systemImage: symbol).font(.subheadline.weight(.medium)).frame(maxWidth: .infinity).frame(height: 46)
+            Label(label, systemImage: symbol).font(.subheadline.weight(.medium)).frame(maxWidth: .infinity).frame(height: TaptionControl.primary)
                 .background(TravelInk.panel, in: Capsule())
-                .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+                .overlay { Capsule().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
         }
         .buttonStyle(.plain)
         .foregroundStyle(TravelInk.plan)
@@ -756,10 +749,7 @@ struct TravelModeView: View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
                 // 뒤로가기: 여행 목록(지구본)으로. 지구본 그림만으로는 뒤로가기인 줄 알기 어려웠다(대표 지적).
-                Button(action: backToGlobe) {
-                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold)).frame(width: 40, height: 40)
-                        .background(TravelInk.land, in: Circle())
-                }
+                Button(action: backToGlobe) { TravelRoundButtonLabel(symbol: "chevron.left", fill: TravelInk.land) }
                 .accessibilityLabel(language.text("여행 목록으로", "Back to trips"))
                 .accessibilityIdentifier("travelTripBack")
                 // Trip 원본처럼 여행 이름을 누르면 여행 속성(이름·기간·나라)을 고친다.
@@ -775,18 +765,12 @@ struct TravelModeView: View {
                 .accessibilityHint(language.text("여행 고치기", "Edit trip"))
                 // 여행 공유(TSH1114A26). 서버 주소가 없는 빌드에서는 숨긴다.
                 if TripShareStore.shared.isAvailable, entry.isStored {
-                    Button { shareRoute = .panel(tripID: entry.id) } label: {
-                        Image(systemName: "person.2.fill").font(.system(size: 15, weight: .medium)).frame(width: 40, height: 40)
-                            .background(TravelInk.land, in: Circle())
-                    }
+                    Button { shareRoute = .panel(tripID: entry.id) } label: { TravelRoundButtonLabel(symbol: "person.2.fill", fill: TravelInk.land) }
                     .accessibilityLabel(language.text("여행 공유", "Share trip"))
                     .accessibilityIdentifier("travelTripShare")
                 }
                 // 일상 화면으로 바로 나간다.
-                Button { exitToDaily(entry) } label: {
-                    Image(systemName: "house.fill").font(.system(size: 16, weight: .medium)).frame(width: 40, height: 40)
-                        .background(TravelInk.land, in: Circle())
-                }
+                Button { exitToDaily(entry) } label: { TravelRoundButtonLabel(symbol: "house.fill", fill: TravelInk.land) }
                 .accessibilityLabel(language.text("일상으로 돌아가기", "Back to everyday"))
                 .accessibilityIdentifier("travelTripHome")
             }

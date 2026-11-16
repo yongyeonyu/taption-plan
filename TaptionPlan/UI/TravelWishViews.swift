@@ -45,7 +45,7 @@ struct TravelWishFooter: View {
             Spacer(minLength: 0)
             Button(language.text("날짜 정하기", "Set dates")) { isPicking = true }
                 .font(.subheadline.weight(.medium))
-                .padding(.horizontal, 14).frame(height: 44)
+                .padding(.horizontal, 14).frame(height: TaptionControl.primary)
                 .foregroundStyle(TravelInk.land)
                 .background(TravelInk.plan, in: Capsule())
                 .accessibilityIdentifier("travelWishSetDates")

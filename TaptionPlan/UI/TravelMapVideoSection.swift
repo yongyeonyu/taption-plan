@@ -161,7 +161,7 @@ struct TravelMapVideoSection: View {
                     systemImage: "list.bullet"
                 )
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .medium))
-                .frame(maxWidth: .infinity, minHeight: 44)
+                .frame(maxWidth: .infinity, minHeight: TaptionControl.primary)
                 .foregroundStyle(Color.tpInk)
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
@@ -169,7 +169,7 @@ struct TravelMapVideoSection: View {
             Button(action: start) {
                 Label(language.text("영상 만들기", "Make video"), systemImage: "film")
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
-                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .frame(maxWidth: .infinity, minHeight: TaptionControl.primary)
                     .foregroundStyle(.white)
                     .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
