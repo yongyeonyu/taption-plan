@@ -2,7 +2,7 @@
 // 공통 규칙 검토·내보내기(SRL1116A01). 대표 Mac에서만 쓴다. 설계: docs/SHARED_RULES_PLAN.md
 // 서명 개인 키는 ~/.bokki-shared-rules/signing.pem, 서버 주소·관리 토큰은 같은 폴더의 admin.json({host, token})에만 둔다. 저장소에 넣지 않는다.
 //   node admin.mjs keygen                  서명 키 쌍을 만들고 서버에 넣을 공개 키를 보여 준다(이미 있으면 거부)
-//   node admin.mjs candidates [--min N]    검토할 후보(기본: 서로 다른 기기 2대 이상)를 번호와 함께 보여 준다
+//   node admin.mjs candidates [--min N]    검토할 후보(서로 다른 기기 N대 이상, 기본·최소 2)를 번호와 함께 보여 준다
 //   node admin.mjs draft <번호,번호…>      고른 후보를 초안 파일(drafts/next.json)에 더한다(서버에 보내지 않음)
 //   node admin.mjs status                  서버의 현재 묶음과 초안의 차이를 보여 준다
 //   node admin.mjs publish                 초안(없으면 현재 묶음)을 다음 버전으로 서명해 서버에 올린다 — 이때부터 모든 앱이 받는다
