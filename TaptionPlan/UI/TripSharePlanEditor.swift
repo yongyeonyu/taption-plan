@@ -66,7 +66,7 @@ enum TripSharePlanEditor {
         case .tripInfo:
             guard store.view(tripID: tripID)?.isOwner == true else { return store.notice = TripSharePlanText.ownerOnly(.current) }
             local()
-        case .move(let itemID, _), .resize(let itemID, _), .delete(let itemID):
+        case .move(let itemID, _), .resize(let itemID, _), .delete(let itemID), .status(let itemID):
             guard !rejectsLocked(tripID: tripID, itemID: itemID) else { return }
             local()
         case .open(let itemID):
@@ -183,6 +183,20 @@ enum TripSharePlanEditor {
         guard model.isSharedTrip(tripID) else { return await model.resizeTripItem(tripID: tripID, itemID: itemID, endDelta: endDelta) }
         guard let old = localItem(model, tripID, itemID), !isFixed(model, old),
               let item = TravelTripItemEditor.resized([old], tripID: tripID, itemID: itemID, endDelta: endDelta)?.first else { return false }
+        return await commit(model: model, tripID: tripID, upserts: [item])
+    }
+
+    /// 지난 일정의 갔음·건너뜀을 상태 칸에 적는다(nil이면 되돌린다, TVZ1116C01).
+    @discardableResult
+    static func setVisitMark(model: AppModel, tripID: String, itemID: String, mark: TravelVisitMark?) async -> Bool {
+        guard model.isSharedTrip(tripID) else {
+            await model.setTripVisitMark(mark, tripID: tripID, itemID: itemID)
+            return true
+        }
+        guard var item = localItem(model, tripID, itemID) else { return false }
+        let next = TravelVisitMark.stored(mark, over: item.status)
+        guard next != item.status else { return true }
+        item.status = next
         return await commit(model: model, tripID: tripID, upserts: [item])
     }
 

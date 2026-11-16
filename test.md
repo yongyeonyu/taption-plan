@@ -15,6 +15,15 @@
 - 못 한 것: 공유 초대로 저절로 열릴 때(단추 자리에서 퍼짐) 확인, 동작 줄이기 열기 페이드의 중간 프레임, 시트가 떠 있을 때 누름, 여행 단추 높이 44·40·32 맞춤(여행 세션 변경이 합쳐진 뒤), 실기기(아이폰 11) 확인. 시트 안 화면의 모서리 변경 전후 사진은 홈 첫 화면만 찍음.
 - main 머지(`c2fe5b90`, 충돌 없음) 뒤 그 세션이 지정 시뮬레이터에서 `TravelModeTransitionTests` 7건·`MapHomePlaybackMusicTests` 13건 통과, Debug 빌드 성공(세션 보고, 메인 세션은 다시 돌리지 않음). 새 문구 「여행으로 가기」 12개 언어 번역 후 `check.py` 실패 0.
 
+## TVZ1116C01 · 여행 C안 「여행 중 오늘 중심」 (2026-11-16, 작업 공간 브랜치 `claude/travel-c-today-card-094cff`, 아직 main·빌드에 없음)
+
+- 저장: 새 칸·형식 변경 없음. 일정 상태 칸(`TravelTripItem.status`)에 `visited`·`skipped` 값을 더하고 예약·미정은 `visited/booked`처럼 뒤에 지킴(대표 객관식 답 「기존 상태 칸에 값 추가」). `TripItemStatus(raw:)`는 `/` 뒤를 읽어 예약·미정을 그대로 보이고, 공유 방에서 받은 상태 값은 허용 목록으로 거름, 다시 가져오기에서도 확정 유지.
+- 단위 시험(지정 시뮬레이터 BOKKI-STL, 병렬 끔): `TravelTodayTests` 14건 + `PlanRealityGapTests` 15건 = 29건 통과·실패 0(이때 앱 Debug 시뮬레이터 빌드 포함). 구조 지표 기준선 통과.
+- main(4866007f 이후) 합친 뒤 c50154f5에서 다시(낡은 모듈 캐시를 지우고 깨끗이 빌드): `TravelTodayTests` 14 · `PlanRealityGapTests` 15 · `TripItemStatusTests` 10 · `TripShareFoundationTests` 15 · `TripShareLedgerTests` 11 · `TripSharePlanTests` 7 · `TripShareRoomTests` 12 = 84건 통과·실패 0·건너뜀 0(앱 Debug 시뮬레이터 빌드 포함). 번역 `check.py` 실패 0. 구조 지표의 전체 줄 수 초과(248,597 > 기준 225,717)는 main 자체에서도 나는 것이며 이 변경은 약 500줄. 번역 `check.py` 실패 0(긴 문구 3은 전부터). `source.json`·카탈로그 생성은 메인 몫으로 남김.
+- 시뮬레이터 화면(지어낸 견본 여행 「견본 서울 산책」, 오늘이 여행 기간, 임시 불러오기 코드는 커밋 전 제거): 내린 판에 오늘 카드(지금 일정·남은 분, 다음 11:05, 「확인할 일정 2개」, 끝난 일정의 갔음/건너뜀 줄, 「계획과 실제」·「지출」) → 「확인할 일정」 창에서 하나씩 묻기 → 갔음·건너뜀 확정 뒤 「오늘 일정을 모두 확인했어요」 → 「되돌리기」로 다시 물음 → 카드 숫자 2→1 갱신. 사진 `build/validation/TVZ1116C01/1~5-*.png`.
+- 하지 않은 것: 카드에서 연 「계획과 실제」 화면 사진(다른 세션이 같은 시뮬레이터에 자기 빌드를 깔아 중단), 자동 기록이 맞아 「갔음」을 미리 고른 모습(견본에 머문 기록 없음 — 단위 시험으로만 확인), 일정 없는 날·남은 돈 줄 화면(견본에 여행 장부 없음), 공유 여행 경로 실제 시험, 실기기(아이폰 11) 확인.
+- 제한: 옛 빌드(이 변경 전)는 `visited` 값을 모르는 값으로 보고 계획으로 읽음(예약 표시는 사라짐). 공유 여행에서 옛 빌드 동행이 그 일정을 고치면 확정이 지워질 수 있음. 오늘 카드가 보이는 동안(판 내림)은 발판 「+」 메뉴가 숨고, 판을 올리면 보임(대표 객관식 답 「카드만 보이기」).
+
 ## AIT1116A01 · 튜토리얼 AI 연결을 앞으로 + 「조각 맞추기」 1차 (2026-11-16, 메인 머지 전)
 
 - 바꾼 것: 튜토리얼 순서 `welcome → aiConnect → …`(전에는 「연결과 보호」 장 안쪽). AI 연결 장면은 3컷 시연(대화 → AI가 올림 → 일정표·지도·가계부)·할 수 있는 일 3가지·주 단추 「지금 연결」(AI 고르기 창)·작은 「나중에」. 건너뛴 사람에게 AI로 만들기 창에서 한 번만 안내(`AIConnectNudge.swift`, 키 `aiConnectNudgeShown`). 연결 키·PIN 보안은 그대로.
@@ -78,7 +87,6 @@
   - 합성 신호를 0을 지나지 않는 사각파로, 허용 범위를 「소리 끝 − 2,048프레임 초과 ~ 소리 끝 이하」로 바꿈. `music-tests-7.log`: **`MapHomePlaybackMusicTests` 13건 통과·실패 0**(BOKKI-STL 시뮬레이터, 병렬 끔, 빌드 `TEST BUILD SUCCEEDED`). 실기기 재생·대표 청취는 아직.
 - ASC 올리기(대표 객관식 답 「아이폰, 듀오, 패드, 애플 커넥티드에 헤더 및 검색결과 부분 이미지 추가해줘」, `design/APS1115A01/asc_upload.py`): 1.0 한국어에 `APP_IPHONE_67` 6장·`APP_IPHONE_DUO` 6장(2007×2853 받아짐)·`APP_IPAD_PRO_3GEN_129` 6장 모두 `COMPLETE`, 미리보기 `IPHONE_67` 1편 업로드 `COMPLETE`(영상 처리는 읽을 때 `PROCESSING`). 옛 iPhone 2장(`03-home.jpg`·`04-menu.jpg`)은 대표 객관식 답 「옛 2장 지우기」로 지움 → iPhone 칸은 새 6장만. 미리보기 영상 처리 `COMPLETE`. 다시 읽은 결과 `build/validation/APS1115A01/asc-readback.txt`·`asc-upload.json`. 심사 제출은 하지 않음.
 - 디스크: 스크래치 DerivedData 2.7GB를 맥북에서 지우고 외장 HFS+ 볼륨(`/Volumes/외장형HDD/APS1115A01-work/work-hfs.sparsebundle` → `/Volumes/APSWork`)으로 옮김. 처음 시도한 APFS 번들 둘(`/Volumes/외장형HDD/APSWork.sparsebundle`, `APS1115A01-work/work.sparsebundle`)은 마운트 실패한 빈 번들로, 안전 검사 때문에 지우지 못함. 작업이 끝나 `/Volumes/APSWork`를 분리하고 `work-hfs.sparsebundle`(빌드 산출물·녹화·시험 결과 약 5.4GB)과 `work.sparsebundle`을 지움. 남은 것: 드라이브 맨 위의 빈 번들 `APSWork.sparsebundle`(36MB)과 빈 폴더 `APS1115A01-work` — 대표가 지워야 함.
-
 ## CLM1114A01 · 337 뒤에 넣은 것 (2026-11-14 낮)
 
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).

@@ -24,6 +24,7 @@ struct TravelModeView: View {
     @State private var newTripDraft: TravelNewTripSheet.Draft?
     @State private var ledgerTripID: String?
     @State private var expenseDraft: LedgerEntry?
+    @State private var realityDay: TravelTodayDay?
     @State private var entryTarget: TravelQuickEntrySheet.Target?
     /// 계획표에서 고른 빈 셀(TVU1113A01).
     @State private var planCell: TravelPlanCell?
@@ -201,6 +202,7 @@ struct TravelModeView: View {
         .sheet(item: $columnsTrip) { TravelColumnEditorSheet(model: model, language: language, trip: $0) }
         .sheet(item: $entryTarget) { target in TravelQuickEntrySheet(model: model, language: language, target: target) { planHistory.record($0) } }
         .sheet(item: $expenseDraft) { draft in LedgerEntryForm(language: language, entry: draft, members: draft.tripID.flatMap(book.trip)?.members) }
+        .sheet(item: $realityDay) { PlanRealityView(model: model, language: language, day: $0.date) }
         .tripShare(model: model, language: language, openedID: openedID, route: $shareRoute)
         .preferredColorScheme(openedID == nil && flight == nil ? .dark : .light)
         .accessibilityIdentifier("travelModeScreen")
@@ -831,7 +833,22 @@ struct TravelModeView: View {
             .init(language.text("열 편집", "Edit columns"), "rectangle.split.3x1") { columnsTrip = entry.trip },
             .init(language.text("AI로 만들기", "Plan with AI"), "sparkles") { isImportPresented = true },
             .init(language.text("지출 넣기", "Add expense"), "wonsign") { addExpense(entry, minute: nil) },
+            .init(language.text("계획과 실제", "Plan vs actual"), "chart.bar.xaxis") { realityDay = .init(date: dayDate(dayKey(entry))) },
         ]) { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
+    }
+
+    /// 여행 중이고 보는 날이 오늘이면, 내린 판에 한 줄 대신 오늘 카드를 보인다(TVZ1116C01).
+    @ViewBuilder private func sheetFoot(_ entry: TravelTripDirectory.Entry) -> some View {
+        if !isPlanUp, entry.state == .active, dayKey(entry) == today() {
+            TravelTodayCard(
+                model: model, entry: entry, blocks: table(entry).blocks, travelMinutes: routes.minutes,
+                sheet: book.trip(entry.id).map { LedgerTripMath.sheet($0, entries: book.entries) }, language: language,
+                onExpense: { addExpense(entry, minute: nil) }, onAddStop: { courseAdding = entry },
+                onReality: { realityDay = .init(date: dayDate(dayKey(entry))) }, onRaise: { withAnimation(.snappy(duration: 0.25)) { isPlanUp = true } }
+            )
+        } else {
+            tripFooter(entry)
+        }
     }
 
     /// 코스에서 곳 더하기(TVV1113A01 C2): 편집기를 거치지 않고 그날 코스 끝에 붙인다. 시각은 앱이 잡는다.
@@ -934,7 +951,7 @@ struct TravelModeView: View {
             if isPlanUp, planHistory.tripID == entry.id, planHistory.canUndo || planHistory.canRedo, !model.isSharedTrip(entry.id) {
                 TravelPlanHistoryBar(history: planHistory, language: language, onUndo: { applyHistory(planHistory.undo()) }, onRedo: { applyHistory(planHistory.redo()) })
             }
-            tripFooter(entry)
+            sheetFoot(entry)
         }
         .travelDayBoard(model: model, tripID: entry.id, trip: entry.trip, dayKey: dayKey(entry), language: language, history: $planHistory)
         .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: corner, style: .continuous))

@@ -15,6 +15,8 @@ enum TripSharePlanEdit: Equatable, Sendable {
     case move(itemID: String, minutes: Int)
     case resize(itemID: String, minutes: Int)
     case delete(itemID: String)
+    /// 지난 일정의 갔음·건너뜀 확정(TVZ1116C01).
+    case status(itemID: String)
     /// 그날 코스의 순서 바꾸기(날 묶음 잠금).
     case reorder(dayKey: String)
     /// 계획표 되돌리기·다시 하기. 공유 여행에서는 막는다(대표 결정).
