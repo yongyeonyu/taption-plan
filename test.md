@@ -15,7 +15,11 @@
   - 재생 HUD 1개: 재생 전 아래쪽 단추 수가 실행마다 13·12로 다름(홈 안내 띠·할 일 판 탭이 재생 중 숨음) → 시험의 뜻 「재생 중 단추를 늘리지 않는다」대로 `≤`로 고침, 통과.
   - 전체 덮기 1개: 첫 실행 실패, 다시 돌리니 통과(실행마다 갈리는 시험).
   - **남은 실패 1개** `TaptionPlanTravelPlanUITests.testEmptyCellSelectsThenPlusOpensEntryAndBlockTapShowsSelectionBar`: 시뮬레이터에 C안 세션이 남긴 당일 견본 여행 「견본 서울 산책」이 첫 여행으로 열려, 좌표로 누르는 칸이 비어 선택 막대·편집기가 안 뜸(`retest3.log`). 2일차가 없을 때 날 바꾸기를 건너뛰게만 고침. 견본 여행을 지우고 다시 돌려야 확인됨.
-- 하지 않은 것: 실기기(아이폰 11) 시험, 화면 눈 확인, 푸시.
+- 이어서(같은 날): 분류 엔진 시험을 분류표 v5(DTL1111A01)에 맞춰 38건 통과. 구조 기준선의 files·lines만 757·250,477로 올려 점검 통과(동결 예산 그대로). 여행 계획 UI 시험은 처음 열리는 여행이 당일 여행이면 건너뛰게 함 → 이 시뮬레이터에서는 **건너뜀**(견본 여행이 압축 저장소 안에 있어 골라 지우지 못함, 여러 날 여행이 있는 기기에서 다시 확인 필요).
+- **실기기 아이폰 11 Pro** 앱 단위 시험 전체(`device-unit.log`, Debug, 병렬 끔, 끝날 때 맥 부하 5.6): 2,996개 중 실패 3·건너뜀 26.
+  - `AssistantCommandEditTests.testOperationTableMatchesTheServerRegistry`: 맥의 `server/trip-relay/test/fixtures/actions.json`을 읽는 시험이라 기기에서는 파일이 없음(시뮬레이터 전용, 시뮬레이터에서는 통과).
+  - `FeatureEngineTests.testImmediateSensorAnalysisKeepsEveryPendingDay`·`testSensorAnalysisDefersBackgroundReadingsAndCoalescesOnForeground`: `FeatureEngineTests`만 다시 돌려도 같은 2건 실패(`device-feature.log`, 707건 중). 앞서 아이폰 11 Pro(test.md 1514행 부근)·아이폰 18(3161행 부근)에서도 실패한 기록이 있는 기기 쪽 시각 의존 실패로, 오늘 변경과 무관.
+- 화면 눈 확인(시뮬레이터 UI 시험 첨부 사진): 튜토리얼 2단계 AI 연결(3컷 시연·할 수 있는 일 3가지·「지금 연결」·「나중에」), 홈(여행 단추 아래 「일상」 이름·할 일 판 탭 개수 점·권한 안내 띠·아래 메뉴 7개 그대로), 여행 오늘 카드(「확인할 일정 3개」·갔음/건너뜀·계획과 실제·지출). 깨진 곳 없음. 전환 효과 움직임과 시간 끌기 카메라는 기기에서 눈으로 보지 않음.
 
 ## PRF1116A01 · 아이폰 11 Pro 성능 측정과 최적화 (2026-11-16)
 
