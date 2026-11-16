@@ -107,6 +107,7 @@
 		A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */; };
 		A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */; };
 		A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */; };
+		607F3CFDF67827418A7A8A47 /* TravelModeClassifier+Signals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F940955247968F220F267E /* TravelModeClassifier+Signals.swift */; };
 		A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */; };
 		A10000000000000000000001 /* TaptionPlanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* TaptionPlanApp.swift */; };
 		A10000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* AppModel.swift */; };
@@ -148,9 +149,17 @@
 		A10000000000000000000005 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* AppShellView.swift */; };
 		A10000000000000000000006 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000006 /* ScheduleView.swift */; };
 		A10000000000000000000007 /* GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000007 /* GoalsView.swift */; };
+		A555E510ADEA5505DC2F5A79 /* GoalDetailParts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */; };
+		8588E42DD2C1DE6268A73D68 /* GoalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */; };
+		B519210965A8995AF81BD1F8 /* RoutineTimeRangeSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */; };
+		01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */; };
 		A10000000000000000000008 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* ReviewView.swift */; };
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
+		5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */; };
+		F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */; };
+		27AB5D5D8EA08049CE1DEDAC /* MiniTimeSliceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */; };
+		C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */; };
 		5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F1 /* PlanTextSuggestion.swift */; };
 		A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F1 /* MemoTextPolish.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
@@ -190,6 +199,11 @@
 		A1000000000000000B1105C8 /* WidgetSharedEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C8 /* WidgetSharedEngines.swift */; };
 		A1000000000000000B1105C9 /* WidgetSharedEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C8 /* WidgetSharedEngines.swift */; };
 		A10000000000000000000011 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
+		A4FD6949CA1FDA595B696942 /* WeatherTimelineEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */; };
+		C38EADC38E73A6B5762E740D /* RecordRelationshipEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */; };
+		3307B18C5D4A31E44B067DC2 /* MemoAndPhotoEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */; };
+		EE7B3A821E8BAB071B1E6A0F /* PlaceStayAndSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */; };
+		99F70A4FD813F1270426E15A /* PlanGoalEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */; };
 		A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* TemplatesAndSettings.swift */; };
 		A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000071 /* StationaryContextClassifier.swift */; };
 		A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */; };
@@ -284,15 +298,31 @@
 		A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001C /* SleepAnalysisEngine.swift */; };
 		A1000000000000000000001D /* SensorDataServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* SensorDataServices.swift */; };
 		A1000000000000000000001E /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		F32C48963B1D5E07B587FC7D /* WidgetSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */; };
+		6841D0B0114051799D6AA131 /* WidgetCatEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */; };
+		B27429155CC7CC376B544969 /* SensorCollectionActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */; };
+		1477619E42A2F3CC7281493E /* LiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */; };
 		A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000001A70002 /* WidgetAppOnly.swift */; };
 		A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000020 /* TaptionPlanWidget.swift */; };
+		AF8ED5501D2F3CC3724BE648 /* TaptionWidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D819A2F5A8084C46702AAB75 /* TaptionWidgetIntents.swift */; };
+		D4E455A4832D6F6B9D33AC51 /* PrototypeWidgetTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A9B1B187C44F945AA3BF97 /* PrototypeWidgetTrack.swift */; };
+		EF1B5C9E36C5286B6120C9E1 /* TaptionScheduleWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3B183CA51E73A8424A60C7 /* TaptionScheduleWidgetView.swift */; };
 		C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */; };
 		C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */; };
 		C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */; };
 		A10000000000000000000020 /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		D2C8AB6C7FF62427C50ED178 /* WidgetSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */; };
+		166D7D35AD9FD04EEC99786E /* WidgetCatEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */; };
+		1E7F5C045ECD177F3E6A63F0 /* SensorCollectionActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */; };
+		22F40BBCC048CD0A2461AD02 /* LiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */; };
 		A10000000000000000000021 /* TaptionPlanWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* TaptionPlanWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000022 /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
 		A10000000000000000000024 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
+		E3A11DC5150E2D85998E4ABA /* WeatherTimelineEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */; };
+		1E2A6352C30B07C9807138F0 /* RecordRelationshipEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */; };
+		D9CADDB856A056A218B394FD /* MemoAndPhotoEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */; };
+		38D410163EED99BF6DD3ED32 /* PlaceStayAndSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */; };
+		1C9707B82F997A6CF1DFCDD0 /* PlanGoalEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */; };
 		A10000000000000000000025 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
 		A10000000000000000000026 /* StoreKitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000023 /* StoreKitSupport.swift */; };
 		A10000000000000000000027 /* CategoryManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000024 /* CategoryManagerView.swift */; };
@@ -303,11 +333,19 @@
 		A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */; };
 		A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002A /* WatchConnectivitySupport.swift */; };
+		817838D7A6AD39CBCE82FCAF /* AppleWatchConnectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54098A0F6E26340F8C3FF63A /* AppleWatchConnectionModels.swift */; };
 		C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000032 /* WatchActivityReplay.swift */; };
 		A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000060 /* WatchLaunchDiagnostics.swift */; };
 		A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002B /* TaptionPlanWatchApp.swift */; };
 		A1000000000000000000002D /* WatchConnectivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002C /* WatchConnectivityController.swift */; };
+		7707DAEE983BE30C78C07F7E /* WatchConnectivityController+PendingQueues.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BC68E0457B7860E195FA2F6 /* WatchConnectivityController+PendingQueues.swift */; };
+		3CA5516D1AC2C321B4908457 /* WatchConnectivityController+AmbientOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43F0175ACF24B52B149A152 /* WatchConnectivityController+AmbientOutbox.swift */; };
+		91D631C8C0BFBC8129833933 /* WatchConnectivityController+Purge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F5BF821F457319D8F0F104 /* WatchConnectivityController+Purge.swift */; };
 		A1000000000000000000002E /* WatchWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* WatchWorkoutManager.swift */; };
+		FE065DB4C04A97C20DA0A5F9 /* WatchWorkoutManager+Sensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C769A089E8740CFD112FFEC2 /* WatchWorkoutManager+Sensors.swift */; };
+		739E80FAE7B22494F3870331 /* WatchWorkoutManager+WorkoutPurge.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDE1D9B2A763F8F32341095F /* WatchWorkoutManager+WorkoutPurge.swift */; };
+		66060F3B955D065703DADA56 /* WatchWorkoutManager+Health.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93BF355AF80D32FCBBEC6ED5 /* WatchWorkoutManager+Health.swift */; };
+		F56B6107FF552C65CEF782AE /* WatchAccelerationArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D946A60D8A9BD9CD7786F5E /* WatchAccelerationArchive.swift */; };
 		A10000000000000000000070 /* WatchAmbientSensorRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000070 /* WatchAmbientSensorRecorder.swift */; };
 		A1000000000000000B1105B1 /* WatchTodayCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105B1 /* WatchTodayCards.swift */; };
 		A1000000000000000B1105B2 /* WatchStatusViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105B2 /* WatchStatusViews.swift */; };
@@ -402,6 +440,10 @@
 		A1000000000000000000007C /* SubwayCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007C /* SubwayCatalog.swift */; };
 		C1F111100000000000000004 /* SubwayCatalog+Routing.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F111100000000000000003 /* SubwayCatalog+Routing.swift */; };
 		A10000000000000000000085 /* RouteTimelineData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000085 /* RouteTimelineData.swift */; };
+		78A04AA29041D0599FD23AAF /* RouteTimelineDataEngine+Segments.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7DC2660D2DDA762BDF79F88 /* RouteTimelineDataEngine+Segments.swift */; };
+		0984A81FF6DB5322DB46E056 /* RouteTimelineDataEngine+Display.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122467C75FB310A42DF2BF2B /* RouteTimelineDataEngine+Display.swift */; };
+		CCAE13815AE63CB7E40AA7CF /* ExpectedRouteRequestEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E1848FC54355242A1A712C /* ExpectedRouteRequestEngine.swift */; };
+		46C5EF5FEF6717E4CAC9B5B6 /* RouteTimelineModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B896DD5D283C14FCF4115329 /* RouteTimelineModels.swift */; };
 		A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */; };
 		A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000095 /* RoutePolylineDecimator.swift */; };
 		A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000086 /* RouteTimelineDataTests.swift */; };
@@ -431,6 +473,9 @@
 		A40000000000000000000001 /* TaptionActivityEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000002 /* TaptionActivityEngine */; };
 		A40000000000000000000002 /* TaptionRouteEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000004 /* TaptionRouteEngine */; };
 		A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */; };
+		E23F65D234B3FBCC31C3EBA0 /* ActivityClassificationLockEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EC8A4E1C38FC3EA94CA6F0 /* ActivityClassificationLockEngine.swift */; };
+		3FDE6F78D83F0443F159C9F2 /* TaptionActivityEngineAdapter+Overrides.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68764F937E5A4C8384AADD10 /* TaptionActivityEngineAdapter+Overrides.swift */; };
+		D1DA8BE663C5819F68C209DB /* TaptionActivityEngineAdapter+TravelMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CFE220A1AC2E0D576BE73E /* TaptionActivityEngineAdapter+TravelMatching.swift */; };
 		AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1A55000000000000000001 /* ClassifierAdapter.swift */; };
 		A10000000000000003C90002 /* ClassificationBackfill.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90002 /* ClassificationBackfill.swift */; };
 		A10000000000000003C90001 /* AppleWatchNapPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90001 /* AppleWatchNapPolicy.swift */; };
@@ -962,6 +1007,7 @@
 		F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthRouteMergeEngine.swift; sourceTree = "<group>"; };
 		F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorEstimator.swift; sourceTree = "<group>"; };
 		F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeClassifier.swift; sourceTree = "<group>"; };
+		53F940955247968F220F267E /* TravelModeClassifier+Signals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TravelModeClassifier+Signals.swift"; sourceTree = "<group>"; };
 		F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSensorMapProjection.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* TaptionPlan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaptionPlan.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000000000000000000002 /* TaptionPlanTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1008,9 +1054,17 @@
 		F10000000000000000000005 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
 		F10000000000000000000006 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
 		F10000000000000000000007 /* GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsView.swift; sourceTree = "<group>"; };
+		2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailParts.swift; sourceTree = "<group>"; };
+		0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailView.swift; sourceTree = "<group>"; };
+		BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineTimeRangeSlider.swift; sourceTree = "<group>"; };
+		2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000008 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		F10000000000000000000009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
+		3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSliderScreen.swift; sourceTree = "<group>"; };
+		71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AddPlanSheet+CategoryPickers.swift"; sourceTree = "<group>"; };
+		C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniTimeSliceEditor.swift; sourceTree = "<group>"; };
+		3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalRepeatRulesEditor.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F1 /* PlanTextSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTextSuggestion.swift; sourceTree = "<group>"; };
 		F1A11102A0100000000000F1 /* MemoTextPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolish.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -1031,6 +1085,11 @@
 		F10000000000000000000010 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C8 /* WidgetSharedEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedEngines.swift; sourceTree = "<group>"; };
 		F10000000000000000000011 /* PlanningEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningEngine.swift; sourceTree = "<group>"; };
+		0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherTimelineEngines.swift; sourceTree = "<group>"; };
+		1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordRelationshipEngine.swift; sourceTree = "<group>"; };
+		F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoAndPhotoEngines.swift; sourceTree = "<group>"; };
+		77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceStayAndSleepEngines.swift; sourceTree = "<group>"; };
+		033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanGoalEngines.swift; sourceTree = "<group>"; };
 		F10000000000000000000012 /* TemplatesAndSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesAndSettings.swift; sourceTree = "<group>"; };
 		F10000000000000000000071 /* StationaryContextClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationaryContextClassifier.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntegrationPolicies.swift; sourceTree = "<group>"; };
@@ -1127,8 +1186,15 @@
 		F1000000000000000000001D /* SensorDataServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataServices.swift; sourceTree = "<group>"; };
 		F1000000000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000000000000000000001F /* WidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetShared.swift; sourceTree = "<group>"; };
+		54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedStore.swift; sourceTree = "<group>"; };
+		908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCatEngines.swift; sourceTree = "<group>"; };
+		197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionActivityShared.swift; sourceTree = "<group>"; };
+		046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityShared.swift; sourceTree = "<group>"; };
 		F10000000000000001A70002 /* WidgetAppOnly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAppOnly.swift; sourceTree = "<group>"; };
 		F10000000000000000000020 /* TaptionPlanWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWidget.swift; sourceTree = "<group>"; };
+		D819A2F5A8084C46702AAB75 /* TaptionWidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionWidgetIntents.swift; sourceTree = "<group>"; };
+		60A9B1B187C44F945AA3BF97 /* PrototypeWidgetTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrototypeWidgetTrack.swift; sourceTree = "<group>"; };
+		CE3B183CA51E73A8424A60C7 /* TaptionScheduleWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionScheduleWidgetView.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionLiveActivity.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanLiveActivity.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionLiveActivityCat.swift; sourceTree = "<group>"; };
@@ -1144,11 +1210,19 @@
 		F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSummaryAccumulator.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchMenuPolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000000002A /* WatchConnectivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivitySupport.swift; sourceTree = "<group>"; };
+		54098A0F6E26340F8C3FF63A /* AppleWatchConnectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchConnectionModels.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000032 /* WatchActivityReplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActivityReplay.swift; sourceTree = "<group>"; };
 		F1000000000000000000002B /* TaptionPlanWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchApp.swift; sourceTree = "<group>"; };
 		F1000000000000000000002C /* WatchConnectivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityController.swift; sourceTree = "<group>"; };
+		0BC68E0457B7860E195FA2F6 /* WatchConnectivityController+PendingQueues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchConnectivityController+PendingQueues.swift"; sourceTree = "<group>"; };
+		C43F0175ACF24B52B149A152 /* WatchConnectivityController+AmbientOutbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchConnectivityController+AmbientOutbox.swift"; sourceTree = "<group>"; };
+		85F5BF821F457319D8F0F104 /* WatchConnectivityController+Purge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchConnectivityController+Purge.swift"; sourceTree = "<group>"; };
 		F10000000000000000000060 /* WatchLaunchDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLaunchDiagnostics.swift; sourceTree = "<group>"; };
 		F1000000000000000000002D /* WatchWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWorkoutManager.swift; sourceTree = "<group>"; };
+		C769A089E8740CFD112FFEC2 /* WatchWorkoutManager+Sensors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchWorkoutManager+Sensors.swift"; sourceTree = "<group>"; };
+		CDE1D9B2A763F8F32341095F /* WatchWorkoutManager+WorkoutPurge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchWorkoutManager+WorkoutPurge.swift"; sourceTree = "<group>"; };
+		93BF355AF80D32FCBBEC6ED5 /* WatchWorkoutManager+Health.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchWorkoutManager+Health.swift"; sourceTree = "<group>"; };
+		6D946A60D8A9BD9CD7786F5E /* WatchAccelerationArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccelerationArchive.swift; sourceTree = "<group>"; };
 		F10000000000000000000070 /* WatchAmbientSensorRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSensorRecorder.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105B1 /* WatchTodayCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTodayCards.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105B2 /* WatchStatusViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchStatusViews.swift; sourceTree = "<group>"; };
@@ -1228,6 +1302,10 @@
 		F1000000000000000000007C /* SubwayCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayCatalog.swift; sourceTree = "<group>"; };
 		C1F111100000000000000003 /* SubwayCatalog+Routing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SubwayCatalog+Routing.swift"; sourceTree = "<group>"; };
 		F10000000000000000000085 /* RouteTimelineData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineData.swift; sourceTree = "<group>"; };
+		E7DC2660D2DDA762BDF79F88 /* RouteTimelineDataEngine+Segments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RouteTimelineDataEngine+Segments.swift"; sourceTree = "<group>"; };
+		122467C75FB310A42DF2BF2B /* RouteTimelineDataEngine+Display.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RouteTimelineDataEngine+Display.swift"; sourceTree = "<group>"; };
+		F4E1848FC54355242A1A712C /* ExpectedRouteRequestEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpectedRouteRequestEngine.swift; sourceTree = "<group>"; };
+		B896DD5D283C14FCF4115329 /* RouteTimelineModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineModels.swift; sourceTree = "<group>"; };
 		F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWBSPlayback.swift; sourceTree = "<group>"; };
 		F10000000000000000000095 /* RoutePolylineDecimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePolylineDecimator.swift; sourceTree = "<group>"; };
 		F10000000000000000000086 /* RouteTimelineDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineDataTests.swift; sourceTree = "<group>"; };
@@ -1267,6 +1345,9 @@
 		F2000000000000000000000D /* LocalizationCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationCatalogTests.swift; sourceTree = "<group>"; };
 		F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupportTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionActivityEngineAdapter.swift; sourceTree = "<group>"; };
+		53EC8A4E1C38FC3EA94CA6F0 /* ActivityClassificationLockEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityClassificationLockEngine.swift; sourceTree = "<group>"; };
+		68764F937E5A4C8384AADD10 /* TaptionActivityEngineAdapter+Overrides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TaptionActivityEngineAdapter+Overrides.swift"; sourceTree = "<group>"; };
+		43CFE220A1AC2E0D576BE73E /* TaptionActivityEngineAdapter+TravelMatching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TaptionActivityEngineAdapter+TravelMatching.swift"; sourceTree = "<group>"; };
 		FC1A55000000000000000001 /* ClassifierAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassifierAdapter.swift; sourceTree = "<group>"; };
 		F10000000000000003C90002 /* ClassificationBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassificationBackfill.swift; sourceTree = "<group>"; };
 		F10000000000000003C90001 /* AppleWatchNapPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchNapPolicy.swift; sourceTree = "<group>"; };
@@ -2190,6 +2271,10 @@
 				F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */,
 				F1FA11013C73958F69782D38 /* TimelineSelection.swift */,
 				F10000000000000000000007 /* GoalsView.swift */,
+				2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */,
+				0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */,
+				BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */,
+				2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */,
 				F10000000000000000000008 /* ReviewView.swift */,
 				F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */,
 				F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */,
@@ -2207,6 +2292,10 @@
 				F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
+				3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */,
+				71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */,
+				C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */,
+				3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */,
 				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
 				F1A11102A0100000000000F1 /* MemoTextPolish.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
@@ -2292,6 +2381,11 @@
 				F1FA1157352882250214647A /* PlanRecordModels.swift */,
 				F10000000000000000000010 /* PlanRepository.swift */,
 				F10000000000000000000011 /* PlanningEngine.swift */,
+				0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */,
+				1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */,
+				F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */,
+				77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */,
+				033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */,
 				F1000000000000000B1105C8 /* WidgetSharedEngines.swift */,
 				F1FA11518EFE631FA33E137B /* StableRecordID.swift */,
 				F10000000000000000000012 /* TemplatesAndSettings.swift */,
@@ -2317,6 +2411,7 @@
 				F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */,
 				F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */,
 				F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */,
+				53F940955247968F220F267E /* TravelModeClassifier+Signals.swift */,
 				F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */,
 				F10000000000000000000071 /* StationaryContextClassifier.swift */,
 				F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */,
@@ -2366,6 +2461,10 @@
 				F10000000000000000CA2004 /* SubwayAlighting.swift */,
 				F10000000000000000000041 /* ScreenTimeUsageService.swift */,
 				F1000000000000000000001F /* WidgetShared.swift */,
+				54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */,
+				908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */,
+				197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */,
+				046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */,
 				B10816000000000000000001 /* LiveActivityDaySummaryState.swift */,
 				F10000000000000001A70002 /* WidgetAppOnly.swift */,
 				F1000000000000000000003B /* WidgetPayloadFactory.swift */,
@@ -2410,6 +2509,7 @@
 				F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */,
 				F10000000000000000000029 /* WatchSyncModels.swift */,
 				F1000000000000000000002A /* WatchConnectivitySupport.swift */,
+				54098A0F6E26340F8C3FF63A /* AppleWatchConnectionModels.swift */,
 				F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */,
 				C0FFEE000000000000000032 /* WatchActivityReplay.swift */,
 				F10000000000000000000072 /* WatchSensorQueryPlan.swift */,
@@ -2427,6 +2527,10 @@
 				F1000000000000000000007C /* SubwayCatalog.swift */,
 				C1F111100000000000000003 /* SubwayCatalog+Routing.swift */,
 				F10000000000000000000085 /* RouteTimelineData.swift */,
+				E7DC2660D2DDA762BDF79F88 /* RouteTimelineDataEngine+Segments.swift */,
+				122467C75FB310A42DF2BF2B /* RouteTimelineDataEngine+Display.swift */,
+				F4E1848FC54355242A1A712C /* ExpectedRouteRequestEngine.swift */,
+				B896DD5D283C14FCF4115329 /* RouteTimelineModels.swift */,
 				F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */,
 				F10000000000000000000095 /* RoutePolylineDecimator.swift */,
 				F10000000000000000000088 /* BiometricDataProtection.swift */,
@@ -2438,6 +2542,9 @@
 				F10000000000000000000093 /* WatchDayDatabase.swift */,
 				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
 				F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */,
+				53EC8A4E1C38FC3EA94CA6F0 /* ActivityClassificationLockEngine.swift */,
+				68764F937E5A4C8384AADD10 /* TaptionActivityEngineAdapter+Overrides.swift */,
+				43CFE220A1AC2E0D576BE73E /* TaptionActivityEngineAdapter+TravelMatching.swift */,
 				FC1A55000000000000000001 /* ClassifierAdapter.swift */,
 				F10000000000000003C90002 /* ClassificationBackfill.swift */,
 				F10000000000000003C90001 /* AppleWatchNapPolicy.swift */,
@@ -2451,6 +2558,9 @@
 			children = (
 				F10000000000000000000078 /* Assets.xcassets */,
 				F10000000000000000000020 /* TaptionPlanWidget.swift */,
+				D819A2F5A8084C46702AAB75 /* TaptionWidgetIntents.swift */,
+				60A9B1B187C44F945AA3BF97 /* PrototypeWidgetTrack.swift */,
+				CE3B183CA51E73A8424A60C7 /* TaptionScheduleWidgetView.swift */,
 				C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */,
 				C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */,
 				C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */,
@@ -2471,8 +2581,15 @@
 				F10000000000000000000033 /* Assets.xcassets */,
 				F1000000000000000000002B /* TaptionPlanWatchApp.swift */,
 				F1000000000000000000002C /* WatchConnectivityController.swift */,
+				0BC68E0457B7860E195FA2F6 /* WatchConnectivityController+PendingQueues.swift */,
+				C43F0175ACF24B52B149A152 /* WatchConnectivityController+AmbientOutbox.swift */,
+				85F5BF821F457319D8F0F104 /* WatchConnectivityController+Purge.swift */,
 				F10000000000000000000060 /* WatchLaunchDiagnostics.swift */,
 				F1000000000000000000002D /* WatchWorkoutManager.swift */,
+				C769A089E8740CFD112FFEC2 /* WatchWorkoutManager+Sensors.swift */,
+				CDE1D9B2A763F8F32341095F /* WatchWorkoutManager+WorkoutPurge.swift */,
+				93BF355AF80D32FCBBEC6ED5 /* WatchWorkoutManager+Health.swift */,
+				6D946A60D8A9BD9CD7786F5E /* WatchAccelerationArchive.swift */,
 				F10000000000000000000070 /* WatchAmbientSensorRecorder.swift */,
 				F10000000000000000000073 /* WatchObjCExceptionCatcher.h */,
 				F10000000000000000000074 /* WatchObjCExceptionCatcher.m */,
@@ -3229,6 +3346,10 @@
 				CA1A1111A010000000000004 /* AITaskPanel.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
+				A555E510ADEA5505DC2F5A79 /* GoalDetailParts.swift in Sources */,
+				8588E42DD2C1DE6268A73D68 /* GoalDetailView.swift in Sources */,
+				B519210965A8995AF81BD1F8 /* RoutineTimeRangeSlider.swift in Sources */,
+				01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,
 				A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */,
 				A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */,
@@ -3246,6 +3367,10 @@
 				A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
+				5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */,
+				F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */,
+				27AB5D5D8EA08049CE1DEDAC /* MiniTimeSliceEditor.swift in Sources */,
+				C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
 				A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
@@ -3265,6 +3390,11 @@
 				A1FA11EE9F352FA3C4B9FA2A /* PlanRecordModels.swift in Sources */,
 				A10000000000000000000010 /* PlanRepository.swift in Sources */,
 				A10000000000000000000011 /* PlanningEngine.swift in Sources */,
+				A4FD6949CA1FDA595B696942 /* WeatherTimelineEngines.swift in Sources */,
+				C38EADC38E73A6B5762E740D /* RecordRelationshipEngine.swift in Sources */,
+				3307B18C5D4A31E44B067DC2 /* MemoAndPhotoEngines.swift in Sources */,
+				EE7B3A821E8BAB071B1E6A0F /* PlaceStayAndSleepEngines.swift in Sources */,
+				99F70A4FD813F1270426E15A /* PlanGoalEngines.swift in Sources */,
 				A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */,
 				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
 				A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */,
@@ -3289,6 +3419,7 @@
 				A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */,
 				A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */,
 				A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */,
+				607F3CFDF67827418A7A8A47 /* TravelModeClassifier+Signals.swift in Sources */,
 				A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */,
 				A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */,
 				A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */,
@@ -3334,6 +3465,10 @@
 				A10000000000000000CA2003 /* HwarangCoat.swift in Sources */,
 				A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */,
 				A1000000000000000000001E /* WidgetShared.swift in Sources */,
+				F32C48963B1D5E07B587FC7D /* WidgetSharedStore.swift in Sources */,
+				6841D0B0114051799D6AA131 /* WidgetCatEngines.swift in Sources */,
+				B27429155CC7CC376B544969 /* SensorCollectionActivityShared.swift in Sources */,
+				1477619E42A2F3CC7281493E /* LiveActivityShared.swift in Sources */,
 				B10816000000000000000002 /* LiveActivityDaySummaryState.swift in Sources */,
 				A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */,
 				A10000000000000000000026 /* StoreKitSupport.swift in Sources */,
@@ -3343,6 +3478,7 @@
 				A1000000000000000000002A /* WatchSyncModels.swift in Sources */,
 				A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
+				817838D7A6AD39CBCE82FCAF /* AppleWatchConnectionModels.swift in Sources */,
 				A1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift in Sources */,
 				C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */,
 				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
@@ -3397,6 +3533,10 @@
 				A1000000000000000000007C /* SubwayCatalog.swift in Sources */,
 				C1F111100000000000000004 /* SubwayCatalog+Routing.swift in Sources */,
 				A10000000000000000000085 /* RouteTimelineData.swift in Sources */,
+				78A04AA29041D0599FD23AAF /* RouteTimelineDataEngine+Segments.swift in Sources */,
+				0984A81FF6DB5322DB46E056 /* RouteTimelineDataEngine+Display.swift in Sources */,
+				CCAE13815AE63CB7E40AA7CF /* ExpectedRouteRequestEngine.swift in Sources */,
+				46C5EF5FEF6717E4CAC9B5B6 /* RouteTimelineModels.swift in Sources */,
 				A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */,
 				A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */,
 				A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */,
@@ -3409,6 +3549,9 @@
 				A51002000000000000000007 /* MapHomeNLEClipEditor.swift in Sources */,
 				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 				A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */,
+				E23F65D234B3FBCC31C3EBA0 /* ActivityClassificationLockEngine.swift in Sources */,
+				3FDE6F78D83F0443F159C9F2 /* TaptionActivityEngineAdapter+Overrides.swift in Sources */,
+				D1DA8BE663C5819F68C209DB /* TaptionActivityEngineAdapter+TravelMatching.swift in Sources */,
 				AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */,
 				A10000000000000003C90002 /* ClassificationBackfill.swift in Sources */,
 				A10000000000000003C90001 /* AppleWatchNapPolicy.swift in Sources */,
@@ -3553,10 +3696,17 @@
 			files = (
 				A1000000000000000B1105C9 /* WidgetSharedEngines.swift in Sources */,
 				A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */,
+				AF8ED5501D2F3CC3724BE648 /* TaptionWidgetIntents.swift in Sources */,
+				D4E455A4832D6F6B9D33AC51 /* PrototypeWidgetTrack.swift in Sources */,
+				EF1B5C9E36C5286B6120C9E1 /* TaptionScheduleWidgetView.swift in Sources */,
 				C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */,
 				C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */,
 				C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */,
 				A10000000000000000000020 /* WidgetShared.swift in Sources */,
+				D2C8AB6C7FF62427C50ED178 /* WidgetSharedStore.swift in Sources */,
+				166D7D35AD9FD04EEC99786E /* WidgetCatEngines.swift in Sources */,
+				1E7F5C045ECD177F3E6A63F0 /* SensorCollectionActivityShared.swift in Sources */,
+				22F40BBCC048CD0A2461AD02 /* LiveActivityShared.swift in Sources */,
 				B10816000000000000000003 /* LiveActivityDaySummaryState.swift in Sources */,
 				A10000000000000000000022 /* FeatureModels.swift in Sources */,
 				A1FA115BFD9ADB6D5F57D8C1 /* SensorReadingModels.swift in Sources */,
@@ -3581,7 +3731,14 @@
 				A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */,
 				A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */,
 				A1000000000000000000002D /* WatchConnectivityController.swift in Sources */,
+				7707DAEE983BE30C78C07F7E /* WatchConnectivityController+PendingQueues.swift in Sources */,
+				3CA5516D1AC2C321B4908457 /* WatchConnectivityController+AmbientOutbox.swift in Sources */,
+				91D631C8C0BFBC8129833933 /* WatchConnectivityController+Purge.swift in Sources */,
 				A1000000000000000000002E /* WatchWorkoutManager.swift in Sources */,
+				FE065DB4C04A97C20DA0A5F9 /* WatchWorkoutManager+Sensors.swift in Sources */,
+				739E80FAE7B22494F3870331 /* WatchWorkoutManager+WorkoutPurge.swift in Sources */,
+				66060F3B955D065703DADA56 /* WatchWorkoutManager+Health.swift in Sources */,
+				F56B6107FF552C65CEF782AE /* WatchAccelerationArchive.swift in Sources */,
 				A10000000000000000000070 /* WatchAmbientSensorRecorder.swift in Sources */,
 				A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A10000000000000000000073 /* WatchSensorQueryPlan.swift in Sources */,

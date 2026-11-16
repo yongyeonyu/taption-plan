@@ -734,6 +734,22 @@ final class AppModel {
             "app_model_initialized",
             fields: ["repository": repositorySource]
         )
+        connectServiceCallbacks()
+        activateWatchConnectivity()
+        if registersHealthBackgroundHandler {
+            Self.applicationInstance = self
+            Task { [weak self] in
+                await HealthBackgroundRefreshCoordinator.shared.register {
+                    [weak self] in
+                    guard let self else { return false }
+                    await self.handleObservedHealthChange()
+                    return true
+                }
+            }
+        }
+    }
+
+    private func connectServiceCallbacks() {
         self.voiceMemoPlayer.onFinish = { [weak self] in
             self?.playingVoiceAttachmentID = nil
         }
@@ -766,6 +782,9 @@ final class AppModel {
                 self.syncSensorBackgroundState()
             }
         }
+    }
+
+    private func activateWatchConnectivity() {
         self.watchConnectivityService.activate(
             onCommand: { [weak self] command in
                 Task { @MainActor [weak self] in
@@ -841,17 +860,6 @@ final class AppModel {
                 }
             }
         )
-        if registersHealthBackgroundHandler {
-            Self.applicationInstance = self
-            Task { [weak self] in
-                await HealthBackgroundRefreshCoordinator.shared.register {
-                    [weak self] in
-                    guard let self else { return false }
-                    await self.handleObservedHealthChange()
-                    return true
-                }
-            }
-        }
     }
 
     var showsBottomBar: Bool {

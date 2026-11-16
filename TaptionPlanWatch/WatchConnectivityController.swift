@@ -19,42 +19,42 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
     }
 
-    @Published private(set) var payload: TaptionWatchPayload?
+    @Published var payload: TaptionWatchPayload?
     @Published private(set) var statusText = AppLanguagePreference.text(
         korean: "iPhone 연결 중",
         english: "Connecting to iPhone"
     )
 
-    private let encoder = JSONEncoder()
+    let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
-    private let cachedPayloadKey = "TaptionPlan.cachedWatchPayload"
-    private let pendingSensorSummariesKey =
+    let cachedPayloadKey = "TaptionPlan.cachedWatchPayload"
+    let pendingSensorSummariesKey =
         "TaptionPlan.pendingWatchSensorSummaries"
-    private let pendingAccelerationChunksKey =
+    let pendingAccelerationChunksKey =
         "TaptionPlan.pendingWatchAccelerationChunks"
-    private let pendingHealthSnapshotsKey =
+    let pendingHealthSnapshotsKey =
         "TaptionPlan.pendingWatchHealthSnapshots"
-    private let ambientOutboxRetryAttemptsKey =
+    let ambientOutboxRetryAttemptsKey =
         "TaptionPlan.ambientOutboxRetryAttempts"
-    private let completedPurgeGenerationKey =
+    let completedPurgeGenerationKey =
         "TaptionPlan.completedWatchPurgeGeneration"
-    private var pendingSensorSummaries: [TaptionWatchSensorSummary] = []
-    private var pendingAccelerationChunks: [TaptionWatchAccelerationChunk] = []
-    private var pendingHealthSnapshots: [TaptionWatchHealthSnapshot] = []
-    private var widgetReloadFollowupTask: Task<Void, Never>?
-    private var handledWorkoutRequestIDs = Set<UUID>()
-    private var handledWorkoutRequestOrder: [UUID] = []
-    private var dataSyncRequestGate = TaptionWatchDataSyncRequestGate()
-    private var activeDataSyncRequestID: String? {
+    var pendingSensorSummaries: [TaptionWatchSensorSummary] = []
+    var pendingAccelerationChunks: [TaptionWatchAccelerationChunk] = []
+    var pendingHealthSnapshots: [TaptionWatchHealthSnapshot] = []
+    var widgetReloadFollowupTask: Task<Void, Never>?
+    var handledWorkoutRequestIDs = Set<UUID>()
+    var handledWorkoutRequestOrder: [UUID] = []
+    var dataSyncRequestGate = TaptionWatchDataSyncRequestGate()
+    var activeDataSyncRequestID: String? {
         dataSyncRequestGate.activeRequestID
     }
-    private var activePurge:
+    var activePurge:
         (id: UUID, generation: UInt64, task: Task<Bool, Never>)?
-    private var sensorWriteTasks: [UUID: Task<Void, Never>] = [:]
-    private var isFlushingSensorSummaries = false // 연결·버튼이 겹쳐도 두 번 보내지 않는다(WCH1110A01)
-    private var isFlushingAccelerationChunks = false
-    private var isPurgingData = false
-    private let dayDatabase: WatchDayDatabase?
+    var sensorWriteTasks: [UUID: Task<Void, Never>] = [:]
+    var isFlushingSensorSummaries = false // 연결·버튼이 겹쳐도 두 번 보내지 않는다(WCH1110A01)
+    var isFlushingAccelerationChunks = false
+    var isPurgingData = false
+    let dayDatabase: WatchDayDatabase?
     var onWorkoutRequest: ((TaptionWatchWorkoutRequest) -> Void)?
     var onPayloadChange: ((TaptionWatchPayload) -> Void)?
     var onDataSyncRequest: ((String) -> Void)?
@@ -63,16 +63,16 @@ final class WatchConnectivityController: NSObject, ObservableObject {
 
     private var didPrepare = false
     private var didActivateConnectivity = false
-    private var isFlushingAmbientOutbox = false
-    private var ambientOutboxFlushRequested = false
-    private var ambientOutboxFlushTask: Task<Void, Never>?
-    private var ambientOutboxFlushGeneration: UInt64 = 0
-    private var ambientLiveDeliveryGate = TaptionWatchAmbientLiveDeliveryGate()
-    private var ambientOutboxRetryTask: Task<Void, Never>?
-    private var ambientOutboxRetryID: UUID?
-    private var ambientOutboxRetryAttempts: [String: Int] = [:]
-    private var legacyAmbientAdoptionID: UUID?
-    private var legacyAmbientAdoptionTask: Task<Void, Never>?
+    var isFlushingAmbientOutbox = false
+    var ambientOutboxFlushRequested = false
+    var ambientOutboxFlushTask: Task<Void, Never>?
+    var ambientOutboxFlushGeneration: UInt64 = 0
+    var ambientLiveDeliveryGate = TaptionWatchAmbientLiveDeliveryGate()
+    var ambientOutboxRetryTask: Task<Void, Never>?
+    var ambientOutboxRetryID: UUID?
+    var ambientOutboxRetryAttempts: [String: Int] = [:]
+    var legacyAmbientAdoptionID: UUID?
+    var legacyAmbientAdoptionTask: Task<Void, Never>?
 
     private var language: AppLanguagePreference.ResolvedLanguage { AppLanguagePreference.resolve(rawValue: payload?.languagePreference) }
 
@@ -120,7 +120,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         requestSync()
     }
 
-    private func adoptLegacyAmbientQueue() async {
+    func adoptLegacyAmbientQueue() async {
         guard !isPurgingData, let dayDatabase else { return }
         if let legacyAmbientAdoptionTask {
             await legacyAmbientAdoptionTask.value
@@ -407,7 +407,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     @discardableResult
-    private func sendAccelerationChunkTransport(
+    func sendAccelerationChunkTransport(
         _ chunk: TaptionWatchAccelerationChunk
     ) -> Bool {
         guard WCSession.isSupported() else {
@@ -791,410 +791,6 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
     }
 
-    private nonisolated static func purgeGeneration(
-        in envelope: [String: Any]
-    ) -> UInt64? {
-        guard let value = envelope[
-            TaptionWatchEnvelope.purgeGenerationKey
-        ] as? String else { return nil }
-        return UInt64(value)
-    }
-
-    private func completedPurgeGeneration() -> UInt64 {
-        guard let data = TaptionWatchDeviceLocalDefaults.data(
-            forKey: completedPurgeGenerationKey
-        ), let value = String(data: data, encoding: .utf8) else { return 0 }
-        return UInt64(value) ?? 0
-    }
-
-    private func finishPurge(
-        id: UUID,
-        generation: UInt64,
-        succeeded: Bool
-    ) {
-        guard activePurge?.id == id else { return }
-        activePurge = nil
-        guard succeeded else { return }
-        let completed = max(completedPurgeGeneration(), generation)
-        TaptionWatchDeviceLocalDefaults.set(
-            Data(String(completed).utf8),
-            forKey: completedPurgeGenerationKey
-        )
-    }
-
-    private func performPurge(
-        requestID: String,
-        generation: UInt64
-    ) async -> Bool {
-        guard generation > 0 else {
-            sendPurgeAcknowledgement(
-                requestID: requestID,
-                succeeded: false
-            )
-            return false
-        }
-        while let activePurge {
-            let succeeded = await activePurge.task.value
-            finishPurge(
-                id: activePurge.id,
-                generation: activePurge.generation,
-                succeeded: succeeded
-            )
-            if !TaptionWatchPurgeGenerationPolicy.shouldExecute(
-                requested: generation,
-                completed: completedPurgeGeneration()
-            ) {
-                sendPurgeAcknowledgement(
-                    requestID: requestID,
-                    succeeded: true
-                )
-                return true
-            }
-            if !succeeded {
-                sendPurgeAcknowledgement(
-                    requestID: requestID,
-                    succeeded: false
-                )
-                return false
-            }
-        }
-        if !TaptionWatchPurgeGenerationPolicy.shouldExecute(
-            requested: generation,
-            completed: completedPurgeGeneration()
-        ) {
-            sendPurgeAcknowledgement(requestID: requestID, succeeded: true)
-            return true
-        }
-        let purgeID = UUID()
-        let task = Task { @MainActor [weak self] in
-            await self?.executePurge() ?? false
-        }
-        activePurge = (purgeID, generation, task)
-        let succeeded = await task.value
-        finishPurge(
-            id: purgeID,
-            generation: generation,
-            succeeded: succeeded
-        )
-        sendPurgeAcknowledgement(
-            requestID: requestID,
-            succeeded: succeeded
-        )
-        return succeeded
-    }
-
-    private func executePurge() async -> Bool {
-        isPurgingData = true
-        ambientLiveDeliveryGate.reset()
-        defer {
-            isPurgingData = false
-        }
-        await cancelAmbientOutboxFlush()
-        cancelAmbientOutboxRetry()
-        ambientOutboxFlushRequested = false
-        widgetReloadFollowupTask?.cancel()
-        widgetReloadFollowupTask = nil
-        let writeTasks = Array(sensorWriteTasks.values)
-        writeTasks.forEach { $0.cancel() }
-        for task in writeTasks { await task.value }
-
-        if let legacyAmbientAdoptionTask {
-            legacyAmbientAdoptionTask.cancel()
-            await legacyAmbientAdoptionTask.value
-            self.legacyAmbientAdoptionTask = nil
-            legacyAmbientAdoptionID = nil
-        }
-
-        for transfer in WCSession.default.outstandingUserInfoTransfers
-            where transfer.userInfo[
-                TaptionWatchEnvelope.ambientDeliveryIDKey
-            ] != nil
-                || transfer.userInfo[TaptionWatchEnvelope.launchDiagnosticsKey] == nil {
-            transfer.cancel()
-        }
-        guard let dayDatabase else { return false }
-        let managerSucceeded = await onPurgeRequest? {
-            try await dayDatabase.deleteAll()
-        } ?? false
-        guard managerSucceeded else {
-            WatchLaunchDiagnostics.mark("local purge stopped manager=false")
-            isPurgingData = false
-            Array(ambientOutboxRetryAttempts.keys).forEach {
-                scheduleAmbientOutboxRetry(for: $0)
-            }
-            flushPendingSensorSummaries(using: .default)
-            flushPendingAccelerationChunks(using: .default)
-            flushPendingAmbientOutbox(using: .default)
-            return false
-        }
-
-        ambientOutboxRetryAttempts.removeAll(keepingCapacity: false)
-        persistAmbientOutboxRetryAttempts()
-        sensorWriteTasks.removeAll(keepingCapacity: false)
-        pendingSensorSummaries.removeAll(keepingCapacity: false)
-        pendingAccelerationChunks.removeAll(keepingCapacity: false)
-        pendingHealthSnapshots.removeAll(keepingCapacity: false)
-        dataSyncRequestGate.reset()
-        persistPendingSensorSummaries()
-        persistPendingAccelerationChunks()
-        persistPendingHealthSnapshots()
-        payload = nil
-        handledWorkoutRequestIDs.removeAll(keepingCapacity: false)
-        handledWorkoutRequestOrder.removeAll()
-        TaptionWatchDeviceLocalDefaults.removeObject(forKey: cachedPayloadKey)
-        TaptionWatchWidgetStore.clear()
-        TaptionWatchMeasurementStore.clear()
-        WidgetCenter.shared.reloadAllTimelines()
-        WatchLaunchDiagnostics.mark(
-            "local purge completed manager=true database=true"
-        )
-        return true
-    }
-
-    private func flushPendingAmbientOutbox(
-        using session: WCSession,
-        deliveryIDs: Set<String>? = nil
-    ) {
-        guard !isPurgingData,
-              session.activationState == .activated,
-              let dayDatabase else { return }
-        guard !isFlushingAmbientOutbox else {
-            ambientOutboxFlushRequested = true
-            return
-        }
-        let generation = ambientOutboxFlushGeneration
-        isFlushingAmbientOutbox = true
-        let task = Task { @MainActor [weak self, dayDatabase, session, generation] in
-            defer {
-                if let self {
-                    self.isFlushingAmbientOutbox = false
-                    let shouldRetry = self.ambientOutboxFlushRequested
-                    self.ambientOutboxFlushRequested = false
-                    self.ambientOutboxFlushTask = nil
-                    if shouldRetry {
-                        self.flushPendingAmbientOutbox(using: session)
-                    }
-                }
-            }
-            guard let self,
-                  self.canContinueAmbientOutboxFlush(generation),
-                  !Task.isCancelled else { return }
-            do {
-                let items = try await dayDatabase.pendingAmbientOutbox(limit: 256)
-                guard self.canContinueAmbientOutboxFlush(generation) else {
-                    return
-                }
-                let pendingIDs = Set(items.map(\.id))
-                let staleRetryIDs = self.ambientOutboxRetryAttempts.keys.filter {
-                    $0 == TaptionWatchAmbientAcknowledgementRetryPolicy
-                        .outboxReadRetryID
-                        || (items.count < 256 && !pendingIDs.contains($0))
-                }
-                staleRetryIDs.forEach { self.ambientOutboxRetryAttempts[$0] = nil }
-                if !staleRetryIDs.isEmpty {
-                    self.persistAmbientOutboxRetryAttempts()
-                }
-                if self.ambientOutboxRetryAttempts.isEmpty {
-                    self.cancelAmbientOutboxRetry()
-                }
-                guard self.canContinueAmbientOutboxFlush(generation),
-                      session.activationState == .activated else { return }
-                for id in TaptionWatchAmbientAcknowledgementRetryPolicy
-                    .pendingDeliveryIDs(from: items) {
-                    self.scheduleAmbientOutboxRetry(for: id)
-                }
-                for id in self.ambientOutboxRetryAttempts.keys {
-                    self.scheduleAmbientOutboxRetry(for: id)
-                }
-                let outstandingIDs = Set(
-                    session.outstandingUserInfoTransfers.compactMap {
-                        $0.userInfo[
-                            TaptionWatchEnvelope.ambientDeliveryIDKey
-                        ] as? String
-                    }
-                )
-                for item in items {
-                    guard self.canContinueAmbientOutboxFlush(generation),
-                          session.activationState == .activated else {
-                        return
-                    }
-                    guard item.kind == TaptionWatchEnvelope.sensorSummaryKey
-                            || item.kind == TaptionWatchEnvelope.accelerationChunkKey
-                    else { continue }
-                    var envelope: [String: Any] = [
-                        item.kind: item.payload,
-                        TaptionWatchEnvelope.ambientDeliveryIDKey: item.id,
-                    ]
-                    if let requestID = self.activeDataSyncRequestID {
-                        envelope[TaptionWatchEnvelope.dataSyncRequestIDKey] =
-                            requestID
-                    }
-                    if !outstandingIDs.contains(item.id) {
-                        session.transferUserInfo(envelope)
-                        WatchLaunchDiagnostics.mark(
-                            "ambient outbox transfer scheduled id=\(item.id) kind=\(item.kind)"
-                        )
-                    }
-                    if self.ambientLiveDeliveryGate.reserve(
-                        id: item.id,
-                        payloadBytes: item.payload.count,
-                        isReachable: session.isReachable,
-                        now: ProcessInfo.processInfo.systemUptime
-                    ) {
-                        session.sendMessage(
-                            envelope,
-                            replyHandler: nil,
-                            errorHandler: { error in
-                                WatchLaunchDiagnostics.mark(
-                                    "ambient live transfer failed code=\((error as NSError).code)"
-                                )
-                            }
-                        )
-                        WatchLaunchDiagnostics.mark(
-                            "ambient live transfer scheduled bytes=\(item.payload.count)"
-                        )
-                    }
-                }
-            } catch {
-                guard self.canContinueAmbientOutboxFlush(generation) else {
-                    return
-                }
-                WatchLaunchDiagnostics.mark(
-                    "ambient outbox read failed error=\(error.localizedDescription)"
-                )
-                let retryIDs = TaptionWatchAmbientOutboxReadFailurePolicy.retryIDs(
-                    requested: deliveryIDs,
-                    alreadyTracked: Set(self.ambientOutboxRetryAttempts.keys)
-                )
-                retryIDs.forEach {
-                    self.scheduleAmbientOutboxRetry(for: $0)
-                }
-            }
-        }
-        ambientOutboxFlushTask = task
-    }
-
-    private func canContinueAmbientOutboxFlush(
-        _ generation: UInt64
-    ) -> Bool {
-        TaptionWatchAmbientOutboxFlushPolicy.shouldContinue(
-            startGeneration: generation,
-            currentGeneration: ambientOutboxFlushGeneration,
-            isPurging: isPurgingData,
-            isCancelled: Task.isCancelled
-        )
-    }
-
-    private func cancelAmbientOutboxFlush() async {
-        ambientOutboxFlushGeneration &+= 1
-        ambientOutboxFlushTask?.cancel()
-        await ambientOutboxFlushTask?.value
-        ambientOutboxFlushTask = nil
-        isFlushingAmbientOutbox = false
-        ambientOutboxFlushRequested = false
-    }
-
-    private func cancelAmbientOutboxRetry() {
-        ambientOutboxRetryTask?.cancel()
-        ambientOutboxRetryTask = nil
-        ambientOutboxRetryID = nil
-    }
-
-    private func scheduleAmbientOutboxRetry(for deliveryID: String) {
-        guard deliveryID.hasPrefix("summary:")
-                || deliveryID.hasPrefix("chunk:")
-                || deliveryID == TaptionWatchAmbientAcknowledgementRetryPolicy
-                    .outboxReadRetryID else { return }
-        let retryCount = ambientOutboxRetryAttempts[deliveryID] ?? 0
-        guard TaptionWatchAmbientAcknowledgementRetryPolicy.shouldRetry(
-            retryCount: retryCount,
-            hasDeliveryID: !deliveryID.isEmpty,
-            sessionIsActivated: WCSession.default.activationState == .activated,
-            isPurging: isPurgingData
-        ) else { return }
-        if ambientOutboxRetryAttempts[deliveryID] == nil {
-            ambientOutboxRetryAttempts[deliveryID] = retryCount
-            persistAmbientOutboxRetryAttempts()
-        }
-        guard WCSession.default.activationState == .activated,
-              ambientOutboxRetryID == nil else { return }
-        let retryID = UUID()
-        ambientOutboxRetryID = retryID
-        let delay = TaptionWatchAmbientAcknowledgementRetryPolicy.delay(
-            retryCount: retryCount
-        )
-        ambientOutboxRetryTask = Task { @MainActor [weak self] in
-            do {
-                try await Task.sleep(
-                    nanoseconds: UInt64(delay * 1_000_000_000)
-                )
-            } catch {
-                return
-            }
-            guard let self,
-                  self.ambientOutboxRetryID == retryID else { return }
-            self.ambientOutboxRetryID = nil
-            self.ambientOutboxRetryTask = nil
-            guard !Task.isCancelled,
-                  !self.isPurgingData,
-                  WCSession.default.activationState == .activated else { return }
-            let deliveryIDs = Set(self.ambientOutboxRetryAttempts.keys)
-            guard !deliveryIDs.isEmpty else { return }
-            for id in deliveryIDs {
-                self.ambientOutboxRetryAttempts[id] =
-                    TaptionWatchAmbientAcknowledgementRetryPolicy
-                        .nextRetryCount(after: self.ambientOutboxRetryAttempts[id] ?? 0)
-            }
-            self.persistAmbientOutboxRetryAttempts()
-            self.flushPendingAmbientOutbox(
-                using: .default,
-                deliveryIDs: deliveryIDs
-            )
-        }
-    }
-
-    private func acknowledgeAmbientDelivery(_ id: String) async {
-        guard id.hasPrefix("summary:") || id.hasPrefix("chunk:"),
-              let dayDatabase else { return }
-        let deleted = await TaptionWatchAmbientAcknowledgementRetryPolicy
-            .deleteOutboxItem(
-                id: id,
-                delete: {
-                    try await dayDatabase.acknowledgeAmbientOutbox(ids: [id])
-                },
-                onFailure: { [weak self] id, error in
-                    WatchLaunchDiagnostics.mark(
-                        "ambient outbox acknowledgement failed error=\(error.localizedDescription)"
-                    )
-                    self?.scheduleAmbientOutboxRetry(for: id)
-                }
-            )
-        guard deleted else { return }
-        ambientLiveDeliveryGate.acknowledge(id)
-        ambientOutboxRetryAttempts[id] = nil
-        persistAmbientOutboxRetryAttempts()
-        if ambientOutboxRetryAttempts.isEmpty {
-            cancelAmbientOutboxRetry()
-        }
-        WatchLaunchDiagnostics.mark("ambient outbox acknowledged id=\(id)")
-        guard !isPurgingData else { return }
-        await adoptLegacyAmbientQueue()
-        flushPendingAmbientOutbox(using: .default)
-    }
-
-    private func sendPurgeAcknowledgement(
-        requestID: String,
-        succeeded: Bool
-    ) {
-        guard WCSession.isSupported() else { return }
-        let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        session.transferUserInfo([
-            TaptionWatchEnvelope.purgeRequestIDKey: requestID,
-            TaptionWatchEnvelope.purgeAcknowledgedKey: succeeded,
-        ])
-    }
-
     private func applyWorkoutRequest(data: Data) {
         guard !isPurgingData,
               let request = try? decoder.decode(
@@ -1286,333 +882,6 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         default:
             statusText = language.text("연결 상태 확인 중", "Checking connection")
         }
-    }
-
-    private func transfer(
-        _ summary: TaptionWatchSensorSummary,
-        through session: WCSession
-    ) -> Bool {
-        guard let data = try? encoder.encode(summary) else {
-            WatchLaunchDiagnostics.mark(
-                "sensor encode failed sequence=\(summary.sequence)"
-            )
-            return false
-        }
-        let requestID = activeDataSyncRequestID ?? "none"
-        WatchLaunchDiagnostics.mark(
-            "sensor summary sequence=\(summary.sequence) samples=\(summary.accelerometerSampleCount) final=\(summary.isFinal) request_id=\(requestID)"
-        )
-        var envelope: [String: Any] = [
-            TaptionWatchEnvelope.sensorSummaryKey: data,
-        ]
-        if let activeDataSyncRequestID {
-            envelope[TaptionWatchEnvelope.dataSyncRequestIDKey] =
-                activeDataSyncRequestID
-        }
-        session.transferUserInfo(envelope)
-        WatchLaunchDiagnostics.mark(
-            "sensor reliable transfer scheduled sequence=\(summary.sequence) request_id=\(requestID) reachable=\(session.isReachable)"
-        )
-        if session.isReachable {
-            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
-        }
-        return true
-    }
-
-    private func cachePending(_ summary: TaptionWatchSensorSummary) {
-        TaptionWatchDurableSpoolPolicy.enqueue(
-            summary,
-            into: &pendingSensorSummaries
-        )
-        persistPendingSensorSummaries()
-        WatchLaunchDiagnostics.mark(
-            "sensor queue count=\(pendingSensorSummaries.count)"
-        )
-    }
-
-    private func flushPendingSensorSummaries(using session: WCSession) {
-        guard !isPurgingData,
-              session.activationState == .activated,
-              !pendingSensorSummaries.isEmpty else {
-            return
-        }
-        if pendingSensorSummaries.contains(where: { $0.isAmbient == true }) {
-            Task { @MainActor [weak self] in
-                await self?.adoptLegacyAmbientQueue()
-            }
-        }
-        let pending = pendingSensorSummaries.filter { $0.isAmbient != true }
-        guard !pending.isEmpty, !isFlushingSensorSummaries else { return }
-        if let dayDatabase {
-            let taskID = UUID()
-            isFlushingSensorSummaries = true
-            let task = Task { @MainActor [weak self, dayDatabase, pending] in
-                guard let self else { return }
-                defer { self.sensorWriteTasks[taskID] = nil; self.isFlushingSensorSummaries = false }
-                do {
-                    try await dayDatabase.appendBatch(pending)
-                } catch {
-                    WatchLaunchDiagnostics.mark("sensor batch store failed before send")
-                    return
-                }
-                guard !Task.isCancelled, !self.isPurgingData else { return }
-                let scheduled = self.transferPendingSensorSummaries(
-                    pending,
-                    through: session
-                )
-                guard TaptionWatchDurableSpoolPolicy.commitForTransfer(
-                    scheduled,
-                    from: &self.pendingSensorSummaries,
-                    isCancelled: Task.isCancelled,
-                    isPurging: self.isPurgingData
-                ) else { return }
-                self.persistPendingSensorSummaries()
-            }
-            sensorWriteTasks[taskID] = task
-            return
-        }
-        let scheduled = transferPendingSensorSummaries(pending, through: session)
-        guard TaptionWatchDurableSpoolPolicy.commitForTransfer(
-            scheduled,
-            from: &pendingSensorSummaries,
-            isCancelled: Task.isCancelled,
-            isPurging: isPurgingData
-        ) else { return }
-        persistPendingSensorSummaries()
-    }
-
-    private func cachePending(_ chunk: TaptionWatchAccelerationChunk) {
-        TaptionWatchDurableSpoolPolicy.enqueue(
-            chunk,
-            into: &pendingAccelerationChunks
-        )
-        persistPendingAccelerationChunks()
-        WatchLaunchDiagnostics.mark(
-            "acceleration queue count=\(pendingAccelerationChunks.count)"
-        )
-    }
-
-    private func flushPendingAccelerationChunks(using session: WCSession) {
-        guard !isPurgingData,
-              session.activationState == .activated,
-              !pendingAccelerationChunks.isEmpty else { return }
-        if pendingAccelerationChunks.contains(where: \.isAmbient) {
-            Task { @MainActor [weak self] in
-                await self?.adoptLegacyAmbientQueue()
-            }
-        }
-        let pending = pendingAccelerationChunks.filter { !$0.isAmbient }
-        guard !pending.isEmpty, !isFlushingAccelerationChunks else { return }
-        if let dayDatabase {
-            let taskID = UUID()
-            isFlushingAccelerationChunks = true
-            let task = Task { @MainActor [weak self, dayDatabase, pending] in
-                guard let self else { return }
-                defer { self.sensorWriteTasks[taskID] = nil; self.isFlushingAccelerationChunks = false }
-                for chunk in pending {
-                    do {
-                        try await dayDatabase.append(chunk)
-                    } catch {
-                        WatchLaunchDiagnostics.mark(
-                            "acceleration batch store failed before send chunk=\(chunk.id.uuidString)"
-                        )
-                        continue
-                    }
-                    guard !Task.isCancelled, !self.isPurgingData else { return }
-                    guard self.sendAccelerationChunkTransport(chunk) else {
-                        continue
-                    }
-                    guard TaptionWatchDurableSpoolPolicy.commitForTransfer(
-                        [chunk],
-                        from: &self.pendingAccelerationChunks,
-                        isCancelled: Task.isCancelled,
-                        isPurging: self.isPurgingData
-                    ) else { return }
-                    self.persistPendingAccelerationChunks()
-                }
-            }
-            sensorWriteTasks[taskID] = task
-            return
-        }
-        var scheduled: [TaptionWatchAccelerationChunk] = []
-        for chunk in pending where sendAccelerationChunkTransport(chunk) {
-            scheduled.append(chunk)
-        }
-        guard TaptionWatchDurableSpoolPolicy.commitForTransfer(
-            scheduled,
-            from: &pendingAccelerationChunks,
-            isCancelled: Task.isCancelled,
-            isPurging: isPurgingData
-        ) else { return }
-        persistPendingAccelerationChunks()
-    }
-
-    private func transferPendingSensorSummaries(
-        _ pending: [TaptionWatchSensorSummary],
-        through session: WCSession
-    ) -> [TaptionWatchSensorSummary] {
-        var scheduled: [TaptionWatchSensorSummary] = []
-        scheduled.reserveCapacity(pending.count)
-        for summary in pending {
-            if transfer(summary, through: session) {
-                scheduled.append(summary)
-            } else {
-                cachePending(summary)
-            }
-        }
-        return scheduled
-    }
-
-    private func cachePending(_ snapshot: TaptionWatchHealthSnapshot) {
-        TaptionWatchDurableSpoolPolicy.enqueue(
-            snapshot,
-            into: &pendingHealthSnapshots
-        )
-        persistPendingHealthSnapshots()
-        WatchLaunchDiagnostics.mark(
-            "health queue count=\(pendingHealthSnapshots.count)"
-        )
-    }
-
-    private func flushPendingHealthSnapshots(using session: WCSession) {
-        guard !isPurgingData,
-              session.activationState == .activated else {
-            if !pendingHealthSnapshots.isEmpty {
-                WatchLaunchDiagnostics.mark(
-                    "health queue flush skipped reason=inactive state=\(session.activationState.rawValue)"
-                )
-            }
-            return
-        }
-        guard !pendingHealthSnapshots.isEmpty else { return }
-        let pending = pendingHealthSnapshots
-        var scheduled: [TaptionWatchHealthSnapshot] = []
-        for snapshot in pending {
-            guard !Task.isCancelled, !isPurgingData else { break }
-            if sendHealthSnapshot(snapshot, through: session) {
-                scheduled.append(snapshot)
-            }
-        }
-        guard TaptionWatchDurableSpoolPolicy.commitForTransfer(
-            scheduled,
-            from: &pendingHealthSnapshots,
-            isCancelled: Task.isCancelled,
-            isPurging: isPurgingData
-        ) else { return }
-        persistPendingHealthSnapshots()
-        WatchLaunchDiagnostics.mark(
-            "health queue drained scheduled=\(scheduled.count) remaining=\(pendingHealthSnapshots.count)"
-        )
-    }
-
-    private func restorePendingHealthSnapshots() {
-        let data = TaptionWatchDeviceLocalDefaults.data(
-            forKey: pendingHealthSnapshotsKey
-        )
-        guard let values = TaptionWatchDurableSpoolCodec.decode(
-            [TaptionWatchHealthSnapshot].self,
-            from: data
-        ) else { return }
-        pendingHealthSnapshots = values
-    }
-
-    private func restoreAmbientOutboxRetryAttempts() {
-        let data = TaptionWatchDeviceLocalDefaults.data(
-            forKey: ambientOutboxRetryAttemptsKey
-        )
-        ambientOutboxRetryAttempts =
-            TaptionWatchAmbientAcknowledgementRetryPolicy
-                .restoredAttempts(from: data)
-    }
-
-    private func persistAmbientOutboxRetryAttempts() {
-        guard !ambientOutboxRetryAttempts.isEmpty else {
-            TaptionWatchDeviceLocalDefaults.removeObject(
-                forKey: ambientOutboxRetryAttemptsKey
-            )
-            return
-        }
-        guard let data = TaptionWatchAmbientAcknowledgementRetryPolicy
-            .encodedAttempts(ambientOutboxRetryAttempts) else {
-            return
-        }
-        TaptionWatchDeviceLocalDefaults.set(
-            data,
-            forKey: ambientOutboxRetryAttemptsKey
-        )
-    }
-
-    private let pendingAccelerationChunksFile = "pending-acceleration-chunks.json" // 묶음이 커서 파일에 둔다(WCH1110A01)
-    private func restorePendingAccelerationChunks() {
-        let data = WatchPendingFile.read(pendingAccelerationChunksFile, legacyKey: pendingAccelerationChunksKey)
-        guard let values = TaptionWatchDurableSpoolCodec.decode(
-            [TaptionWatchAccelerationChunk].self,
-            from: data
-        ) else { return }
-        pendingAccelerationChunks = values
-        WatchLaunchDiagnostics.mark(
-            "acceleration queue restored count=\(values.count)"
-        )
-    }
-
-    private func persistPendingAccelerationChunks() {
-        guard !pendingAccelerationChunks.isEmpty else {
-            return WatchPendingFile.remove(pendingAccelerationChunksFile, legacyKey: pendingAccelerationChunksKey)
-        }
-        guard let data = TaptionWatchDurableSpoolCodec.encode(pendingAccelerationChunks) else { return }
-        WatchPendingFile.write(data, to: pendingAccelerationChunksFile)
-    }
-
-    private func persistPendingHealthSnapshots() {
-        if pendingHealthSnapshots.isEmpty {
-            TaptionWatchDeviceLocalDefaults.removeObject(
-                forKey: pendingHealthSnapshotsKey
-            )
-            return
-        }
-        guard let data = TaptionWatchDurableSpoolCodec.encode(
-            pendingHealthSnapshots
-        ) else {
-            return
-        }
-        TaptionWatchDeviceLocalDefaults.set(
-            data,
-            forKey: pendingHealthSnapshotsKey
-        )
-    }
-
-    private func restorePendingSensorSummaries() {
-        let data = TaptionWatchDeviceLocalDefaults.data(
-            forKey: pendingSensorSummariesKey
-        )
-        guard let values = TaptionWatchDurableSpoolCodec.decode(
-            [TaptionWatchSensorSummary].self,
-            from: data
-        ) else {
-            return
-        }
-        pendingSensorSummaries = values
-        WatchLaunchDiagnostics.mark(
-            "sensor queue restored count=\(values.count)"
-        )
-    }
-
-    private func persistPendingSensorSummaries() {
-        if pendingSensorSummaries.isEmpty {
-            TaptionWatchDeviceLocalDefaults.removeObject(
-                forKey: pendingSensorSummariesKey
-            )
-            return
-        }
-        guard let data = TaptionWatchDurableSpoolCodec.encode(
-            pendingSensorSummaries
-        ) else {
-            return
-        }
-        TaptionWatchDeviceLocalDefaults.set(
-            data,
-            forKey: pendingSensorSummariesKey
-        )
     }
 }
 

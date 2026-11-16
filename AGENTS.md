@@ -55,6 +55,7 @@
 - `docs/TRIP_SHARE_PROTOCOL.md`: 여행 공유 통신 규약 v1 — 키 유도·시험 벡터, 암호문 형식, HTTP 경로·WebSocket 메시지, 잠금, 권한 표, 한도, 키 교체, 앱 구현 체크리스트(TSH1114A26).
 - `Packages/TaptionTripShare`·`TaptionPlan/Core/TripShare*.swift`: 여행 공유의 기기 쪽 핵심과 앱 토대(창구·곁 파일·변환·가드). 위치는 `DEVELOPMENT.md`의 소스 표 「여행 공유」 줄.
 - `docs/SHARED_RULES_PLAN.md`: 공통 규칙(서명한 묶음 받기·후보 모으기·대표 검토·약관 초안) 설계와 배포 순서(SRL1116A01). 약관 초안은 `TERMS.md`, 방침은 `PRIVACY.md`.
+- `docs/REFACTOR_TOP20.md`: 리팩토링 상위 20개 파일의 잰 값·할 일·겹침·상태와 전후 줄 수(RFT1116A01).
 - `docs/TRIP_LIVE_LOCATION_PLAN.md`: 여행 중 동행 실시간 위치 공유 설계(범위·동의·종단 암호화·주기·도와주세요·약관 초안·배포 순서, LOC1116S01). 통신 형식은 `docs/TRIP_SHARE_PROTOCOL.md` 21절.
 - `docs/ACCURACY_PLAN.md`: 분류 정확도 검토(약한 곳 10가지)와 제안 A~D, 카카오 지도 동일 화면 단계 K1~K5(ACC1114A01).
 - `docs/HOME_EVOLUTION_LIST.md`: 집 성장 366일 건축물 목록(생성물).
