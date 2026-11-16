@@ -571,6 +571,16 @@ struct MapHomeView: View {
                 isDayLoaded: { routeReadingsLoadState.isLoaded(for: model.selectedDate) && !dayDataIsPreview },
                 dayRowCount: { routeReadings.count },
                 setMinute: { selectedTimelineMinute = $0 },
+                setScrubbing: { active in
+                    // 사이드바 손짓의 onInteractionChanged와 같은 일을 한다.
+                    isTimelineInteractionActive = active
+                    if active {
+                        isTimelineSelectionPinned = true
+                    } else {
+                        flushDeferredWBSPlaybackProjection()
+                        recordTimelineWindow("handle_end")
+                    }
+                },
                 setLedger: { LedgerPresenter.shared.isPresented = $0 },
                 setTravel: { isTravelHomePresented = $0 }
             ))

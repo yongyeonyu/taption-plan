@@ -260,6 +260,7 @@ enum MapHomePerfBench {
         let isDayLoaded: () -> Bool
         let dayRowCount: () -> Int
         let setMinute: (Int?) -> Void
+        let setScrubbing: (Bool) -> Void
         let setLedger: (Bool) -> Void
         let setTravel: (Bool) -> Void
     }
@@ -289,18 +290,23 @@ enum MapHomePerfBench {
             try? await Task.sleep(for: .seconds(4))
             emit(name, ["days_ago": Double(days), "loaded_ms": loaded, "main_cpu_4s_ms": mainCPUMs() - main, "rows": Double(actions.dayRowCount())])
         }
-        // 시간 끌기: 화면 틱마다 고른 분을 옮긴다(3초에 하루 왕복). 사이드바 손짓 판정은 거치지 않는다.
+        // 시간 끌기: 손가락으로 끌 때처럼 「끄는 중」을 켜고 화면 틱(16ms)마다 고른 분을 옮긴다(3초에 하루 왕복).
+        // 사이드바의 손짓 판정만 거치지 않는다.
         actions.selectDaysAgo(1)
         await waitUntil(timeout: 20, actions.isDayLoaded)
         try? await Task.sleep(for: .seconds(4))
         for _ in 0..<3 {
             MapHomeInteractionMonitor.shared.begin("bench_scrub")
+            actions.setScrubbing(true)
             let began = CACurrentMediaTime()
+            var last: Int?
             while CACurrentMediaTime() - began < 6 {
                 let phase = (CACurrentMediaTime() - began).truncatingRemainder(dividingBy: 3) / 3
-                actions.setMinute(Int((1 - abs(phase * 2 - 1)) * 1_439))
-                try? await Task.sleep(for: .milliseconds(8))
+                let minute = Int((1 - abs(phase * 2 - 1)) * 1_439)
+                if minute != last { actions.setMinute(minute); last = minute }
+                try? await Task.sleep(for: .milliseconds(16))
             }
+            actions.setScrubbing(false)
             MapHomeInteractionMonitor.shared.end("bench_scrub")
             try? await Task.sleep(for: .seconds(2))
         }
