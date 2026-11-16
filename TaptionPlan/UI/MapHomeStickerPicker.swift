@@ -208,9 +208,9 @@ struct MapHomeStickerPickerSheet: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 68)
                 // 어두운 화면에서도 검은 테두리가 보이도록 칸 바탕은 밝은색으로 고정한다.
-                .background(Color(hex: "#FFF9EC"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color(hex: "#FFF9EC"), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                         .stroke(symbol == entry.id ? Color.tpAccent : Color.clear, lineWidth: 3)
                 }
                 .contentShape(Rectangle())

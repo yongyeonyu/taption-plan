@@ -33,7 +33,7 @@ struct MapHomeAppleWatchMenuItem: View {
                 .foregroundStyle(Color.tpInk)
                 .modifier(MapHomeMenuRowPadding())
                 .padding(.horizontal, 12)
-                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

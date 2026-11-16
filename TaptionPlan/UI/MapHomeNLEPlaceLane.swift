@@ -316,10 +316,10 @@ extension MapHomeNLEClipEditor {
     }
 
     private func placeBlock(_ segment: NLEPlaceSegment, height: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: 7, style: .continuous)
+        RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous)
             .fill(segment.kind == .transit ? Color.tpAccent.opacity(0.14) : Color.tpInk.opacity(segment.kind == .registered ? 0.1 : 0.04))
             .overlay {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous)
                     .stroke(
                         segment.kind == .transit ? Color.tpAccent.opacity(0.45) : Color.tpLine,
                         style: StrokeStyle(lineWidth: 1, dash: segment.kind == .visited ? [3, 3] : [])

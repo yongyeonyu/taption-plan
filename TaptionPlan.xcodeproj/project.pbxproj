@@ -708,6 +708,7 @@
 		B1TV11120000000000000107 /* TravelStreetMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000007 /* TravelStreetMap.swift */; };
 		B1TV11120000000000000108 /* TravelGlobeTouch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000008 /* TravelGlobeTouch.swift */; };
 		B1TV11120000000000000109 /* TravelModeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000009 /* TravelModeSupport.swift */; };
+		B1ST11160000000000000101 /* TravelModeTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1ST11160000000000000001 /* TravelModeTransition.swift */; };
 		B1TV1112000000000000010A /* TravelWishViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV1112000000000000000A /* TravelWishViews.swift */; };
 		B1TV1112000000000000010B /* TravelPlacePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV1112000000000000000B /* TravelPlacePicker.swift */; };
 		B1TV1112000000000000010C /* TravelPlanSpend.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV1112000000000000000C /* TravelPlanSpend.swift */; };
@@ -745,6 +746,7 @@
 		T5H1114A260000000000P005 /* TaptionTripShareTesting in Frameworks */ = {isa = PBXBuildFile; productRef = T5H1114A260000000000P003 /* TaptionTripShareTesting */; };
 		B1080700000000000000010A /* ne-cities.tsv in Resources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000A /* ne-cities.tsv */; };
 		B1080700000000000000010B /* TravelMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000B /* TravelMapTests.swift */; };
+		B1ST11160000000000000102 /* TravelModeTransitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1ST11160000000000000002 /* TravelModeTransitionTests.swift */; };
 		B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000C /* TravelMapVideoRenderTests.swift */; };
 		A1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */; };
 		A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */; };
@@ -1516,6 +1518,7 @@
 		B1TV11120000000000000007 /* TravelStreetMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelStreetMap.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000008 /* TravelGlobeTouch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGlobeTouch.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000009 /* TravelModeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeSupport.swift; sourceTree = "<group>"; };
+		B1ST11160000000000000001 /* TravelModeTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeTransition.swift; sourceTree = "<group>"; };
 		B1TV1112000000000000000A /* TravelWishViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelWishViews.swift; sourceTree = "<group>"; };
 		B1TV1112000000000000000B /* TravelPlacePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlacePicker.swift; sourceTree = "<group>"; };
 		B1TV1112000000000000000C /* TravelPlanSpend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlanSpend.swift; sourceTree = "<group>"; };
@@ -1551,6 +1554,7 @@
 		T5H1114A26000000000F0024 /* TripShareLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareLedgerTests.swift; sourceTree = "<group>"; };
 		B1080700000000000000000A /* ne-cities.tsv */ = {isa = PBXFileReference; lastKnownFileType = text; name = ne-cities.tsv; path = MapData/ne-cities.tsv; sourceTree = "<group>"; };
 		B1080700000000000000000B /* TravelMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTests.swift; sourceTree = "<group>"; };
+		B1ST11160000000000000002 /* TravelModeTransitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeTransitionTests.swift; sourceTree = "<group>"; };
 		B1080700000000000000000C /* TravelMapVideoRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoRenderTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangePlaybackTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangeRenderBenchTests.swift; sourceTree = "<group>"; };
@@ -1845,6 +1849,7 @@
 				F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */,
 				F1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift */,
 				B1080700000000000000000B /* TravelMapTests.swift */,
+				B1ST11160000000000000002 /* TravelModeTransitionTests.swift */,
 				B1080700000000000000000C /* TravelMapVideoRenderTests.swift */,
 				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
@@ -2126,6 +2131,7 @@
 				B1TV11120000000000000007 /* TravelStreetMap.swift */,
 				B1TV11120000000000000008 /* TravelGlobeTouch.swift */,
 				B1TV11120000000000000009 /* TravelModeSupport.swift */,
+				B1ST11160000000000000001 /* TravelModeTransition.swift */,
 				B1TV1112000000000000000A /* TravelWishViews.swift */,
 				B1TV1112000000000000000B /* TravelPlacePicker.swift */,
 				B1TV1112000000000000000C /* TravelPlanSpend.swift */,
@@ -3176,6 +3182,7 @@
 				B1TV11120000000000000107 /* TravelStreetMap.swift in Sources */,
 				B1TV11120000000000000108 /* TravelGlobeTouch.swift in Sources */,
 				B1TV11120000000000000109 /* TravelModeSupport.swift in Sources */,
+				B1ST11160000000000000101 /* TravelModeTransition.swift in Sources */,
 				B1TV1112000000000000010A /* TravelWishViews.swift in Sources */,
 				B1TV1112000000000000010B /* TravelPlacePicker.swift in Sources */,
 				B1TV1112000000000000010C /* TravelPlanSpend.swift in Sources */,
@@ -3491,6 +3498,7 @@
 				A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */,
 				A1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift in Sources */,
 				B1080700000000000000010B /* TravelMapTests.swift in Sources */,
+				B1ST11160000000000000102 /* TravelModeTransitionTests.swift in Sources */,
 				B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */,
 				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,

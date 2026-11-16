@@ -2,6 +2,17 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## STY1116A01 · 일상↔여행 전환 효과·전환 아이콘·스타일 통일 1차 (2026-11-16)
+
+- 전환 방식 비교: (가) `fullScreenCover`는 두고 시스템 올림 움직임만 끈 뒤 덮개 안에서 원형 가림으로 드러냄 — 모달·`dismiss()`·안쪽 시트가 그대로라 고른 것. (나) 홈 위 겹침(overlay)으로 여행 화면을 띄움 — 움직임은 완전히 다룰 수 있지만 `TravelModeView`의 `dismiss()`와 시트 표시가 달라져 여행 세션 셋이 고치는 파일까지 바꿔야 함. (다) UIKit 사용자 전환 — 가장 매끄럽지만 SwiftUI 바깥 코드가 커지고 시트 겹침에서 깨지기 쉬움.
+- 단위 시험: `TravelModeTransitionTests` 7건 통과(0 실패), 지정 시뮬레이터 `99AC6F35…`, `-parallel-testing-enabled NO`. 단계 상태 기계(두 번 누름·여는 중 닫기·닫는 중 다시 열기·늦게 온 끝남 신호)와 원 반지름·시작점. 로그 `build/validation/STY1116A01/unit-tests-1.log`.
+- 첫 구현은 녹화해 보니 원이 아니라 아래에서 올라옴(덮개를 올리는 「애니메이션 끔」 거래 안에서 퍼짐이 시작돼 바로 끝남). 고침: 올릴 때 `UIView.setAnimationsEnabled(false)`를 한 틱만, 퍼짐은 40ms 뒤 시작.
+- 고친 뒤 시뮬레이터 Debug 빌드(외장 볼륨 파생 데이터) 통과(`build-sim-2.log`), 지정 시뮬레이터에서 녹화: 비행기 단추를 누르면 그 자리에서 원이 퍼지며 여행 화면이 드러나고(`transition-open-frames.png`, 앞·중간·뒤 `transition-1-before.png`·`transition-2-mid.png`·`transition-3-after.png`), 여행 화면의 집 단추를 누르면 원이 오므라들어 일상의 비행기 단추 자리로 들어감(`transition-close-frames.png`). 끝나면 일상 단추는 다시 비행기.
+- 하단 메뉴: 스타일 변경 전(`home-after.png`)과 모든 변경 뒤(`home-style-after.png`) 사진의 하단 막대 영역(아래 8.5%)이 화소 단위로 같음(차이 0화소, `bottom-bar-before-after.png`). 홈 배치·고양이 크기도 같음(`home-before-after.png`, 다른 곳은 시각·고양이 동작 차이).
+- 스타일: 값이 같은 모서리 41곳 → `TaptionCorner`. 대표 결정(객관식 세 물음 모두 추천안)에 따라 사이 값 모서리 111곳을 네 단계로, 옛 `TaptionRadius` 값을 네 단계에 연결, 모양 바로 뒤 테두리 19곳을 1pt(강조 1.5)로. 표와 결정은 `docs/STYLE_UNIFY.md`, 다시 세는 도구 `scripts/style-survey.py`.
+- 동작 줄이기: 처음에는 켜면 크로스페이드가 아니라 아래에서 올라오는 것을 녹화로 찾음(시스템 움직임을 한 틱 뒤에 되돌려 덮개가 뜨기 전에 다시 켜짐). 고침: 덮개 안 화면이 나타난 뒤(40ms)에 되돌리고, 0.5초 예비. 다시 빌드(`build-sim-3.log`) 후 녹화: 닫기는 크로스페이드로 바뀜(`transition-reduce-motion-frames.png`), 열기는 올라오는 움직임이 없음(녹화가 늦게 시작돼 페이드 중간 프레임은 못 잡음, `transition-reduce-motion-open-frames.png`). 동작 줄이기를 끈 기본 원형 퍼짐도 그대로 동작(`transition-open-frames-2.png`). 공용 시뮬레이터의 동작 줄이기 설정은 끝난 뒤 다시 끔(0 확인).
+- main(4866007f)을 합침: `MapHomeView+Support.swift`의 여행 덮개 호출이 A안의 `importText:` 형태로 바뀐 것과 충돌 → A안 호출에 `.travelModeCover`를 씌워 풂. 합친 코드로 `TravelModeTransitionTests` 7건 통과(앱 Debug 빌드 포함, 지정 시뮬레이터, `unit-tests-2.log`). 외장 볼륨이 가득 차(0바이트) 이 실행은 맥북 작업 공간 파생 데이터로 했고 끝난 뒤 지움(2.8GB). 구조 점검은 「총 줄 수 +10% 초과」만 남음(main 쪽 증가, 이 브랜치는 약 400줄).
+- 못 한 것: 공유 초대로 저절로 열릴 때(단추 자리에서 퍼짐) 확인, 동작 줄이기 열기 페이드의 중간 프레임, 시트가 떠 있을 때 누름, 여행 단추 높이 44·40·32 맞춤(여행 세션 변경이 합쳐진 뒤), 실기기(아이폰 11) 확인. 시트 안 화면의 모서리 변경 전후 사진은 홈 첫 화면만 찍음.
 ## AIT1116A01 · 튜토리얼 AI 연결을 앞으로 + 「조각 맞추기」 1차 (2026-11-16, 메인 머지 전)
 
 - 바꾼 것: 튜토리얼 순서 `welcome → aiConnect → …`(전에는 「연결과 보호」 장 안쪽). AI 연결 장면은 3컷 시연(대화 → AI가 올림 → 일정표·지도·가계부)·할 수 있는 일 3가지·주 단추 「지금 연결」(AI 고르기 창)·작은 「나중에」. 건너뛴 사람에게 AI로 만들기 창에서 한 번만 안내(`AIConnectNudge.swift`, 키 `aiConnectNudgeShown`). 연결 키·PIN 보안은 그대로.

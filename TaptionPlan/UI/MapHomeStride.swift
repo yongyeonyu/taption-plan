@@ -163,7 +163,7 @@ struct MapHomeStrideCalibrationSheet: View {
                     }
                 }
                 .padding(14)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
 
                 HStack {
                     Text(language.text("직접 입력", "Manual"))

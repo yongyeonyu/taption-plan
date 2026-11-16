@@ -35,7 +35,7 @@ struct MapHomeMapStickerMarker: View {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(Color.white.opacity(0.94), in: Capsule())
-                .overlay { Capsule().stroke(Color.black, lineWidth: 1) }
+                .overlay { Capsule().stroke(Color.black, lineWidth: TaptionBorder.width) }
         }
         .taptionShadow(.floating)
         .fixedSize()
@@ -67,10 +67,10 @@ struct MapHomeMapMemoMarker: View {
         .padding(.vertical, 6)
         .background(
             Color.tpPastelButter.opacity(0.94),
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .stroke(Color.tpReferenceGold.opacity(0.72), lineWidth: 1)
         }
         // 말풍선 꼬리: 아래 가운데 끝이 선택한 위치(핀 끝)에 닿는다.
@@ -552,9 +552,9 @@ struct MapHomeStickerEditorSheet: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
     }
@@ -629,7 +629,7 @@ struct MapHomeStickerEditorSheet: View {
                         .tint(Color.tpAccent)
                 }
                 .frame(height: 150)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 Text(String(format: "%.5f, %.5f", point.latitude, point.longitude))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
@@ -716,7 +716,7 @@ struct MapHomeStickerEditorSheet: View {
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                     .foregroundStyle(Color(hex: colorHex))
                     .frame(width: 60, height: 60)
-                    .background(Color(hex: "#FFF9EC"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color(hex: "#FFF9EC"), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 Text(language.text("스티커 고르기", "Choose a sticker"))
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")

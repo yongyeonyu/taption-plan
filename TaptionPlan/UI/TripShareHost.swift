@@ -275,7 +275,7 @@ struct TripShareStatusBand: View {
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
             .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: TaptionCorner.small))
-            .overlay { RoundedRectangle(cornerRadius: TaptionCorner.small).stroke(TravelInk.border, lineWidth: 1) }
+            .overlay { RoundedRectangle(cornerRadius: TaptionCorner.small).stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
             .accessibilityIdentifier("travelTripShareBand")
             .sheet(isPresented: $asksPassword) { TripShareRekeySheet(language: language, tripID: tripID) }
         }

@@ -1683,7 +1683,7 @@ private struct CustomCategoryScreen: View {
                         Spacer()
                     }
                     .padding(13)
-                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 15))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
 
                     HStack {
                         Text("이름")
@@ -1736,7 +1736,7 @@ private struct CustomCategoryScreen: View {
                                         .overlay {
                                             if selectedColor == index {
                                                 RoundedRectangle(cornerRadius: TaptionRadius.field)
-                                                    .stroke(Color.tpInk, lineWidth: 2)
+                                                    .stroke(Color.tpInk, lineWidth: 1.5)
                                                     .padding(-3)
                                             }
                                         }

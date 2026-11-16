@@ -644,7 +644,7 @@ extension MapHomeView {
             .presentationDragIndicator(.visible)
         }
         .onChange(of: TripShareInbox.shared.pending != nil, initial: true) { _, invited in if invited { isTravelHomePresented = true } }
-        .fullScreenCover(isPresented: $isTravelHomePresented) {
+        .travelModeCover(isPresented: $isTravelHomePresented) {
             // 받은 여행 계획(붙여넣기·중계)도 여기서 가져온다. 예전 지도 여행 모드로는 가지 않는다(TVX1116A01).
             TravelModeView(model: model, language: language, importText: pastedTripText)
                 .onDisappear { pastedTripText = nil }

@@ -428,10 +428,10 @@ struct MemoDetailView: View {
             }
         }
         .padding(10)
-        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 15))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
         .overlay {
-            RoundedRectangle(cornerRadius: 15)
-                .stroke(Color.tpControlStroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium)
+                .stroke(Color.tpControlStroke, lineWidth: TaptionBorder.width)
         }
         .shadow(color: .black.opacity(0.07), radius: 8, y: 5)
     }

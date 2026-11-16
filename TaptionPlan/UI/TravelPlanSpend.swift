@@ -69,7 +69,7 @@ struct TravelMoneyBar: View {
             .padding(.horizontal, 12)
             .frame(height: 34)
             .background(TravelInk.panel, in: Capsule())
-            .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+            .overlay { Capsule().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("travelMoneyBar")

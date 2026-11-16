@@ -318,9 +318,9 @@ struct MapHomeNLEClipEditor: View {
             }
             // 줄 안의 클립이 화면 밖까지 길어도 카드 밖으로 새지 않게 크기를 못 박는다.
             .frame(width: width, height: height, alignment: .topLeading)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                     .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
             }
             .contentShape(Rectangle())
@@ -365,7 +365,7 @@ struct MapHomeNLEClipEditor: View {
         let isSelected = clip.id == selectedClipID || pickedClipIDs.contains(clip.id) || mergePreviewIDs.contains(clip.id)
         let isLifted = clip.id == liftedClipID
         return ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [tint.opacity(0.95), tint.opacity(0.72)],
@@ -373,7 +373,7 @@ struct MapHomeNLEClipEditor: View {
                         endPoint: .bottomTrailing
                     )
                 )
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .stroke(Color.white.opacity(isSelected ? 0.95 : 0.35), lineWidth: isSelected ? 2.5 : 1)
             // 선택 중에는 제목을 위 손잡이 아래로 내린다. 손잡이 사이에 못 들어가면 아래 요약 줄이 이름을 보여 준다.
             if blockHeight >= (isSelected ? 38 : 26), width > 34 {

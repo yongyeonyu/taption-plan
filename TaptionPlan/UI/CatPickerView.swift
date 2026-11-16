@@ -79,7 +79,7 @@ struct CatPickerView: View {
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        in: RoundedRectangle(cornerRadius: 15)
+                        in: RoundedRectangle(cornerRadius: TaptionCorner.medium)
                     )
 
                     LazyVGrid(

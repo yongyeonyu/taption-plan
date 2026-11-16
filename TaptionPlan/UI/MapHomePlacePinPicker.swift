@@ -55,7 +55,7 @@ struct MapHomePlacePinPicker: View {
             }
             .frame(minHeight: 200)
             .frame(height: height)
-            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             Button {
                 onSave(center)
             } label: {
@@ -65,7 +65,7 @@ struct MapHomePlacePinPicker: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .foregroundStyle(canSave ? Color.white : Color.tpSecondary)
-                    .background(canSave ? tint : Color.tpBackground, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .background(canSave ? tint : Color.tpBackground, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(!canSave)
@@ -86,7 +86,7 @@ struct MapHomePlacePinPicker: View {
             zoomButton("minus", label: language.text("축소", "Zoom out"), delta: -1)
         }
         .frame(width: 44)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         .padding(8)
     }

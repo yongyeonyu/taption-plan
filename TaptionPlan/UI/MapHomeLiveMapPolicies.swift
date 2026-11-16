@@ -778,9 +778,9 @@ struct MapHomeWeatherNoticeView: View {
         .multilineTextAlignment(.trailing)
         .padding(.horizontal, 7)
         .padding(.vertical, 4)
-        .background(Color.tpSurface.opacity(0.92), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .background(Color.tpSurface.opacity(0.92), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
         .accessibilityElement(children: .combine)

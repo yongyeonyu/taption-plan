@@ -374,7 +374,7 @@ struct MapHomeCounterDetailSheet: View {
                         .foregroundStyle(Color.tpSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(16)
-                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
                 }
                 ForEach(content.sections) { section in
                     sectionCard(section)
@@ -412,9 +412,9 @@ struct MapHomeCounterDetailSheet: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
     }
@@ -441,7 +441,7 @@ struct MapHomeCounterDetailSheet: View {
             }
         }
         .padding(16)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
     }
 
     private func sectionCard(_ section: MapHomeCounterDetailContent.Section) -> some View {
@@ -456,7 +456,7 @@ struct MapHomeCounterDetailSheet: View {
                     rowView(row)
                 }
             }
-            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
         }
     }
 

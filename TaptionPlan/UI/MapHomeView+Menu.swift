@@ -389,10 +389,10 @@ extension MapHomeView {
                     alignment: .top
                 )
                 .background(Color.tpSurface.opacity(0.62))
-                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous)
                         .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                 }
                 .padding(.top, menuTop)
@@ -590,7 +590,7 @@ extension MapHomeView {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .background(Color.tpAccent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(Color.tpAccent.opacity(0.08), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .contentShape(Rectangle())
     }
 
@@ -648,9 +648,9 @@ extension MapHomeView {
             content()
         }
         .padding(.vertical, 2)
-        .background(Color.tpSurface.opacity(0.78), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.tpSurface.opacity(0.78), in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
     }
@@ -809,7 +809,7 @@ extension MapHomeView {
                         .padding(.horizontal, 8)
                         .background(
                             category.tint.opacity(0.06),
-                            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                         )
                         .accessibilityElement(children: .contain)
                     }
@@ -897,7 +897,7 @@ extension MapHomeView {
                         .padding(.horizontal, 8)
                         .background(
                             Color.tpReferenceMint.opacity(0.06),
-                            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                         )
                     }
                 }
@@ -976,7 +976,7 @@ extension MapHomeView {
                 .padding(.horizontal, 8)
                 .background(
                     Color.tpReferenceRose.opacity(0.07),
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 )
                 .contentShape(Rectangle())
             }

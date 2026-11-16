@@ -1780,7 +1780,7 @@ private struct FrequentPlaceDetailView: View {
                     tint: UIColor(Color.tpPlaceDark)
                 )
                 .frame(height: 180)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             Slider(value: $radiusMeters, in: 30...500, step: 10)
                 .tint(Color.tpPlaceDark)

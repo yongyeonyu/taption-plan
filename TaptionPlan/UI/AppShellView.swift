@@ -994,7 +994,7 @@ private struct RequiredPermissionGateView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 20))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.large))
     }
 
     private func permissionCard(
@@ -1052,7 +1052,7 @@ private struct RequiredPermissionGateView: View {
             }
         }
         .padding(13)
-        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 16))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.large))
     }
 
     private func request(_ permission: RequiredPermission) {

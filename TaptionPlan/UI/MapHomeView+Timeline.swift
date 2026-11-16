@@ -237,7 +237,7 @@ extension MapHomeView {
                     Capsule()
                         .fill(Color.tpAccent.opacity(0.07))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                                 .stroke(Color.tpAccent.opacity(0.20), lineWidth: 0.8)
                         }
                         .frame(

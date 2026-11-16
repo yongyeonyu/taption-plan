@@ -44,7 +44,7 @@ struct MapHomeCounterTable: View {
                 }
             }
             .frame(width: moneyRows.isEmpty ? Self.boxWidth : Self.boxWidthWithSalary)
-            .mapHomeCounterPlate(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .mapHomeCounterPlate(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             .animation(.snappy, value: rowCount)
         }
     }
