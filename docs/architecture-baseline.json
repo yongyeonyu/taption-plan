@@ -30,7 +30,6 @@
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1367,
-    "TaptionPlan/Core/PlanningEngine.swift": 2259,
     "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1871,
     "TaptionPlan/Core/TravelModeClassifier.swift": 1367,
     "TaptionPlan/Core/WidgetShared.swift": 1678,

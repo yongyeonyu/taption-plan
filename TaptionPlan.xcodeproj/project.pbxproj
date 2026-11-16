@@ -190,6 +190,11 @@
 		A1000000000000000B1105C8 /* WidgetSharedEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C8 /* WidgetSharedEngines.swift */; };
 		A1000000000000000B1105C9 /* WidgetSharedEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C8 /* WidgetSharedEngines.swift */; };
 		A10000000000000000000011 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
+		A4FD6949CA1FDA595B696942 /* WeatherTimelineEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */; };
+		C38EADC38E73A6B5762E740D /* RecordRelationshipEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */; };
+		3307B18C5D4A31E44B067DC2 /* MemoAndPhotoEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */; };
+		EE7B3A821E8BAB071B1E6A0F /* PlaceStayAndSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */; };
+		99F70A4FD813F1270426E15A /* PlanGoalEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */; };
 		A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* TemplatesAndSettings.swift */; };
 		A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000071 /* StationaryContextClassifier.swift */; };
 		A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */; };
@@ -293,6 +298,11 @@
 		A10000000000000000000021 /* TaptionPlanWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* TaptionPlanWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000022 /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
 		A10000000000000000000024 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
+		E3A11DC5150E2D85998E4ABA /* WeatherTimelineEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */; };
+		1E2A6352C30B07C9807138F0 /* RecordRelationshipEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */; };
+		D9CADDB856A056A218B394FD /* MemoAndPhotoEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */; };
+		38D410163EED99BF6DD3ED32 /* PlaceStayAndSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */; };
+		1C9707B82F997A6CF1DFCDD0 /* PlanGoalEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */; };
 		A10000000000000000000025 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
 		A10000000000000000000026 /* StoreKitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000023 /* StoreKitSupport.swift */; };
 		A10000000000000000000027 /* CategoryManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000024 /* CategoryManagerView.swift */; };
@@ -1016,6 +1026,11 @@
 		F10000000000000000000010 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C8 /* WidgetSharedEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedEngines.swift; sourceTree = "<group>"; };
 		F10000000000000000000011 /* PlanningEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningEngine.swift; sourceTree = "<group>"; };
+		0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherTimelineEngines.swift; sourceTree = "<group>"; };
+		1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordRelationshipEngine.swift; sourceTree = "<group>"; };
+		F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoAndPhotoEngines.swift; sourceTree = "<group>"; };
+		77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceStayAndSleepEngines.swift; sourceTree = "<group>"; };
+		033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanGoalEngines.swift; sourceTree = "<group>"; };
 		F10000000000000000000012 /* TemplatesAndSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesAndSettings.swift; sourceTree = "<group>"; };
 		F10000000000000000000071 /* StationaryContextClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationaryContextClassifier.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntegrationPolicies.swift; sourceTree = "<group>"; };
@@ -2245,6 +2260,11 @@
 				F1FA1157352882250214647A /* PlanRecordModels.swift */,
 				F10000000000000000000010 /* PlanRepository.swift */,
 				F10000000000000000000011 /* PlanningEngine.swift */,
+				0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */,
+				1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */,
+				F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */,
+				77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */,
+				033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */,
 				F1000000000000000B1105C8 /* WidgetSharedEngines.swift */,
 				F1FA11518EFE631FA33E137B /* StableRecordID.swift */,
 				F10000000000000000000012 /* TemplatesAndSettings.swift */,
@@ -3206,6 +3226,11 @@
 				A1FA11EE9F352FA3C4B9FA2A /* PlanRecordModels.swift in Sources */,
 				A10000000000000000000010 /* PlanRepository.swift in Sources */,
 				A10000000000000000000011 /* PlanningEngine.swift in Sources */,
+				A4FD6949CA1FDA595B696942 /* WeatherTimelineEngines.swift in Sources */,
+				C38EADC38E73A6B5762E740D /* RecordRelationshipEngine.swift in Sources */,
+				3307B18C5D4A31E44B067DC2 /* MemoAndPhotoEngines.swift in Sources */,
+				EE7B3A821E8BAB071B1E6A0F /* PlaceStayAndSleepEngines.swift in Sources */,
+				99F70A4FD813F1270426E15A /* PlanGoalEngines.swift in Sources */,
 				A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */,
 				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
 				A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */,
