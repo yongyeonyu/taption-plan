@@ -63,6 +63,9 @@ public actor ShareFakeServer {
 
     public func socketCount(roomID: String) -> Int { rooms[roomID]?.sockets.count ?? 0 }
     public func rev(roomID: String) -> Int { rooms[roomID]?.rev ?? 0 }
+    /// 주인이 기간 창을 올린 것처럼 둔다(시험용).
+    public func openLocationWindow(roomID: String, from: Int, until: Int) { rooms[roomID]?.locWindow = (from, until) }
+    public func storedLocationMembers(roomID: String) -> [Int] { (rooms[roomID]?.locs.keys.sorted()) ?? [] }
     public func clearCalls() { calls = [] }
 
     /// 서버만 할 수 있는 장난: 항목의 암호문을 바꿔 놓는다(풀리지 않는 항목 시험).
@@ -129,6 +132,9 @@ public actor ShareFakeServer {
         var locks: [String: (by: Int, until: Int)] = [:]
         var items: [String: Item] = [:]
         var sockets: [ShareFakeSocket] = []
+        /// 동행 위치(LOC1116S01): 참여자 번호 → 마지막 암호문 한 건.
+        var locs: [Int: [String: Any]] = [:]
+        var locWindow: (from: Int, until: Int)?
 
         init(id: String, proof: String, ownerKey: String, createdAt: Int, expiresAt: Int) {
             self.id = id
@@ -146,7 +152,7 @@ public actor ShareFakeServer {
         var body: [String: Any]?
     }
 
-    private static let kinds = ["plan", "expense-shared", "expense-own", "notice", "member", "meta"]
+    private static let kinds = ["plan", "expense-shared", "expense-own", "notice", "member", "meta", "meet"]
     private static let limits: [String: Int] = [
         "members": 10, "itemBytes": 4096, "liveItems": 1000, "roomBytes": 1_048_576, "batch": 50, "locksPerMember": 20, "leaseMs": 120_000,
     ]
@@ -194,9 +200,15 @@ public actor ShareFakeServer {
         case "POST items": return write(room, me, body, origin: nil)
         case "POST locks": return lock(room, me, body, origin: nil)
         case "POST acks": return ack(room, me, noticeID: body["id"] as? String, origin: nil)
+        case "PUT loc": return loc(room, me, body, origin: nil)
+        case "DELETE loc":
+            room.locs[me.no] = nil
+            broadcast(room, ["t": "loc", "by": me.no, "off": true])
+            return Reply(status: 204, body: nil)
+        case "GET loc": return Reply(status: 200, body: ["locs": storedLocs(room), "locWindow": windowJSON(room), "now": now])
         default: break
         }
-        guard ["DELETE ", "POST kick", "POST close", "POST expiry", "POST rotate"].contains(op) else { return fail(404, "not_found") }
+        guard ["DELETE ", "POST kick", "POST close", "POST expiry", "POST rotate", "POST locwindow"].contains(op) else { return fail(404, "not_found") }
         guard me.no == 1, request.headers["x-share-owner"] == room.ownerKey else { return fail(403, "owner_only") }
         switch op {
         case "DELETE ":
@@ -217,6 +229,11 @@ public actor ShareFakeServer {
             room.expiresAt = value
             roomEvent(room)
             return Reply(status: 200, body: ["expiresAt": value])
+        case "POST locwindow":
+            guard let from = body["from"] as? Int, let until = body["until"] as? Int, until > from else { return fail(422, "bad_request") }
+            room.locWindow = (from, until)
+            roomEvent(room)
+            return Reply(status: 200, body: ["from": from, "until": until])
         default:
             return rotate(room, me, body)
         }
@@ -281,6 +298,19 @@ public actor ShareFakeServer {
         return room.locks.sorted { $0.key < $1.key }.map { ["name": $0.key, "by": $0.value.by, "until": $0.value.until] }
     }
 
+    private func windowJSON(_ room: Room) -> Any { room.locWindow.map { ["from": $0.from, "until": $0.until] as [String: Any] } ?? NSNull() }
+    private func storedLocs(_ room: Room) -> [[String: Any]] { room.locs.keys.sorted().compactMap { room.locs[$0] } }
+
+    private func loc(_ room: Room, _ me: Member, _ body: [String: Any], origin: ShareFakeSocket?) -> Reply {
+        guard let cipher = body["cipher"] as? String, body["epoch"] as? Int == room.epoch else { return fail(409, "epoch_mismatch", ["epoch": room.epoch]) }
+        guard let window = room.locWindow, now >= window.from, now < window.until else { return fail(403, "loc_closed", ["locWindow": windowJSON(room)]) }
+        var message: [String: Any] = ["by": me.no, "cipher": cipher, "epoch": room.epoch, "at": now]
+        if body["help"] as? Bool == true { message["help"] = true }
+        room.locs[me.no] = message
+        broadcast(room, message.merging(["t": "loc"]) { $1 }, except: origin)
+        return Reply(status: 200, body: ["now": now])
+    }
+
     private func describe(_ room: Room, _ me: Member) -> [String: Any] {
         let online = Set(room.sockets.map(\.member))
         let live = room.items.values.filter { !$0.deleted }
@@ -294,7 +324,7 @@ public actor ShareFakeServer {
             },
             "locks": liveLocks(room),
             "counts": ["items": live.count, "ids": room.items.count, "bytes": live.reduce(0) { $0 + ($1.cipher?.count ?? 0) * 3 / 4 }],
-            "limits": Self.limits, "now": now,
+            "limits": Self.limits, "now": now, "locWindow": windowJSON(room),
         ]
     }
 
@@ -372,6 +402,7 @@ public actor ShareFakeServer {
         case "notice": return mine || (deleting && me.no == 1) ? nil : fail(403, "forbidden", extra)
         case "member": return id == "member-\(me.no)" && !deleting ? nil : fail(403, "forbidden", extra)
         case "meta": return me.no == 1 ? nil : fail(403, "forbidden", extra)
+        case "meet": return id == "meet-point" && !deleting ? nil : fail(422, "bad_request", extra)
         default: return fail(422, "bad_request")
         }
     }
@@ -491,7 +522,7 @@ public actor ShareFakeServer {
     }
 
     private func roomEvent(_ room: Room) {
-        broadcast(room, ["t": "room", "closed": room.closed, "expiresAt": room.expiresAt, "epoch": room.epoch, "now": now])
+        broadcast(room, ["t": "room", "closed": room.closed, "expiresAt": room.expiresAt, "epoch": room.epoch, "locWindow": windowJSON(room), "now": now])
     }
 
     private func rotate(_ room: Room, _ me: Member, _ body: [String: Any]) -> Reply {
@@ -554,7 +585,7 @@ public actor ShareFakeServer {
         if mine.count >= 2, let oldest = mine.first { bye(room, oldest, reason: "replaced", code: 4003) }
         let wasOnline = room.sockets.contains { $0.member == me.no }
         room.sockets.append(socket)
-        send(socket, describe(room, me).merging(["t": "hello"]) { $1 })
+        send(socket, describe(room, me).merging(["t": "hello", "locs": storedLocs(room)]) { $1 })
         if !wasOnline { broadcast(room, ["t": "member", "event": "online", "no": me.no, "now": now], except: socket) }
         return socket
     }
@@ -574,6 +605,7 @@ public actor ShareFakeServer {
         case "ack": reply = ack(room, me, noticeID: body["notice"] as? String, origin: socket)
         case "changes": reply = changes(room, since: body["since"] as? Int ?? 0, limit: body["limit"] as? Int ?? 200)
         case "state": reply = Reply(status: 200, body: describe(room, me))
+        case "loc": reply = loc(room, me, body, origin: socket)
         default: reply = fail(400, "unknown_op")
         }
         // 본문의 id(공지 확인)보다 요청 번호가 앞선다.

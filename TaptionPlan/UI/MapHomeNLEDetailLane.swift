@@ -48,10 +48,10 @@ extension MapHomeNLEClipEditor {
 
     private func detailBar(_ clip: NLEClip, height: CGFloat) -> some View {
         let isSelected = clip.id == selectedSubClipID
-        return RoundedRectangle(cornerRadius: 7, style: .continuous)
+        return RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous)
             .fill(Self.tint(for: clip.option.categoryID).opacity(0.88))
             .overlay {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous)
                     .stroke(Color.white.opacity(isSelected ? 0.95 : 0.35), lineWidth: isSelected ? 2 : 0.7)
             }
             .overlay(alignment: .topLeading) {

@@ -251,6 +251,31 @@ public struct ShareTripMeta: Codable, Sendable, Equatable {
     }
 }
 
+/// 모이는 곳(`meet`, id `meet-point`). 좌표가 든 항목이라 위치 기간 창 안에서만 올린다. 지우지 않고 `on: false`로 덮어쓴다.
+public struct ShareMeetContent: Codable, Sendable, Equatable {
+    public var v = ShareContentVersion.current
+    public var on: Bool
+    public var name: String
+    public var lat: Double
+    public var lon: Double
+    /// 모이는 시각(밀리초). 정하지 않았으면 nil.
+    public var at: Int?
+    /// 정한 사람의 참여자 번호.
+    public var by: Int?
+
+    public init(on: Bool = true, name: String, latitude: Double, longitude: Double, at: Int? = nil, by: Int? = nil) {
+        self.on = on
+        self.name = String(name.prefix(60))
+        lat = latitude
+        lon = longitude
+        self.at = at
+        self.by = by
+    }
+
+    public var isValid: Bool { (-90...90).contains(lat) && (-180...180).contains(lon) }
+    public static let itemID = "meet-point"
+}
+
 /// 항목 하나의 평문.
 public enum ShareContent: Sendable, Equatable {
     case plan(SharePlanContent)
@@ -259,6 +284,7 @@ public enum ShareContent: Sendable, Equatable {
     case notice(ShareNoticeContent)
     case member(ShareMemberCard)
     case meta(ShareTripMeta)
+    case meet(ShareMeetContent)
     /// 더 새 판이 써서 이 판의 모양으로 읽지 못한 것. 보여 주지 못하지만 지우지 않는다.
     case unsupported(kind: String, version: Int)
 
@@ -275,6 +301,7 @@ public enum ShareContent: Sendable, Equatable {
         case .notice: ShareKind.notice.rawValue
         case .member: ShareKind.member.rawValue
         case .meta: ShareKind.meta.rawValue
+        case .meet: ShareKind.meet.rawValue
         case .unsupported(let kind, _): kind
         }
     }
@@ -287,6 +314,7 @@ public enum ShareContent: Sendable, Equatable {
         case .notice(let value): value.v
         case .member(let value): value.v
         case .meta(let value): value.v
+        case .meet(let value): value.v
         case .unsupported(_, let version): version
         }
     }
@@ -306,6 +334,7 @@ public enum ShareContent: Sendable, Equatable {
             case .notice(let value): return try encoder.encode(value)
             case .member(let value): return try encoder.encode(value)
             case .meta(let value): return try encoder.encode(value)
+            case .meet(let value): return try encoder.encode(value)
             case .unsupported: throw ShareError.readOnly(.newerVersion)
             }
         } catch let error as ShareError {
@@ -330,6 +359,7 @@ public enum ShareContent: Sendable, Equatable {
             case .notice: return .notice(try decoder.decode(ShareNoticeContent.self, from: json))
             case .member: return .member(try decoder.decode(ShareMemberCard.self, from: json))
             case .meta: return .meta(try decoder.decode(ShareTripMeta.self, from: json))
+            case .meet: return .meet(try decoder.decode(ShareMeetContent.self, from: json))
             }
         } catch {
             if head.v > ShareContentVersion.current { return .unsupported(kind: kind, version: head.v) }

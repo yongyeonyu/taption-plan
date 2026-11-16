@@ -325,16 +325,16 @@ extension Color {
     }
 }
 
-/// 모서리 반경 토큰. 화면에서 실제로 쓰이던 값을 이름만 붙여 모았다.
+/// 옛 모서리 이름. 값은 `TaptionCorner` 네 단계로 모았다(STY1116A01, 대표 결정 2026-11-16). 새 코드는 `TaptionCorner`를 쓴다.
 enum TaptionRadius {
-    static let tight: CGFloat = 7
-    static let small: CGFloat = 8
-    static let control: CGFloat = 9
-    static let field: CGFloat = 10
-    static let compact: CGFloat = 11
-    static let panel: CGFloat = 12
-    static let tile: CGFloat = 13
-    static let card: CGFloat = 14
+    static let tight = TaptionCorner.small
+    static let small = TaptionCorner.small
+    static let control = TaptionCorner.medium
+    static let field = TaptionCorner.medium
+    static let compact = TaptionCorner.medium
+    static let panel = TaptionCorner.medium
+    static let tile = TaptionCorner.medium
+    static let card = TaptionCorner.medium
 }
 
 /// 모서리 네 단계(UIR1111A01, 대표 결정). 새로 다듬는 화면은 이 넷만 쓴다: 작은 단추·칩 8, 카드·띠 12, 묶음 패널 16, 시트 24.

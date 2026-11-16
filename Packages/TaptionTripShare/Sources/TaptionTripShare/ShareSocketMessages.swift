@@ -38,6 +38,8 @@ public struct ShareRoomEvent: Codable, Sendable, Equatable {
     public var now: Int
     /// 키 교체 직후 주인에게만 온다.
     public var rekeyed: Bool?
+    /// 위치를 보낼 수 있는 기간. 없으면 닫힘.
+    public var locWindow: ShareLocWindow?
 }
 
 public enum ShareByeReason: String, Codable, Sendable {
@@ -66,6 +68,7 @@ public enum ShareSocketMessage: Sendable, Equatable {
     case ack(ShareAckEvent)
     case member(ShareMemberEvent)
     case room(ShareRoomEvent)
+    case loc(ShareWireLocation)
     /// 모르는 이유면 nil.
     case bye(ShareByeReason?)
     case response(ShareSocketResponse)
@@ -102,6 +105,7 @@ public enum ShareSocketMessage: Sendable, Equatable {
         case "ack": return .ack(try ShareJSON.decode(ShareAckEvent.self, from: data))
         case "member": return .member(try ShareJSON.decode(ShareMemberEvent.self, from: data))
         case "room": return .room(try ShareJSON.decode(ShareRoomEvent.self, from: data))
+        case "loc": return .loc(try ShareJSON.decode(ShareWireLocation.self, from: data))
         case "bye": return .bye(head.reason.flatMap(ShareByeReason.init(rawValue:)))
         case "res":
             guard let status = head.status else { throw ShareError.invalidResponse }

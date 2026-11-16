@@ -824,7 +824,7 @@ extension TimelineBoard {
                         .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous)
-                                .stroke(.white, lineWidth: 2)
+                                .stroke(.white, lineWidth: 1.5)
                         }
                         .shadow(color: .black.opacity(0.24), radius: 2.5, y: 1)
 

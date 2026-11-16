@@ -19,6 +19,78 @@ enum LedgerMemoFilter: String, CaseIterable, Identifiable {
         case .ai: "AI"
         }
     }
+
+    /// 고르지 않은 탭은 그림으로 줄여 긴 언어에서도 잘리지 않게 한다(HUX1116A04).
+    var systemImage: String {
+        switch self {
+        case .today: "wonsign.circle"
+        case .check: "checkmark.circle"
+        case .schedule: "calendar"
+        case .memos: "note.text"
+        case .inbox: "tray"
+        case .ai: "sparkles"
+        }
+    }
+
+    /// 탭에 보일 개수 글. 0이면 없고 99를 넘으면 「99+」.
+    static func badgeText(_ count: Int?) -> String? {
+        guard let count, count > 0 else { return nil }
+        return count > 99 ? "99+" : String(count)
+    }
+}
+
+/// 할 일 판의 탭 줄(HUX1116A04): 고른 탭만 이름을 쓰고, 나머지는 그림과 개수 점.
+struct LedgerMemoTabs: View {
+    @Binding var filter: LedgerMemoFilter
+    let counts: [LedgerMemoFilter: Int]
+    let language: MapHomeLanguage
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(LedgerMemoFilter.allCases) { tab in
+                let isSelected = tab == filter
+                let badge = LedgerMemoFilter.badgeText(counts[tab])
+                Button { withAnimation(.snappy) { filter = tab } } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: tab.systemImage)
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+                        if isSelected {
+                            Text(tab.title(language)).lineLimit(1).minimumScaleFactor(0.7)
+                        }
+                    }
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.tpInk : Color.tpSecondary)
+                    .frame(maxWidth: isSelected ? .infinity : nil, minHeight: 30)
+                    .padding(.horizontal, isSelected ? 8 : 6)
+                    .background {
+                        if isSelected { Capsule().fill(Color.tpBackground) }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if let badge {
+                            Text(badge)
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
+                                .monospacedDigit()
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 4)
+                                .frame(minWidth: 15, minHeight: 15)
+                                .background(Capsule().fill(tab == .check ? Color.orange : Color.tpAccent))
+                                .offset(x: 3, y: -3)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .taptionHitOutset(vertical: 7)
+                .layoutPriority(isSelected ? 1 : 0)
+                .accessibilityLabel(tab.title(language))
+                .accessibilityValue(badge.map { language.text("\($0)개", "\($0) items") } ?? "")
+                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .padding(2)
+        .background(Capsule().fill(Color.tpSecondary.opacity(0.14)))
+    }
 }
 
 /// 가계부 화면을 어디서든 연다(메모 목록 머리, 「+ 메모」 길게 누르기). 화면은 지도 왼쪽 위 단추 뒤에 붙은 호스트가 띄운다.
@@ -28,6 +100,13 @@ final class LedgerPresenter {
     static let shared = LedgerPresenter()
     /// 열려 있는 동안 아래 깔린 홈 화면은 갱신을 멈춘다(LGS1115A01).
     var isPresented = false { didSet { MapHomeLiveGate.shared.set(.ledger, covering: isPresented) } }
+    /// 열자마자 지출 입력 창을 띄운다(HUX1116A05, ₩ 줄의 ＋). 가계부가 한 번 읽고 끈다.
+    var startsAdding = false
+
+    func presentAdding() {
+        startsAdding = true
+        isPresented = true
+    }
 }
 
 struct LedgerSheetHost: View {
@@ -54,36 +133,56 @@ struct LedgerMemoHeader: View {
     @Binding var linkedMemoIDs: Set<UUID>
     let language: MapHomeLanguage
     let day: Date
+    /// 판이 아는 개수(확인·일정·메모). 「내역」은 여기서 그날 받은 글을 센다.
+    var counts: [LedgerMemoFilter: Int] = [:]
+    @State private var inboxCount = 0
     private var book: LedgerBook { .shared }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Picker("", selection: $filter) {
-                ForEach(LedgerMemoFilter.allCases) { Text($0.title(language)).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            Button { LedgerPresenter.shared.isPresented = true } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "wonsign.circle.fill").foregroundStyle(Color.tpAccent)
-                    Text(summary).lineLimit(1)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").foregroundStyle(Color.tpSecondary)
+            LedgerMemoTabs(filter: $filter, counts: counts.merging([.inbox: inboxCount]) { _, new in new }, language: language)
+            HStack(spacing: 0) {
+                Button { LedgerPresenter.shared.isPresented = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wonsign.circle.fill").foregroundStyle(Color.tpAccent)
+                        Text(summary).lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.leading, 12)
+                    .padding(.vertical, 7)
+                    .contentShape(Rectangle())
                 }
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
-                .foregroundStyle(Color.tpInk)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("memo-ledger-open")
+                // 오른쪽 ＋는 가계부를 열며 바로 지출 입력 창을 띄운다(HUX1116A05).
+                Button { LedgerPresenter.shared.presentAdding() } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+                        .foregroundStyle(Color.tpAccent)
+                        .frame(width: 40)
+                        .frame(maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .taptionHitOutset(vertical: 6)
+                .accessibilityLabel(language.text("지출 넣기", "Add spending"))
+                .accessibilityIdentifier("memo-ledger-add")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("memo-ledger-open")
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+            .foregroundStyle(Color.tpInk)
+            .fixedSize(horizontal: false, vertical: true)
+            .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             // 조용히 넣지 않은 결제는 「확인」 위에 띠로 모아 보인다(LRV1111A01, TDW1114A01).
             if filter == .check { LedgerReviewBand(language: language) }
         }
         .task {
             await book.load()
             publishLinkedIDs()
+        }
+        // 내역 개수는 날짜가 바뀌거나 탭을 바꿀 때만 다시 센다(지도 화면이 다시 그려질 때마다 읽지 않게).
+        .task(id: "\(day.timeIntervalSince1970)|\(filter.rawValue)") {
+            let count = PaymentInbox.items().filter { Calendar.autoupdatingCurrent.isDate($0.receivedAt, inSameDayAs: day) }.count
+            if count != inboxCount { inboxCount = count }
         }
         .onChange(of: book.entries) { _, _ in publishLinkedIDs() }
     }

@@ -35,7 +35,7 @@ extension AppModel {
                 tripID: plan.tripID, itemID: item.id, kind: item.kind.rawValue, title: item.title,
                 start: item.start, end: item.end,
                 startOffsetSeconds: item.timeZone.secondsFromGMT(for: item.start),
-                endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: item.status.stored,
+                endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: visitStatus(item, kept),
                 note: item.note.isEmpty ? nil : item.note,
                 colorHex: kept[item.id]?.colorHex, plannedSpendKRW: kept[item.id]?.plannedSpendKRW, parentItemID: kept[item.id]?.parentItemID
             ))
@@ -45,7 +45,7 @@ extension AppModel {
             stops.append(TravelPlanStop(
                 id: UUID(), title: item.title, latitude: coordinate.latitude, longitude: coordinate.longitude,
                 day: day, order: TravelPlanSchedule.stops(on: day, in: stops).count, planID: planID,
-                tripID: plan.tripID, itemID: item.id, status: item.status.stored
+                tripID: plan.tripID, itemID: item.id, status: visitStatus(item, kept)
             ))
         }
         snapshot.settings.travelPlanStops = stops
@@ -552,6 +552,7 @@ struct MapHomeTripImportSheet: View {
             VStack(alignment: .leading, spacing: 18) {
                 Text(language.text("AI로 여행 계획 만들기", "Plan a trip with AI"))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.headline), weight: .bold))
+                AIConnectNudgeSlot(model: model, language: language)
                 talkStep
                 if TripRelay.isAvailable { relayStep }
                 pasteStep
@@ -664,7 +665,7 @@ struct MapHomeTripImportSheet: View {
                 .font(.system(size: 12, design: .monospaced))
                 .frame(minHeight: 90)
                 .scrollContentBackground(.hidden)
-                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             wideButton(language.text("확인", "Check"), prominent: false) { read(pasted) }
                 .disabled(pasted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             // 못 읽은 까닭은 경고색으로 보인다(회색 보조 글자는 눈에 안 띈다, PLN1111A01 제안 7-5).
@@ -758,7 +759,7 @@ struct MapHomeTripImportSheet: View {
             Spacer(minLength: 0)
         }
         .padding(10)
-        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
     }
 
     private func warningText(_ warning: TripImportTimingCheck.Warning) -> String {
@@ -946,7 +947,7 @@ struct MapHomeTripImportSheet: View {
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                 .foregroundStyle(prominent ? Color.tpBackground : Color.tpInk)
                 .frame(maxWidth: .infinity, minHeight: 46)
-                .background(prominent ? Color.tpInk : Color.tpCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(prominent ? Color.tpInk : Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         .buttonStyle(.plain)
     }

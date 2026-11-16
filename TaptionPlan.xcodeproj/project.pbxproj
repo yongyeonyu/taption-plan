@@ -107,6 +107,7 @@
 		A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */; };
 		A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */; };
 		A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */; };
+		607F3CFDF67827418A7A8A47 /* TravelModeClassifier+Signals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F940955247968F220F267E /* TravelModeClassifier+Signals.swift */; };
 		A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */; };
 		A10000000000000000000001 /* TaptionPlanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* TaptionPlanApp.swift */; };
 		A10000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* AppModel.swift */; };
@@ -148,9 +149,17 @@
 		A10000000000000000000005 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* AppShellView.swift */; };
 		A10000000000000000000006 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000006 /* ScheduleView.swift */; };
 		A10000000000000000000007 /* GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000007 /* GoalsView.swift */; };
+		A555E510ADEA5505DC2F5A79 /* GoalDetailParts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */; };
+		8588E42DD2C1DE6268A73D68 /* GoalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */; };
+		B519210965A8995AF81BD1F8 /* RoutineTimeRangeSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */; };
+		01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */; };
 		A10000000000000000000008 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* ReviewView.swift */; };
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
+		5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */; };
+		F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */; };
+		27AB5D5D8EA08049CE1DEDAC /* MiniTimeSliceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */; };
+		C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */; };
 		5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F1 /* PlanTextSuggestion.swift */; };
 		A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F1 /* MemoTextPolish.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
@@ -190,6 +199,11 @@
 		A1000000000000000B1105C8 /* WidgetSharedEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C8 /* WidgetSharedEngines.swift */; };
 		A1000000000000000B1105C9 /* WidgetSharedEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C8 /* WidgetSharedEngines.swift */; };
 		A10000000000000000000011 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
+		A4FD6949CA1FDA595B696942 /* WeatherTimelineEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */; };
+		C38EADC38E73A6B5762E740D /* RecordRelationshipEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */; };
+		3307B18C5D4A31E44B067DC2 /* MemoAndPhotoEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */; };
+		EE7B3A821E8BAB071B1E6A0F /* PlaceStayAndSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */; };
+		99F70A4FD813F1270426E15A /* PlanGoalEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */; };
 		A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* TemplatesAndSettings.swift */; };
 		A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000071 /* StationaryContextClassifier.swift */; };
 		A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */; };
@@ -244,6 +258,7 @@
 		A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */; };
 		D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D15ABA1114A1500000000006 /* AssistantDigestTests.swift */; };
 		D22A1114A220000000000005 /* AssistantMoreActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D22A1114A220000000000006 /* AssistantMoreActionTests.swift */; };
+		ARL1116A01000000000003 /* SharedRuleStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRL1116A01000000000003 /* SharedRuleStoreTests.swift */; };
 		A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */; };
 		D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */; };
 		D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */; };
@@ -283,15 +298,31 @@
 		A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001C /* SleepAnalysisEngine.swift */; };
 		A1000000000000000000001D /* SensorDataServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* SensorDataServices.swift */; };
 		A1000000000000000000001E /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		F32C48963B1D5E07B587FC7D /* WidgetSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */; };
+		6841D0B0114051799D6AA131 /* WidgetCatEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */; };
+		B27429155CC7CC376B544969 /* SensorCollectionActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */; };
+		1477619E42A2F3CC7281493E /* LiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */; };
 		A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000001A70002 /* WidgetAppOnly.swift */; };
 		A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000020 /* TaptionPlanWidget.swift */; };
+		AF8ED5501D2F3CC3724BE648 /* TaptionWidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D819A2F5A8084C46702AAB75 /* TaptionWidgetIntents.swift */; };
+		D4E455A4832D6F6B9D33AC51 /* PrototypeWidgetTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A9B1B187C44F945AA3BF97 /* PrototypeWidgetTrack.swift */; };
+		EF1B5C9E36C5286B6120C9E1 /* TaptionScheduleWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3B183CA51E73A8424A60C7 /* TaptionScheduleWidgetView.swift */; };
 		C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */; };
 		C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */; };
 		C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */; };
 		A10000000000000000000020 /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		D2C8AB6C7FF62427C50ED178 /* WidgetSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */; };
+		166D7D35AD9FD04EEC99786E /* WidgetCatEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */; };
+		1E7F5C045ECD177F3E6A63F0 /* SensorCollectionActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */; };
+		22F40BBCC048CD0A2461AD02 /* LiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */; };
 		A10000000000000000000021 /* TaptionPlanWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* TaptionPlanWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000022 /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
 		A10000000000000000000024 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
+		E3A11DC5150E2D85998E4ABA /* WeatherTimelineEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */; };
+		1E2A6352C30B07C9807138F0 /* RecordRelationshipEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */; };
+		D9CADDB856A056A218B394FD /* MemoAndPhotoEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */; };
+		38D410163EED99BF6DD3ED32 /* PlaceStayAndSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */; };
+		1C9707B82F997A6CF1DFCDD0 /* PlanGoalEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */; };
 		A10000000000000000000025 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
 		A10000000000000000000026 /* StoreKitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000023 /* StoreKitSupport.swift */; };
 		A10000000000000000000027 /* CategoryManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000024 /* CategoryManagerView.swift */; };
@@ -302,11 +333,19 @@
 		A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */; };
 		A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002A /* WatchConnectivitySupport.swift */; };
+		817838D7A6AD39CBCE82FCAF /* AppleWatchConnectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54098A0F6E26340F8C3FF63A /* AppleWatchConnectionModels.swift */; };
 		C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000032 /* WatchActivityReplay.swift */; };
 		A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000060 /* WatchLaunchDiagnostics.swift */; };
 		A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002B /* TaptionPlanWatchApp.swift */; };
 		A1000000000000000000002D /* WatchConnectivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002C /* WatchConnectivityController.swift */; };
+		7707DAEE983BE30C78C07F7E /* WatchConnectivityController+PendingQueues.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BC68E0457B7860E195FA2F6 /* WatchConnectivityController+PendingQueues.swift */; };
+		3CA5516D1AC2C321B4908457 /* WatchConnectivityController+AmbientOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43F0175ACF24B52B149A152 /* WatchConnectivityController+AmbientOutbox.swift */; };
+		91D631C8C0BFBC8129833933 /* WatchConnectivityController+Purge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F5BF821F457319D8F0F104 /* WatchConnectivityController+Purge.swift */; };
 		A1000000000000000000002E /* WatchWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* WatchWorkoutManager.swift */; };
+		FE065DB4C04A97C20DA0A5F9 /* WatchWorkoutManager+Sensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C769A089E8740CFD112FFEC2 /* WatchWorkoutManager+Sensors.swift */; };
+		739E80FAE7B22494F3870331 /* WatchWorkoutManager+WorkoutPurge.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDE1D9B2A763F8F32341095F /* WatchWorkoutManager+WorkoutPurge.swift */; };
+		66060F3B955D065703DADA56 /* WatchWorkoutManager+Health.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93BF355AF80D32FCBBEC6ED5 /* WatchWorkoutManager+Health.swift */; };
+		F56B6107FF552C65CEF782AE /* WatchAccelerationArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D946A60D8A9BD9CD7786F5E /* WatchAccelerationArchive.swift */; };
 		A10000000000000000000070 /* WatchAmbientSensorRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000070 /* WatchAmbientSensorRecorder.swift */; };
 		A1000000000000000B1105B1 /* WatchTodayCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105B1 /* WatchTodayCards.swift */; };
 		A1000000000000000B1105B2 /* WatchStatusViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105B2 /* WatchStatusViews.swift */; };
@@ -341,6 +380,7 @@
 		A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111X0100000000000001 /* GPXTrackExport.swift */; };
 		A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111T0100000000000001 /* LedgerTollRepeat.swift */; };
 		A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PRL1112A01000000000001 /* LedgerMessageRules.swift */; };
+		ARL1116A01000000000001 /* SharedRuleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRL1116A01000000000001 /* SharedRuleStore.swift */; };
 		A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AIX1114A01000000000001 /* AssistantRuleStore.swift */; };
 		A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PAS1113A01000000000001 /* PaymentAlertSources.swift */; };
 		A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000001 /* LedgerTransitFare.swift */; };
@@ -400,6 +440,10 @@
 		A1000000000000000000007C /* SubwayCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007C /* SubwayCatalog.swift */; };
 		C1F111100000000000000004 /* SubwayCatalog+Routing.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F111100000000000000003 /* SubwayCatalog+Routing.swift */; };
 		A10000000000000000000085 /* RouteTimelineData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000085 /* RouteTimelineData.swift */; };
+		78A04AA29041D0599FD23AAF /* RouteTimelineDataEngine+Segments.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7DC2660D2DDA762BDF79F88 /* RouteTimelineDataEngine+Segments.swift */; };
+		0984A81FF6DB5322DB46E056 /* RouteTimelineDataEngine+Display.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122467C75FB310A42DF2BF2B /* RouteTimelineDataEngine+Display.swift */; };
+		CCAE13815AE63CB7E40AA7CF /* ExpectedRouteRequestEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E1848FC54355242A1A712C /* ExpectedRouteRequestEngine.swift */; };
+		46C5EF5FEF6717E4CAC9B5B6 /* RouteTimelineModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B896DD5D283C14FCF4115329 /* RouteTimelineModels.swift */; };
 		A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */; };
 		A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000095 /* RoutePolylineDecimator.swift */; };
 		A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000086 /* RouteTimelineDataTests.swift */; };
@@ -429,6 +473,9 @@
 		A40000000000000000000001 /* TaptionActivityEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000002 /* TaptionActivityEngine */; };
 		A40000000000000000000002 /* TaptionRouteEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000004 /* TaptionRouteEngine */; };
 		A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */; };
+		E23F65D234B3FBCC31C3EBA0 /* ActivityClassificationLockEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EC8A4E1C38FC3EA94CA6F0 /* ActivityClassificationLockEngine.swift */; };
+		3FDE6F78D83F0443F159C9F2 /* TaptionActivityEngineAdapter+Overrides.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68764F937E5A4C8384AADD10 /* TaptionActivityEngineAdapter+Overrides.swift */; };
+		D1DA8BE663C5819F68C209DB /* TaptionActivityEngineAdapter+TravelMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CFE220A1AC2E0D576BE73E /* TaptionActivityEngineAdapter+TravelMatching.swift */; };
 		AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1A55000000000000000001 /* ClassifierAdapter.swift */; };
 		A10000000000000003C90002 /* ClassificationBackfill.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90002 /* ClassificationBackfill.swift */; };
 		A10000000000000003C90001 /* AppleWatchNapPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90001 /* AppleWatchNapPolicy.swift */; };
@@ -461,6 +508,8 @@
 		C51A1111A010000000000004 /* MapHomeView+Siri.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51A1111A010000000000003 /* MapHomeView+Siri.swift */; };
 		A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */; };
 		A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E4358522139E5590681710 /* MapHomeView+Support3.swift */; };
+		319A1263A20B507E246E4253 /* MapHomeDaySummaryBand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E19F93569FC7DA338430F75 /* MapHomeDaySummaryBand.swift */; };
+		B2C00275D48DA8EE0E78A918 /* MapHomeMenuShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99362D6409E1783BF738F707 /* MapHomeMenuShortcuts.swift */; };
 		A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */; };
 		A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */; };
 		A1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */; };
@@ -578,7 +627,11 @@
 		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
 		CC4A1111A010000000000002 /* FirstRunCarPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A1111A010000000000001 /* FirstRunCarPage.swift */; };
+		ARL1116A01000000000002 /* SharedRulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRL1116A01000000000002 /* SharedRulesView.swift */; };
 		A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000005 /* AssistantSafetyViews.swift */; };
+		C1A1116A01B0000000000000 /* AIConnectNudge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A01F0000000000000 /* AIConnectNudge.swift */; };
+		C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A02F0000000000000 /* TravelPuzzle.swift */; };
+		C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */; };
 		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
 		B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */; };
 		B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */; };
@@ -693,13 +746,18 @@
 		B1TV11120000000000000102 /* ne-regions.bin in Resources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000002 /* ne-regions.bin */; };
 		B1TV11120000000000000101 /* TravelModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000001 /* TravelModeView.swift */; };
 		B1TV11120000000000000103 /* TravelPlanTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000003 /* TravelPlanTable.swift */; };
+		B1TVZ1116C0100000000B002 /* TravelTodayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TVZ1116C0100000000F002 /* TravelTodayCard.swift */; };
+		B1TVZ1116C0100000000B001 /* TravelTodayLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TVZ1116C0100000000F001 /* TravelTodayLogic.swift */; };
 		B1TV11120000000000000104 /* TravelQuickEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */; };
 		B1TV11120000000000000105 /* TravelNewTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000005 /* TravelNewTripSheet.swift */; };
 		B1TV11120000000000000106 /* TravelRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000006 /* TravelRoutes.swift */; };
+		TVY1116B0100000000000B02 /* TravelCourseSort.swift in Sources */ = {isa = PBXBuildFile; fileRef = TVY1116B0100000000000F02 /* TravelCourseSort.swift */; };
+		TVY1116B0100000000000B01 /* TravelDayBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = TVY1116B0100000000000F01 /* TravelDayBoard.swift */; };
 		B1TV11130000000000000101 /* TravelPlacePhotos.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11130000000000000001 /* TravelPlacePhotos.swift */; };
 		B1TV11120000000000000107 /* TravelStreetMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000007 /* TravelStreetMap.swift */; };
 		B1TV11120000000000000108 /* TravelGlobeTouch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000008 /* TravelGlobeTouch.swift */; };
 		B1TV11120000000000000109 /* TravelModeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000009 /* TravelModeSupport.swift */; };
+		B1ST11160000000000000101 /* TravelModeTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1ST11160000000000000001 /* TravelModeTransition.swift */; };
 		B1TV1112000000000000010A /* TravelWishViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV1112000000000000000A /* TravelWishViews.swift */; };
 		B1TV1112000000000000010B /* TravelPlacePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV1112000000000000000B /* TravelPlacePicker.swift */; };
 		B1TV1112000000000000010C /* TravelPlanSpend.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV1112000000000000000C /* TravelPlanSpend.swift */; };
@@ -713,6 +771,8 @@
 		T5H1114A26000000000B0008 /* TripSharePlanEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */; };
 		T5H1114A26000000000B0009 /* TripSharePlanProjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0009 /* TripSharePlanProjector.swift */; };
 		T5H1114A26000000000B0010 /* TripShareLockBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0010 /* TripShareLockBadge.swift */; };
+		L0C1116S01000000000B0003 /* TripLiveLocationBand.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0003 /* TripLiveLocationBand.swift */; };
+		L0C1116S01000000000B0002 /* TravelCompanionLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0002 /* TravelCompanionLayer.swift */; };
 		T5H1114A26000000000B0011 /* TripShareLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0011 /* TripShareLedger.swift */; };
 		T5H1114A26000000000B0012 /* TripShareExpenseScopePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0012 /* TripShareExpenseScopePicker.swift */; };
 		T5H1114A26000000000B0013 /* TripShareSettlementSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0013 /* TripShareSettlementSection.swift */; };
@@ -720,17 +780,23 @@
 		T5H1114A26000000000B0015 /* TripShareNoticeAlerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0015 /* TripShareNoticeAlerts.swift */; };
 		T5H1114A26000000000B0016 /* TripShareEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0016 /* TripShareEnvironment.swift */; };
 		T5H1114A26000000000B0017 /* TripShareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0017 /* TripShareStore.swift */; };
+		L0C1116S01000000000B0001 /* TripLiveLocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0001 /* TripLiveLocationService.swift */; };
+		L0C1116S01000000000B0000 /* TripLiveLocationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0000 /* TripLiveLocationPolicy.swift */; };
 		T5H1114A26000000000B0018 /* TripShareSidecar.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0018 /* TripShareSidecar.swift */; };
 		T5H1114A26000000000B0019 /* TripShareMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0019 /* TripShareMapping.swift */; };
 		T5H1114A26000000000B0020 /* AppModel+TripShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0020 /* AppModel+TripShare.swift */; };
 		T5H1114A26000000000B0021 /* TripShareFoundationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0021 /* TripShareFoundationTests.swift */; };
+		L0C1116S01000000000B0004 /* TripLiveLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0004 /* TripLiveLocationTests.swift */; };
 		T5H1114A26000000000B0022 /* TripShareRoomTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0022 /* TripShareRoomTests.swift */; };
 		T5H1114A26000000000B0023 /* TripSharePlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0023 /* TripSharePlanTests.swift */; };
+		TVY1116B0100000000000B03 /* TravelDayBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TVY1116B0100000000000F03 /* TravelDayBoardTests.swift */; };
 		T5H1114A26000000000B0024 /* TripShareLedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0024 /* TripShareLedgerTests.swift */; };
 		T5H1114A260000000000P004 /* TaptionTripShare in Frameworks */ = {isa = PBXBuildFile; productRef = T5H1114A260000000000P002 /* TaptionTripShare */; };
 		T5H1114A260000000000P005 /* TaptionTripShareTesting in Frameworks */ = {isa = PBXBuildFile; productRef = T5H1114A260000000000P003 /* TaptionTripShareTesting */; };
 		B1080700000000000000010A /* ne-cities.tsv in Resources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000A /* ne-cities.tsv */; };
 		B1080700000000000000010B /* TravelMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000B /* TravelMapTests.swift */; };
+		B1ST11160000000000000102 /* TravelModeTransitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1ST11160000000000000002 /* TravelModeTransitionTests.swift */; };
+		B1TVZ1116C0100000000B003 /* TravelTodayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TVZ1116C0100000000F003 /* TravelTodayTests.swift */; };
 		B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000C /* TravelMapVideoRenderTests.swift */; };
 		A1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */; };
 		A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */; };
@@ -753,6 +819,7 @@
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
 		A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */; };
+		C1A1116A04B0000000000000 /* TravelPuzzleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */; };
 		A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */; };
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
 		A1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift */; };
@@ -940,6 +1007,7 @@
 		F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthRouteMergeEngine.swift; sourceTree = "<group>"; };
 		F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorEstimator.swift; sourceTree = "<group>"; };
 		F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeClassifier.swift; sourceTree = "<group>"; };
+		53F940955247968F220F267E /* TravelModeClassifier+Signals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TravelModeClassifier+Signals.swift"; sourceTree = "<group>"; };
 		F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSensorMapProjection.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* TaptionPlan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaptionPlan.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000000000000000000002 /* TaptionPlanTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -986,9 +1054,17 @@
 		F10000000000000000000005 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
 		F10000000000000000000006 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
 		F10000000000000000000007 /* GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsView.swift; sourceTree = "<group>"; };
+		2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailParts.swift; sourceTree = "<group>"; };
+		0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailView.swift; sourceTree = "<group>"; };
+		BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineTimeRangeSlider.swift; sourceTree = "<group>"; };
+		2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000008 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		F10000000000000000000009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
+		3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSliderScreen.swift; sourceTree = "<group>"; };
+		71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AddPlanSheet+CategoryPickers.swift"; sourceTree = "<group>"; };
+		C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniTimeSliceEditor.swift; sourceTree = "<group>"; };
+		3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalRepeatRulesEditor.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F1 /* PlanTextSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTextSuggestion.swift; sourceTree = "<group>"; };
 		F1A11102A0100000000000F1 /* MemoTextPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolish.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -1009,6 +1085,11 @@
 		F10000000000000000000010 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C8 /* WidgetSharedEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedEngines.swift; sourceTree = "<group>"; };
 		F10000000000000000000011 /* PlanningEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningEngine.swift; sourceTree = "<group>"; };
+		0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherTimelineEngines.swift; sourceTree = "<group>"; };
+		1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordRelationshipEngine.swift; sourceTree = "<group>"; };
+		F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoAndPhotoEngines.swift; sourceTree = "<group>"; };
+		77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceStayAndSleepEngines.swift; sourceTree = "<group>"; };
+		033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanGoalEngines.swift; sourceTree = "<group>"; };
 		F10000000000000000000012 /* TemplatesAndSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesAndSettings.swift; sourceTree = "<group>"; };
 		F10000000000000000000071 /* StationaryContextClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationaryContextClassifier.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntegrationPolicies.swift; sourceTree = "<group>"; };
@@ -1063,6 +1144,7 @@
 		F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommandEditTests.swift; sourceTree = "<group>"; };
 		D15ABA1114A1500000000006 /* AssistantDigestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDigestTests.swift; sourceTree = "<group>"; };
 		D22A1114A220000000000006 /* AssistantMoreActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMoreActionTests.swift; sourceTree = "<group>"; };
+		FRL1116A01000000000003 /* SharedRuleStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedRuleStoreTests.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPhase3Tests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLastKnownLocationPolicyTests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeExpectedRouteRefreshGateTests.swift; sourceTree = "<group>"; };
@@ -1104,8 +1186,15 @@
 		F1000000000000000000001D /* SensorDataServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataServices.swift; sourceTree = "<group>"; };
 		F1000000000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000000000000000000001F /* WidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetShared.swift; sourceTree = "<group>"; };
+		54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedStore.swift; sourceTree = "<group>"; };
+		908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCatEngines.swift; sourceTree = "<group>"; };
+		197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionActivityShared.swift; sourceTree = "<group>"; };
+		046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityShared.swift; sourceTree = "<group>"; };
 		F10000000000000001A70002 /* WidgetAppOnly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAppOnly.swift; sourceTree = "<group>"; };
 		F10000000000000000000020 /* TaptionPlanWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWidget.swift; sourceTree = "<group>"; };
+		D819A2F5A8084C46702AAB75 /* TaptionWidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionWidgetIntents.swift; sourceTree = "<group>"; };
+		60A9B1B187C44F945AA3BF97 /* PrototypeWidgetTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrototypeWidgetTrack.swift; sourceTree = "<group>"; };
+		CE3B183CA51E73A8424A60C7 /* TaptionScheduleWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionScheduleWidgetView.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionLiveActivity.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanLiveActivity.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionLiveActivityCat.swift; sourceTree = "<group>"; };
@@ -1121,11 +1210,19 @@
 		F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSummaryAccumulator.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchMenuPolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000000002A /* WatchConnectivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivitySupport.swift; sourceTree = "<group>"; };
+		54098A0F6E26340F8C3FF63A /* AppleWatchConnectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchConnectionModels.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000032 /* WatchActivityReplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActivityReplay.swift; sourceTree = "<group>"; };
 		F1000000000000000000002B /* TaptionPlanWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchApp.swift; sourceTree = "<group>"; };
 		F1000000000000000000002C /* WatchConnectivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityController.swift; sourceTree = "<group>"; };
+		0BC68E0457B7860E195FA2F6 /* WatchConnectivityController+PendingQueues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchConnectivityController+PendingQueues.swift"; sourceTree = "<group>"; };
+		C43F0175ACF24B52B149A152 /* WatchConnectivityController+AmbientOutbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchConnectivityController+AmbientOutbox.swift"; sourceTree = "<group>"; };
+		85F5BF821F457319D8F0F104 /* WatchConnectivityController+Purge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchConnectivityController+Purge.swift"; sourceTree = "<group>"; };
 		F10000000000000000000060 /* WatchLaunchDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLaunchDiagnostics.swift; sourceTree = "<group>"; };
 		F1000000000000000000002D /* WatchWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWorkoutManager.swift; sourceTree = "<group>"; };
+		C769A089E8740CFD112FFEC2 /* WatchWorkoutManager+Sensors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchWorkoutManager+Sensors.swift"; sourceTree = "<group>"; };
+		CDE1D9B2A763F8F32341095F /* WatchWorkoutManager+WorkoutPurge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchWorkoutManager+WorkoutPurge.swift"; sourceTree = "<group>"; };
+		93BF355AF80D32FCBBEC6ED5 /* WatchWorkoutManager+Health.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WatchWorkoutManager+Health.swift"; sourceTree = "<group>"; };
+		6D946A60D8A9BD9CD7786F5E /* WatchAccelerationArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccelerationArchive.swift; sourceTree = "<group>"; };
 		F10000000000000000000070 /* WatchAmbientSensorRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSensorRecorder.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105B1 /* WatchTodayCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTodayCards.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105B2 /* WatchStatusViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchStatusViews.swift; sourceTree = "<group>"; };
@@ -1159,6 +1256,7 @@
 		F1G1111X0100000000000001 /* GPXTrackExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPXTrackExport.swift; sourceTree = "<group>"; };
 		F1L1111T0100000000000001 /* LedgerTollRepeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollRepeat.swift; sourceTree = "<group>"; };
 		F1PRL1112A01000000000001 /* LedgerMessageRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMessageRules.swift; sourceTree = "<group>"; };
+		FRL1116A01000000000001 /* SharedRuleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedRuleStore.swift; sourceTree = "<group>"; };
 		F1AIX1114A01000000000001 /* AssistantRuleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRuleStore.swift; sourceTree = "<group>"; };
 		F1PAS1113A01000000000001 /* PaymentAlertSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentAlertSources.swift; sourceTree = "<group>"; };
 		F1TRF1113A01000000000001 /* LedgerTransitFare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTransitFare.swift; sourceTree = "<group>"; };
@@ -1204,6 +1302,10 @@
 		F1000000000000000000007C /* SubwayCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayCatalog.swift; sourceTree = "<group>"; };
 		C1F111100000000000000003 /* SubwayCatalog+Routing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SubwayCatalog+Routing.swift"; sourceTree = "<group>"; };
 		F10000000000000000000085 /* RouteTimelineData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineData.swift; sourceTree = "<group>"; };
+		E7DC2660D2DDA762BDF79F88 /* RouteTimelineDataEngine+Segments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RouteTimelineDataEngine+Segments.swift"; sourceTree = "<group>"; };
+		122467C75FB310A42DF2BF2B /* RouteTimelineDataEngine+Display.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RouteTimelineDataEngine+Display.swift"; sourceTree = "<group>"; };
+		F4E1848FC54355242A1A712C /* ExpectedRouteRequestEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpectedRouteRequestEngine.swift; sourceTree = "<group>"; };
+		B896DD5D283C14FCF4115329 /* RouteTimelineModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineModels.swift; sourceTree = "<group>"; };
 		F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWBSPlayback.swift; sourceTree = "<group>"; };
 		F10000000000000000000095 /* RoutePolylineDecimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePolylineDecimator.swift; sourceTree = "<group>"; };
 		F10000000000000000000086 /* RouteTimelineDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineDataTests.swift; sourceTree = "<group>"; };
@@ -1243,6 +1345,9 @@
 		F2000000000000000000000D /* LocalizationCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationCatalogTests.swift; sourceTree = "<group>"; };
 		F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupportTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionActivityEngineAdapter.swift; sourceTree = "<group>"; };
+		53EC8A4E1C38FC3EA94CA6F0 /* ActivityClassificationLockEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityClassificationLockEngine.swift; sourceTree = "<group>"; };
+		68764F937E5A4C8384AADD10 /* TaptionActivityEngineAdapter+Overrides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TaptionActivityEngineAdapter+Overrides.swift"; sourceTree = "<group>"; };
+		43CFE220A1AC2E0D576BE73E /* TaptionActivityEngineAdapter+TravelMatching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TaptionActivityEngineAdapter+TravelMatching.swift"; sourceTree = "<group>"; };
 		FC1A55000000000000000001 /* ClassifierAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassifierAdapter.swift; sourceTree = "<group>"; };
 		F10000000000000003C90002 /* ClassificationBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassificationBackfill.swift; sourceTree = "<group>"; };
 		F10000000000000003C90001 /* AppleWatchNapPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchNapPolicy.swift; sourceTree = "<group>"; };
@@ -1269,6 +1374,8 @@
 		C51A1111A010000000000003 /* MapHomeView+Siri.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Siri.swift"; sourceTree = "<group>"; };
 		F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support2.swift"; sourceTree = "<group>"; };
 		F1E4358522139E5590681710 /* MapHomeView+Support3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support3.swift"; sourceTree = "<group>"; };
+		1E19F93569FC7DA338430F75 /* MapHomeDaySummaryBand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDaySummaryBand.swift; sourceTree = "<group>"; };
+		99362D6409E1783BF738F707 /* MapHomeMenuShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeMenuShortcuts.swift; sourceTree = "<group>"; };
 		F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu.swift"; sourceTree = "<group>"; };
 		F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu2.swift"; sourceTree = "<group>"; };
 		F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Map.swift"; sourceTree = "<group>"; };
@@ -1386,7 +1493,11 @@
 		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
 		CC4A1111A010000000000001 /* FirstRunCarPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunCarPage.swift; sourceTree = "<group>"; };
+		FRL1116A01000000000002 /* SharedRulesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedRulesView.swift; sourceTree = "<group>"; };
 		F1A1110A0200000000000005 /* AssistantSafetyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSafetyViews.swift; sourceTree = "<group>"; };
+		C1A1116A01F0000000000000 /* AIConnectNudge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConnectNudge.swift; sourceTree = "<group>"; };
+		C1A1116A02F0000000000000 /* TravelPuzzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzle.swift; sourceTree = "<group>"; };
+		C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleDrawer.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationAlwaysPrompt.swift; sourceTree = "<group>"; };
 		B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeIslandOutlines.swift; sourceTree = "<group>"; };
@@ -1486,13 +1597,18 @@
 		B1TV11120000000000000002 /* ne-regions.bin */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ne-regions.bin"; path = "MapData/ne-regions.bin"; sourceTree = "<group>"; };
 		B1TV11120000000000000001 /* TravelModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeView.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000003 /* TravelPlanTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlanTable.swift; sourceTree = "<group>"; };
+		B1TVZ1116C0100000000F002 /* TravelTodayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTodayCard.swift; sourceTree = "<group>"; };
+		B1TVZ1116C0100000000F001 /* TravelTodayLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTodayLogic.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelQuickEntrySheet.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000005 /* TravelNewTripSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelNewTripSheet.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000006 /* TravelRoutes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelRoutes.swift; sourceTree = "<group>"; };
+		TVY1116B0100000000000F02 /* TravelCourseSort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelCourseSort.swift; sourceTree = "<group>"; };
+		TVY1116B0100000000000F01 /* TravelDayBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelDayBoard.swift; sourceTree = "<group>"; };
 		B1TV11130000000000000001 /* TravelPlacePhotos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlacePhotos.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000007 /* TravelStreetMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelStreetMap.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000008 /* TravelGlobeTouch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGlobeTouch.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000009 /* TravelModeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeSupport.swift; sourceTree = "<group>"; };
+		B1ST11160000000000000001 /* TravelModeTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeTransition.swift; sourceTree = "<group>"; };
 		B1TV1112000000000000000A /* TravelWishViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelWishViews.swift; sourceTree = "<group>"; };
 		B1TV1112000000000000000B /* TravelPlacePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlacePicker.swift; sourceTree = "<group>"; };
 		B1TV1112000000000000000C /* TravelPlanSpend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlanSpend.swift; sourceTree = "<group>"; };
@@ -1506,6 +1622,8 @@
 		T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSharePlanEditor.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0009 /* TripSharePlanProjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSharePlanProjector.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0010 /* TripShareLockBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareLockBadge.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0003 /* TripLiveLocationBand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLiveLocationBand.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0002 /* TravelCompanionLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelCompanionLayer.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0011 /* TripShareLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareLedger.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0012 /* TripShareExpenseScopePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareExpenseScopePicker.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0013 /* TripShareSettlementSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareSettlementSection.swift; sourceTree = "<group>"; };
@@ -1513,15 +1631,21 @@
 		T5H1114A26000000000F0015 /* TripShareNoticeAlerts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareNoticeAlerts.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0016 /* TripShareEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareEnvironment.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0017 /* TripShareStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareStore.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0001 /* TripLiveLocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLiveLocationService.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0000 /* TripLiveLocationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLiveLocationPolicy.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0018 /* TripShareSidecar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareSidecar.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0019 /* TripShareMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareMapping.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0020 /* AppModel+TripShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+TripShare.swift"; sourceTree = "<group>"; };
 		T5H1114A26000000000F0021 /* TripShareFoundationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareFoundationTests.swift; sourceTree = "<group>"; };
+		L0C1116S01000000000F0004 /* TripLiveLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLiveLocationTests.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0022 /* TripShareRoomTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareRoomTests.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0023 /* TripSharePlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSharePlanTests.swift; sourceTree = "<group>"; };
+		TVY1116B0100000000000F03 /* TravelDayBoardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelDayBoardTests.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0024 /* TripShareLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareLedgerTests.swift; sourceTree = "<group>"; };
 		B1080700000000000000000A /* ne-cities.tsv */ = {isa = PBXFileReference; lastKnownFileType = text; name = ne-cities.tsv; path = MapData/ne-cities.tsv; sourceTree = "<group>"; };
 		B1080700000000000000000B /* TravelMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTests.swift; sourceTree = "<group>"; };
+		B1ST11160000000000000002 /* TravelModeTransitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeTransitionTests.swift; sourceTree = "<group>"; };
+		B1TVZ1116C0100000000F003 /* TravelTodayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTodayTests.swift; sourceTree = "<group>"; };
 		B1080700000000000000000C /* TravelMapVideoRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoRenderTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangePlaybackTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangeRenderBenchTests.swift; sourceTree = "<group>"; };
@@ -1557,6 +1681,7 @@
 		F51002000000000000000001 /* PlanDayDataSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDataSnapshot.swift; sourceTree = "<group>"; };
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
 		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
+		C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialTests.swift; sourceTree = "<group>"; };
 		F52000000000000000000002 /* MapHomeLiveMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapTests.swift; sourceTree = "<group>"; };
 		F1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackStaticLayersTests.swift; sourceTree = "<group>"; };
@@ -1764,6 +1889,7 @@
 				F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */,
 				D15ABA1114A1500000000006 /* AssistantDigestTests.swift */,
 				D22A1114A220000000000006 /* AssistantMoreActionTests.swift */,
+				FRL1116A01000000000003 /* SharedRuleStoreTests.swift */,
 				F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */,
 				D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */,
 				D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */,
@@ -1799,6 +1925,7 @@
 				F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */,
 				B10816000000000000000006 /* LiveActivityDaySummaryTests.swift */,
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
+				C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */,
 				F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */,
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
 				F1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift */,
@@ -1813,6 +1940,8 @@
 				F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */,
 				F1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift */,
 				B1080700000000000000000B /* TravelMapTests.swift */,
+				B1ST11160000000000000002 /* TravelModeTransitionTests.swift */,
+				B1TVZ1116C0100000000F003 /* TravelTodayTests.swift */,
 				B1080700000000000000000C /* TravelMapVideoRenderTests.swift */,
 				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
@@ -1827,8 +1956,10 @@
 				F40000000000000000000006 /* SensorDayStoreTests.swift */,
 				5BL1110A010000000000000F /* LedgerTests.swift */,
 				T5H1114A26000000000F0021 /* TripShareFoundationTests.swift */,
+				L0C1116S01000000000F0004 /* TripLiveLocationTests.swift */,
 				T5H1114A26000000000F0022 /* TripShareRoomTests.swift */,
 				T5H1114A26000000000F0023 /* TripSharePlanTests.swift */,
+				TVY1116B0100000000000F03 /* TravelDayBoardTests.swift */,
 				T5H1114A26000000000F0024 /* TripShareLedgerTests.swift */,
 				5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */,
 				F1E0110A0400000000000002 /* StorageReviewFixTests.swift */,
@@ -1857,6 +1988,8 @@
 				F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */,
 				F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */,
 				F1E4358522139E5590681710 /* MapHomeView+Support3.swift */,
+				1E19F93569FC7DA338430F75 /* MapHomeDaySummaryBand.swift */,
+				99362D6409E1783BF738F707 /* MapHomeMenuShortcuts.swift */,
 				F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */,
 				F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */,
 				C51A1111A010000000000003 /* MapHomeView+Siri.swift */,
@@ -1976,7 +2109,11 @@
 				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
 				CC4A1111A010000000000001 /* FirstRunCarPage.swift */,
+				FRL1116A01000000000002 /* SharedRulesView.swift */,
 				F1A1110A0200000000000005 /* AssistantSafetyViews.swift */,
+				C1A1116A01F0000000000000 /* AIConnectNudge.swift */,
+				C1A1116A02F0000000000000 /* TravelPuzzle.swift */,
+				C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */,
 				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
 				B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */,
 				B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */,
@@ -2071,19 +2208,26 @@
 				T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */,
 				T5H1114A26000000000F0009 /* TripSharePlanProjector.swift */,
 				T5H1114A26000000000F0010 /* TripShareLockBadge.swift */,
+				L0C1116S01000000000F0003 /* TripLiveLocationBand.swift */,
+				L0C1116S01000000000F0002 /* TravelCompanionLayer.swift */,
 				T5H1114A26000000000F0011 /* TripShareLedger.swift */,
 				T5H1114A26000000000F0012 /* TripShareExpenseScopePicker.swift */,
 				T5H1114A26000000000F0013 /* TripShareSettlementSection.swift */,
 				T5H1114A26000000000F0014 /* TripShareNoticeViews.swift */,
 				T5H1114A26000000000F0015 /* TripShareNoticeAlerts.swift */,
 				B1TV11120000000000000003 /* TravelPlanTable.swift */,
+				B1TVZ1116C0100000000F002 /* TravelTodayCard.swift */,
+				B1TVZ1116C0100000000F001 /* TravelTodayLogic.swift */,
 				B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */,
 				B1TV11120000000000000005 /* TravelNewTripSheet.swift */,
 				B1TV11120000000000000006 /* TravelRoutes.swift */,
+				TVY1116B0100000000000F02 /* TravelCourseSort.swift */,
+				TVY1116B0100000000000F01 /* TravelDayBoard.swift */,
 				B1TV11130000000000000001 /* TravelPlacePhotos.swift */,
 				B1TV11120000000000000007 /* TravelStreetMap.swift */,
 				B1TV11120000000000000008 /* TravelGlobeTouch.swift */,
 				B1TV11120000000000000009 /* TravelModeSupport.swift */,
+				B1ST11160000000000000001 /* TravelModeTransition.swift */,
 				B1TV1112000000000000000A /* TravelWishViews.swift */,
 				B1TV1112000000000000000B /* TravelPlacePicker.swift */,
 				B1TV1112000000000000000C /* TravelPlanSpend.swift */,
@@ -2127,6 +2271,10 @@
 				F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */,
 				F1FA11013C73958F69782D38 /* TimelineSelection.swift */,
 				F10000000000000000000007 /* GoalsView.swift */,
+				2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */,
+				0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */,
+				BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */,
+				2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */,
 				F10000000000000000000008 /* ReviewView.swift */,
 				F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */,
 				F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */,
@@ -2144,6 +2292,10 @@
 				F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
+				3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */,
+				71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */,
+				C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */,
+				3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */,
 				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
 				F1A11102A0100000000000F1 /* MemoTextPolish.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
@@ -2229,6 +2381,11 @@
 				F1FA1157352882250214647A /* PlanRecordModels.swift */,
 				F10000000000000000000010 /* PlanRepository.swift */,
 				F10000000000000000000011 /* PlanningEngine.swift */,
+				0522AC5C6C76C74858584DD4 /* WeatherTimelineEngines.swift */,
+				1FBB419F15E3A66976518173 /* RecordRelationshipEngine.swift */,
+				F4B533929C818AA561A28A40 /* MemoAndPhotoEngines.swift */,
+				77C157721E7802CCFD5B5467 /* PlaceStayAndSleepEngines.swift */,
+				033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */,
 				F1000000000000000B1105C8 /* WidgetSharedEngines.swift */,
 				F1FA11518EFE631FA33E137B /* StableRecordID.swift */,
 				F10000000000000000000012 /* TemplatesAndSettings.swift */,
@@ -2254,6 +2411,7 @@
 				F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */,
 				F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */,
 				F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */,
+				53F940955247968F220F267E /* TravelModeClassifier+Signals.swift */,
 				F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */,
 				F10000000000000000000071 /* StationaryContextClassifier.swift */,
 				F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */,
@@ -2303,6 +2461,10 @@
 				F10000000000000000CA2004 /* SubwayAlighting.swift */,
 				F10000000000000000000041 /* ScreenTimeUsageService.swift */,
 				F1000000000000000000001F /* WidgetShared.swift */,
+				54185C88E9DB1D34E79BA51C /* WidgetSharedStore.swift */,
+				908D49B648B7FB67CCA2A97C /* WidgetCatEngines.swift */,
+				197CFBCA7B44E8FBF47AEDE8 /* SensorCollectionActivityShared.swift */,
+				046B35426A4631E6C4F5E28D /* LiveActivityShared.swift */,
 				B10816000000000000000001 /* LiveActivityDaySummaryState.swift */,
 				F10000000000000001A70002 /* WidgetAppOnly.swift */,
 				F1000000000000000000003B /* WidgetPayloadFactory.swift */,
@@ -2317,6 +2479,7 @@
 				F1G1111X0100000000000001 /* GPXTrackExport.swift */,
 				F1L1111T0100000000000001 /* LedgerTollRepeat.swift */,
 				F1PRL1112A01000000000001 /* LedgerMessageRules.swift */,
+				FRL1116A01000000000001 /* SharedRuleStore.swift */,
 				F1AIX1114A01000000000001 /* AssistantRuleStore.swift */,
 				F1PAS1113A01000000000001 /* PaymentAlertSources.swift */,
 				F1TRF1113A01000000000001 /* LedgerTransitFare.swift */,
@@ -2330,6 +2493,8 @@
 				F1L1111A0500000000000001 /* LedgerTrips.swift */,
 				T5H1114A26000000000F0016 /* TripShareEnvironment.swift */,
 				T5H1114A26000000000F0017 /* TripShareStore.swift */,
+				L0C1116S01000000000F0001 /* TripLiveLocationService.swift */,
+				L0C1116S01000000000F0000 /* TripLiveLocationPolicy.swift */,
 				T5H1114A26000000000F0018 /* TripShareSidecar.swift */,
 				T5H1114A26000000000F0019 /* TripShareMapping.swift */,
 				F1L1111A0500000000000003 /* LedgerXLSX.swift */,
@@ -2344,6 +2509,7 @@
 				F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */,
 				F10000000000000000000029 /* WatchSyncModels.swift */,
 				F1000000000000000000002A /* WatchConnectivitySupport.swift */,
+				54098A0F6E26340F8C3FF63A /* AppleWatchConnectionModels.swift */,
 				F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */,
 				C0FFEE000000000000000032 /* WatchActivityReplay.swift */,
 				F10000000000000000000072 /* WatchSensorQueryPlan.swift */,
@@ -2361,6 +2527,10 @@
 				F1000000000000000000007C /* SubwayCatalog.swift */,
 				C1F111100000000000000003 /* SubwayCatalog+Routing.swift */,
 				F10000000000000000000085 /* RouteTimelineData.swift */,
+				E7DC2660D2DDA762BDF79F88 /* RouteTimelineDataEngine+Segments.swift */,
+				122467C75FB310A42DF2BF2B /* RouteTimelineDataEngine+Display.swift */,
+				F4E1848FC54355242A1A712C /* ExpectedRouteRequestEngine.swift */,
+				B896DD5D283C14FCF4115329 /* RouteTimelineModels.swift */,
 				F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */,
 				F10000000000000000000095 /* RoutePolylineDecimator.swift */,
 				F10000000000000000000088 /* BiometricDataProtection.swift */,
@@ -2372,6 +2542,9 @@
 				F10000000000000000000093 /* WatchDayDatabase.swift */,
 				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
 				F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */,
+				53EC8A4E1C38FC3EA94CA6F0 /* ActivityClassificationLockEngine.swift */,
+				68764F937E5A4C8384AADD10 /* TaptionActivityEngineAdapter+Overrides.swift */,
+				43CFE220A1AC2E0D576BE73E /* TaptionActivityEngineAdapter+TravelMatching.swift */,
 				FC1A55000000000000000001 /* ClassifierAdapter.swift */,
 				F10000000000000003C90002 /* ClassificationBackfill.swift */,
 				F10000000000000003C90001 /* AppleWatchNapPolicy.swift */,
@@ -2385,6 +2558,9 @@
 			children = (
 				F10000000000000000000078 /* Assets.xcassets */,
 				F10000000000000000000020 /* TaptionPlanWidget.swift */,
+				D819A2F5A8084C46702AAB75 /* TaptionWidgetIntents.swift */,
+				60A9B1B187C44F945AA3BF97 /* PrototypeWidgetTrack.swift */,
+				CE3B183CA51E73A8424A60C7 /* TaptionScheduleWidgetView.swift */,
 				C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */,
 				C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */,
 				C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */,
@@ -2405,8 +2581,15 @@
 				F10000000000000000000033 /* Assets.xcassets */,
 				F1000000000000000000002B /* TaptionPlanWatchApp.swift */,
 				F1000000000000000000002C /* WatchConnectivityController.swift */,
+				0BC68E0457B7860E195FA2F6 /* WatchConnectivityController+PendingQueues.swift */,
+				C43F0175ACF24B52B149A152 /* WatchConnectivityController+AmbientOutbox.swift */,
+				85F5BF821F457319D8F0F104 /* WatchConnectivityController+Purge.swift */,
 				F10000000000000000000060 /* WatchLaunchDiagnostics.swift */,
 				F1000000000000000000002D /* WatchWorkoutManager.swift */,
+				C769A089E8740CFD112FFEC2 /* WatchWorkoutManager+Sensors.swift */,
+				CDE1D9B2A763F8F32341095F /* WatchWorkoutManager+WorkoutPurge.swift */,
+				93BF355AF80D32FCBBEC6ED5 /* WatchWorkoutManager+Health.swift */,
+				6D946A60D8A9BD9CD7786F5E /* WatchAccelerationArchive.swift */,
 				F10000000000000000000070 /* WatchAmbientSensorRecorder.swift */,
 				F10000000000000000000073 /* WatchObjCExceptionCatcher.h */,
 				F10000000000000000000074 /* WatchObjCExceptionCatcher.m */,
@@ -2892,6 +3075,8 @@
 				A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */,
 				A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */,
 				A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */,
+				319A1263A20B507E246E4253 /* MapHomeDaySummaryBand.swift in Sources */,
+				B2C00275D48DA8EE0E78A918 /* MapHomeMenuShortcuts.swift in Sources */,
 				A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */,
 				A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */,
 				C51A1111A010000000000004 /* MapHomeView+Siri.swift in Sources */,
@@ -3011,7 +3196,11 @@
 				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
 				CC4A1111A010000000000002 /* FirstRunCarPage.swift in Sources */,
+				ARL1116A01000000000002 /* SharedRulesView.swift in Sources */,
 				A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */,
+				C1A1116A01B0000000000000 /* AIConnectNudge.swift in Sources */,
+				C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */,
+				C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */,
 				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
 				B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */,
 				B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */,
@@ -3103,6 +3292,8 @@
 				T5H1114A26000000000B0008 /* TripSharePlanEditor.swift in Sources */,
 				T5H1114A26000000000B0009 /* TripSharePlanProjector.swift in Sources */,
 				T5H1114A26000000000B0010 /* TripShareLockBadge.swift in Sources */,
+				L0C1116S01000000000B0003 /* TripLiveLocationBand.swift in Sources */,
+				L0C1116S01000000000B0002 /* TravelCompanionLayer.swift in Sources */,
 				T5H1114A26000000000B0011 /* TripShareLedger.swift in Sources */,
 				T5H1114A26000000000B0012 /* TripShareExpenseScopePicker.swift in Sources */,
 				T5H1114A26000000000B0013 /* TripShareSettlementSection.swift in Sources */,
@@ -3110,17 +3301,24 @@
 				T5H1114A26000000000B0015 /* TripShareNoticeAlerts.swift in Sources */,
 				T5H1114A26000000000B0016 /* TripShareEnvironment.swift in Sources */,
 				T5H1114A26000000000B0017 /* TripShareStore.swift in Sources */,
+				L0C1116S01000000000B0001 /* TripLiveLocationService.swift in Sources */,
+				L0C1116S01000000000B0000 /* TripLiveLocationPolicy.swift in Sources */,
 				T5H1114A26000000000B0018 /* TripShareSidecar.swift in Sources */,
 				T5H1114A26000000000B0019 /* TripShareMapping.swift in Sources */,
 				T5H1114A26000000000B0020 /* AppModel+TripShare.swift in Sources */,
 				B1TV11120000000000000103 /* TravelPlanTable.swift in Sources */,
+				B1TVZ1116C0100000000B002 /* TravelTodayCard.swift in Sources */,
+				B1TVZ1116C0100000000B001 /* TravelTodayLogic.swift in Sources */,
 				B1TV11120000000000000104 /* TravelQuickEntrySheet.swift in Sources */,
 				B1TV11120000000000000105 /* TravelNewTripSheet.swift in Sources */,
 				B1TV11120000000000000106 /* TravelRoutes.swift in Sources */,
+				TVY1116B0100000000000B02 /* TravelCourseSort.swift in Sources */,
+				TVY1116B0100000000000B01 /* TravelDayBoard.swift in Sources */,
 				B1TV11130000000000000101 /* TravelPlacePhotos.swift in Sources */,
 				B1TV11120000000000000107 /* TravelStreetMap.swift in Sources */,
 				B1TV11120000000000000108 /* TravelGlobeTouch.swift in Sources */,
 				B1TV11120000000000000109 /* TravelModeSupport.swift in Sources */,
+				B1ST11160000000000000101 /* TravelModeTransition.swift in Sources */,
 				B1TV1112000000000000010A /* TravelWishViews.swift in Sources */,
 				B1TV1112000000000000010B /* TravelPlacePicker.swift in Sources */,
 				B1TV1112000000000000010C /* TravelPlanSpend.swift in Sources */,
@@ -3148,6 +3346,10 @@
 				CA1A1111A010000000000004 /* AITaskPanel.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
+				A555E510ADEA5505DC2F5A79 /* GoalDetailParts.swift in Sources */,
+				8588E42DD2C1DE6268A73D68 /* GoalDetailView.swift in Sources */,
+				B519210965A8995AF81BD1F8 /* RoutineTimeRangeSlider.swift in Sources */,
+				01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,
 				A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */,
 				A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */,
@@ -3165,6 +3367,10 @@
 				A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
+				5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */,
+				F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */,
+				27AB5D5D8EA08049CE1DEDAC /* MiniTimeSliceEditor.swift in Sources */,
+				C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
 				A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
@@ -3184,6 +3390,11 @@
 				A1FA11EE9F352FA3C4B9FA2A /* PlanRecordModels.swift in Sources */,
 				A10000000000000000000010 /* PlanRepository.swift in Sources */,
 				A10000000000000000000011 /* PlanningEngine.swift in Sources */,
+				A4FD6949CA1FDA595B696942 /* WeatherTimelineEngines.swift in Sources */,
+				C38EADC38E73A6B5762E740D /* RecordRelationshipEngine.swift in Sources */,
+				3307B18C5D4A31E44B067DC2 /* MemoAndPhotoEngines.swift in Sources */,
+				EE7B3A821E8BAB071B1E6A0F /* PlaceStayAndSleepEngines.swift in Sources */,
+				99F70A4FD813F1270426E15A /* PlanGoalEngines.swift in Sources */,
 				A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */,
 				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
 				A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */,
@@ -3208,6 +3419,7 @@
 				A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */,
 				A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */,
 				A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */,
+				607F3CFDF67827418A7A8A47 /* TravelModeClassifier+Signals.swift in Sources */,
 				A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */,
 				A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */,
 				A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */,
@@ -3253,6 +3465,10 @@
 				A10000000000000000CA2003 /* HwarangCoat.swift in Sources */,
 				A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */,
 				A1000000000000000000001E /* WidgetShared.swift in Sources */,
+				F32C48963B1D5E07B587FC7D /* WidgetSharedStore.swift in Sources */,
+				6841D0B0114051799D6AA131 /* WidgetCatEngines.swift in Sources */,
+				B27429155CC7CC376B544969 /* SensorCollectionActivityShared.swift in Sources */,
+				1477619E42A2F3CC7281493E /* LiveActivityShared.swift in Sources */,
 				B10816000000000000000002 /* LiveActivityDaySummaryState.swift in Sources */,
 				A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */,
 				A10000000000000000000026 /* StoreKitSupport.swift in Sources */,
@@ -3262,6 +3478,7 @@
 				A1000000000000000000002A /* WatchSyncModels.swift in Sources */,
 				A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
+				817838D7A6AD39CBCE82FCAF /* AppleWatchConnectionModels.swift in Sources */,
 				A1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift in Sources */,
 				C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */,
 				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
@@ -3281,6 +3498,7 @@
 				A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */,
 				A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */,
 				A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */,
+				ARL1116A01000000000001 /* SharedRuleStore.swift in Sources */,
 				A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */,
 				A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */,
 				A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */,
@@ -3315,6 +3533,10 @@
 				A1000000000000000000007C /* SubwayCatalog.swift in Sources */,
 				C1F111100000000000000004 /* SubwayCatalog+Routing.swift in Sources */,
 				A10000000000000000000085 /* RouteTimelineData.swift in Sources */,
+				78A04AA29041D0599FD23AAF /* RouteTimelineDataEngine+Segments.swift in Sources */,
+				0984A81FF6DB5322DB46E056 /* RouteTimelineDataEngine+Display.swift in Sources */,
+				CCAE13815AE63CB7E40AA7CF /* ExpectedRouteRequestEngine.swift in Sources */,
+				46C5EF5FEF6717E4CAC9B5B6 /* RouteTimelineModels.swift in Sources */,
 				A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */,
 				A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */,
 				A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */,
@@ -3327,6 +3549,9 @@
 				A51002000000000000000007 /* MapHomeNLEClipEditor.swift in Sources */,
 				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 				A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */,
+				E23F65D234B3FBCC31C3EBA0 /* ActivityClassificationLockEngine.swift in Sources */,
+				3FDE6F78D83F0443F159C9F2 /* TaptionActivityEngineAdapter+Overrides.swift in Sources */,
+				D1DA8BE663C5819F68C209DB /* TaptionActivityEngineAdapter+TravelMatching.swift in Sources */,
 				AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */,
 				A10000000000000003C90002 /* ClassificationBackfill.swift in Sources */,
 				A10000000000000003C90001 /* AppleWatchNapPolicy.swift in Sources */,
@@ -3384,6 +3609,7 @@
 				A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */,
 				D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */,
 				D22A1114A220000000000005 /* AssistantMoreActionTests.swift in Sources */,
+				ARL1116A01000000000003 /* SharedRuleStoreTests.swift in Sources */,
 				A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */,
 				D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */,
 				D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */,
@@ -3419,6 +3645,7 @@
 				A5B1102A0200000000000020 /* FeatureEngineTests+Widget.swift in Sources */,
 				B10816000000000000000007 /* LiveActivityDaySummaryTests.swift in Sources */,
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
+				C1A1116A04B0000000000000 /* TravelPuzzleTests.swift in Sources */,
 				A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */,
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
 				A1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift in Sources */,
@@ -3433,6 +3660,8 @@
 				A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */,
 				A1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift in Sources */,
 				B1080700000000000000010B /* TravelMapTests.swift in Sources */,
+				B1ST11160000000000000102 /* TravelModeTransitionTests.swift in Sources */,
+				B1TVZ1116C0100000000B003 /* TravelTodayTests.swift in Sources */,
 				B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */,
 				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,
@@ -3447,8 +3676,10 @@
 				A40000000000000000000008 /* SensorDayStoreTests.swift in Sources */,
 				5BL1110A010000000000000A /* LedgerTests.swift in Sources */,
 				T5H1114A26000000000B0021 /* TripShareFoundationTests.swift in Sources */,
+				L0C1116S01000000000B0004 /* TripLiveLocationTests.swift in Sources */,
 				T5H1114A26000000000B0022 /* TripShareRoomTests.swift in Sources */,
 				T5H1114A26000000000B0023 /* TripSharePlanTests.swift in Sources */,
+				TVY1116B0100000000000B03 /* TravelDayBoardTests.swift in Sources */,
 				T5H1114A26000000000B0024 /* TripShareLedgerTests.swift in Sources */,
 				5B00000000000000000000A4 /* TaptionBackupV2Tests.swift in Sources */,
 				A1E0110A0400000000000002 /* StorageReviewFixTests.swift in Sources */,
@@ -3465,10 +3696,17 @@
 			files = (
 				A1000000000000000B1105C9 /* WidgetSharedEngines.swift in Sources */,
 				A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */,
+				AF8ED5501D2F3CC3724BE648 /* TaptionWidgetIntents.swift in Sources */,
+				D4E455A4832D6F6B9D33AC51 /* PrototypeWidgetTrack.swift in Sources */,
+				EF1B5C9E36C5286B6120C9E1 /* TaptionScheduleWidgetView.swift in Sources */,
 				C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */,
 				C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */,
 				C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */,
 				A10000000000000000000020 /* WidgetShared.swift in Sources */,
+				D2C8AB6C7FF62427C50ED178 /* WidgetSharedStore.swift in Sources */,
+				166D7D35AD9FD04EEC99786E /* WidgetCatEngines.swift in Sources */,
+				1E7F5C045ECD177F3E6A63F0 /* SensorCollectionActivityShared.swift in Sources */,
+				22F40BBCC048CD0A2461AD02 /* LiveActivityShared.swift in Sources */,
 				B10816000000000000000003 /* LiveActivityDaySummaryState.swift in Sources */,
 				A10000000000000000000022 /* FeatureModels.swift in Sources */,
 				A1FA115BFD9ADB6D5F57D8C1 /* SensorReadingModels.swift in Sources */,
@@ -3493,7 +3731,14 @@
 				A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */,
 				A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */,
 				A1000000000000000000002D /* WatchConnectivityController.swift in Sources */,
+				7707DAEE983BE30C78C07F7E /* WatchConnectivityController+PendingQueues.swift in Sources */,
+				3CA5516D1AC2C321B4908457 /* WatchConnectivityController+AmbientOutbox.swift in Sources */,
+				91D631C8C0BFBC8129833933 /* WatchConnectivityController+Purge.swift in Sources */,
 				A1000000000000000000002E /* WatchWorkoutManager.swift in Sources */,
+				FE065DB4C04A97C20DA0A5F9 /* WatchWorkoutManager+Sensors.swift in Sources */,
+				739E80FAE7B22494F3870331 /* WatchWorkoutManager+WorkoutPurge.swift in Sources */,
+				66060F3B955D065703DADA56 /* WatchWorkoutManager+Health.swift in Sources */,
+				F56B6107FF552C65CEF782AE /* WatchAccelerationArchive.swift in Sources */,
 				A10000000000000000000070 /* WatchAmbientSensorRecorder.swift in Sources */,
 				A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A10000000000000000000073 /* WatchSensorQueryPlan.swift in Sources */,

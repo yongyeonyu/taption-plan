@@ -281,13 +281,13 @@ struct MapHomeNLEOverwriteSheet: View {
             .frame(maxWidth: .infinity, minHeight: TaptionMenuMetrics.minimumHitSize)
             .background(
                 isPicked ? Color.tpAccent.opacity(0.12) : Color.tpSurface,
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                     .stroke(isPicked ? Color.tpAccent : Color.tpBorder, lineWidth: isPicked ? 1.6 : TaptionBorder.width)
             }
-            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(category.localizedTitle(language))

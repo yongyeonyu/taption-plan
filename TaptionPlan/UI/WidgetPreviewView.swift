@@ -101,7 +101,7 @@ struct WidgetPreviewView: View {
             .overlay(alignment: .bottom) { Rectangle().fill(Color.tpLine).frame(height: 0.5) }
         }
         .padding(14)
-        .background(Color.tpCard.opacity(0.94), in: RoundedRectangle(cornerRadius: 20))
+        .background(Color.tpCard.opacity(0.94), in: RoundedRectangle(cornerRadius: TaptionCorner.large))
         .shadow(color: .black.opacity(0.12), radius: 12, y: 8)
     }
 
@@ -159,7 +159,7 @@ struct WidgetPreviewView: View {
         }
         .foregroundStyle(.white)
         .padding(14)
-        .background(Color(red: 0.08, green: 0.08, blue: 0.09), in: RoundedRectangle(cornerRadius: 18))
+        .background(Color(red: 0.08, green: 0.08, blue: 0.09), in: RoundedRectangle(cornerRadius: TaptionCorner.large))
     }
 
     private var widgetDaySpan: TimeSpan {

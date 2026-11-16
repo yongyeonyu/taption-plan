@@ -290,9 +290,9 @@ struct MapHomePhotoPin: View {
 
     var body: some View {
         MapHomePhotoThumbnail(localIdentifier: coverID, side: 46)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                     .stroke(isHighlighted ? Color.tpAccent : Color.white, lineWidth: isHighlighted ? 3 : 2)
             }
             .overlay(alignment: .topTrailing) {
@@ -777,8 +777,8 @@ struct MapHomePhotoArcSlot: View {
             .overlay { if distance == 0 { MapHomeRingVideo(localIdentifier: id, seamless: seamlessVideo) } }
             // 지금 사진만 밝게 두고 나머지는 30% 어둡게 한다.
             .overlay(Color.black.opacity(distance == 0 && !dimsCenter ? 0 : 0.3))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white, lineWidth: isCenter ? 3 : 4))
+            .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous).stroke(Color.white, lineWidth: isCenter ? 3 : 4))
             .scaleEffect(isCenter ? 1 : side / MapHomePlaybackPhotoStrip.centerSide, anchor: .bottom)
             .rotationEffect(.degrees(place.degrees), anchor: .bottom)
             .shadow(color: .black.opacity(isCenter ? 0.3 : 0.16), radius: isCenter ? 7 : 3, y: 2)
@@ -973,7 +973,7 @@ struct MapHomePlaybackMomentsOverlay: View {
                     .lineLimit(3)
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                     .taptionShadow(.floating)
                     .id(shown.id)
                     .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))

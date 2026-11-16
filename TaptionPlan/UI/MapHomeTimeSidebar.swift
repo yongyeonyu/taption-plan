@@ -1299,7 +1299,7 @@ struct MapHomeTimeSidebar: View {
 
     /// 사이드바 패널 모양.
     private var panelShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
+        RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous)
     }
 
     var body: some View {
@@ -1638,8 +1638,8 @@ struct MapHomeTimeSidebar: View {
                             )
                         )
                         .zIndex(3)
-                        .accessibilityLabel("시간 선택")
-                        .accessibilityHint("화면 오른쪽 끝까지 끌어 시간을 선택합니다")
+                        .accessibilityLabel(AppLanguagePreference.text("시간 선택", "Pick a time"))
+                        .accessibilityHint(AppLanguagePreference.text("화면 오른쪽 끝까지 끌어 시간을 선택합니다", "Drag along the right edge to pick a time"))
                 }
 
                 reviewMarkerLayer(
@@ -1707,7 +1707,7 @@ struct MapHomeTimeSidebar: View {
                 MapHomeDetailPatternLegend(language: .current, categoryColorHex: categoryColorHex)
             }
             .accessibilityElement(children: .contain)
-            .accessibilityLabel("시간 선택")
+            .accessibilityLabel(AppLanguagePreference.text("시간 선택", "Pick a time"))
             .accessibilityValue(timeLabel(for: minute))
         }
         .frame(width: interactionWidth)
@@ -1867,7 +1867,7 @@ struct MapHomeTimeSidebar: View {
                 .accessibilityLabel(
                     activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
                 )
-                .accessibilityHint("드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다")
+                .accessibilityHint(AppLanguagePreference.text("드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다", "Drag to move the time, double tap to open the clip editor"))
 
             Rectangle()
                 .fill(Color.white.opacity(0.001))
@@ -1889,7 +1889,7 @@ struct MapHomeTimeSidebar: View {
                 .accessibilityLabel(
                     activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
                 )
-                .accessibilityHint("드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다")
+                .accessibilityHint(AppLanguagePreference.text("드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다", "Drag to move the time, double tap to open the clip editor"))
         }
         .frame(width: totalWidth, height: railHeight)
         .zIndex(3)

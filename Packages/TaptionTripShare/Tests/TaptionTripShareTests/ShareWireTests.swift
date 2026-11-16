@@ -16,7 +16,7 @@ final class ShareWireTests: XCTestCase {
     }
 
     func testKindsAndLimitsMatchTheServer() {
-        XCTAssertEqual(ShareKind.allCases.map(\.rawValue), ["plan", "expense-shared", "expense-own", "notice", "member", "meta"])
+        XCTAssertEqual(ShareKind.allCases.map(\.rawValue), ["plan", "expense-shared", "expense-own", "notice", "member", "meta", "meet"])
         XCTAssertEqual(ShareKind.allCases.filter(\.needsLock), [.plan, .expenseShared])
         XCTAssertEqual(ShareLimits.v1, ShareLimits(members: 10, itemBytes: 4096, liveItems: 1000, roomBytes: 1024 * 1024, batch: 50, locksPerMember: 20, leaseMs: 120_000))
         XCTAssertEqual(ShareConstants.bodyBytes, 65_536)

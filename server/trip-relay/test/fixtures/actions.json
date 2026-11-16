@@ -129,7 +129,8 @@
         "start",
         "end",
         "kind",
-        "note"
+        "note",
+        "status"
       ],
       "required": [
         "tripId",

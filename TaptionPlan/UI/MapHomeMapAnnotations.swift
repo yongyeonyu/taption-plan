@@ -119,10 +119,10 @@ struct MapHomePlacePin: View {
                     .frame(width: 48, height: 48)
                     .background(
                         Color.tpSurface.opacity(0.98),
-                        in: RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                     )
                     .overlay {
-                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                             .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                     }
                     .taptionShadow(.floating)
@@ -373,7 +373,7 @@ struct MapHomeCatSpeechBubble: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             if side == .left { tail(pointsLeft: false) }
         }
         .taptionShadow(.floating)

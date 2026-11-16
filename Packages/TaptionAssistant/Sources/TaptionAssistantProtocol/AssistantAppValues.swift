@@ -10,6 +10,8 @@ public enum TripItemStatus: String, CaseIterable, Identifiable, Hashable, Sendab
     public var id: String { rawValue }
 
     public init(raw: String?) {
+        // 갔음·건너뜀 확정은 `visited/booked`처럼 앞에 붙는다(TVZ1116C01). 뒤의 원래 상태만 읽는다.
+        let raw = raw?.split(separator: "/").last.map(String.init)
         self = raw.flatMap { Self(rawValue: $0.trimmingCharacters(in: .whitespaces).lowercased()) } ?? .planned
     }
 

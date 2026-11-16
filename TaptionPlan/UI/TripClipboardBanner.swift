@@ -76,8 +76,7 @@ extension MapHomeView {
             TripClipboardBanner(language: language) { text in
                 isTripClipboardOfferVisible = false
                 pastedTripText = text
-                isTravelMode = true
-                isTripImportPresented = true
+                isTravelHomePresented = true
             } onDismiss: {
                 isTripClipboardOfferVisible = false
                 TripClipboardWatch.clear()

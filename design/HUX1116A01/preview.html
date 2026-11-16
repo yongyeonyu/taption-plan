@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>홈 화면 개선 시안 · HUX1116A01</title>
+<style>
+:root{
+  --page:#F6F1E6; --page-ink:#2E2618; --page-sub:#6B5E45; --page-line:#D9CDB4; --card:#FFFDF8;
+  --bad:#C0392B; --good:#1E8A5A;
+  /* 앱 색(밝은 화면). Theme.swift 기준 */
+  --bg:#F3EAD6; --surface:#FDFAF3; --ink:#3E3320; --sub:#6B5E45; --accent:#A8442F; --border:#8C8C8C;
+  --map:#B9AC90; --map-block:#A6936F; --map-road:#6F5A3A; --map-green:#8F9670; --map-label:#5A4A2E;
+  --rail:#EDE3CC; --now:#D8425A; --blue:#2D9BF0; --scrim:rgba(0,0,0,.18);
+}
+:root[data-theme="dark"]{
+  --page:#15130F; --page-ink:#F1E8D6; --page-sub:#B9AC92; --page-line:#3A342A; --card:#1E1B16;
+  --bad:#FF7B6B; --good:#5FD39A;
+  /* 어두운 화면 색은 시안용으로 지어낸 값 */
+  --bg:#211E18; --surface:#2B271F; --ink:#F1E8D6; --sub:#B9AC92; --accent:#E48A74; --border:#6A6A6A;
+  --map:#2A2B2A; --map-block:#34352F; --map-road:#55524A; --map-green:#2E3A2C; --map-label:#A9A08C;
+  --rail:#2F2B23; --now:#FF6F86; --blue:#6DB9FF; --scrim:rgba(0,0,0,.42);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--page-ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+header{max-width:980px;margin:0 auto;padding:28px 16px 8px;display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+h1{font-size:22px;margin:0 0 6px}
+header p{margin:0;color:var(--page-sub);max-width:640px}
+.toggle{border:1px solid var(--page-line);background:var(--card);color:var(--page-ink);border-radius:999px;padding:8px 14px;font:inherit;cursor:pointer}
+nav{max-width:980px;margin:8px auto 0;padding:0 16px;display:flex;flex-wrap:wrap;gap:6px}
+nav a{font-size:13px;color:var(--page-ink);text-decoration:none;border:1px solid var(--page-line);border-radius:999px;padding:4px 10px;background:var(--card)}
+main{max-width:980px;margin:0 auto;padding:8px 16px 60px}
+section{background:var(--card);border:1px solid var(--page-line);border-radius:16px;padding:20px;margin-top:20px}
+section h2{font-size:18px;margin:0 0 4px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.tag{font-size:12px;border-radius:999px;padding:2px 9px;border:1px solid var(--page-line);color:var(--page-sub)}
+.tag.trial{border-color:var(--accent);color:var(--accent)}
+section p{margin:4px 0;color:var(--page-sub)}
+section p b{color:var(--page-ink)}
+.pair{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;margin-top:16px}
+figure{margin:0;width:281px}
+figcaption{font-size:13px;margin-top:8px;color:var(--page-sub)}
+figcaption b{display:block;font-size:14px}
+figcaption b.now{color:var(--bad)} figcaption b.after{color:var(--good)}
+figcaption ol{margin:4px 0 0;padding-left:18px}
+.frame{width:281px;height:608px;border-radius:30px;overflow:hidden;border:1px solid var(--page-line);box-shadow:0 6px 24px rgba(0,0,0,.18);position:relative}
+.phone{width:390px;height:844px;transform:scale(.72);transform-origin:0 0;position:relative;background:var(--map);overflow:hidden;color:var(--ink);font-size:12px;line-height:1.2}
+.phone *{position:absolute}
+.phone svg.map{inset:0;width:390px;height:844px}
+.status{left:28px;top:16px;font-weight:600;font-size:15px}
+.disc{width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border);box-shadow:0 2px 4px rgba(0,0,0,.22)}
+.disc svg,.bb svg{position:static}
+.disc{display:flex;align-items:center;justify-content:center}
+.disc .lbl{left:0;right:0;top:42px;text-align:center;font-size:10px;font-weight:700;color:var(--ink);text-shadow:0 0 3px var(--surface),0 0 3px var(--surface)}
+.panel{left:10px;top:59px;width:262px;background:var(--bg);opacity:.96;border:1px solid var(--border);border-radius:12px;padding:6px;height:70px}
+.seg{left:6px;top:6px;right:6px;height:28px;border-radius:8px;background:rgba(120,110,90,.18);display:flex}
+.seg span{position:static;flex:1;display:flex;align-items:center;justify-content:center;gap:1px;height:28px;font-size:11px;white-space:nowrap;overflow:hidden}
+.seg span.on{background:var(--surface);border-radius:7px;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.seg span i{position:static;display:inline-block;min-width:14px;height:14px;line-height:14px;border-radius:7px;background:var(--accent);color:#fff;font-style:normal;font-size:9px;font-weight:700;text-align:center;padding:0 3px}
+.won{left:6px;right:6px;top:38px;height:26px;border-radius:10px;background:var(--surface);display:flex;align-items:center;padding:0 10px;font-size:12px;font-weight:500}
+.won span{position:static}
+.won .sp{flex:1}
+.badge{left:336px;top:59px;width:44px;height:40px;border-radius:18px;background:var(--surface);border:1px solid var(--border);text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.22)}
+.badge small{left:0;right:0;top:3px;font-size:10px;color:var(--sub)}
+.badge b{left:0;right:0;top:15px;font-size:18px}
+.badge.past b{color:var(--accent)}
+.strip{left:14px;top:59px;width:316px;height:40px;border-radius:18px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;padding:0 4px;gap:2px}
+.strip div{position:static;width:36px;height:32px;border-radius:10px;text-align:center;font-size:10px;color:var(--sub);padding-top:2px}
+.strip div b{position:static;display:block;font-size:13px;color:var(--ink)}
+.strip div.sel{background:color-mix(in srgb,var(--blue) 30%,var(--surface))}
+.strip div.today{background:var(--accent);width:44px}
+.strip div.today,.strip div.today b{color:#fff}
+.side{left:336px;top:107px;width:44px;height:657px;border-radius:22px;background:color-mix(in srgb,var(--rail) 82%,transparent);border:1px solid var(--border)}
+.side .act{left:6px;width:7px;border-radius:3px}
+.side .hr{left:18px;font-size:10px;color:var(--sub);font-weight:600}
+.side .ic{left:9px;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.side .ic svg{position:static}
+.side .zoom{top:34px;width:22px;height:22px;text-align:center;line-height:22px;font-size:11px;font-weight:800}
+.handle{left:312px;width:69px;height:30px;border-radius:15px;background:var(--surface);border:1.5px solid var(--now);color:var(--now);font-weight:700;text-align:center;line-height:27px;font-size:12px}
+.q{width:26px;height:26px;border-radius:50%;background:var(--surface);border:1px solid var(--border);text-align:center;line-height:24px;font-weight:800;color:var(--sub)}
+.mini{width:22px;height:22px;border-radius:6px;background:var(--surface);border:1px solid var(--border);text-align:center;line-height:20px;font-size:11px}
+.pill{left:14px;top:774px;width:362px;height:56px;border-radius:28px;background:var(--surface);border:1px solid var(--border);box-shadow:0 4px 10px rgba(0,0,0,.2);display:flex;padding:0 8px}
+.bb{position:static!important;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.bb span{position:static;font-size:11px;font-weight:600;color:var(--sub);white-space:nowrap}
+.bb span.tiny{font-size:7.5px}
+.cat{width:36px;height:36px}
+.counter{width:128px;border-radius:12px;background:var(--surface);border:1px solid var(--border);padding:8px 10px;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.counter div{position:static;display:flex;justify-content:space-between;line-height:1.6}
+.counter div span{position:static}
+.homeic{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.homeic svg{position:static}
+.band{left:14px;top:716px;width:312px;min-height:46px;border-radius:16px;background:var(--surface);border:1px solid var(--border);box-shadow:0 3px 8px rgba(0,0,0,.2);padding:8px 12px;font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:8px}
+.band *{position:static}
+.band .go{color:var(--accent);font-weight:700;white-space:nowrap;margin-left:auto}
+.band .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.hint{border-radius:12px;background:var(--ink);color:var(--bg);padding:7px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+.hint:after{content:"";position:absolute;left:18px;bottom:-5px;width:10px;height:10px;background:var(--ink);transform:rotate(45deg)}
+.ring{border:2px dashed var(--bad);border-radius:8px;pointer-events:none}
+.ring.ok{border-color:var(--good)}
+.ring em{left:50%;top:100%;transform:translateX(-50%);font-style:normal;font-size:10px;font-weight:800;background:var(--bad);color:#fff;border-radius:6px;padding:1px 4px;white-space:nowrap;margin-top:2px}
+.ring.ok em{background:var(--good)}
+.ring.up em{top:auto;bottom:100%;margin:0 0 2px}
+.ring.left em{left:auto;right:100%;top:50%;transform:translateY(-50%);margin:0 3px 0 0}
+.num{width:20px;height:20px;border-radius:50%;background:var(--bad);color:#fff;font-weight:800;font-size:12px;text-align:center;line-height:20px;box-shadow:0 0 0 2px var(--surface)}
+.num.ok{background:var(--good)}
+.scrim{inset:0;background:var(--scrim)}
+.menu{left:10px;top:59px;width:290px;height:771px;border-radius:28px;background:var(--bg);border:1px solid var(--border);padding:16px;overflow:hidden}
+.menu *{position:static}
+.menu h3{margin:0 0 10px;font-size:20px}
+.menu .grp{font-size:11px;color:var(--sub);margin:10px 4px 4px}
+.menu .box{background:var(--surface);border-radius:14px;border:1px solid color-mix(in srgb,var(--border) 40%,transparent)}
+.menu .row{display:flex;align-items:center;height:44px;padding:0 12px;font-size:14px;gap:10px;border-top:1px solid color-mix(in srgb,var(--border) 25%,transparent)}
+.menu .row:first-child{border-top:0}
+.menu .row .sq{width:24px;height:24px;border-radius:7px;background:color-mix(in srgb,var(--accent) 22%,var(--surface))}
+.menu .row .ch{margin-left:auto;color:var(--ink);opacity:.28;font-weight:700}
+.menu.after .row .ch{opacity:.7}
+.menu .find{height:40px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;padding:0 12px;color:var(--sub);font-size:14px;gap:8px}
+.sheet{left:0;right:0;bottom:0;border-radius:24px 24px 0 0;background:var(--bg);border-top:1px solid var(--border);padding:10px 16px}
+.sheet *{position:static}
+.sheet .grab{width:36px;height:5px;border-radius:3px;background:var(--border);margin:0 auto 10px;opacity:.6}
+.sheet h3{margin:0 0 8px;font-size:17px;text-align:center}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px 0;text-align:center;font-size:15px}
+.cal span{height:38px;line-height:30px;border-radius:10px}
+.cal span.h{height:20px;line-height:20px;font-size:11px;color:var(--sub)}
+.cal span.sel{background:var(--ink);color:var(--bg);font-weight:700}
+.cal span.rec{box-shadow:inset 0 -3px 0 -1px var(--accent)}
+.sumrow{display:flex;gap:8px;margin-top:10px}
+.sumrow div{flex:1;background:var(--surface);border-radius:12px;padding:8px;font-size:11px;color:var(--sub)}
+.sumrow div b{display:block;font-size:15px;color:var(--ink)}
+footer{max-width:980px;margin:0 auto;padding:0 16px 40px;color:var(--page-sub);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>홈 화면 개선 시안</h1>
+    <p>요청 HUX1116A01 · 2026-11-16. 제안마다 왼쪽이 지금, 오른쪽이 바꾼 뒤입니다. 화면은 코드를 읽고 그린 그림이고 실제 화면 사진이 아닙니다. 지도·숫자·날짜는 지어낸 견본이며, 화랑이는 두 쪽 모두 지금 크기(36pt)입니다. 설명은 <code>docs/HOME_UX_REVIEW.md</code>에 있습니다.</p>
+  </div>
+  <button class="toggle" id="toggle" type="button">어두운 화면으로</button>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<footer>어두운 화면의 색은 시안용으로 지어낸 값입니다. 앱의 실제 어두운 테마 색과 다를 수 있습니다.</footer>
+
+<script>
+const I={
+ menu:'<path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+ cal:'<rect x="4" y="5" width="16" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+ loc:'<path d="M20 4 4 11l7 2 2 7z" fill="currentColor"/>',
+ house:'<path d="M3 12 12 4l9 8v8h-6v-5H9v5H3z" fill="currentColor"/>',
+ play:'<path d="M7 4v16l13-8z" fill="currentColor"/>',
+ rec:'<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/>',
+ plus:'<path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+ search:'<circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m15 15 5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+ bag:'<rect x="5" y="8" width="14" height="12" rx="2.5" fill="currentColor"/><path d="M9 8V5.5h6V8" fill="none" stroke="currentColor" stroke-width="2"/>',
+ pen:'<path d="m5 19 1-4L16 5l3 3L9 18z" fill="currentColor"/>',
+ up:'<path d="m6 15 6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+ check:'<path d="m5 12 5 5 9-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+ note:'<rect x="5" y="4" width="14" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 9h8M8 13h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+ inbox:'<path d="M4 13 6 5h12l2 8v6H4zM4 13h5l1 2h4l1-2h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+};
+const ic=(n,s=24,c='var(--ink)')=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" style="color:${c}">${I[n]}</svg>`;
+const cat=(x,y)=>`<svg class="cat" style="left:${x}px;top:${y}px" viewBox="0 0 36 36"><path d="M7 14 6 4l8 5h8l8-5-1 10a12 11 0 1 1-22 0z" fill="#fff" stroke="#2b2b2b" stroke-width="1.6" stroke-linejoin="round"/><circle cx="13.5" cy="18" r="1.6" fill="#2b2b2b"/><circle cx="22.5" cy="18" r="1.6" fill="#2b2b2b"/><path d="M16.5 21.5h3l-1.5 1.6z" fill="#e58aa0"/><path d="M4 19h5M27 19h5M5 23h4M27 23h4" stroke="#2b2b2b" stroke-width="1"/></svg>`;
+
+function map(route){
+  return `<svg class="map" viewBox="0 0 390 844">
+  <rect width="390" height="844" fill="var(--map)"/>
+  <path d="M-10 610q120-60 200 20t210-30v260h-410z" fill="var(--map-green)" opacity=".8"/>
+  <g fill="var(--map-block)"><rect x="40" y="150" width="120" height="90" rx="4"/><rect x="190" y="170" width="110" height="120" rx="4"/><rect x="30" y="300" width="130" height="110" rx="4"/><rect x="200" y="340" width="120" height="150" rx="4"/><rect x="50" y="470" width="110" height="80" rx="4"/></g>
+  <g stroke="var(--map-road)" stroke-width="7" fill="none" stroke-linecap="round"><path d="M-10 270h410M175 100v500M-10 440h200M320 100v500M-10 580q200-20 410 30"/></g>
+  <text x="60" y="262" font-size="11" fill="var(--map-label)" font-weight="600">견본로 12길</text>
+  <text x="225" y="330" font-size="13" fill="var(--map-label)" font-weight="700">가상구</text>
+  ${route?`<path d="M250 600 175 590 175 440 120 440 120 380" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 8"/>
+  <g fill="var(--accent)" stroke="var(--surface)" stroke-width="2"><circle cx="250" cy="600" r="6"/><circle cx="175" cy="440" r="6"/></g>`:''}
+  </svg>`;
+}
+const ring=(x,y,w,h,t,cls='')=>`<div class="ring ${cls}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px"><em>${t}</em></div>`;
+const num=(x,y,n,ok)=>`<div class="num ${ok?'ok':''}" style="left:${x}px;top:${y}px">${n}</div>`;
+
+function sidebar(o){
+  let hrs='';for(let h=0;h<=24;h+=2){hrs+=`<div class="hr" style="top:${70+h*22.5}px">${String(h).padStart(2,'0')}</div>`}
+  const acts=o.empty?'':`<div class="act" style="top:76px;height:150px;background:#9AA6C8"></div><div class="act" style="top:232px;height:40px;background:#D7A77F"></div><div class="act" style="top:276px;height:150px;background:#7FB7C9"></div>`;
+  return `<div class="side">${acts}${hrs}
+    <div class="ic" style="top:6px">${ic('up',18,'var(--sub)')}</div>
+    <div class="zoom" style="left:0">−</div><div class="zoom" style="left:22px">+</div>
+    <div class="ic" style="top:625px">${ic('pen',18,'var(--sub)')}</div></div>
+    ${o.empty?'':`<div class="handle" style="top:${107+70+15*22.5/1-8}px">15:01</div>
+    <div class="mini" style="left:310px;top:300px">✎</div>
+    <div class="q" style="left:304px;top:392px">?</div>`}`;
+}
+function pill(o){
+  const tiny=o.tinyLabel;
+  const b=(n,t,c)=>`<div class="bb">${ic(n,24,c||'var(--ink)')}<span class="${tiny&&t==='현재 위치'?'tiny':''}">${t}</span></div>`;
+  return `<div class="pill">${b('menu','메뉴')}${b('cal','달력')}${b('loc','현재 위치')}${b('house','집')}${b('play','재생')}${b('rec','녹화','var(--now)')}${b('plus','메모','var(--blue)')}</div>`;
+}
+function panel(o){
+  const t=o.panel==='counts'
+   ? `<span class="on">지출</span><span>${ic('check',14,'var(--sub)')}<i>3</i></span><span>${ic('cal',14,'var(--sub)')}<i>2</i></span><span>${ic('note',14,'var(--sub)')}</span><span>${ic('inbox',14,'var(--sub)')}<i>1</i></span><span>AI<i>1</i></span>`
+   : `<span class="on">지출</span><span>확인</span><span>일정</span><span>메모</span><span>내역</span><span>AI</span>`;
+  return `<div class="panel"><div class="seg">${t}</div>
+   <div class="won"><span style="color:var(--accent);font-weight:800">₩</span>&nbsp;<span>오늘 18,500 · 이번 달 412,300</span><span class="sp"></span><span style="color:var(--${o.ledgerPlus?'accent':'sub'});font-weight:800;font-size:${o.ledgerPlus?16:12}px">${o.ledgerPlus?'＋':'›'}</span></div></div>
+   <div class="disc" style="left:278px;top:59px">${ic('search',22)}</div>
+   <div class="disc" style="left:278px;top:105px">${ic(o.travel==='bag'?'bag':'house',23)}${o.travel==='label'?'<div class="lbl">일상</div>':''}</div>`;
+}
+function strip(o){
+  const d=[['수',11],['목',12],['금',13],['토',14],['일',15],['월',16]];
+  let s=o.todayCell?`<div class="today">↩<b>오늘</b></div>`:'';
+  d.slice(o.todayCell?1:0).forEach(([w,n])=>{s+=`<div class="${n===o.day?'sel':''}">${w}<b>${n}</b></div>`});
+  return `<div class="strip">${s}</div>`;
+}
+function calendar(o){
+  let c=['일','월','화','수','목','금','토'].map(x=>`<span class="h">${x}</span>`).join('');
+  const rec=[2,3,5,6,9,10,11,12,13,14,16];
+  const from=o.cal==='medium'?8:1,to=o.cal==='medium'?21:30;
+  if(from===1)for(let i=0;i<0;i++)c+='<span></span>';
+  for(let n=from;n<=to;n++)c+=`<span class="${n===14?'sel':''} ${rec.includes(n)?'rec':''}">${n}</span>`;
+  return `<div class="sheet" style="height:${o.cal==='medium'?330:660}px"><div class="grab"></div><h3>2026년 11월</h3><div class="cal">${c}</div>
+   <div class="sumrow"><div>머문 곳<b>4곳</b></div><div>걸음<b>6,240</b></div><div>지출<b>₩18,500</b></div></div></div>`;
+}
+function menu(o){
+  const row=(t)=>`<div class="row"><div class="sq"></div>${t}<span class="ch">›</span></div>`;
+  const a=o.menu==='after';
+  return `<div class="scrim"></div><div class="menu ${a?'after':''}"><h3>오늘의 기록</h3>
+   ${a?`<div class="find">${ic('search',16,'var(--sub)')}<span>설정 찾기 (예: 카운터)</span></div><div class="grp">최근에 연 것</div><div class="box">${row('표시 › 카운터')}${row('알림')}${row('데이터 보호')}</div>`:''}
+   <div class="grp">기록</div><div class="box">${row('위치')}${row('행동 분류')}${row('장소 도감')}${row('여권')}</div>
+   <div class="grp">화면</div><div class="box">${row('표시')}${row('언어')}</div>
+   <div class="grp">연결</div><div class="box">${row('Apple Watch 데이터')}${row('캘린더 연결')}${row('내 차 등록')}${row('단축어 · Siri')}${row('AI 연결')}</div>
+   <div class="grp">앱</div><div class="box">${row('설정')}${row('알림')}${row('하루 카드')}</div></div>`;
+}
+function home(o={}){
+  const day=o.day||16, past=day!==16;
+  let h=map(!o.empty)+`<div class="status">9:41</div>`;
+  if(!o.empty){h+=`<div class="homeic" style="left:232px;top:582px">${ic('house',20,'var(--accent)')}</div>`}
+  if(!o.empty||o.catOnly){h+=cat(102,372);
+    if(!o.noCounter)h+=`<div class="counter" style="left:56px;top:${o.hint?250:286}px"><div><span>업무</span><span>3:12</span></div><div><span>걸음</span><span>6,240</span></div><div><span>지출</span><span>₩18,500</span></div></div>`;
+    if(o.hint)h+=`<div class="hint" style="left:96px;top:334px">화랑이를 누르면 숫자를 접을 수 있어요</div>`}
+  h+=o.strip?strip(o):panel(o);
+  h+=`<div class="badge ${past?'past':''}"><small>${{13:'금',14:'토',16:'월'}[day]}</small><b>${day}</b></div>`;
+  h+=sidebar(o);
+  if(o.band==='empty')h+=`<div class="band"><span>이 날은 기록이 없어요</span><span class="go">가까운 기록 11월 12일 ›</span></div>`;
+  if(o.band==='perm')h+=`<div class="band"><span class="dot"></span><span>위치 권한이 꺼져 있어 자동 기록이 멈췄어요</span><span class="go">켜는 법 ›</span></div>`;
+  if(o.band==='summary')h+=`<div class="band"><span>머문 곳 4 · 6,240걸음 · ₩18,500</span><span class="go">하루 요약 ›</span></div>`;
+  h+=pill(o);
+  if(o.cal)h+=calendar(o);
+  if(o.menu)h+=menu(o);
+  (o.marks||[]).forEach(m=>h+=m);
+  return `<div class="frame"><div class="phone">${h}</div></div>`;
+}
+
+const P=[
+ {t:'누르는 자리 44pt와 글자 하한',tags:['기본 배치 그대로','저장 변경 없음','작음'],
+  now:'그림만큼만 눌리는 단추가 많고, 아래 메뉴 이름은 칸이 좁으면 약 7pt까지 줄어듭니다.',
+  after:'그림 크기는 그대로 두고 누르는 자리만 넓힙니다. 아래 메뉴 이름은 약 9.5pt 아래로 줄지 않습니다. 날짜 줄 칸의 VoiceOver 이름, 동작 줄이기 반영도 함께.',
+  a:{tinyLabel:1,marks:[ring(278,59,40,40,'40','left'),ring(278,105,40,40,'40','left'),ring(336,141,22,22,'22','left'),ring(310,300,22,22,'22','left'),ring(112,786,52,40,'약 7pt','up')]},
+  b:{marks:[ring(276,57,44,44,'44','ok left'),ring(276,103,44,44,'44','ok left'),ring(314,130,44,44,'44','ok left'),ring(299,289,44,44,'44','ok left'),ring(112,786,52,40,'9.5pt 이상','ok up')]},
+  ca:['돋보기·여행 단추 40×40','사이드바 +/−와 일정·메모 배지 22×22','「현재 위치」 이름이 작아짐(긴 언어일수록)'],
+  cb:['보이는 크기는 같고 눌리는 자리만 44','이름이 넘치는 언어는 짧은 이름을 씀']},
+ {t:'집 그림이 둘인 것 가르기',tags:['기본 배치 그대로','저장 변경 없음','작음'],
+  now:'왼쪽 위 집 그림은 여행 화면을 열고, 아래 「집」은 집으로 가서 하루 요약을 엽니다. 그림은 같고 하는 일은 다릅니다.',
+  after:'권고안은 그림을 그대로 두고 작은 이름 「일상」/「여행」을 붙이는 것입니다(여행 단추의 「지금 모드를 보여 준다」는 대표 지시를 유지). 그림을 가방으로 바꾸는 안은 문서에 따로 적었습니다.',
+  a:{marks:[num(268,98,1),num(196,764,2)]},
+  b:{travel:'label',marks:[num(268,98,1,1),num(196,764,2,1)]},
+  ca:['① 집 그림 = 여행 열기','② 집 그림 = 집으로 + 하루 요약'],
+  cb:['① 「일상」 이름표: 지금은 일상 모드, 누르면 여행','② 그대로. VoiceOver 설명에 「하루 요약을 엽니다」 추가']},
+ {t:'기록 없는 날·권한 꺼짐 안내',tags:['기본 배치 그대로(해당할 때만 띠)','저장 변경 없음','새 권한 창 없음','작음'],
+  now:'기록이 없는 날은 빈 지도뿐입니다. 권한이 꺼져 있어도 메뉴 맨 아래에 「위치 기록을 기다리는 중」이라고만 나옵니다.',
+  after:'해당할 때만 아래 메뉴 위에 한 줄 띠가 뜹니다. 닫으면 그날은 다시 안 뜹니다. 권한 띠는 이미 있는 메뉴의 권한 카드로 데려갑니다.',
+  a:{empty:1,day:13},
+  b:{empty:1,day:13,band:'empty'},
+  ca:['11월 13일: 경로도 화랑이도 없고 이유를 알 수 없음'],
+  cb:['누르면 가장 가까운 기록 있는 날로','권한이 꺼진 경우의 띠는 오른쪽 그림'],
+  extra:{o:{empty:1,band:'perm'},cap:'권한이 꺼졌을 때(오늘)'}},
+ {t:'날짜 배지 뜻 하나로',tags:['배치 그대로','배지 동작은 시험 옵션(기본은 지금대로)','설정 값','작음'],
+  now:'날짜 배지는 오늘이면 날짜 줄을 펼치고, 다른 날이면 오늘로 갑니다. 14일을 보다가 13일로 가려고 배지를 누르면 오늘로 튑니다.',
+  after:'배지는 늘 날짜 줄을 펼칩니다. 오늘이 아닐 때는 줄 맨 왼쪽에 「오늘」 칸이 있습니다. 「현재 위치」로 오늘에 돌아오는 한 번 길은 그대로입니다.',
+  a:{day:14,marks:[ring(334,57,48,44,'누르면 오늘로','up')]},
+  b:{day:14,strip:1,todayCell:1,marks:[ring(334,57,48,44,'늘 날짜 줄','ok up')]},
+  ca:['같은 단추가 날짜에 따라 다른 일을 함'],
+  cb:['날짜 줄에서 13일도, 오늘도 한 번에']},
+ {t:'달력에서 날짜를 누르면 지도가 보이게',tags:['기본 배치 그대로','저장 변경 없음','작음'],
+  now:'달력에서 날짜를 눌러도 시트가 지도를 가린 채로 남아, 끌어내려야 그날 경로가 보입니다.',
+  after:'날짜를 누르면 시트가 중간 높이로 내려갑니다. 위쪽 지도에 그날 경로가 보이고, 달력은 두 주만 남아 옆 날짜로 바로 옮길 수 있습니다.',
+  a:{day:14,cal:'full'},
+  b:{day:14,cal:'medium'},
+  ca:['달력 → 날짜 → 끌어내리기 = 3번'],
+  cb:['달력 → 날짜 = 2번, 시트를 다시 올리면 한 달']},
+ {t:'할 일 판 탭에 개수 표시',tags:['판 자리·크기 그대로','저장 변경 없음','작음~중간'],
+  now:'탭 6칸이 한 칸 약 41pt라 긴 언어에서 잘립니다. 확인할 것이 있는지는 탭을 눌러 봐야 압니다.',
+  after:'고른 탭만 이름을 쓰고 나머지는 그림으로 줄입니다. 확인·일정·내역·AI에 개수 점이 붙습니다. 첫 탭이 오늘 지출 한 줄인 것은 그대로입니다.',
+  a:{marks:[ring(14,63,254,32,'6칸 × 41pt','up')]},
+  b:{panel:'counts',marks:[ring(14,63,254,32,'확인 3 · 일정 2 · 내역 1 · AI 1','ok up')]},
+  ca:['개수 표시 없음'],
+  cb:['판을 열지 않아도 할 일이 보임']},
+ {t:'숨은 제스처 길잡이와 지출 한 번에 넣기',tags:['기본 배치 그대로','설정 값(본 횟수)','중간'],
+  now:'화랑이 누르기, 레일 두 번 누르기, 「메모」 길게 눌러 가계부 같은 길이 화면에 적혀 있지 않습니다.',
+  after:'처음 세 번만 화랑이 옆에 한 줄 안내가 뜹니다. ₩ 줄 끝의 「＋」는 바로 지출 입력을 엽니다. 메뉴 › 설정에 「홈 사용법」 한 장을 둡니다.',
+  a:{marks:[num(346,764,1),num(92,362,2)]},
+  b:{hint:1,ledgerPlus:1,marks:[num(262,88,1,1)]},
+  ca:['① 「메모」 길게 누르기 = 가계부(표시 없음)','② 화랑이 누르기 = 카운터 켜고 끄기(표시 없음)'],
+  cb:['① ＋를 누르면 바로 지출 입력(1번)','화랑이 안내는 세 번 뒤로는 안 뜸']},
+ {t:'메뉴: 찾기, 최근에 연 것, 시트 겹침 없애기',tags:['기본 배치 그대로(메뉴 안)','설정 값(최근 연 줄)','중간'],
+  now:'메뉴가 20줄이 넘고 가장 깊은 설정은 4단계입니다. 줄을 눌러 시트가 떠도 메뉴가 뒤에 남습니다. 화살표가 흐립니다.',
+  after:'맨 위에 찾기 칸과 최근에 연 3줄. 묶음 4개와 순서는 그대로입니다. 시트를 여는 줄은 메뉴를 먼저 닫습니다.',
+  a:{menu:'now'},b:{menu:'after'},
+  ca:['카운터 설정까지: 메뉴 → 표시 → 카운터 = 3번'],
+  cb:['최근에 연 것에서 2번, 또는 찾기']},
+ {t:'하루 요약 띠',trial:1,tags:['기본 배치 바뀜 → 시험 옵션으로만','설정 값','중간~큼'],
+  now:'「오늘 어땠나」는 「집」 단추나 지도의 집 아이콘을 눌러야 나오고, 집이 등록돼 있지 않으면 열리지 않습니다.',
+  after:'메뉴 › 표시 › 홈 배치에서 켠 사람에게만 아래 메뉴 위에 요약 한 줄이 보입니다. 누르면 하루 요약. 기본은 꺼짐이고 지금 홈은 그대로입니다.',
+  a:{marks:[num(196,764,1)]},
+  b:{noCounter:1,band:'summary'},
+  ca:['① 「집」이 요약으로 가는 길'],
+  cb:['카운터 창과 내용이 겹치므로 띠를 켜면 카운터 창은 접힌 채로 시작']},
+];
+
+const main=document.getElementById('main'),nav=document.getElementById('nav');
+P.forEach((p,i)=>{
+  const n=['1','2','3','4-1','4-2','5','6','7','8'][i];
+  nav.insertAdjacentHTML('beforeend',`<a href="#p${n}">${n}. ${p.t}</a>`);
+  const li=a=>a.map(x=>`<li>${x}</li>`).join('');
+  main.insertAdjacentHTML('beforeend',`<section id="p${n}">
+   <h2>${n}. ${p.t}</h2>
+   <div class="tags">${p.tags.map(t=>`<span class="tag ${/시험/.test(t)?'trial':''}">${t}</span>`).join('')}</div>
+   <p><b>지금</b> ${p.now}</p><p><b>바꾼 뒤</b> ${p.after}</p>
+   <div class="pair">
+    <figure>${home(p.a)}<figcaption><b class="now">지금</b><ol>${li(p.ca)}</ol></figcaption></figure>
+    <figure>${home(p.b)}<figcaption><b class="after">바꾼 뒤${p.trial?' (시험 옵션을 켰을 때)':''}</b><ol>${li(p.cb)}</ol></figcaption></figure>
+    ${p.extra?`<figure>${home(p.extra.o)}<figcaption><b class="after">바꾼 뒤</b>${p.extra.cap}</figcaption></figure>`:''}
+   </div></section>`);
+});
+
+const root=document.documentElement,btn=document.getElementById('toggle');
+function setTheme(t){root.dataset.theme=t;btn.textContent=t==='dark'?'밝은 화면으로':'어두운 화면으로'}
+setTheme(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+btn.onclick=()=>setTheme(root.dataset.theme==='dark'?'light':'dark');
+</script>
+</body>
+</html>

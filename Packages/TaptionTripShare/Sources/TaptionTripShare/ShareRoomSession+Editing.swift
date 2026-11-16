@@ -95,6 +95,7 @@ extension ShareRoomSession {
         case .notice: allowed = mine || (deleting && me == 1)
         case .member: allowed = id == ShareIdentifiers.memberCardID(me) && !deleting
         case .meta: allowed = me == 1
+        case .meet: allowed = id == ShareMeetContent.itemID && !deleting // 누구나, 지우지는 못한다(서버가 기간 창도 본다).
         }
         guard allowed, (kind == .member) == id.hasPrefix(ShareIdentifiers.memberPrefix) else { throw ShareError.readOnly(.notAllowed) }
     }

@@ -119,7 +119,7 @@ enum TripShareMapping {
         let item = TravelTripItem(
             tripID: tripID, itemID: localID, kind: kind, title: title.isEmpty ? kind : title, start: start, end: end,
             startOffsetSeconds: startOffset, endOffsetSeconds: endOffset, planID: old?.planID,
-            status: content.status.flatMap { ["booked", "tentative"].contains($0) ? $0 : nil },
+            status: content.status.flatMap { TravelVisitMark.isStorable($0) ? $0 : nil },
             note: memo?.isEmpty == false ? memo.map { String($0.prefix(500)) } : nil,
             colorHex: TravelTripItem.cleanColorHex(content.colorHex),
             plannedSpendKRW: TravelTripItem.cleanPlannedSpend(content.cost.map(Double.init)),

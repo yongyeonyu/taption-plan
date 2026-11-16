@@ -521,7 +521,7 @@ struct MapHomeAlarmSettingsSheet: View {
                             }
                         }
                         .padding(.horizontal, 14)
-                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                     }
                     if group == .day {
                         HStack {
@@ -533,7 +533,7 @@ struct MapHomeAlarmSettingsSheet: View {
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
-                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                     }
                 }
                 nearbyMemoRow
@@ -568,7 +568,7 @@ struct MapHomeAlarmSettingsSheet: View {
             .tint(Color.tpAccent)
             .padding(.vertical, 8)
             .padding(.horizontal, 14)
-            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             .onChange(of: isNearbyMemoEnabled) { _, _ in onNearbyMemoChange() }
         }
     }

@@ -5,8 +5,8 @@ import TaptionPlanStore
 struct TravelModeView: View {
     @Bindable var model: AppModel
     let language: MapHomeLanguage
-    /// 예전 지도 여행 모드로 그날을 연다. 일정 편집은 계획표가 생길 때까지 거기서 한다.
-    let openPlan: (Date) -> Void
+    /// 붙여넣기 배너·중계로 받은 여행 계획. 있으면 들어오자마자 가져오기 창을 연다(TVX1116A01).
+    var importText: String?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -24,6 +24,7 @@ struct TravelModeView: View {
     @State private var newTripDraft: TravelNewTripSheet.Draft?
     @State private var ledgerTripID: String?
     @State private var expenseDraft: LedgerEntry?
+    @State private var realityDay: TravelTodayDay?
     @State private var entryTarget: TravelQuickEntrySheet.Target?
     /// 계획표에서 고른 빈 셀(TVU1113A01).
     @State private var planCell: TravelPlanCell?
@@ -36,6 +37,8 @@ struct TravelModeView: View {
     @State private var placePhotos = TravelPlacePhotoStore()
     @State private var planHistory = TravelPlanHistory()
     @State private var deleteCandidate: TravelTripDirectory.Entry?
+    /// AI로 만들기(가져오기) 창. 예전에는 지도 여행 모드로 건너가야 했다.
+    @State private var isImportPresented = false
     /// 여행 공유 시트(TSH1114A26). 내용은 `TripShareHost`가 띄운다.
     @State private var shareRoute: TripShareRoute?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
@@ -109,11 +112,17 @@ struct TravelModeView: View {
         .overlay { if let focused, openedID != nil, flight == nil { streetMap(focused, destination).ignoresSafeArea() } }
         .overlay {
             if let focused, openedID != nil, flight == nil, !isPlanUp, pins(destination).isEmpty {
-                Text(language.text("일정에 장소를 붙이면 지도에 나옵니다", "Add a place to a plan to see it on the map"))
-                    .font(.footnote.weight(.medium)).foregroundStyle(TravelInk.plan)
-                    .padding(.horizontal, 12).frame(height: 32)
-                    .background(TravelInk.panel, in: Capsule())
-                    .allowsHitTesting(false)
+                // 안내만 있던 자리에 바로 누를 단추를 둔다(TVX1116A01). 날짜 없는 여행은 날짜를 먼저 정한다.
+                Button { courseAdding = focused } label: {
+                    Label(language.text("곳을 더하면 지도에 나옵니다", "Add a stop to see it on the map"), systemImage: "plus")
+                        .font(.footnote.weight(.medium)).foregroundStyle(TravelInk.plan)
+                        .padding(.horizontal, 14).frame(height: 36)
+                        .background(TravelInk.panel, in: Capsule())
+                        .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+                }
+                .buttonStyle(.plain)
+                .disabled(focused.state == .someday)
+                .accessibilityIdentifier("travelEmptyAddStop")
             }
         }
         .overlay(alignment: .topLeading) {
@@ -152,6 +161,7 @@ struct TravelModeView: View {
             }
         }
         .onChange(of: openedID) { _, id in lastTripID = id ?? "" }
+        .onChange(of: importText) { _, text in if text != nil, !isImportPresented { isImportPresented = true } }
         .onChange(of: isPlanUp) { _, _ in
             if planCell != nil { planCell = nil }
             applyPlanCamera()
@@ -185,9 +195,14 @@ struct TravelModeView: View {
                 addCourseStop(entry, name: $0, place: $1, kind: $2)
             }
         }
+        .sheet(isPresented: $isImportPresented) {
+            MapHomeTripImportSheet(model: model, language: language, initialText: importText) { openImported($0) }
+                .presentationDetents([.large])
+        }
         .sheet(item: $columnsTrip) { TravelColumnEditorSheet(model: model, language: language, trip: $0) }
         .sheet(item: $entryTarget) { target in TravelQuickEntrySheet(model: model, language: language, target: target) { planHistory.record($0) } }
         .sheet(item: $expenseDraft) { draft in LedgerEntryForm(language: language, entry: draft, members: draft.tripID.flatMap(book.trip)?.members) }
+        .sheet(item: $realityDay) { PlanRealityView(model: model, language: language, day: $0.date) }
         .tripShare(model: model, language: language, openedID: openedID, route: $shareRoute)
         .preferredColorScheme(openedID == nil && flight == nil ? .dark : .light)
         .accessibilityIdentifier("travelModeScreen")
@@ -206,6 +221,7 @@ struct TravelModeView: View {
         didEnter = true
         camera.radius = restRadius
         let dayKey = Self.dayKey(model.selectedDate)
+        if importText != nil { isImportPresented = true }
         guard let target = Self.entryToOpen(entries, selectedDay: dayKey, lastTripID: lastTripID) else { return }
         focusedID = target.id
         let destination = TravelModeDestination(trip: target.trip, stops: model.settings.travelPlanStops)
@@ -213,6 +229,17 @@ struct TravelModeView: View {
         // 일상에서 보던 날이 그 여행 기간이면 계획표도 그날로 연다.
         if dayKey >= target.trip.startDay, dayKey <= target.trip.endDay { planDayKey = dayKey }
         openedID = target.id
+    }
+
+    /// 가져온 계획의 첫날을 품은 여행을 그날로 연다.
+    private func openImported(_ day: Date) {
+        let key = Self.dayKey(day)
+        guard let entry = entries.first(where: { $0.trip.startDay <= key && key <= $0.trip.endDay }) else { return }
+        if openedID != entry.id { backToGlobe() }
+        if let last = cameras(for: TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops)).last { camera = last }
+        focusedID = entry.id
+        planDayKey = key
+        openedID = entry.id
     }
 
     static func dayKey(_ date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
@@ -289,7 +316,16 @@ struct TravelModeView: View {
 
     /// 지출 넣기. 장부가 있으면 바로 입력 칸을 연다: 고른 일정의 시작, 없으면 재생 헤드의 시각(계획표가 내려 있으면 지금).
     private func addExpense(_ entry: TravelTripDirectory.Entry, minute: Int?) {
-        guard book.trip(entry.id) != nil else { return ledgerTripID = entry.id }
+        guard book.trip(entry.id) != nil else {
+            // 가계부에 이 여행이 아직 없으면 예산 없는 여행 장부를 만들고 바로 입력 칸을 연다(TVX1116A01). 만들 수 없으면 전처럼 가계부를 연다.
+            let planned = LedgerBook.plannedTrips(stops: model.settings.travelPlanStops, items: model.settings.travelTripItems ?? [], trips: model.settings.travelTrips ?? [])
+            guard let trip = planned.first(where: { $0.id == entry.id }) else { return ledgerTripID = entry.id }
+            Task {
+                await book.saveTrip(trip)
+                if book.trip(entry.id) != nil { addExpense(entry, minute: minute) } else { ledgerTripID = entry.id }
+            }
+            return
+        }
         let zone = entry.trip.timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
         let picked = minute.map { TravelQuickEntrySheet.date(dayKey: dayKey(entry), minute: $0, offsetSeconds: zone.secondsFromGMT()) }
         expenseDraft = TravelPlanSpend.draft(tripID: entry.id, at: picked ?? (isPlanUp ? playDate(entry) : .now))
@@ -355,7 +391,8 @@ struct TravelModeView: View {
             // 위쪽 핀에 선 고양이가 머리말에 가리지 않게 고양이 키만큼 더 띄운다.
             insets: UIEdgeInsets(top: area.minY + 74, left: 28, bottom: viewSize.height - area.maxY + 24, right: viewSize.width - area.maxX + 28),
             fitKey: "\(entry.id)|\(dayKey(entry))|\(isPlanUp)|\(Int(viewSize.width))x\(Int(viewSize.height))|\(Int(tableHeight))",
-            onSelect: { selectPin(entry, itemID: $0) }, isCourse: isCourse, onLongPress: { addEntry(entry, at: $0) }
+            onSelect: { selectPin(entry, itemID: $0) }, isCourse: isCourse, onLongPress: { addEntry(entry, at: $0) },
+            companions: TripLiveLocationService.shared.marks(tripID: entry.id, language: language)
         )
     }
 
@@ -439,7 +476,7 @@ struct TravelModeView: View {
         return drag.simultaneously(with: pinch).simultaneously(with: tap)
     }
 
-    /// 깃발이나 카드를 누르면 그 여행지로 돌아가 포커싱하고, 포커싱된 것을 한 번 더 누르면 여행 화면으로 들어간다(대표 결정).
+    /// 깃발이나 카드를 한 번 누르면 그 여행지로 날아가 바로 여행 화면으로 들어간다(TVX1116A01, 두 번 누르기를 없앰).
     private func select(_ entry: TravelTripDirectory.Entry) {
         guard flight == nil else { return }
         if focusedID == entry.id {
@@ -491,6 +528,7 @@ struct TravelModeView: View {
             camera = plan.camera(at: plan.duration)
             focusedID = entry.id
             flyingID = nil
+            openedID = entry.id
             return
         }
         flight = plan
@@ -505,6 +543,7 @@ struct TravelModeView: View {
         flight = nil
         flyingID = nil
         focusedID = id
+        openedID = id
     }
 
     private func backToGlobe() {
@@ -573,6 +612,12 @@ struct TravelModeView: View {
                     .accessibilityIdentifier("travelShareJoin")
                 }
             }
+            if entries.isEmpty {
+                Text(language.text("아직 여행이 없습니다. 아래에서 첫 여행을 만들어 보세요.", "No trips yet. Make your first one below."))
+                    .font(.footnote).padding(.horizontal, 12).padding(.vertical, 10).frame(width: 220, alignment: .leading)
+                    .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
+                    .accessibilityIdentifier("travelNoTrips")
+            }
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(entries) { entry in card(entry) }
@@ -601,7 +646,8 @@ struct TravelModeView: View {
                 }
                 .font(.caption.weight(.medium))
                 .foregroundStyle(TravelInk.land)
-                .padding(.horizontal, 9)
+                .padding(.leading, 9)
+                .padding(.trailing, 34)
                 .frame(height: 26)
                 .background(flagColor.opacity(entry.state == .past ? 0.6 : 1))
                 VStack(alignment: .leading, spacing: 2) {
@@ -625,7 +671,20 @@ struct TravelModeView: View {
             }
         }
         .buttonStyle(.plain)
-        .contextMenu {
+        // 길게 누르기를 모르는 사람도 고치기·지우기를 찾게 ⋯ 단추로도 같은 메뉴를 연다(TVX1116A01).
+        .overlay(alignment: .topTrailing) {
+            Menu { cardMenu(entry) } label: {
+                Image(systemName: "ellipsis").font(.system(size: 14, weight: .semibold)).frame(width: 34, height: 26).contentShape(Rectangle())
+                    .foregroundStyle(entry.state == .someday ? TravelInk.plan : TravelInk.land)
+            }
+            .accessibilityLabel(language.text("여행 메뉴", "Trip menu"))
+            .accessibilityIdentifier("travelTripCardMenu-\(entry.id)")
+        }
+        .contextMenu { cardMenu(entry) }
+        .accessibilityIdentifier("travelTripCard-\(entry.id)")
+    }
+
+    @ViewBuilder private func cardMenu(_ entry: TravelTripDirectory.Entry) -> some View {
             // 깃발 색 고르기. 저장한 여행만 바꿀 수 있다.
             if entry.isStored {
                 ForEach(TravelInk.flagHexes, id: \.self) { hex in
@@ -643,8 +702,6 @@ struct TravelModeView: View {
                 shareEdit(entry, .tripInfo) { newTripDraft = .init(isDayTrip: entry.isDayTrip, editing: entry.trip) }
             }
             Button(language.text("여행 지우기", "Delete trip"), systemImage: "trash", role: .destructive) { deleteCandidate = entry }
-        }
-        .accessibilityIdentifier("travelTripCard-\(entry.id)")
     }
 
     /// 여행을 고르면 두 단추로 바로 들어간다(TPB1114A01): 왼쪽 카드(코스), 오른쪽 상세(계획표). 아니면 새 여행·당일치기.
@@ -656,6 +713,15 @@ struct TravelModeView: View {
             } else {
                 footerButton("plus", language.text("새 여행", "New trip")) { newTripDraft = .init(isDayTrip: false) }
                 footerButton("sun.max", language.text("오늘 당일치기", "Day trip today")) { newTripDraft = .init(isDayTrip: true) }
+                Button { isImportPresented = true } label: {
+                    Image(systemName: "sparkles").font(.system(size: 17, weight: .medium)).frame(width: 46, height: 46)
+                        .background(TravelInk.panel, in: Circle())
+                        .overlay { Circle().stroke(TravelInk.border, lineWidth: 1) }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(TravelInk.plan)
+                .accessibilityLabel(language.text("AI로 만들기", "Plan with AI"))
+                .accessibilityIdentifier("travelImportAI")
             }
         }
         .padding(.horizontal, 14)
@@ -729,6 +795,7 @@ struct TravelModeView: View {
             .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: 1) }
             moneyBar(entry)
             TripShareStatusBand(language: language, tripID: entry.id)
+            TripLiveLocationBand(language: language, tripID: entry.id)
             TripShareNoticeBand(model: model, language: language, tripID: entry.id)
         }
         .foregroundStyle(TravelInk.plan)
@@ -764,9 +831,24 @@ struct TravelModeView: View {
             .init(language.text("일정 넣기", "Add plan"), "calendar.badge.plus") { addEntry(entry, cell: planCell) },
             .init(language.text("곳 더하기", "Add a stop"), "mappin.and.ellipse") { courseAdding = entry },
             .init(language.text("열 편집", "Edit columns"), "rectangle.split.3x1") { columnsTrip = entry.trip },
-            .init(language.text("지도에서 일정 보기", "View plans on the map"), "map") { openPlan(planDay(entry, items: items)) },
+            .init(language.text("AI로 만들기", "Plan with AI"), "sparkles") { isImportPresented = true },
             .init(language.text("지출 넣기", "Add expense"), "wonsign") { addExpense(entry, minute: nil) },
+            .init(language.text("계획과 실제", "Plan vs actual"), "chart.bar.xaxis") { realityDay = .init(date: dayDate(dayKey(entry))) },
         ]) { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
+    }
+
+    /// 여행 중이고 보는 날이 오늘이면, 내린 판에 한 줄 대신 오늘 카드를 보인다(TVZ1116C01).
+    @ViewBuilder private func sheetFoot(_ entry: TravelTripDirectory.Entry) -> some View {
+        if !isPlanUp, entry.state == .active, dayKey(entry) == today() {
+            TravelTodayCard(
+                model: model, entry: entry, blocks: table(entry).blocks, travelMinutes: routes.minutes,
+                sheet: book.trip(entry.id).map { LedgerTripMath.sheet($0, entries: book.entries) }, language: language,
+                onExpense: { addExpense(entry, minute: nil) }, onAddStop: { courseAdding = entry },
+                onReality: { realityDay = .init(date: dayDate(dayKey(entry))) }, onRaise: { withAnimation(.snappy(duration: 0.25)) { isPlanUp = true } }
+            )
+        } else {
+            tripFooter(entry)
+        }
     }
 
     /// 코스에서 곳 더하기(TVV1113A01 C2): 편집기를 거치지 않고 그날 코스 끝에 붙인다. 시각은 앱이 잡는다.
@@ -831,6 +913,7 @@ struct TravelModeView: View {
                     }
                 )
                 dayChips(entry)
+                TravelPuzzleDrawer(model: model, tripID: entry.id, language: language)
                 if showsCourse(entry) {
                     TravelCourseView(
                         table: table(entry), items: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }, language: language,
@@ -868,8 +951,9 @@ struct TravelModeView: View {
             if isPlanUp, planHistory.tripID == entry.id, planHistory.canUndo || planHistory.canRedo, !model.isSharedTrip(entry.id) {
                 TravelPlanHistoryBar(history: planHistory, language: language, onUndo: { applyHistory(planHistory.undo()) }, onRedo: { applyHistory(planHistory.redo()) })
             }
-            tripFooter(entry)
+            sheetFoot(entry)
         }
+        .travelDayBoard(model: model, tripID: entry.id, trip: entry.trip, dayKey: dayKey(entry), language: language, history: $planHistory)
         .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: corner, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: corner, style: .continuous).stroke(TravelInk.border, lineWidth: 1) }
         .frame(maxWidth: Self.isWide(viewSize) ? min(460, viewSize.width * 0.5) : .infinity)
@@ -978,13 +1062,6 @@ struct TravelModeView: View {
             addEntry(entry)
             entryTarget?.place = place
         }
-    }
-
-    /// 예전 지도 여행 모드에서 열 날: 여행 중이면 오늘, 아니면 여행 첫날.
-    private func planDay(_ entry: TravelTripDirectory.Entry, items: [TravelTripItem]) -> Date {
-        if entry.state == .active { return .now }
-        let calendar = Calendar.autoupdatingCurrent
-        return TravelTripDay.components(entry.trip.planStartDay).flatMap(calendar.date(from:)) ?? items.first?.start ?? .now
     }
 }
 

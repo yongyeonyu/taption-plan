@@ -78,10 +78,10 @@ struct TravelMapVideoSection: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.tpLine, lineWidth: 1)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
+                .stroke(Color.tpLine, lineWidth: TaptionBorder.width)
         }
     }
 
@@ -163,7 +163,7 @@ struct TravelMapVideoSection: View {
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .medium))
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .foregroundStyle(Color.tpInk)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             Button(action: start) {
@@ -171,7 +171,7 @@ struct TravelMapVideoSection: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(.white)
-                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(!(trip?.isRenderable ?? false))

@@ -935,6 +935,7 @@ extension MapHomeView {
                 .foregroundStyle(Color.tpInk)
                 .frame(width: 40, height: 40)
                 .background { TaptionStickerDisc() }
+                .taptionTouchTarget(visualWidth: 40, visualHeight: 40)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(language.text("여권으로 돌아가기", "Back to passport"))
@@ -947,10 +948,10 @@ extension MapHomeView {
         ForEach(3..<6, id: \.self) { _ in Color.clear.frame(maxWidth: .infinity) }
     }
 
-    /// 돋보기 옆 여행 모드 전환. 지금 모드를 보여 준다: 현실은 집, 여행은 비행기(대표 지시).
+    /// 돋보기 옆 여행 모드 전환. 누르면 가는 곳을 보여 준다: 일상에서는 비행기, 여행에서는 집(대표 지시, STY1116A01).
     var travelModeButton: some View {
         Button {
-            // 집 단추는 여행 화면(지구본)을 연다. 지도 여행 모드에 있을 때는 일상으로 돌아간다(TVB1112A01).
+            // 비행기 단추는 여행 화면(지구본)을 연다. 지도 여행 모드에 있을 때는 집 단추가 되어 일상으로 돌아간다(TVB1112A01).
             if isTravelMode {
                 withAnimation(.easeInOut(duration: 0.2)) { isTravelMode = false }
                 model.selectedDate = .now
@@ -958,14 +959,28 @@ extension MapHomeView {
                 isTravelHomePresented = true
             }
         } label: {
-            TaptionBarIcon(systemImage: isTravelMode ? "airplane" : "house.fill", size: 25)
+            TravelModeSwitchIcon(goesToTravel: !isTravelMode)
                 .frame(width: 40, height: 40)
                 .background { TaptionStickerDisc() }
+                .travelModeTransitionOrigin()
+                // 지금 모드 이름을 붙인다. 배치가 밀리지 않게 단추 밖에 얹는다(HUX1116A02).
+                .overlay(alignment: .bottom) {
+                    Text(isTravelMode ? language.text("여행", "Trip") : language.text("일상", "Everyday"))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
+                        .foregroundStyle(Color.tpInk)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 4)
+                        .background(Color.tpSurface.opacity(0.9), in: Capsule())
+                        .offset(y: 9)
+                        .accessibilityHidden(true)
+                }
+                .taptionTouchTarget(visualWidth: 40, visualHeight: 40)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(isTravelMode
-            ? language.runtimeText("현실 모드로 돌아가기", "Back to everyday mode")
-            : language.text("여행 계획", "Trip plan"))
+            ? language.text("일상으로 돌아가기", "Back to everyday")
+            : language.text("여행으로 가기", "Go to travel"))
     }
 
     /// 여행 모드에서는 오늘 이후만 고른다.

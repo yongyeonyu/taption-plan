@@ -21,10 +21,11 @@ struct PlanRealityView: View {
     @State private var notice: String?
     @State private var computedAt = Date.now
 
-    init(model: AppModel, language: MapHomeLanguage) {
+    /// `day`를 주면 그날부터 본다(여행 화면, TVZ1116C01). 없으면 홈에서 고른 날.
+    init(model: AppModel, language: MapHomeLanguage, day: Date? = nil) {
         _model = Bindable(wrappedValue: model)
         self.language = language
-        _dayStart = State(initialValue: PlanRealityDay.span(containing: model.selectedDate).start)
+        _dayStart = State(initialValue: PlanRealityDay.span(containing: day ?? model.selectedDate).start)
     }
 
     private var book: LedgerBook { .shared }

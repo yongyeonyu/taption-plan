@@ -624,7 +624,7 @@ struct FirstRunBottomBarSketch: View {
                                 .fill(Color.tpAccent.opacity(0.16))
                                 .overlay {
                                     RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
-                                        .stroke(Color.tpAccent, lineWidth: 2)
+                                        .stroke(Color.tpAccent, lineWidth: 1.5)
                                 }
                         }
                     }

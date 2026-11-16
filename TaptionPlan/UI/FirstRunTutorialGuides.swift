@@ -503,7 +503,7 @@ struct FirstRunCatPage: View {
                         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
-                                .stroke(model.selectedCatCoat == cat.coat ? Color.tpAccent : Color.clear, lineWidth: 2)
+                                .stroke(model.selectedCatCoat == cat.coat ? Color.tpAccent : Color.clear, lineWidth: 1.5)
                         }
                         .contentShape(Rectangle())
                     }

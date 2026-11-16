@@ -203,6 +203,15 @@ struct TravelQuickEntrySheet: View {
                 Button(language.text("바로 뒤에 복제", "Duplicate right after"), systemImage: "plus.square.on.square") { Task { await duplicate() } }
                 Button(language.text("전날로", "Move to previous day"), systemImage: "arrow.left") { Task { await shiftDay(-1) } }
                 Button(language.text("다음 날로", "Move to next day"), systemImage: "arrow.right") { Task { await shiftDay(1) } }
+                if let item = target.editing {
+                    TravelDayMoveMenu(model: model, item: item, language: language) { step in
+                        didFail = step == nil
+                        if let step {
+                            onHistory(step)
+                            dismiss()
+                        }
+                    }
+                }
             } label: {
                 Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(TravelInk.plan).frame(width: 40, height: 32)
             }
@@ -231,8 +240,8 @@ struct TravelQuickEntrySheet: View {
                     .multilineTextAlignment(.trailing)
                     .font(.footnote.monospacedDigit())
                     .padding(.horizontal, 10).frame(height: 34)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
-                    .overlay { RoundedRectangle(cornerRadius: 8).stroke(TravelInk.border, lineWidth: 1) }
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionCorner.small))
+                    .overlay { RoundedRectangle(cornerRadius: TaptionCorner.small).stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
                     .onChange(of: plannedSpend) { _, value in
                         let digits = Self.spendDigits(value)
                         if digits != value { plannedSpend = digits }
@@ -265,15 +274,15 @@ struct TravelQuickEntrySheet: View {
             TextField(language.text("메모 (선택)", "Note (optional)"), text: $note, axis: .vertical)
                 .font(.footnote).lineLimit(1...3)
                 .padding(.horizontal, 8).padding(.vertical, 6)
-                .background(Color.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.white.opacity(0.8), in: RoundedRectangle(cornerRadius: TaptionCorner.small))
                 .padding(.top, 4)
                 .accessibilityIdentifier("travelEntryNote")
         }
         .foregroundStyle(TravelInk.plan)
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(TravelPlanTable.tint(colorHex), in: RoundedRectangle(cornerRadius: 12))
-        .overlay { RoundedRectangle(cornerRadius: 12).stroke(TravelPlanTable.ink(colorHex), lineWidth: 1) }
+        .background(TravelPlanTable.tint(colorHex), in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelPlanTable.ink(colorHex), lineWidth: 1) }
     }
 
     /// 시작·종료 슬라이더(5분 단위). 시작을 옮기면 길이는 그대로 따라간다.
@@ -353,7 +362,7 @@ struct TravelQuickEntrySheet: View {
                         Text(title).font(.footnote).lineLimit(1)
                             .padding(.horizontal, 10).frame(height: 28)
                             .foregroundStyle(TravelInk.plan)
-                            .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+                            .overlay { Capsule().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
                     }
                     .buttonStyle(.plain)
                 }
@@ -371,7 +380,7 @@ struct TravelQuickEntrySheet: View {
             .onSubmit { Task { await save() } }
             .padding(.horizontal, 10).frame(height: 44)
             .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
-            .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelInk.border, lineWidth: 1) }
+            .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
             .accessibilityIdentifier("travelEntryTitle")
     }
 

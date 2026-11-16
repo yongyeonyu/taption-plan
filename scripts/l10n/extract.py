@@ -34,7 +34,7 @@ EN_TABLES = [
     ("TaptionPlan/UI/MapHomeLanguage.swift", "englishTitle"),
     ("Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/MovementModels.swift", "englishTitle"),
     ("Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/PlaceModels.swift", "englishTitle"),
-    ("TaptionPlan/Core/WidgetShared.swift", "englishTitle"),
+    ("TaptionPlan/Core/LiveActivityShared.swift", "englishTitle"),
     ("Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/FloorModels.swift", "english"),
 ]
 # 표로 쓴 "한글", "English" 짝을 그대로 읽는 파일.

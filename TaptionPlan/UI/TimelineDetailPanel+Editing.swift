@@ -47,7 +47,7 @@ extension TimelineDetailPanel {
         .background(Color.tpSurfaceCream, in: RoundedRectangle(cornerRadius: TaptionRadius.control))
         .overlay {
             RoundedRectangle(cornerRadius: TaptionRadius.control)
-                .stroke(Color.tpLine, lineWidth: 0.7)
+                .stroke(Color.tpLine, lineWidth: TaptionBorder.width)
         }
     }
 }

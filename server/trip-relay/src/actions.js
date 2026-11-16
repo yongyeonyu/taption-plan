@@ -195,6 +195,7 @@ registry
 
 // 2묶음: 일정.
 const TRIP_ITEM_KINDS = ["flight", "lodging", "meal", "cafe", "sight", "photo", "shopping", "activity", "rest", "sleep", "transfer", "other"];
+const TRIP_STATUSES = ["booked", "planned", "tentative"];
 const after = (start, end) => !given(start) || !given(end) || Date.parse(end) > Date.parse(start);
 registry
   .add("planQuickAction", {
@@ -217,6 +218,7 @@ registry
       end: f.instant("End, after start").required_(),
       kind: f.oneOf(TRIP_ITEM_KINDS, "Kind of item, default activity"),
       note: f.text(500, "Note"),
+      status: f.oneOf(TRIP_STATUSES, "booked, planned or tentative, default planned. tentative makes it a puzzle piece the user fits into the plan"),
     },
     check: (v) => after(v.start, v.end),
   })

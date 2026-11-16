@@ -128,9 +128,9 @@ struct MapHomePlaybackVideoSheet: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                     .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
             }
             actionButton
@@ -185,7 +185,7 @@ struct MapHomePlaybackVideoSheet: View {
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity, minHeight: 36)
                         .foregroundStyle(id == selected ? Color.white : Color.tpInk)
-                        .background(id == selected ? Color.tpPrimaryFill : Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(id == selected ? Color.tpPrimaryFill : Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
@@ -314,7 +314,7 @@ struct MapHomePlaybackVideoSheet: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(.white)
-                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(!canStart)
@@ -415,7 +415,7 @@ struct MapHomePlaybackRangePicker: View {
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity, minHeight: 40)
                 .foregroundStyle(Color.tpInk)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .accessibilityIdentifier("playbackRangeMenu")
             if preset == .custom {

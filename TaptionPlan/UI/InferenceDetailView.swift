@@ -258,7 +258,7 @@ struct InferenceDetailView: View {
         .overlay {
             if selectedGroupID == group.id {
                 RoundedRectangle(cornerRadius: TaptionRadius.card)
-                    .stroke(Color.tpTransitDark, lineWidth: 2)
+                    .stroke(Color.tpTransitDark, lineWidth: 1.5)
             }
         }
     }
@@ -654,7 +654,7 @@ struct InferenceDetailView: View {
         .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
         .overlay {
             RoundedRectangle(cornerRadius: TaptionRadius.compact)
-                .stroke(Color.tpControlStroke, lineWidth: 1)
+                .stroke(Color.tpControlStroke, lineWidth: TaptionBorder.width)
         }
     }
 }

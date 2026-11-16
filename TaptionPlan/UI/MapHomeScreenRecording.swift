@@ -627,7 +627,7 @@ struct MapHomeRecordingOptionsSheet: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(.white)
-                    .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             }
@@ -637,7 +637,7 @@ struct MapHomeRecordingOptionsSheet: View {
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .foregroundStyle(Color.tpAccent)
-                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 Text(language.text(

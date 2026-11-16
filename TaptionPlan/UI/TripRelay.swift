@@ -12,11 +12,10 @@ extension MapHomeView {
         guard await AssistantRegistration.ensureReady() else { return }
         // AI 비서 명령도 같은 때 받는다(TRP1110A07).
         await checkAssistantCommands()
-        guard TripRelay.isAvailable, TripRelay.key != nil, !isTripImportPresented,
-              let text = await TripRelay.fetch(), !isTripImportPresented, TripRelay.isNew(text) else { return }
+        guard TripRelay.isAvailable, TripRelay.key != nil, pastedTripText == nil,
+              let text = await TripRelay.fetch(), pastedTripText == nil, TripRelay.isNew(text) else { return }
         pastedTripText = text
         if isTripClipboardOfferVisible { isTripClipboardOfferVisible = false }
-        isTravelMode = true
-        isTripImportPresented = true
+        isTravelHomePresented = true
     }
 }

@@ -62,7 +62,7 @@ extension MapHomeView {
                     .foregroundStyle(Color.tpSecondary)
                     Image(systemName: isCounterMenuExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.tpInk.opacity(0.55))
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
@@ -157,18 +157,28 @@ extension MapHomeView {
                     Spacer()
                     Image(systemName: isSettingsMenuExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.tpInk.opacity(0.55))
                 }
                 .foregroundStyle(Color.tpInk)
                 .modifier(MapHomeMenuRowPadding())
                 .padding(.horizontal, 12)
-                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("설정 목록", "Settings list"))
 
             if isSettingsMenuExpanded {
+                Button { performMenuShortcut(.homeGuide) } label: {
+                    Label(language.text("홈 사용법", "Home guide"), systemImage: "hand.tap.fill")
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                        .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 12)
                 Button { isDataProtectionPresented = true } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "lock.shield.fill")
@@ -185,12 +195,12 @@ extension MapHomeView {
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.tpInk.opacity(0.55))
                     }
                     .foregroundStyle(Color.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 8)
-                    .background(Color.tpReferenceRose.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Color.tpReferenceRose.opacity(0.055), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(language.text("데이터 보호 열기", "Open data protection"))
@@ -216,12 +226,12 @@ extension MapHomeView {
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.tpInk.opacity(0.55))
                     }
                     .foregroundStyle(Color.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 8)
-                    .background(Color.tpReferenceRose.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Color.tpReferenceRose.opacity(0.055), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(language.text("설정 초기화", "Reset settings"))
@@ -271,7 +281,7 @@ extension MapHomeView {
         .foregroundStyle(Color.primary)
         .padding(.vertical, 12)
         .padding(.horizontal, 12)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
         .accessibilityElement(children: .combine)
     }
 
@@ -295,7 +305,7 @@ extension MapHomeView {
             .padding(.horizontal, 13)
             .background(
                 isSelected ? Color.tpAccent.opacity(0.12) : .clear,
-                in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+                in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
             )
         }
         .buttonStyle(.plain)

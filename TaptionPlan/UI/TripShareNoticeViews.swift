@@ -123,7 +123,7 @@ struct TripShareNoticeBand: View {
                 }
                 .padding(8)
                 .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: TaptionCorner.large))
-                .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: 1) }
+                .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
                 .accessibilityIdentifier("tripShareNoticeBand")
             }
         }

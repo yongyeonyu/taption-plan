@@ -2,6 +2,99 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## STY1116A01 · 일상↔여행 전환 효과·전환 아이콘·스타일 통일 1차 (2026-11-16)
+
+- 전환 방식 비교: (가) `fullScreenCover`는 두고 시스템 올림 움직임만 끈 뒤 덮개 안에서 원형 가림으로 드러냄 — 모달·`dismiss()`·안쪽 시트가 그대로라 고른 것. (나) 홈 위 겹침(overlay)으로 여행 화면을 띄움 — 움직임은 완전히 다룰 수 있지만 `TravelModeView`의 `dismiss()`와 시트 표시가 달라져 여행 세션 셋이 고치는 파일까지 바꿔야 함. (다) UIKit 사용자 전환 — 가장 매끄럽지만 SwiftUI 바깥 코드가 커지고 시트 겹침에서 깨지기 쉬움.
+- 단위 시험: `TravelModeTransitionTests` 7건 통과(0 실패), 지정 시뮬레이터 `99AC6F35…`, `-parallel-testing-enabled NO`. 단계 상태 기계(두 번 누름·여는 중 닫기·닫는 중 다시 열기·늦게 온 끝남 신호)와 원 반지름·시작점. 로그 `build/validation/STY1116A01/unit-tests-1.log`.
+- 첫 구현은 녹화해 보니 원이 아니라 아래에서 올라옴(덮개를 올리는 「애니메이션 끔」 거래 안에서 퍼짐이 시작돼 바로 끝남). 고침: 올릴 때 `UIView.setAnimationsEnabled(false)`를 한 틱만, 퍼짐은 40ms 뒤 시작.
+- 고친 뒤 시뮬레이터 Debug 빌드(외장 볼륨 파생 데이터) 통과(`build-sim-2.log`), 지정 시뮬레이터에서 녹화: 비행기 단추를 누르면 그 자리에서 원이 퍼지며 여행 화면이 드러나고(`transition-open-frames.png`, 앞·중간·뒤 `transition-1-before.png`·`transition-2-mid.png`·`transition-3-after.png`), 여행 화면의 집 단추를 누르면 원이 오므라들어 일상의 비행기 단추 자리로 들어감(`transition-close-frames.png`). 끝나면 일상 단추는 다시 비행기.
+- 하단 메뉴: 스타일 변경 전(`home-after.png`)과 모든 변경 뒤(`home-style-after.png`) 사진의 하단 막대 영역(아래 8.5%)이 화소 단위로 같음(차이 0화소, `bottom-bar-before-after.png`). 홈 배치·고양이 크기도 같음(`home-before-after.png`, 다른 곳은 시각·고양이 동작 차이).
+- 스타일: 값이 같은 모서리 41곳 → `TaptionCorner`. 대표 결정(객관식 세 물음 모두 추천안)에 따라 사이 값 모서리 111곳을 네 단계로, 옛 `TaptionRadius` 값을 네 단계에 연결, 모양 바로 뒤 테두리 19곳을 1pt(강조 1.5)로. 표와 결정은 `docs/STYLE_UNIFY.md`, 다시 세는 도구 `scripts/style-survey.py`.
+- 동작 줄이기: 처음에는 켜면 크로스페이드가 아니라 아래에서 올라오는 것을 녹화로 찾음(시스템 움직임을 한 틱 뒤에 되돌려 덮개가 뜨기 전에 다시 켜짐). 고침: 덮개 안 화면이 나타난 뒤(40ms)에 되돌리고, 0.5초 예비. 다시 빌드(`build-sim-3.log`) 후 녹화: 닫기는 크로스페이드로 바뀜(`transition-reduce-motion-frames.png`), 열기는 올라오는 움직임이 없음(녹화가 늦게 시작돼 페이드 중간 프레임은 못 잡음, `transition-reduce-motion-open-frames.png`). 동작 줄이기를 끈 기본 원형 퍼짐도 그대로 동작(`transition-open-frames-2.png`). 공용 시뮬레이터의 동작 줄이기 설정은 끝난 뒤 다시 끔(0 확인).
+- main(4866007f)을 합침: `MapHomeView+Support.swift`의 여행 덮개 호출이 A안의 `importText:` 형태로 바뀐 것과 충돌 → A안 호출에 `.travelModeCover`를 씌워 풂. 합친 코드로 `TravelModeTransitionTests` 7건 통과(앱 Debug 빌드 포함, 지정 시뮬레이터, `unit-tests-2.log`). 외장 볼륨이 가득 차(0바이트) 이 실행은 맥북 작업 공간 파생 데이터로 했고 끝난 뒤 지움(2.8GB). 구조 점검은 「총 줄 수 +10% 초과」만 남음(main 쪽 증가, 이 브랜치는 약 400줄).
+- 못 한 것: 공유 초대로 저절로 열릴 때(단추 자리에서 퍼짐) 확인, 동작 줄이기 열기 페이드의 중간 프레임, 시트가 떠 있을 때 누름, 여행 단추 높이 44·40·32 맞춤(여행 세션 변경이 합쳐진 뒤), 실기기(아이폰 11) 확인. 시트 안 화면의 모서리 변경 전후 사진은 홈 첫 화면만 찍음.
+- main 머지(`c2fe5b90`, 충돌 없음) 뒤 그 세션이 지정 시뮬레이터에서 `TravelModeTransitionTests` 7건·`MapHomePlaybackMusicTests` 13건 통과, Debug 빌드 성공(세션 보고, 메인 세션은 다시 돌리지 않음). 새 문구 「여행으로 가기」 12개 언어 번역 후 `check.py` 실패 0.
+
+## TVZ1116C01 · 여행 C안 「여행 중 오늘 중심」 (2026-11-16, 작업 공간 브랜치 `claude/travel-c-today-card-094cff`, 아직 main·빌드에 없음)
+
+- 저장: 새 칸·형식 변경 없음. 일정 상태 칸(`TravelTripItem.status`)에 `visited`·`skipped` 값을 더하고 예약·미정은 `visited/booked`처럼 뒤에 지킴(대표 객관식 답 「기존 상태 칸에 값 추가」). `TripItemStatus(raw:)`는 `/` 뒤를 읽어 예약·미정을 그대로 보이고, 공유 방에서 받은 상태 값은 허용 목록으로 거름, 다시 가져오기에서도 확정 유지.
+- 단위 시험(지정 시뮬레이터 BOKKI-STL, 병렬 끔): `TravelTodayTests` 14건 + `PlanRealityGapTests` 15건 = 29건 통과·실패 0(이때 앱 Debug 시뮬레이터 빌드 포함). 구조 지표 기준선 통과.
+- main(4866007f 이후) 합친 뒤 c50154f5에서 다시(낡은 모듈 캐시를 지우고 깨끗이 빌드): `TravelTodayTests` 14 · `PlanRealityGapTests` 15 · `TripItemStatusTests` 10 · `TripShareFoundationTests` 15 · `TripShareLedgerTests` 11 · `TripSharePlanTests` 7 · `TripShareRoomTests` 12 = 84건 통과·실패 0·건너뜀 0(앱 Debug 시뮬레이터 빌드 포함). 번역 `check.py` 실패 0. 구조 지표의 전체 줄 수 초과(248,597 > 기준 225,717)는 main 자체에서도 나는 것이며 이 변경은 약 500줄. 번역 `check.py` 실패 0(긴 문구 3은 전부터). `source.json`·카탈로그 생성은 메인 몫으로 남김.
+- 시뮬레이터 화면(지어낸 견본 여행 「견본 서울 산책」, 오늘이 여행 기간, 임시 불러오기 코드는 커밋 전 제거): 내린 판에 오늘 카드(지금 일정·남은 분, 다음 11:05, 「확인할 일정 2개」, 끝난 일정의 갔음/건너뜀 줄, 「계획과 실제」·「지출」) → 「확인할 일정」 창에서 하나씩 묻기 → 갔음·건너뜀 확정 뒤 「오늘 일정을 모두 확인했어요」 → 「되돌리기」로 다시 물음 → 카드 숫자 2→1 갱신. 사진 `build/validation/TVZ1116C01/1~5-*.png`.
+- 하지 않은 것: 카드에서 연 「계획과 실제」 화면 사진(다른 세션이 같은 시뮬레이터에 자기 빌드를 깔아 중단), 자동 기록이 맞아 「갔음」을 미리 고른 모습(견본에 머문 기록 없음 — 단위 시험으로만 확인), 일정 없는 날·남은 돈 줄 화면(견본에 여행 장부 없음), 공유 여행 경로 실제 시험, 실기기(아이폰 11) 확인.
+- 제한: 옛 빌드(이 변경 전)는 `visited` 값을 모르는 값으로 보고 계획으로 읽음(예약 표시는 사라짐). 공유 여행에서 옛 빌드 동행이 그 일정을 고치면 확정이 지워질 수 있음. 오늘 카드가 보이는 동안(판 내림)은 발판 「+」 메뉴가 숨고, 판을 올리면 보임(대표 객관식 답 「카드만 보이기」).
+
+## RFT1116A01 · 리팩토링 상위 20개 중 겹치지 않는 14개 (2026-11-16, 메인 머지 전)
+
+- 결과: 완료 13개(파일마다 커밋 하나), 보류 1개(`AppModel+Classification`), 합친 뒤 6개. 원본 14개 24,706줄 → 10,383줄, 새 파일 40개. 표와 이유는 `docs/REFACTOR_TOP20.md`.
+- 동작·저장 형식: 줄 범위를 그대로 옮기고 `extension`으로 감쌌으며, 컴파일러가 알려 준 `private` 이름만 internal로 풀었습니다. 저장 바이트를 고정하는 `TaptionPlanCore` 시험(`DomainRecordCompatibilityTests` 등)이 통과했습니다.
+- 시험(시뮬레이터 `99AC6F35…`, 로그 `build/validation/RFT1116A01/`): 합친 14개 묶음 상태에서 앱 시험 890개(7개 건너뜀, `35-app-try1`)+103개(`36-app-extra`), 패키지 XCTest 89개·Swift Testing 11개(`21-core-test`), Watch 스킴 빌드(`37-watch-build`). `main`(`3697d4b3`)을 합친 뒤 다시: 앱 시험 993개(7개 건너뜀 — `RawSensorReplayTests` 원본 기록 재생용, 0 실패, `40-merge-app`), Watch 빌드(`41-merge-watch`), 패키지 89+11개(`42-merge-core-test`) 모두 통과.
+- 구조 점검: 합치기 전 브랜치는 `architecture-metrics.py --check`와 import 경계 검사 모두 통과. 합친 뒤에는 「총 줄 수 +10% 초과」(225,717 → 248,757)로 실패하는데, `main`만으로도 248,597이라 실패합니다(이 브랜치 몫은 +160줄). 기준선의 `lines`는 건드리지 않았습니다.
+- 제한: 중간 커밋을 하나씩 따로 빌드하지는 않았습니다. 실기기 확인은 없습니다.
+
+## AIT1116A01 · 튜토리얼 AI 연결을 앞으로 + 「조각 맞추기」 1차 (2026-11-16, 메인 머지 전)
+
+- 바꾼 것: 튜토리얼 순서 `welcome → aiConnect → …`(전에는 「연결과 보호」 장 안쪽). AI 연결 장면은 3컷 시연(대화 → AI가 올림 → 일정표·지도·가계부)·할 수 있는 일 3가지·주 단추 「지금 연결」(AI 고르기 창)·작은 「나중에」. 건너뛴 사람에게 AI로 만들기 창에서 한 번만 안내(`AIConnectNudge.swift`, 키 `aiConnectNudgeShown`). 연결 키·PIN 보안은 그대로.
+- 조각 맞추기 1차(대표 객관식 답 「가+다 조합」): 여행 계획 시트의 「조각」 서랍(미정 일정 → 끼우기/되돌리기, 시간 겹침 경고, 새 조각 딸깍 효과), 프롬프트 한 줄. 저장 형식 변경 없음.
+- `add_trip_item` 선택 칸 `status`(대표 답 「더한다, 배포는 따로 지시」): 서버 `actions.js`·시험·기준표, 앱 패키지 명세·적용. **서버 배포 안 함.**
+- 서버: `node --test test/actions.test.mjs` 17건 통과. `npm run actions`로 기준표 다시 만듦. 서버 전체 `npm test`는 다시 돌리지 않았다.
+- 앱 시뮬레이터 단위 시험(지정 시뮬레이터, 외장 볼륨 DerivedData): `FirstRunTutorialTests` 23건·`TravelPuzzleTests` 5건 통과(`build/validation/AIT1116A01/test2.log`). `AssistantCommandEditTests` 31건 중 지문 시험은 새 `addTripItem` 지문·안내문 지문으로 고친 뒤 통과. 다만 `testBoardingCandidatesAreSharedWithoutCoordinatesAndResolved`가 2차 실행에서 실패(1차에서는 통과, 이 작업은 해당 코드를 안 건드림; 지도 화면이 공유 정적 `AssistantBoardingCandidates.current`를 덮어쓰는 경쟁으로 추정, **미확인**). 재실행은 세션 종료로 못 함.
+- 앱 Debug 빌드(시뮬레이터): 성공(`build-debug.log`).
+- 번역: 12개 언어에 새 문구 30개, `check.py` 실패 0(긴 문구 3은 전부터). `generate.py`는 돌리지 않음(메인 세션 몫).
+- 하지 않은 것: 튜토리얼 새 순서·AI 연결 장면 시뮬레이터 사진, 실기기, 실제 AI 왕복, 서버 배포. `project.pbxproj`는 손으로 4개 파일을 등록.
+- 시안: `docs/AI_PUZZLE_PLAN.md`(세 안 견주기·권고·설계만 항목), `design/AIT1116A01/preview.html`(브라우저에서 렌더 확인).
+
+## LOC1116S01 · 여행 중 동행 실시간 위치 공유 (2026-11-16, 서버 배포·실기기 확인 전)
+
+- 대표 객관식 답: 기본 꺼짐(본인이 여행마다 켬), 서버는 암호화된 마지막 위치 사람당 1건 10분(도와주세요 24시간), 도와주세요·끊김 표시 1차 포함, 기간은 시작일 0시~종료일 24시(여행지 시간대)이고 주인이 바꿀 수 있음(최대 40일).
+- 서버 `npm test` 206건 통과(`build/validation/LOC1116S01/server-test.log`). 위치 기간 창·전달·보관·도와주세요 보관·끄기/내보내기 때 지우기·잘못된 입력·모이는 곳 6건과 Swift 암호문을 Node에서 푸는 교차 벡터 포함.
+- 패키지 `TaptionTripShare` `swift test` 70건 통과(`package-test.log`). 처음 두 번은 종류 목록을 확인하는 기존 시험 2건(`ShareWireTests`·`ShareContentTests`)이 새 `meet`를 몰라 실패해 기대값을 고침.
+- 앱 Debug 빌드(generic iOS) 성공(`app-build.log`). 시뮬레이터 `TripLiveLocationTests` 7건 통과(`app-test.log`). 그 전에 이 시험 파일이 `sending 'suite' risks causing data races`로 컴파일되지 않아 다른 세션 시험을 막았음 → 해당 시험을 `@MainActor`로 고침.
+- 하지 않은 것: 서버 배포, 실기기 두 대 확인(갱신 주기·숨기기/끄기 즉시 반영·마지막 날 자정 자동 종료·도움 요청 수신·배터리) — 기기 미확인. 푸시(APNs 키 없음), 지도 길게 눌러 모이는 곳 정하기, 12개 언어 번역(한국어·영어만), 화면을 눈으로 보기. 위치정보법 검토·신고 전에는 배포하지 않음(`AGENTS.md`).
+
+## TVX1116A01 · 여행 모드 A안 「한 화면으로 정리」 (2026-11-16, 아직 빌드에 없음)
+
+- 바꾼 것: 카드·깃발 한 번 탭으로 날아가 바로 열림(`TravelModeView.select`·`finishFlight`), 카드 ⋯ 메뉴(`cardMenu`, 길게 누르기와 같은 내용), 여행 화면 + 메뉴와 지구본 아래 「AI로 만들기」(`MapHomeTripImportSheet`를 여행 화면에서 엶), 붙여넣기 배너·중계로 받은 계획은 `TravelModeView(importText:)`로 열림(`MapHomeView+Support`·`TripClipboardBanner`·`TripRelay`), 「지도에서 일정 보기」 없앰, 코스 「순서 편집」 단추(`TravelCourseView`, 손잡이·지우기), 「지출 넣기」가 여행 장부를 만들고 바로 폼, 여행 없음 안내와 핀 없음 「곳 더하기」 단추. 새 문구 4개를 12개 언어에 더함.
+- 시뮬레이터 단위 시험: `TripItemStatusTests`·`TravelMapTests`·`TripSharePlanTests` 33건 통과(`build/validation/TVX1116A01/test2.log`). 첫 실행은 빌드는 됐으나 「Simulator device failed to launch」로 시험이 돌지 않았고(`test.log`) 다시 돌려 통과.
+- 번역 점검: `check.py` 실패 0(긴 문구 3은 전부터 있던 것), `generate.py`로 카탈로그 다시 씀.
+- 하지 않은 것: 바뀐 화면을 시뮬레이터·기기에서 눈으로 보지 않았다(다른 세션들과 시뮬레이터를 나눠 쓰는 중). 새 동작만 보는 단위 시험은 더하지 않았다(화면 연결뿐). 전체 단위·UI 시험 미실행. 예전 지도 여행 모드(`isTravelMode`)의 코드는 들어가는 길만 끊겼고 남아 있다.
+
+## SRL1116A01 · 공통 규칙 — 서버에서 받아 쓰기와 후보 수집·검토·배포 (2026-11-16)
+
+- 설계: `docs/SHARED_RULES_PLAN.md`. 대표 객관식 답: 동의 = AI 연결 화면의 기본 꺼짐 스위치 하나(확인창 없음), 수집 범위 = 가게→분류 포함(기기 2대 이상일 때만 검토 목록), 알림 규칙 = 앱별 기본값 포함(대표가 직접 작성), 받기 = 기본 켜짐, 약관 문구 = 앱 안 「공통 규칙」 화면에도 요약(초안 표시).
+- 서버 `npm test`: 199건 통과·실패 0(새 `test/shared.test.mjs` 5건: 개인 정보 거르기 견본, 서명 묶음 받기·304, 관리 토큰·서명·판 번호·개인 정보 거절·거두기, 관리 길 닫힘, 후보 2대 이상·익명·하루 한도·만료).
+- `TaptionRules` 패키지 `swift test`: 6건 통과(새 `SharedRuleFilterTests`가 서버와 같은 `shared-rules.json`을 읽음).
+- 앱 시험(`build/validation/SRL1116A01/test-4.log`, 지정 시뮬레이터 BOKKI-STL, `-parallel-testing-enabled NO`, 외장 볼륨 DerivedData): `SharedRuleStoreTests` 4건·`LedgerTests` 34건·`AssistantRelayTests` 21건 등 59건 통과·실패 0, `TEST SUCCEEDED`(앱 Debug 빌드 포함). 첫 실행은 내부 구조체 `Bundle`이 Foundation `Bundle`을 가려 컴파일 실패해 `SignedBundle`로 고쳤고(`test-2.log`), 다음 실행은 다른 세션의 미커밋 `TripLiveLocationTests.swift` 오류로 막혀 HEAD에 이 수정만 얹은 깨끗한 사본(외장 볼륨 worktree)에서 돌렸다. 이 작업 폴더 전체의 앱 시험은 그 파일이 고쳐진 뒤 다시 필요하다.
+- 못 한 것: 실기기·아이폰 11 확인 없음(시뮬레이터 결과만).
+- 서버 미배포, 서명 키 미생성(`admin.mjs keygen` 미실행), 앱 공개 키 비어 있음(공통 규칙을 받지 않음), 실기기 미확인. 새 화면 문구는 12개 언어 번역 전(영어로 보임). 약관·방침은 초안이며 확정은 대표.
+
+## APS1115A01·BGM1115A01 · 일레븐랩스로 App Store 자료와 재생 음악 (2026-11-15~16)
+
+- 일레븐랩스(대표 Chrome 로그인)로 만든 것: 배경 그림 24장(Seedream 5.5, 9:16 2K, 장당 73) 중 6장 선택 → `design/APS1115A01/source/backgrounds/`(JPEG 88). 미리보기용 음악 2곡(30초, 900). 재생 음악 20곡(1분, 곡당 2가지 1,800×10) 중 10곡 선택. 홍보 장면 3편(Gemini Omni Flash 1.2, 5초 9:16 720p, 편당 2,153; 생성 전 「사용 금지 정책」 동의는 대표 객관식 답 「동의하고 3편 생성」). Seedance 2.5는 5초에 14,004라 쓰지 않음.
+- 크레딧: 사용 142,438 → 175,453(+33,015, 남음 41,337/216,790, 12월 11일 다운그레이드 예정). 이 작업 추정 약 27,100, 나머지는 같은 시간에 같은 계정을 쓴 다른 세션 생성분으로 보임(확인 못 함).
+- 스크린샷: 빌드 347 코드 Debug를 BOKKI-STL 시뮬레이터에서 지어낸 자료로 캡처(위치 서울시청 앞 공공 좌표, 지도 스타일 「계절」). iPhone 1290×2796 5장·iPad 2064×2752 5장 `design/APS1115A01/output/`(가계부 03은 아직). 개인 정보: 화면에 실제 기록·계정 없음을 눈으로 확인. 결제 문자 미리보기는 실제 상호가 보여 쓰지 않음. iPad 판은 iPhone 화면을 얹은 초안(iPad 화면 캡처로 바꿔야 함). AI 연결 화면에 다른 회사 AI 이름이 보임.
+- 가계부 캡처용으로 Debug 전용 `-ledgerPreview` 견본을 「이번 달 일반 기록이 없으면 지어낸 7건(월급 포함)」으로 고침(`MapHomeLaunchPrompts.swift`, `#if DEBUG` 안). Debug 빌드 3회 `BUILD SUCCEEDED`(`build/validation/APS1115A01/captures/build-debug*.log`). 고친 견본으로 찍기는 BOKKI Editor 세션이 같은 시뮬레이터에서 UI 시험을 돌려 앱이 밀려나 못 함.
+- 홍보 영상(App Store 밖): `output/promo/bokki-plan-promo.mp4` 1080×1920 30fps H.264 25.0초, AAC, -14.0 LUFS, 프레임 눈 확인.
+- 앱 미리보기 영상(886×1920, 앱 화면 녹화만): 만들지 못함. 스크립트 `preview.sh`만 있음. 녹화는 시뮬레이터가 빌 때.
+- BGM1115A01: `TaptionPlan/Audio/PlaybackMusic/*.m4a` 10개를 같은 이름으로 교체(AAC 44.1kHz 스테레오 192k, 57~60초, -13.7~-14.4 LUFS; 끝이 줄어드는 2곡은 57초로 자름). 고른 기준은 시작·중간·끝 음량(반복 이음새)으로, 귀로 듣지 않음 — 가사가 섞였는지 확인 못 함. build-for-testing 성공(`build/validation/BGM1115A01/build-for-testing.log`). `MapHomePlaybackMusicTests` 1차는 「test runner hung before establishing connection」(`music-tests-1-hung.log`), 2차는 시뮬레이터가 꺼지고 맥 프로세스 한도·디스크 부족(여유 1.9GB) 때문에 멈춰 중단. **음악 단위 시험 통과는 아직 근거 없음.**
+- 디스크 공지에 따라 스크래치 DerivedData 등 약 3.6GB 지움 → 다음 빌드·시험은 처음부터 다시 빌드해야 함.
+- **2026-11-16 이어서**
+  - 대표 객관식 답: ASC에는 iPhone·Duo·iPad 모두 올리고 미리보기도 넣음, 「헤더·검색 결과」는 앞 3장을 이어지는 한 장면으로, AI 장은 그대로.
+  - 넓은 배경 1장 추가 생성(Seedream 5.5 16:9 2K 4장, 장당 73) → `source/backgrounds/bg-pano.jpg`. `compose.py`가 1~3번을 이 배경과 점선 길로 이어 그림.
+  - ASC 칸 확인(API 오류 메시지의 허용값 읽기, 아무것도 만들지 않음): `APP_IPHONE_DUO`·미리보기 `IPHONE_DUO` 있음. Duo 크기는 시뮬레이터 프로필의 펼친 화면 2007×2853로 만듦(ASC가 받는지는 올릴 때 확인).
+  - 가계부 캡처: 빌드 347 Debug `-ledgerPreview` 견본 7건으로 찍음(`captures/03-ledger.png`). 기록 시각이 지금 시각 기준이라 「아침 라떼 오전 3:01」처럼 보임.
+  - 스크린샷 18장 `output/{iphone,duo,ipad}/01~06`(1290×2796·2007×2853·2064×2752). Duo·iPad는 iPhone 화면을 얹은 것.
+  - 앱 미리보기 `output/preview/app-preview-iphone.mp4`: 886×1920, 30fps, H.264 High, AAC 44.1k 스테레오, 25.2초, -15.5 LUFS, 프레임 756개 확인. 홈·다시보기·가계부는 시뮬레이터 화면 녹화. 여행·도장은 시뮬레이터 조작 도구가 계속 「hook did not respond」로 막혀 앱 화면 캡처를 천천히 확대한 장면으로 넣음(앱 화면 그대로, 앱 밖 그림 없음).
+  - 홍보 영상 다시 만듦(가계부 장 포함, 27.0초).
+  - 5번 AI 장 캡처에 시작 화면 로고가 희미하게 겹쳐 있던 것을 다시 찍어(`captures/raw-ai-r3.png`) 18장·홍보 영상(27.0초)을 다시 만듦.
+- BGM1115A01 시험(2026-11-16):
+  - `music-tests-3.log`: 12건 중 11건 통과, `testLoopLengthDropsTrailingSilence` 실패. 원인은 새 곡이 끝까지 소리가 있어 반복 길이 = 파일 길이(시험이 옛 합성곡의 무음 꼬리를 전제). 꼬리 2.5초 미만·반복 지점 소리 있음은 10곡 모두 통과.
+  - 시험을 「같거나 짧다」로 고치고, 무음 꼬리 자르기를 합성 파일(소리 1초+무음 1초)로 따로 확인하는 `testAudibleLengthCutsSyntheticSilentTail` 추가.
+  - 다시 빌드 실패 두 번: ① 옮긴 DerivedData 경로 문제(MapLibre xcframework 못 찾음) ② 새 경로 전체 빌드에서 다른 세션 소관 `TripLiveLocationTests.swift:64` 「sending 'suite' risks causing data races」(`build-for-testing-5.log`).
+  - 그 세션이 고친 뒤 시험용 빌드 성공(`build-for-testing-6.log`). `music-tests-6.log`: 13건 중 12건 통과, 새 합성 파일 시험만 실패 — 기대 44,100프레임인데 44,032(1024의 배수)로, 시험 파일 쓰기·읽기가 끝을 블록 단위로 다루는 것으로 보임(확인 못 함). 같은 원인이면 실제 곡의 반복 지점이 최대 한 블록(약 23ms) 일찍 끝날 수 있음.
+  - 합성 신호를 0을 지나지 않는 사각파로, 허용 범위를 「소리 끝 − 2,048프레임 초과 ~ 소리 끝 이하」로 바꿈. `music-tests-7.log`: **`MapHomePlaybackMusicTests` 13건 통과·실패 0**(BOKKI-STL 시뮬레이터, 병렬 끔, 빌드 `TEST BUILD SUCCEEDED`). 실기기 재생·대표 청취는 아직.
+- ASC 올리기(대표 객관식 답 「아이폰, 듀오, 패드, 애플 커넥티드에 헤더 및 검색결과 부분 이미지 추가해줘」, `design/APS1115A01/asc_upload.py`): 1.0 한국어에 `APP_IPHONE_67` 6장·`APP_IPHONE_DUO` 6장(2007×2853 받아짐)·`APP_IPAD_PRO_3GEN_129` 6장 모두 `COMPLETE`, 미리보기 `IPHONE_67` 1편 업로드 `COMPLETE`(영상 처리는 읽을 때 `PROCESSING`). 옛 iPhone 2장(`03-home.jpg`·`04-menu.jpg`)은 대표 객관식 답 「옛 2장 지우기」로 지움 → iPhone 칸은 새 6장만. 미리보기 영상 처리 `COMPLETE`. 다시 읽은 결과 `build/validation/APS1115A01/asc-readback.txt`·`asc-upload.json`. 심사 제출은 하지 않음.
+- 디스크: 스크래치 DerivedData 2.7GB를 맥북에서 지우고 외장 HFS+ 볼륨(`/Volumes/외장형HDD/APS1115A01-work/work-hfs.sparsebundle` → `/Volumes/APSWork`)으로 옮김. 처음 시도한 APFS 번들 둘(`/Volumes/외장형HDD/APSWork.sparsebundle`, `APS1115A01-work/work.sparsebundle`)은 마운트 실패한 빈 번들로, 안전 검사 때문에 지우지 못함. 작업이 끝나 `/Volumes/APSWork`를 분리하고 `work-hfs.sparsebundle`(빌드 산출물·녹화·시험 결과 약 5.4GB)과 `work.sparsebundle`을 지움. 남은 것: 드라이브 맨 위의 빈 번들 `APSWork.sparsebundle`(36MB)과 빈 폴더 `APS1115A01-work` — 대표가 지워야 함.
 ## CLM1114A01 · 337 뒤에 넣은 것 (2026-11-14 낮)
 
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
@@ -3360,3 +3453,56 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 담긴 것: 346 + TPY1115A01 이미 들어간 이체·입금 제목 고치기(`LedgerTransferRename`).
 - `release.sh --yes --request-id TFB1115A347` 종료 코드 0: VALID, 「TP Taption Plan 내부 테스트」 그룹 연결, 테스터 1명(`build/validation/TFB1115A347/testflight-report.json`). 서버 변경 없음. 아카이브용 중간 폴더는 디스크 때문에 지움.
 - 대표 기기 설치·기존 입금 제목 변경 확인은 하지 않음(받은 문자함 7일 안, 11-22 전에 깔아야 함).
+
+## HUX1116A01 · 메인 홈 화면 UI·UX 검토와 시안 (2026-11-16)
+
+- 만든 것: `docs/HOME_UX_REVIEW.md`(지금 구조·기존 진단 대조·참고 앱·제안 8개·물음 초안), `design/HUX1116A01/preview.html`(제안별 「지금 → 바꾼 뒤」 9쌍, 한 파일, 외부 자원 없음), `AGENTS.md` 문서 위치 한 줄. 앱 Swift 코드는 바꾸지 않음.
+- 근거: 커밋 `b5e79263`의 홈 코드를 읽어 정리. 핵심 몇 곳(여행 단추 그림, 날짜 배지 동작, 달력 날짜 누르기, 홈 배치 고정, 아래 메뉴 글자, 메뉴 상태 문구)은 해당 줄을 직접 다시 확인. 나머지 크기·개수는 조사 결과를 옮긴 것이고 줄마다 다시 세지는 않음.
+- 시안 확인: 앱 안 브라우저로 열어 9개 구역·그림 19장이 그려지고 콘솔 오류 없음, 밝은·어두운 화면 전환을 눈으로 확인.
+- 하지 않은 것: 앱 빌드·시뮬레이터·기기 확인(요청 범위 밖). 시안은 코드를 읽고 그린 그림이라 실제 화면과 세부가 다를 수 있음. 어두운 화면 색은 시안용으로 지어낸 값. 참고 앱은 직접 써 보지 않고 공개 자료 기준. 좁은 폭(휴대폰)에서 시안 페이지 배치는 확인하지 않음.
+
+## HUX1116A02 — 홈 제안 1·2·3 (터치 영역·집 이름표·기록 없는 날/권한 띠)
+- 단위 시험: `MapHomeLiveMapTests` 96개 실행, 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔). 시험 빌드(Debug)가 같은 실행에서 통과. 로그 `build/validation/HUX1116A02/unit-1.log`.
+- 첫 실행은 `MapHomeView+Support3.swift`의 옵셔널 폭 오류로 실패해 고친 뒤 다시 통과.
+- l10n `check.py` 실패 0, 구조 검사 통과.
+- 제한: 실기기·눈으로 본 확인은 아직 없음. 아래 막대 글자 최소 배율, 「가장 가까운 기록 날로 가기」는 달력 열기로 단순화.
+
+## HUX1116A03 — 홈 제안 4 (달력 날짜 고르면 시트 낮춤, 「날짜 줄 늘 펼치기」 시험 옵션)
+- 단위 시험: `MapHomeLiveMapTests` 96개 실행, 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A03/unit-1.log`.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 시트 낮춤·뒤 지도 만지기·「오늘」 칸은 화면 시험·기기 눈 확인을 하지 않음. 새 동작 전용 단위 시험 없음(보기 코드만 바뀜).
+
+## HUX1116A04 — 홈 제안 5 (할 일 판 탭 개수)
+- 단위 시험: `MapHomeLiveMapTests` 96개 + `LedgerTests` 34개, 합 130개 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A04/unit-1.log`.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 탭 줄 모양·긴 언어 잘림 여부는 눈으로 보지 않음(기기·화면 시험 없음). 「AI」 탭 개수는 넣지 않음.
+
+## HUX1116A05 — 홈 제안 6·7 (홈 사용법·첫 세 번 길잡이·₩ ＋·메뉴 찾기·최근·시트 전 메뉴 닫기)
+- 단위 시험: `MapHomeLiveGateTests` 10 + `MapHomeLiveMapTests` 96 + `LedgerTests` 34 = 140개 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔, 파생 데이터는 워크트리 `build/dd-hux`). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A05/unit-4.log`.
+- 앞선 실행: unit-1(LiveMap·Ledger 130개 통과, LiveGate 빠짐), unit-2(LiveGate 10개 중 메뉴 찾기 1개 실패 — 「·」 기호를 거르지 않음 → 글자·숫자·₩만 비교하게 고침), unit-3(외장 볼륨 공간 없음으로 결과 저장 실패, 시험 결과 아님).
+- 바로잡음: HUX1116A02~A04 기록의 단위 시험에는 `MapHomeLiveGateTests`(안내 띠 시험 2개 포함)가 빠져 있었음. 이번 unit-4에서 그 2개를 포함해 통과.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 화면·기기 눈 확인 없음(찾기 칸·최근 줄·사용법 시트·₩ ＋·길잡이 띠 모두 보지 않음).
+
+## HUX1116A06 — 홈 제안 8 (하루 요약 띠, 시험 옵션·기본 끔)
+- 단위 시험: `MapHomeLiveGateTests` 11 + `MapHomeLiveMapTests` 96 + `LedgerTests` 34 = 141개 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔, 파생 데이터 `build/dd-hux`). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A06/unit-2.log`.
+- 첫 실행(unit-1)은 `LedgerMoney.text`를 MainActor 밖에서 불러 컴파일 오류 → 정책에 `@MainActor`를 붙여 고침.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 띠를 켠 화면·사진 반달과의 겹침·하루 요약 열림은 눈으로 보지 않음(기기·화면 시험 없음).
+
+## TVY1116B01 · 여행 모드 B안 「지도 + 날짜 보드」 (2026-11-16 새벽, 시뮬레이터)
+
+- 넣은 것: ① 코스 줄을 길게 눌러 일차 칩에 놓으면 그 날 코스 끝으로 옮김(`TravelDayBoard.swift`), 편집기 「⋯」 메뉴에 「다른 날로…」(날짜 목록) ② 그날 코스의 「동선 정리」 단추(`TravelCourseSort.swift`, 가장 가까운 이웃 + 2-opt, 직선 거리) ③ 여행 시작일을 바꾸면 일정이 함께 옮겨지는 것은 이미 `TravelNewTripSheet.create` → `shiftTravelTrip`이 묻지 않고 함(공유 여행은 막음). 대표 객관식 답(2026-11-16) 「지금처럼 묻지 않기」라 코드는 그대로 두고 세부 계획까지 따라가는지 보는 시험만 더함. 예약·잠을 다른 날로 옮길 때는 대표 답 「시각 그대로, 날만 바꾸기」. 저장 형식은 바꾸지 않음.
+- 단위 시험: `TravelDayBoardTests` 14건 통과·실패 0(`build/validation/TVY1116B01/tests-2.log`, 지정 시뮬레이터 99AC6F35, `-parallel-testing-enabled NO`). 정렬(가까운 순서·첫 곳 유지), 예약·숙소·잠·이동·항공·캘린더 고정·핀 없는 곳 제자리, 고정된 곳을 넘지 않음, 이미 가까운 순서면 nil, 시각 다시 잡기, 무작위 40판에서 길어지지 않음, 다른 날로 옮길 분(끝에 붙이기·빈 날 09:00·예약과 잠은 시각 유지), 저장소까지 세부 동반과 되돌리기 한 걸음, 동선 정리 적용·되돌리기, 날짜 통째 옮기기에 세부 동반. 다른 시험 묶음(전체 단위 시험·화면 시험)은 돌리지 않음.
+- 앱 Debug 빌드: 위 시험의 시뮬레이터용 Debug 빌드 성공(오류 0). 기기용(generic iOS) 빌드는 하지 않음.
+- 시뮬레이터 화면(`build/validation/TVY1116B01/1~8-*.png`, 이미 있던 시험 여행 「후쿠오카 2박 3일」): 1일차 「규슈 국립박물관」을 길게 눌러 「2일차」 칩에 놓음 → 1일차에서 빠지고 2일차 저녁 뒤 20:15(잠 앞)에 35분 그대로 붙음, 되돌리기 줄 「→ 2일차 11/21 규슈 국립박물관」, 되돌리기로 원래 자리 복귀. 목록 안에서 끌어 순서 바꾸기도 전처럼 됨(끌기와 함께 동작). 「동선 정리」를 누르면 「이동 거리 약 16.9 km → 16.8 km (직선 거리 기준)…」 창과 취소·바꾸기. 편집기 「⋯」에 「다른 날로…」 줄. 시험 여행은 모두 되돌려 원래 순서로 둠.
+- 화면에서 하지 않은 것: 「바꾸기」를 눌러 동선을 실제로 반영, 「다른 날로…」에서 날을 골라 옮기기, 「이미 가까운 순서입니다」 창, 공유 여행(방에 쓰기·잠금), 영어·12개 언어 화면, 넓은 화면·가로, 실기기. 앞의 둘은 단위 시험이 저장소까지 확인함.
+- 번역: `scripts/l10n/check.py` 실패 0(새 문구 5개 × 12개 언어). `extract.py`가 만든 `source.json`은 다른 갈래와 충돌을 피하려고 커밋하지 않음 → 합친 뒤 메인 세션이 `extract.py` → `check.py` → `generate.py`.
+- 겪은 일: 빌드 잠금을 02:59까지 다른 세션들이 쥐었고 맥 여유가 6.6GB까지 줄어 빌드를 미룸. 대표 지시(공지)로 외장 작업 볼륨 `/Volumes/TaptionPlanWork/dd/TVY1116B01`에 빌드했고 끝난 뒤 그 폴더와 `sim/TVY1116B01`을 지움(약 2.6GB). HFS+ 볼륨에서는 Xcode 컴파일 캐시(`CompilationCache.noindex`)가 37GB를 통째로 잡아 40GB짜리 전용 볼륨이 꽉 찼음 → `COMPILATION_CACHE_ENABLE_CACHING=NO`로 돌리니 2.6GB.
+- 알고 둘 것: 일차가 많아 칩이 화면 밖에 있으면 끌어서는 닿지 않음(메뉴로), 옮긴 일정이 길면 자정을 넘을 수 있음(길이를 줄이지 않음), 동선은 직선 거리이고 예약·숙소·잠·이동·항공을 넘어 바꾸지 않아 줄어드는 폭이 작을 수 있음, 핀 없는 곳은 순서만 제자리(시각은 밀릴 수 있음), 공유 여행에서는 옮겨도 되돌리기 줄이 없음(기존 결정).
+
+## HUX1116A02~A06 — main(3697d4b3) 합친 뒤 재시험
+- 합침 커밋 `ef62e5fc`. 충돌: l10n 번역 12개(양쪽 문구 모두 살림, `extract.py` 다시 돌림)·`temp.md`·`test.md`(양쪽 기록 유지).
+- 단위 시험: `MapHomeLiveGateTests` 11 + `MapHomeLiveMapTests` 96 + `LedgerTests` 34 = 141개 실패 0, `** TEST SUCCEEDED **`, 같은 실행에서 Debug 시험 빌드 통과(시뮬레이터 99AC6F35). 로그 `build/validation/HUX1116A06/merge-1.log`.
+- l10n `check.py` 실패 0. 구조 지표 「총 줄 수 +10% 초과」 실패는 main 단독에서도 같음(248,597줄) — 이 브랜치 몫 아님.
+- 실기기 시험 없음.
