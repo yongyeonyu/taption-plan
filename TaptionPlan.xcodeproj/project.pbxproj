@@ -461,6 +461,7 @@
 		C51A1111A010000000000004 /* MapHomeView+Siri.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51A1111A010000000000003 /* MapHomeView+Siri.swift */; };
 		A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */; };
 		A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E4358522139E5590681710 /* MapHomeView+Support3.swift */; };
+		319A1263A20B507E246E4253 /* MapHomeDaySummaryBand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E19F93569FC7DA338430F75 /* MapHomeDaySummaryBand.swift */; };
 		B2C00275D48DA8EE0E78A918 /* MapHomeMenuShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99362D6409E1783BF738F707 /* MapHomeMenuShortcuts.swift */; };
 		A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */; };
 		A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */; };
@@ -1270,6 +1271,7 @@
 		C51A1111A010000000000003 /* MapHomeView+Siri.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Siri.swift"; sourceTree = "<group>"; };
 		F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support2.swift"; sourceTree = "<group>"; };
 		F1E4358522139E5590681710 /* MapHomeView+Support3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support3.swift"; sourceTree = "<group>"; };
+		1E19F93569FC7DA338430F75 /* MapHomeDaySummaryBand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDaySummaryBand.swift; sourceTree = "<group>"; };
 		99362D6409E1783BF738F707 /* MapHomeMenuShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeMenuShortcuts.swift; sourceTree = "<group>"; };
 		F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu.swift"; sourceTree = "<group>"; };
 		F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu2.swift"; sourceTree = "<group>"; };
@@ -1859,6 +1861,7 @@
 				F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */,
 				F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */,
 				F1E4358522139E5590681710 /* MapHomeView+Support3.swift */,
+				1E19F93569FC7DA338430F75 /* MapHomeDaySummaryBand.swift */,
 				99362D6409E1783BF738F707 /* MapHomeMenuShortcuts.swift */,
 				F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */,
 				F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */,
@@ -2895,6 +2898,7 @@
 				A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */,
 				A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */,
 				A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */,
+				319A1263A20B507E246E4253 /* MapHomeDaySummaryBand.swift in Sources */,
 				B2C00275D48DA8EE0E78A918 /* MapHomeMenuShortcuts.swift in Sources */,
 				A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */,
 				A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */,

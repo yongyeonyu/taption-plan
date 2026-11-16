@@ -186,6 +186,10 @@ struct MapHomeView: View {
     /// 시험 옵션(HUX1116A03): 날짜 배지를 누르면 어느 날에서든 날짜 줄을 펼치고, 오늘이 아니면 줄 맨 앞에 「오늘」 칸을 둔다. 기본은 끔.
     @AppStorage("mapHomeDateBadgeAlwaysStrip") var dateBadgeAlwaysStrip = false
 
+    /// 시험 옵션(HUX1116A06): 아래 메뉴 위 하루 요약 띠. 기본은 끔.
+    @AppStorage(MapHomeDaySummaryBandPolicy.storageKey) var showsDaySummaryBand = false
+    @State var daySummaryBandCache = MapHomeDaySummaryBandCache()
+
     @AppStorage(MapHomeSidebarTimeFormat.storageKey) var sidebarTimeFormatRaw = MapHomeSidebarTimeFormat.twentyFourHour.rawValue
 
 

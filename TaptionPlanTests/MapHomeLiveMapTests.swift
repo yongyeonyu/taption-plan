@@ -1997,6 +1997,23 @@ final class MapHomeLiveGateTests: XCTestCase {
         XCTAssertTrue(MapHomeMenuFinder.matches("단축어Siri", in: all).contains(.shortcuts))
     }
 
+    @MainActor
+    func testDaySummaryBandTextSkipsEmptyPartsAndCacheReusesValue() {
+        XCTAssertNil(MapHomeDaySummaryBandPolicy.summary(places: 0, steps: nil, spent: 0, language: .korean))
+        XCTAssertEqual(MapHomeDaySummaryBandPolicy.summary(places: 4, steps: 0, spent: 0, language: .korean), "머문 곳 4")
+        let full = MapHomeDaySummaryBandPolicy.summary(places: 4, steps: 6240, spent: 18500, language: .korean)
+        XCTAssertEqual(full?.components(separatedBy: " · ").count, 3)
+        let cache = MapHomeDaySummaryBandCache()
+        let key = MapHomeDaySummaryBandCache.Key(revision: 1, day: .distantPast, ledgerRevision: 0, english: false, minute: 0)
+        var calls = 0
+        _ = cache.value(for: key) { calls += 1; return "a" }
+        XCTAssertEqual(cache.value(for: key) { calls += 1; return "b" }, "a")
+        XCTAssertEqual(calls, 1)
+        var next = key
+        next.revision = 2
+        XCTAssertEqual(cache.value(for: next) { calls += 1; return "c" }, "c")
+    }
+
     func testMenuRecentsKeepsNewestThreeWithoutDuplicates() {
         var raw = ""
         for shortcut in [MapHomeMenuShortcut.alerts, .dayCard, .alerts, .ledger, .car] {

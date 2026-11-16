@@ -5959,6 +5959,9 @@
 "홈 사용법|Home guide": "ホームの使い方",
 "화랑이 누르기|Tap the cat": "猫をタップ",
 "화랑이를 누르면 카운터, 지도를 길게 누르면 메모|Tap the cat for counters, long-press the map for a memo": "猫をタップでカウンター、地図を長押しでメモ",
-"화면 오른쪽 끝 끌기|Drag the right edge": "画面右端をドラッグ"
+"화면 오른쪽 끝 끌기|Drag the right edge": "画面右端をドラッグ",
+"누르면 하루 요약을 엽니다|Opens the day summary": "1日のまとめを開きます",
+"머문 곳 {0}|{0} places": "滞在 {0}か所",
+"하루 요약 띠 (시험)|Day summary bar (trial)": "1日のまとめバー（試験）"
 }
 }

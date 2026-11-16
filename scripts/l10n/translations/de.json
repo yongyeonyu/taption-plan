@@ -5959,6 +5959,9 @@
 "홈 사용법|Home guide": "Startbildschirm-Anleitung",
 "화랑이 누르기|Tap the cat": "Katze tippen",
 "화랑이를 누르면 카운터, 지도를 길게 누르면 메모|Tap the cat for counters, long-press the map for a memo": "Katze tippen für Zähler, Karte lange drücken für ein Memo",
-"화면 오른쪽 끝 끌기|Drag the right edge": "Rechten Rand ziehen"
+"화면 오른쪽 끝 끌기|Drag the right edge": "Rechten Rand ziehen",
+"누르면 하루 요약을 엽니다|Opens the day summary": "Öffnet die Tageszusammenfassung",
+"머문 곳 {0}|{0} places": "{0} Orte",
+"하루 요약 띠 (시험)|Day summary bar (trial)": "Tagesleiste (Test)"
 }
 }

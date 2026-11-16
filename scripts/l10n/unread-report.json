@@ -1,7 +1,13 @@
 {
- "ui": 5204,
+ "ui": 5207,
  "catalog": 504,
  "unread": [
+  {
+   "file": "TaptionPlan/UI/MapHomeDaySummaryBand.swift",
+   "line": 12,
+   "ko": "spent",
+   "en": "language"
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,

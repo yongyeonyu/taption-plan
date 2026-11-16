@@ -1085,6 +1085,11 @@ extension MapHomeView {
                 .accessibilityLabel(language.text("안개 탐험 선택", "Choose fog of exploration"))
 
                 counterMenuItem
+                displayToggle(
+                    language.text("하루 요약 띠 (시험)", "Day summary bar (trial)"),
+                    systemImage: "sun.max.fill",
+                    isOn: $showsDaySummaryBand
+                )
                 sidebarDisplayGroup
                 mapDisplayGroup
             }

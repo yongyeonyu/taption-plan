@@ -911,9 +911,9 @@
    "ko": "AI 연결",
    "en": "AI connections",
    "files": [
-    "MapHomeMenuShortcuts.swift:19",
     "AssistantDataCommands.swift:482",
-    "AssistantSettingsView.swift:36"
+    "AssistantSettingsView.swift:36",
+    "MapHomeMenuShortcuts.swift:19"
    ],
    "args": [],
    "targets": [
@@ -4265,12 +4265,12 @@
    "ko": "{0}걸음",
    "en": "{0} steps",
    "files": [
+    "MapHomeDaySummaryBand.swift:11",
     "MapHomeCalendarPolicies.swift:455",
-    "MapHomeCounterDetailSheet.swift:97",
-    "MapHomeStride.swift:143"
+    "MapHomeCounterDetailSheet.swift:97"
    ],
    "args": [
-    "value"
+    "steps.formatted()"
    ],
    "targets": [
     "TaptionPlan"
@@ -34062,9 +34062,9 @@
    "ko": "가계부",
    "en": "Ledger",
    "files": [
-    "MapHomeMenuShortcuts.swift:26",
     "AssistantDataCommands.swift:483",
-    "AssistantDigest.swift:80"
+    "AssistantDigest.swift:80",
+    "LedgerSheet.swift:65"
    ],
    "args": [],
    "targets": [
@@ -39530,6 +39530,18 @@
    ]
   },
   {
+   "key": "누르면 하루 요약을 엽니다|Opens the day summary",
+   "ko": "누르면 하루 요약을 엽니다",
+   "en": "Opens the day summary",
+   "files": [
+    "MapHomeDaySummaryBand.swift:70"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "누적 시급({0})|Hourly ({0})",
    "ko": "누적 시급({0})",
    "en": "Hourly ({0})",
@@ -39988,9 +40000,9 @@
    "ko": "단축어 · Siri",
    "en": "Shortcuts · Siri",
    "files": [
-    "MapHomeMenuShortcuts.swift:18",
     "AssistantDataCommands.swift:481",
-    "BokkiShortcutsGuide.swift:69"
+    "BokkiShortcutsGuide.swift:69",
+    "FirstRunTutorialView.swift:182"
    ],
    "args": [],
    "targets": [
@@ -40065,9 +40077,9 @@
    "ko": "닫기",
    "en": "Close",
    "files": [
-    "MapHomeMenuShortcuts.swift:168",
     "AppShellView.swift:1131",
-    "ArrivalCardView.swift:67"
+    "ArrivalCardView.swift:67",
+    "AssistantBeforeAfterView.swift:84"
    ],
    "args": [],
    "targets": [
@@ -40549,8 +40561,8 @@
    "ko": "데이터 보호",
    "en": "Data Protection",
    "files": [
-    "MapHomeMenuShortcuts.swift:21",
     "AssistantDataCommands.swift:484",
+    "MapHomeMenuShortcuts.swift:21",
     "MapHomeSettingsSheets.swift:274"
    ],
    "args": [],
@@ -41755,6 +41767,20 @@
     "AppModel+Plans.swift:625"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "머문 곳 {0}|{0} places",
+   "ko": "머문 곳 {0}",
+   "en": "{0} places",
+   "files": [
+    "MapHomeDaySummaryBand.swift:10"
+   ],
+   "args": [
+    "places"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -46664,9 +46690,9 @@
    "ko": "설정",
    "en": "Settings",
    "files": [
-    "MapHomeMenuShortcuts.swift:20",
     "AssistantDataCommands.swift:485",
-    "AssistantDigest.swift:81"
+    "AssistantDigest.swift:81",
+    "MapHomeMenuShortcuts.swift:20"
    ],
    "args": [],
    "targets": [
@@ -49028,8 +49054,8 @@
    "ko": "알림",
    "en": "Alerts",
    "files": [
-    "MapHomeMenuShortcuts.swift:23",
-    "MapHomeAlarm.swift:482"
+    "MapHomeAlarm.swift:482",
+    "MapHomeMenuShortcuts.swift:23"
    ],
    "args": [],
    "targets": [
@@ -50116,8 +50142,8 @@
    "ko": "여권",
    "en": "Passport",
    "files": [
-    "MapHomeMenuShortcuts.swift:13",
-    "AssistantDataCommands.swift:490"
+    "AssistantDataCommands.swift:490",
+    "MapHomeMenuShortcuts.swift:13"
    ],
    "args": [],
    "targets": [
@@ -59683,8 +59709,8 @@
    "ko": "지출 넣기",
    "en": "Add spending",
    "files": [
-    "MapHomeMenuShortcuts.swift:27",
-    "LedgerMemoPanel.swift:168"
+    "LedgerMemoPanel.swift:168",
+    "MapHomeMenuShortcuts.swift:27"
    ],
    "args": [],
    "targets": [
@@ -62640,6 +62666,18 @@
    ]
   },
   {
+   "key": "하루 요약 띠 (시험)|Day summary bar (trial)",
+   "ko": "하루 요약 띠 (시험)",
+   "en": "Day summary bar (trial)",
+   "files": [
+    "MapHomeView+Menu.swift:1089"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "하루 요약 접기|Collapse day summary",
    "ko": "하루 요약 접기",
    "en": "Collapse day summary",
@@ -62680,6 +62718,7 @@
    "ko": "하루 요약",
    "en": "Day summary",
    "files": [
+    "MapHomeDaySummaryBand.swift:69",
     "AssistantRelay.swift:8",
     "FirstRunTutorialGuides.swift:62"
    ],
@@ -62839,9 +62878,9 @@
    "ko": "하루 카드",
    "en": "Day card",
    "files": [
-    "MapHomeMenuShortcuts.swift:24",
     "AssistantDataCommands.swift:493",
-    "MapHomeDailyCard.swift:358"
+    "MapHomeDailyCard.swift:358",
+    "MapHomeDailyCard.swift:499"
    ],
    "args": [],
    "targets": [

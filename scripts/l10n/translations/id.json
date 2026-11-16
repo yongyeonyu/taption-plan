@@ -5959,6 +5959,9 @@
 "홈 사용법|Home guide": "Panduan beranda",
 "화랑이 누르기|Tap the cat": "Ketuk kucing",
 "화랑이를 누르면 카운터, 지도를 길게 누르면 메모|Tap the cat for counters, long-press the map for a memo": "Ketuk kucing untuk penghitung, tekan lama peta untuk memo",
-"화면 오른쪽 끝 끌기|Drag the right edge": "Seret tepi kanan"
+"화면 오른쪽 끝 끌기|Drag the right edge": "Seret tepi kanan",
+"누르면 하루 요약을 엽니다|Opens the day summary": "Membuka ringkasan hari",
+"머문 곳 {0}|{0} places": "{0} tempat",
+"하루 요약 띠 (시험)|Day summary bar (trial)": "Bilah ringkasan hari (uji)"
 }
 }
