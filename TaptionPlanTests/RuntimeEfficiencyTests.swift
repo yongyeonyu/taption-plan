@@ -1,3 +1,4 @@
+import MapKit
 import SwiftUI
 import UIKit
 import XCTest
@@ -176,6 +177,23 @@ final class RuntimeEfficiencyTests: XCTestCase {
         )
     }
 
+    /// PRF1116A01: 시간 끌기 카메라 통로는 받을 지도가 있을 때만 카메라를 넘기고, 없으면 원래 경로로 돌린다.
+    func testVectorCameraChannelDeliversOnlyToLiveSink() {
+        let channel = MapHomeVectorCameraChannel()
+        let camera = MapCamera(
+            centerCoordinate: CLLocationCoordinate2D(latitude: 1, longitude: 2), distance: 800, heading: 30, pitch: 10
+        )
+        XCTAssertFalse(channel.send(camera))
+        var sink: CameraSinkSpy? = CameraSinkSpy()
+        channel.sink = sink
+        XCTAssertTrue(channel.send(camera))
+        XCTAssertEqual(sink?.cameras.count, 1)
+        XCTAssertEqual(sink?.cameras.first?.centerCoordinate.longitude, 2)
+        XCTAssertEqual(sink?.cameras.first?.distance, 800)
+        sink = nil
+        XCTAssertFalse(channel.send(camera), "지도가 사라지면 약한 참조가 풀려 원래 경로를 탄다")
+    }
+
     private func write(_ plist: [String: Any], format: PropertyListSerialization.PropertyListFormat) throws {
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try PropertyListSerialization.data(fromPropertyList: plist, format: format, options: 0).write(to: file)
@@ -188,4 +206,10 @@ final class RuntimeEfficiencyTests: XCTestCase {
 
 private final class GestureTarget: NSObject {
     @objc func handle() {}
+}
+
+@MainActor
+private final class CameraSinkSpy: MapHomeVectorCameraSink {
+    var cameras: [MapCamera] = []
+    func applyDirectCamera(_ camera: MapCamera) { cameras.append(camera) }
 }

@@ -32,6 +32,7 @@ final class MapHomeViewWork {
     var lastPlaybackFocusLogUptime: TimeInterval = 0
     var lastPlaybackMarkerUptime: TimeInterval = 0
     var lastTimelineMapFocusUptime: TimeInterval = 0
+    let vectorCameraChannel = MapHomeVectorCameraChannel()
     /// 가계부가 홈을 덮기 직전의 위치·실시간 경로(LGS1115A01).
     var heldLatestReading = MapHomeHeldValue<SensorReading?>(nil)
     var heldLiveRoute = MapHomeHeldValue(LiveRouteState.empty)

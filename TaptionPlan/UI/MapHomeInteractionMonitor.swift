@@ -116,6 +116,16 @@ final class MapHomeInteractionMonitor {
 
     private func record(_ phase: Phase) {
         guard phase.frames > 0 || phase.firstMs != nil else { return }
+        #if DEBUG || BENCH
+        if MapHomePerfBench.isRequested {
+            MapHomePerfBench.emit(phase.name, [
+                "frames": Double(phase.frames), "over20": Double(phase.over20), "over40": Double(phase.over40),
+                "max_ms": phase.maximumMs, "first_ms": phase.firstMs ?? -1,
+                "wall_ms": (ProcessInfo.processInfo.systemUptime - phase.startedAt) * 1_000,
+                "cpu_ms": phase.lastCPU - phase.startedCPU, "max_frame_cpu_ms": phase.maximumFrameCPUMs,
+            ])
+        }
+        #endif
         TaptionPlanDiagnosticsLogger.shared.record(
             "interaction_stats",
             fields: ["name": phase.name],
@@ -237,6 +247,128 @@ enum LedgerScrollBench {
             if let view = controller?.view, let found = find(view) { return found }
         }
         return nil
+    }
+}
+
+/// 측정용: `-autoBenchPerf`면 첫 화면 → 대기 → 날짜 바꾸기 → 시간 끌기 → 지도 밀기 → 가계부·여행 열기를 차례로 돌리고
+/// 숫자만 `PRFBENCH` 줄로 찍는다(PRF1116A01). 기록 내용·좌표는 찍지 않는다.
+@MainActor
+enum MapHomePerfBench {
+    struct Actions {
+        let isReady: () -> Bool
+        let selectDaysAgo: (Int) -> Void
+        let isDayLoaded: () -> Bool
+        let dayRowCount: () -> Int
+        let setMinute: (Int?) -> Void
+        let setScrubbing: (Bool) -> Void
+        let setLedger: (Bool) -> Void
+        let setTravel: (Bool) -> Void
+    }
+
+    static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains("-autoBenchPerf") }
+
+    static func run(_ actions: Actions) async {
+        await waitUntil(timeout: 60, actions.isReady)
+        emit("launch", ["ready_ms": sinceProcessStartMs()])
+        await waitUntil(timeout: 30, actions.isDayLoaded)
+        emit("launch", ["day_loaded_ms": sinceProcessStartMs(), "rows": Double(actions.dayRowCount())])
+        try? await Task.sleep(for: .seconds(25))
+        for round in 0..<3 {
+            let main = mainCPUMs(), all = processCPUMs()
+            try? await Task.sleep(for: .seconds(10))
+            emit("idle", ["round": Double(round), "main_cpu_ms": mainCPUMs() - main, "all_cpu_ms": processCPUMs() - all, "footprint_mb": footprintMB().now])
+        }
+        // 날짜 바꾸기: 처음 여는 날 셋(-1·-2·-3), 다시 여는 날 셋.
+        for (index, days) in [1, 2, 3, 1, 2, 3].enumerated() {
+            let name = "date_\(index < 3 ? "cold" : "warm")"
+            let began = ProcessInfo.processInfo.systemUptime, main = mainCPUMs()
+            MapHomeInteractionMonitor.shared.begin("bench_\(name)", duration: 3)
+            actions.selectDaysAgo(days)
+            await Task.yield()
+            await waitUntil(timeout: 20, actions.isDayLoaded)
+            let loaded = (ProcessInfo.processInfo.systemUptime - began) * 1_000
+            try? await Task.sleep(for: .seconds(4))
+            emit(name, ["days_ago": Double(days), "loaded_ms": loaded, "main_cpu_4s_ms": mainCPUMs() - main, "rows": Double(actions.dayRowCount())])
+        }
+        // 시간 끌기: 손가락으로 끌 때처럼 「끄는 중」을 켜고 화면 틱(16ms)마다 고른 분을 옮긴다(3초에 하루 왕복).
+        // 사이드바의 손짓 판정만 거치지 않는다.
+        actions.selectDaysAgo(1)
+        await waitUntil(timeout: 20, actions.isDayLoaded)
+        try? await Task.sleep(for: .seconds(4))
+        for _ in 0..<3 {
+            MapHomeInteractionMonitor.shared.begin("bench_scrub")
+            actions.setScrubbing(true)
+            let began = CACurrentMediaTime()
+            var last: Int?
+            while CACurrentMediaTime() - began < 6 {
+                let phase = (CACurrentMediaTime() - began).truncatingRemainder(dividingBy: 3) / 3
+                let minute = Int((1 - abs(phase * 2 - 1)) * 1_439)
+                if minute != last { actions.setMinute(minute); last = minute }
+                try? await Task.sleep(for: .milliseconds(16))
+            }
+            actions.setScrubbing(false)
+            MapHomeInteractionMonitor.shared.end("bench_scrub")
+            try? await Task.sleep(for: .seconds(2))
+        }
+        actions.setMinute(nil)
+        if ProcessInfo.processInfo.arguments.contains("-autoBenchMapPan") {
+            for _ in 0..<3 {
+                MapHomeInteractionMonitor.shared.begin("bench_pan")
+                NotificationCenter.default.post(name: MapHomeVectorBenchPan.notification, object: nil)
+                try? await Task.sleep(for: .seconds(MapHomeVectorBenchPan.seconds))
+                MapHomeInteractionMonitor.shared.end("bench_pan")
+                try? await Task.sleep(for: .seconds(3))
+            }
+        }
+        for (name, set) in [("ledger", actions.setLedger), ("travel", actions.setTravel)] {
+            for round in 0..<4 {
+                MapHomeInteractionMonitor.shared.begin("bench_open_\(name)_\(round == 0 ? "cold" : "warm")", duration: 1.5)
+                set(true)
+                try? await Task.sleep(for: .seconds(3))
+                set(false)
+                try? await Task.sleep(for: .seconds(2.5))
+            }
+        }
+        actions.selectDaysAgo(0)
+        try? await Task.sleep(for: .seconds(3))
+        let memory = footprintMB()
+        emit("memory", ["footprint_mb": memory.now, "peak_mb": memory.peak])
+        print("PRFBENCH done")
+    }
+
+    static func emit(_ name: String, _ values: [String: Double]) {
+        let body = values.sorted { $0.key < $1.key }.map { "\($0.key)=\(($0.value * 10).rounded() / 10)" }.joined(separator: " ")
+        print("PRFBENCH \(name) \(body)")
+    }
+
+    private static func waitUntil(timeout: TimeInterval, _ condition: () -> Bool) async {
+        let began = ProcessInfo.processInfo.systemUptime
+        while !condition(), ProcessInfo.processInfo.systemUptime - began < timeout {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    private static func mainCPUMs() -> Double { Double(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)) / 1_000_000 }
+
+    private static func processCPUMs() -> Double { Double(clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID)) / 1_000_000 }
+
+    private static func sinceProcessStartMs() -> Double {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else { return -1 }
+        let start = info.kp_proc.p_starttime
+        return (Date().timeIntervalSince1970 - Double(start.tv_sec) - Double(start.tv_usec) / 1_000_000) * 1_000
+    }
+
+    private static func footprintMB() -> (now: Double, peak: Double) {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
+        }
+        guard result == KERN_SUCCESS else { return (-1, -1) }
+        return (Double(info.phys_footprint) / 1_048_576, Double(info.ledger_phys_footprint_peak) / 1_048_576)
     }
 }
 #endif

@@ -313,7 +313,8 @@ struct MapHomePlacePin: View {
         return MapHomeStickmanGlyph(
             action: catAction,
             size: MapHomeStickmanMarker.size.width,
-            equippedAccessoryID: equippedAccessoryID
+            equippedAccessoryID: equippedAccessoryID,
+            rendersAsynchronously: true
         )
         .catSpeechBubble(action: catAction)
         .offset(

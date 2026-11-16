@@ -2,6 +2,17 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## PRF1116A01 · 아이폰 11 Pro 성능 측정과 최적화 (2026-11-16)
+
+- 기기: 아이폰 11 Pro(60Hz, `devicectl` physical·available), Release + `-D BENCH`, `-autoBenchPerf` 종합 측정 3회 + 하루 재생 3회. 시뮬레이터 수치는 없다. 실제 기록 데이터로만 쟀고 로그에는 숫자만 남겼다. 결과 `build/validation/PRF1116A01/`(git 무시).
+- 기준(`baseline2`, 맥 부하 62~101): 콜드 실행 3,631ms, 대기 10초 메인 CPU 3,556ms, 시간 끌기 6초 154프레임, 지도 끌기 12초 367프레임, 날짜 바꾼 뒤 3초 118프레임·최대 154ms, 가계부 다시 열기 최대 148ms, 하루 재생 20ms 넘는 틱 17.4%, 메모리 최고 325MB. 전체 표 `docs/PERFORMANCE_PLAN.md`.
+- 고침 1(시간 레일 구간 기억): 기기 3회에서 오차 안 → 되돌림.
+- 고침 2 `c03801ba`(지도 위 화랑이·집 고양이 Canvas 비동기): 대기 메인 CPU 3,556 → 2,923ms(2,832~3,003), 전체 CPU·프레임 그대로. `MapHomeStickmanTests` 기기 83개 통과(5개 건너뜀, 0 실패), Debug 빌드 통과.
+- 고침 3 `cf063cf2`(시간 끌기 카메라를 홈 상태 없이 벡터 지도에 직접): 시간 끌기 154 → 207프레임(199~221), 메인 CPU 4,934 → 3,025ms, 40ms 넘는 끊김 56 → 42, 다른 항목 오차 안(맥 부하 8~47). `RuntimeEfficiencyTests` 기기 12개 통과(새 시험 `testVectorCameraChannelDeliversOnlyToLiveSink` 포함). 첫 시도는 시험 실행기가 연결 전에 멈춤(기기 쪽 오류), 다시 돌려 통과.
+- main 합친 뒤(`e15cae0c`, main `1b3844d7`까지): 앱 Debug build-for-testing 통과, 기기에서 `MapHomeStickmanTests`·`MapHomeTimeRailCardTests`·`RuntimeEfficiencyTests` 99개 통과(5개 건너뜀, 0 실패, 맥 부하 23). 합친 뒤 성능은 다시 재지 않았다.
+- 인수인계: 2026-11-16 메인 세션에 머지 요청을 보냄(끝 커밋 `d5dbf912`). 기기 잠금 해제, 작업 볼륨 `PRF1116Work`는 꺼냈고 이미지 셋(약 42GB) 삭제는 안전 검사에 막혀 대표·메인 세션 몫으로 넘김.
+- 못 잰 것: Time Profiler(`xctrace`가 기기를 오프라인으로 봄), 손가락 핀치 확대, 120Hz(기기 60Hz), 실제 GPS 이동 중 수치, 손으로 끄는 실제 손짓(측정은 같은 경로를 코드로 흉내). 고침 3의 화면 모습(끄는 동안 지도가 화랑이를 따라가는지)은 눈으로 보지 않았다 — 카메라 값은 `focusMap`과 같은 식이다.
+
 ## STY1116A01 · 일상↔여행 전환 효과·전환 아이콘·스타일 통일 1차 (2026-11-16)
 
 - 전환 방식 비교: (가) `fullScreenCover`는 두고 시스템 올림 움직임만 끈 뒤 덮개 안에서 원형 가림으로 드러냄 — 모달·`dismiss()`·안쪽 시트가 그대로라 고른 것. (나) 홈 위 겹침(overlay)으로 여행 화면을 띄움 — 움직임은 완전히 다룰 수 있지만 `TravelModeView`의 `dismiss()`와 시트 표시가 달라져 여행 세션 셋이 고치는 파일까지 바꿔야 함. (다) UIKit 사용자 전환 — 가장 매끄럽지만 SwiftUI 바깥 코드가 커지고 시트 겹침에서 깨지기 쉬움.

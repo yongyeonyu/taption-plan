@@ -1164,6 +1164,9 @@ struct HwarangSceneView: View {
     var showsBackdrop = true
     /// 캣휠 안 화랑이도 다른 장면과 같은 몸통 크기로 그린다. 좁은 메뉴 칸에서는 끈다.
     var keepsBodySize = true
+    /// 지도 위 표지처럼 화면에 계속 움직이는 곳에서만 켠다. 같은 그림을 메인 스레드 밖에서 그린다(PRF1116A01).
+    /// ImageRenderer로 그림을 뽑는 곳(하루 카드·영상)은 그리는 즉시 결과가 필요해 끈 채로 둔다.
+    var rendersAsynchronously = false
 
     static let worldWidth: CGFloat = 146
     static let worldHeight: CGFloat = 134
@@ -1178,7 +1181,7 @@ struct HwarangSceneView: View {
         let scale = width / Self.worldWidth * (isWheel && keepsBodySize ? 1 / wheelScale : 1)
         let height = (Self.worldHeight + headroom) * scale
         let ground = ((isWheel ? wheelGround : groundY) + headroom - 8) * scale
-        Canvas { context, size in
+        Canvas(rendersAsynchronously: rendersAsynchronously) { context, size in
             context.withCGContext { cg in
                 let k = size.width / Self.worldWidth
                 cg.scaleBy(x: k, y: k)

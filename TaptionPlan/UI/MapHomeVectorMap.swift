@@ -119,6 +119,25 @@ struct MapHomeVectorViewport: Equatable {
     }
 }
 
+/// 시간 끌기 중 카메라를 지도 홈 `@State`를 거치지 않고 벡터 지도에 바로 놓는 통로(PRF1116A01).
+/// 끄는 동안 분이 바뀔 때마다 홈 본문 전체를 다시 계산하지 않는다. 손을 떼면 원래 경로가 최종 카메라를 놓는다.
+@MainActor
+protocol MapHomeVectorCameraSink: AnyObject {
+    func applyDirectCamera(_ camera: MapCamera)
+}
+
+@MainActor
+final class MapHomeVectorCameraChannel {
+    weak var sink: MapHomeVectorCameraSink?
+
+    /// 받을 지도가 없으면(카카오·Apple 지도) false를 돌려 원래 경로를 타게 한다.
+    func send(_ camera: MapCamera) -> Bool {
+        guard let sink else { return false }
+        sink.applyDirectCamera(camera)
+        return true
+    }
+}
+
 struct MapHomeVectorMap: UIViewRepresentable {
     let style: MapHomeVectorStyle
     let cameraPosition: MapCameraPosition
@@ -155,6 +174,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
     var layerPawprints: [MapHomeLayerPawprint] = []
     /// 저장된 앱 언어 값. 바뀌면 지도 글자를 그 언어로 바꾼다.
     var languageKey = ""
+    var cameraChannel: MapHomeVectorCameraChannel? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -193,16 +213,34 @@ struct MapHomeVectorMap: UIViewRepresentable {
         context.coordinator.applyHeadingIfNeeded(to: mapView)
         context.coordinator.updateFrameRate(of: mapView)
         playbackDriver?.sink = context.coordinator
+        cameraChannel?.sink = context.coordinator
     }
 
     static func dismantleUIView(_ mapView: MLNMapView, coordinator: Coordinator) {
         coordinator.detach(from: mapView)
+        if coordinator.parent.cameraChannel?.sink === coordinator { coordinator.parent.cameraChannel?.sink = nil }
         mapView.delegate = nil
     }
 
     final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate, UIGestureRecognizerDelegate,
-        MapHomePlaybackSink {
+        MapHomePlaybackSink, MapHomeVectorCameraSink {
         var parent: MapHomeVectorMap
+
+        /// 손가락 팬처럼 바로 놓고 뷰포트는 `force: false`로 알린다. 그래야 홈으로 되읽는 값이 간격마다만 오른다.
+        func applyDirectCamera(_ camera: MapCamera) {
+            guard let mapView, mapView.bounds.width > 0, mapView.bounds.height > 0,
+                  parent.playbackDriver == nil else { return }
+            mapView.setCamera(
+                MLNMapCamera(
+                    lookingAtCenter: camera.centerCoordinate,
+                    altitude: camera.distance,
+                    pitch: camera.pitch,
+                    heading: camera.heading
+                ),
+                animated: false
+            )
+            publishViewport(from: mapView, force: false)
+        }
 
         var playbackCameraDistance: Double? {
             mapView.map { max($0.camera.altitude, 1) }
