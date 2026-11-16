@@ -39,6 +39,7 @@ export const SHARE = {
   locPerMinute: 20,
   locKeep: true, // 암호화된 마지막 위치를 짧게 둔다. false면 전달만 한다.
   locStoreGapMs: 90_000, // 저장은 이 간격보다 자주 하지 않는다(방송은 매번).
+  locHelpStoreGapMs: 10_000, // 도움 요청을 이어 보낼 때의 저장 간격.
   locKeepMs: 10 * MINUTE_MS,
   locHelpKeepMs: 24 * 60 * MINUTE_MS,
   locWindowMaxMs: 40 * DAY_MS,
@@ -79,10 +80,10 @@ function cipherError(cipher) {
 }
 
 function writeError(w) {
-  if (!w || typeof w !== "object" || !ITEM_ID.test(w.id ?? "") || !isInt(w.baseRev)) return [422, "bad_request"];
+  if (!w || typeof w !== "object" || typeof w.id !== "string" || !ITEM_ID.test(w.id) || !isInt(w.baseRev)) return [422, "bad_request"];
   if (w.delete !== undefined) return w.delete === true && w.baseRev > 0 ? null : [422, "bad_request"];
   if (!KINDS.includes(w.kind) || (w.kind === "member") !== w.id.startsWith("member-")) return [422, "bad_request"];
-  if (w.group !== undefined && w.group !== null && !GROUP.test(w.group)) return [422, "bad_request"];
+  if (w.group !== undefined && w.group !== null && (typeof w.group !== "string" || !GROUP.test(w.group))) return [422, "bad_request"];
   return cipherError(w.cipher);
 }
 
@@ -542,8 +543,12 @@ export class ShareRoom {
     this.broadcast({ t: "loc", by: me.no, cipher: body.cipher, epoch: room.epoch, at: now, ...(help ? { help: true } : {}) }, origin);
     if (SHARE.locKeep) {
       const old = await this.storage.get("l:" + me.no);
-      if (!old || old.until <= now || help || old.help || now - old.storedAt >= SHARE.locStoreGapMs) {
-        await this.storage.put("l:" + me.no, { no: me.no, cipher: body.cipher, epoch: room.epoch, at: now, storedAt: now, help, until: now + (help ? SHARE.locHelpKeepMs : SHARE.locKeepMs) });
+      // 도움 요청이 이어질 때는 10초마다만 저장한다(보통 위치로 돌아갈 때와 처음 요청은 바로 저장).
+      const gap = help && old?.help ? SHARE.locHelpStoreGapMs : SHARE.locStoreGapMs;
+      if (!old || old.until <= now || help !== !!old.help || now - old.storedAt >= gap) {
+        // 보관은 위치 기간 창이 끝나는 때를 넘기지 않는다(「여행 기간에만」).
+        const until = Math.min(now + (help ? SHARE.locHelpKeepMs : SHARE.locKeepMs), window.until);
+        await this.storage.put("l:" + me.no, { no: me.no, cipher: body.cipher, epoch: room.epoch, at: now, storedAt: now, help, until });
       }
     }
     return reply(200, { now });
@@ -551,8 +556,8 @@ export class ShareRoom {
 
   // 내 저장된 위치를 지우고 동행에게 「껐음」을 알린다.
   async locOff(room, me, now) {
+    // 끄기와 켜기를 번갈아 횟수 제한을 피하지 못하도록 `locRates`는 지우지 않는다.
     await this.storage.delete("l:" + me.no);
-    this.locRates.delete(me.no);
     this.broadcast({ t: "loc", by: me.no, off: true });
     return reply(204);
   }
