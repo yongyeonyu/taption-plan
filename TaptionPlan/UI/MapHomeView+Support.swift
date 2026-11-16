@@ -471,7 +471,6 @@ extension MapHomeView {
             MapHomeCalendarSheet(
                 selectedDate: calendarSelectedDateBinding,
                 starredDays: travelPlanDays,
-                minimumDay: travelModeMinimumDay,
                 holidayName: { date in
                     TimelineAxisGrid.koreanHolidayName(on: date)
                 },
@@ -636,15 +635,6 @@ extension MapHomeView {
                 )
             }
         }
-        .onChange(of: model.selectedDate) { keepSelectedDateInFuture() }
-        .sheet(isPresented: $isTravelPlanPresented) {
-            MapHomeTripPlanSheet(model: model, language: language, initialDay: model.selectedDate) { pin in
-                isTravelPlanPresented = false
-                showPlaceBookEntryOnMap(pin)
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-        }
         .onChange(of: TripShareInbox.shared.pending != nil, initial: true) { _, invited in if invited { isTravelHomePresented = true } }
         .travelModeCover(isPresented: $isTravelHomePresented) {
             // 받은 여행 계획(붙여넣기·중계)도 여기서 가져온다. 예전 지도 여행 모드로는 가지 않는다(TVX1116A01).
@@ -668,8 +658,6 @@ extension MapHomeView {
                     isPassportPresented = false
                     isMenuOpen = false
                     passportReturnPage = page
-                    // 여권은 다녀온 기록이라 여행 모드(미래만 고름)를 끄고 그날로 간다.
-                    if isTravelMode { isTravelMode = false }
                     model.selectedDate = day
                 }
             )
@@ -703,15 +691,6 @@ extension MapHomeView {
             Button(language.text("나중에", "Later"), role: .cancel) {}
         } message: {
             Text(LocationAlwaysPrompt.message(language))
-        }
-        .confirmationDialog(language.text("여행 계획 추가", "Add to trip"), isPresented: $isTravelAddChoicePresented, titleVisibility: .visible) {
-            Button(language.text("직접 입력", "Enter manually")) { isTravelPlanPresented = true }
-            Button(language.text("AI로 만들기", "Plan with AI")) { isTripImportPresented = true }
-        }
-        .sheet(isPresented: $isTripImportPresented) {
-            MapHomeTripImportSheet(model: model, language: language, initialText: pastedTripText) { day in model.selectedDate = day }
-                .onDisappear { pastedTripText = nil }
-                .presentationDetents([.large])
         }
         .sheet(isPresented: $isCalendarConnectPresented) { MapHomeCalendarConnectSheet(model: model, language: language) }
         .sheet(isPresented: $isDataProtectionPresented) {

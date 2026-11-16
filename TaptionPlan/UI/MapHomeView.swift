@@ -505,12 +505,10 @@ struct MapHomeView: View {
     @State var placeStampMemo = MapHomeMemo<MapHomePlaceStampKey, Set<String>>()
     @State var isPlaceBookPresented = false
     @State var isPassportPresented = false
-    @State var isTravelAddChoicePresented = false
     @State var memoLedgerFilter = LedgerMemoFilter.today
     /// 할 일 목록 패널의 「확인할 것」. 패널을 열 때 읽는다(TDP1113A01).
     @State var todoItems: [MapHomeLaunchPrompt] = []
     @State var memoLedgerLinkedIDs: Set<UUID> = []
-    @State var isTripImportPresented = false
     @State var isLocationAlwaysPromptPresented = false
     @State var isTripClipboardOfferVisible = false
     @State var pastedTripText: String?
@@ -519,11 +517,8 @@ struct MapHomeView: View {
     /// 여권 도장을 눌러 나온 쪽. 있으면 왼쪽 위에 돌아가기 단추가 뜬다.
     @State var passportReturnPage: Int?
     @State var passportStartPage = 0
-    /// 여행 계획 모드. 미래 날짜만 고른다.
-    @State var isTravelMode = false
     /// 여행 모드 화면(TVB1112A01): 지구본과 여행 목록, 여행별 화면.
     @State var isTravelHomePresented = false
-    @State var isTravelPlanPresented = false
 
     @State var stickmanActionMemo = MapHomeMemo<MapHomeStickmanActionKey, MapHomeStickmanAction>()
 

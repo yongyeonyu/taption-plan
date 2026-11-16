@@ -941,31 +941,19 @@ extension MapHomeView {
         .accessibilityLabel(language.text("여권으로 돌아가기", "Back to passport"))
     }
 
-    /// 여행 모드 하단. 가운데 추가만 두고 양쪽 세 칸은 비워 둔다(대표 지시).
-    @ViewBuilder var travelBottomBarItems: some View {
-        ForEach(0..<3, id: \.self) { _ in Color.clear.frame(maxWidth: .infinity) }
-        bottomBarButton("plus", language.text("추가", "Add")) { isTravelAddChoicePresented = true }
-        ForEach(3..<6, id: \.self) { _ in Color.clear.frame(maxWidth: .infinity) }
-    }
-
     /// 돋보기 옆 여행 모드 전환. 누르면 가는 곳을 보여 준다: 일상에서는 비행기, 여행에서는 집(대표 지시, STY1116A01).
     var travelModeButton: some View {
         Button {
-            // 비행기 단추는 여행 화면(지구본)을 연다. 지도 여행 모드에 있을 때는 집 단추가 되어 일상으로 돌아간다(TVB1112A01).
-            if isTravelMode {
-                withAnimation(.easeInOut(duration: 0.2)) { isTravelMode = false }
-                model.selectedDate = .now
-            } else {
-                isTravelHomePresented = true
-            }
+            // 비행기 단추는 여행 화면(지구본)을 연다(TVB1112A01).
+            isTravelHomePresented = true
         } label: {
-            TravelModeSwitchIcon(goesToTravel: !isTravelMode)
+            TravelModeSwitchIcon(goesToTravel: true)
                 .frame(width: 40, height: 40)
                 .background { TaptionStickerDisc() }
                 .travelModeTransitionOrigin()
                 // 지금 모드 이름을 붙인다. 배치가 밀리지 않게 단추 밖에 얹는다(HUX1116A02).
                 .overlay(alignment: .bottom) {
-                    Text(isTravelMode ? language.text("여행", "Trip") : language.text("일상", "Everyday"))
+                    Text(language.text("일상", "Everyday"))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                         .foregroundStyle(Color.tpInk)
                         .lineLimit(1)
@@ -978,25 +966,11 @@ extension MapHomeView {
                 .taptionTouchTarget(visualWidth: 40, visualHeight: 40)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isTravelMode
-            ? language.text("일상으로 돌아가기", "Back to everyday")
-            : language.text("여행으로 가기", "Go to travel"))
-    }
-
-    /// 여행 모드에서는 오늘 이후만 고른다.
-    func keepSelectedDateInFuture() {
-        guard isTravelMode, let minimum = travelModeMinimumDay, model.selectedDate < minimum else { return }
-        model.selectedDate = .now
+        .accessibilityLabel(language.text("여행으로 가기", "Go to travel"))
     }
 
     var travelPlanDays: Set<Date> {
         Set(TravelPlanSchedule.days(model.settings.travelPlanStops))
-    }
-
-    /// 여행 모드에서 고를 수 있는 첫날. 오늘이 기본이고, 이미 시작해 아직 끝나지 않은 여행이 있으면 그 첫날까지 연다.
-    var travelModeMinimumDay: Date? {
-        guard isTravelMode else { return nil }
-        return TravelTripSchedule.earliestSelectableDay(items: model.settings.travelTripItems ?? [], now: .now)
     }
 }
 

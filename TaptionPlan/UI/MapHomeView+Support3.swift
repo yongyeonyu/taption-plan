@@ -114,7 +114,7 @@ extension MapHomeView {
     /// 하루 요약 띠(시험 옵션)는 사진링이 반달로 접혀 있으면 반달 위에 띄운다.
     var showsStatusBandLayer: Bool {
         !isScreenRecording && (!isMenuOpen || isWideLayout) && layoutStyle.movesActionsToBottom
-            && !isTravelMode && !isDayPlaybackRunning && !isSearchExpanded
+            && !isDayPlaybackRunning && !isSearchExpanded
             && photoBrowserSelection == nil
             && (browsablePhotos.isEmpty || (showsDaySummaryBand && isPhotoRingFolded))
     }

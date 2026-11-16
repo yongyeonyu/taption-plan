@@ -55,9 +55,40 @@
 - 확인: 앱 시험 890개(7개 건너뜀 — 원본 기록 재생용, 자료가 없으면 건너뜀)+103개, `TaptionPlanCore` 패키지 XCTest 89개·Swift Testing 11개(저장 바이트 고정 시험 포함), Watch 스킴 빌드, 구조 점검·import 경계. 14개 묶음을 합친 상태에서 한 번에 돌렸고 중간 커밋 하나하나를 따로 빌드하지는 않았습니다. 실기기 확인 없음.
 - 함수 쪼개기는 `AppModel.init`만 했습니다. `classify`(839줄)·`receiveEnvelope`(254줄)·`performSensorTimelineRefresh`(534줄)는 결과를 고정하는 시험을 먼저 늘린 뒤 따로 합니다.
 
-## 따로 적는 후보: 옛 「지도 여행 모드」 죽은 코드
+## 옛 「지도 여행 모드」 죽은 코드 (RFT1116A02)
 
-`MapHomeView`의 `isTravelMode` 상태와 그것만 쓰는 코드입니다. `isTravelMode`가 나오는 곳: `MapHomePlaceBookTools.swift` 6, `MapHomeView.swift`·`MapHomeView+Support.swift`·`MapHomeView+Support2.swift`·`MapHomeView+Ledger.swift`·`TripImportSheet.swift` 각 1. 모두 다른 세션이 고치는 영역이라 「합친 뒤」에 한 커밋으로 걷습니다.
+`MapHomeView`의 `@State var isTravelMode = false`와 그것만 쓰는 코드입니다. `main` `edd6222a` 기준으로 닿을 수 없음을 확인하고 걷었습니다.
+
+닿을 수 없는 근거:
+
+- `isTravelMode`에 값을 넣는 곳은 `isTravelMode = false` 두 곳(`travelModeButton`, 여권 `onSelectDay`)뿐입니다. `true`·`toggle()`·`$isTravelMode` 바인딩·`isTravelMode:` 인자는 저장소 어디에도 없습니다(`rg '\$isTravelMode|isTravelMode\s*=\s*true|isTravelMode\.toggle|isTravelMode:'` 결과 0줄). `@State`라 밖에서 넣을 길도 없습니다.
+- 여행 단추는 `isTravelMode`가 거짓일 때 `isTravelHomePresented = true`로 `TravelModeView` 전체 화면만 엽니다. 붙여넣거나 중계로 받은 여행 계획도 `TravelModeView`로 가고, 옛 지도 여행 모드로는 가지 않는다는 주석이 이미 있습니다(TVX1116A01).
+- 그래서 `isTravelMode`는 늘 거짓이고, 참일 때만 도는 가지와 그 가지에서만 여는 화면은 실행될 수 없습니다.
+
+걷은 곳(동작 변화 없음 — 모두 늘 거짓 쪽 값으로 바꾼 것과 같음):
+
+| 파일 | 걷은 것 |
+| --- | --- |
+| `MapHomeView.swift` | `isTravelMode`, 여행 모드 하단 「추가」에서만 쓰던 `isTravelAddChoicePresented`·`isTravelPlanPresented`·`isTripImportPresented` 상태 |
+| `MapHomePlaceBookTools.swift` | `travelModeButton`의 「일상으로 돌아가기」 가지(동작·모양·접근성 이름 「여행으로 가기」·아래 이름 「일상」은 그대로), `travelBottomBarItems`, `keepSelectedDateInFuture`, `travelModeMinimumDay` |
+| `MapHomeView+Support.swift` | 날짜 바뀔 때 `keepSelectedDateInFuture` 호출, 여행 계획 시트·「여행 계획 추가」 선택 창·지도 쪽 「AI로 만들기」 시트, 여권 `onSelectDay`의 끄기 줄, 달력의 `minimumDay` 인자(늘 `nil`이라 기본값과 같음) |
+| `MapHomeView+Support2.swift` | 하단 막대의 `if isTravelMode { travelBottomBarItems } else { … }` 가지, 날짜 줄의 `minimumDay` 인자 |
+| `MapHomeView+Support3.swift` | 안내 띠 조건의 `!isTravelMode` |
+| `MapHomeView+Ledger.swift` | 가계부 `tripID: isTravelMode ? ledgerTripID : nil` → `nil`, `ledgerTripID` |
+| `TripImportSheet.swift` | `travelSidebarSegments`. `travelPlanBand`는 `[]`만 돌려주게 남김(아래) |
+
+성능 작업 파일 때문에 남긴 것:
+
+| 파일 | 남긴 것 | 이유 |
+| --- | --- | --- |
+| `MapHomeView+Timeline.swift` | `planBand: travelPlanBand` 인자 | 성능 작업 파일. `isTravelMode`는 없고 계획 띠만 넘김. 띠는 이제 늘 빔 |
+| `MapHomeTimeSidebar.swift` | `planBand: [MapHomeRailPlanSpan]` 속성과 그리기 | 성능 작업 파일. 위와 같이 늘 빈 값을 받음 |
+
+더 걷을 수 있으나 이번에 두는 것(대표·메인 세션 판단):
+
+- `MapHomeTripPlanSheet`(`MapHomePlaceBookTools.swift`, 91줄): 이제 아무도 열지 않는 화면 타입 하나. 타입째 지우면 문구 5개가 번역 카탈로그에서 빠질 수 있어 두었습니다.
+- `TravelTripSchedule`·`TravelPlanBand`(+ `MapHomeRailPlanSpan`): 앱에서는 더 쓰지 않거나(앞 둘) 빈 값만 오가지만 단위 시험(`InkWashThemeTests`·`TripItemStatusTests`)이 있는 순수 계산이라 두었습니다. 시간 막대 성능 작업이 끝난 뒤 `planBand`와 함께 걷을 수 있습니다.
+- 번역: `extract.py`→`generate.py`를 돌리면 `TaptionPlan/UIText.xcstrings`에서 「여행 계획 추가|Add to trip」 하나가 빠집니다(지운 선택 창의 제목, 다른 곳에서 쓰지 않음). 카탈로그 생성은 메인 세션이 하므로 이 브랜치에서는 카탈로그를 고치지 않았습니다.
 
 ## 순서
 
