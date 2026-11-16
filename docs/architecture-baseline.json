@@ -28,7 +28,6 @@
     "largest_type_lines": 2127
   },
   "frozen_files": {
-    "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1367,
     "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1871,
     "TaptionPlan/Core/TravelModeClassifier.swift": 1367,
