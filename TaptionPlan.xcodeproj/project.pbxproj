@@ -402,6 +402,10 @@
 		A1000000000000000000007C /* SubwayCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007C /* SubwayCatalog.swift */; };
 		C1F111100000000000000004 /* SubwayCatalog+Routing.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F111100000000000000003 /* SubwayCatalog+Routing.swift */; };
 		A10000000000000000000085 /* RouteTimelineData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000085 /* RouteTimelineData.swift */; };
+		78A04AA29041D0599FD23AAF /* RouteTimelineDataEngine+Segments.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7DC2660D2DDA762BDF79F88 /* RouteTimelineDataEngine+Segments.swift */; };
+		0984A81FF6DB5322DB46E056 /* RouteTimelineDataEngine+Display.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122467C75FB310A42DF2BF2B /* RouteTimelineDataEngine+Display.swift */; };
+		CCAE13815AE63CB7E40AA7CF /* ExpectedRouteRequestEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E1848FC54355242A1A712C /* ExpectedRouteRequestEngine.swift */; };
+		46C5EF5FEF6717E4CAC9B5B6 /* RouteTimelineModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B896DD5D283C14FCF4115329 /* RouteTimelineModels.swift */; };
 		A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */; };
 		A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000095 /* RoutePolylineDecimator.swift */; };
 		A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000086 /* RouteTimelineDataTests.swift */; };
@@ -1209,6 +1213,10 @@
 		F1000000000000000000007C /* SubwayCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayCatalog.swift; sourceTree = "<group>"; };
 		C1F111100000000000000003 /* SubwayCatalog+Routing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SubwayCatalog+Routing.swift"; sourceTree = "<group>"; };
 		F10000000000000000000085 /* RouteTimelineData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineData.swift; sourceTree = "<group>"; };
+		E7DC2660D2DDA762BDF79F88 /* RouteTimelineDataEngine+Segments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RouteTimelineDataEngine+Segments.swift"; sourceTree = "<group>"; };
+		122467C75FB310A42DF2BF2B /* RouteTimelineDataEngine+Display.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RouteTimelineDataEngine+Display.swift"; sourceTree = "<group>"; };
+		F4E1848FC54355242A1A712C /* ExpectedRouteRequestEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpectedRouteRequestEngine.swift; sourceTree = "<group>"; };
+		B896DD5D283C14FCF4115329 /* RouteTimelineModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineModels.swift; sourceTree = "<group>"; };
 		F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWBSPlayback.swift; sourceTree = "<group>"; };
 		F10000000000000000000095 /* RoutePolylineDecimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePolylineDecimator.swift; sourceTree = "<group>"; };
 		F10000000000000000000086 /* RouteTimelineDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineDataTests.swift; sourceTree = "<group>"; };
@@ -2370,6 +2378,10 @@
 				F1000000000000000000007C /* SubwayCatalog.swift */,
 				C1F111100000000000000003 /* SubwayCatalog+Routing.swift */,
 				F10000000000000000000085 /* RouteTimelineData.swift */,
+				E7DC2660D2DDA762BDF79F88 /* RouteTimelineDataEngine+Segments.swift */,
+				122467C75FB310A42DF2BF2B /* RouteTimelineDataEngine+Display.swift */,
+				F4E1848FC54355242A1A712C /* ExpectedRouteRequestEngine.swift */,
+				B896DD5D283C14FCF4115329 /* RouteTimelineModels.swift */,
 				F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */,
 				F10000000000000000000095 /* RoutePolylineDecimator.swift */,
 				F10000000000000000000088 /* BiometricDataProtection.swift */,
@@ -3326,6 +3338,10 @@
 				A1000000000000000000007C /* SubwayCatalog.swift in Sources */,
 				C1F111100000000000000004 /* SubwayCatalog+Routing.swift in Sources */,
 				A10000000000000000000085 /* RouteTimelineData.swift in Sources */,
+				78A04AA29041D0599FD23AAF /* RouteTimelineDataEngine+Segments.swift in Sources */,
+				0984A81FF6DB5322DB46E056 /* RouteTimelineDataEngine+Display.swift in Sources */,
+				CCAE13815AE63CB7E40AA7CF /* ExpectedRouteRequestEngine.swift in Sources */,
+				46C5EF5FEF6717E4CAC9B5B6 /* RouteTimelineModels.swift in Sources */,
 				A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */,
 				A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */,
 				A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */,
