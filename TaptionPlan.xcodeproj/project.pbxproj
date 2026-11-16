@@ -250,6 +250,7 @@
 		A10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */; };
 		A1000000000000000C1A0002 /* MovementFragmentMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000C1A0002 /* MovementFragmentMergeTests.swift */; };
 		A10000000000000004DA0004 /* UserEditRollbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0004 /* UserEditRollbackTests.swift */; };
+		A10000000000000005F10301 /* SensorTimelineRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000005F10301 /* SensorTimelineRefreshTests.swift */; };
 		A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */; };
 		B10815000000000000000C03 /* MapHomeAppleCounterStabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10815000000000000000C04 /* MapHomeAppleCounterStabilityTests.swift */; };
 		A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */; };
@@ -1136,6 +1137,7 @@
 		F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceStayMergeEngineTests.swift; sourceTree = "<group>"; };
 		F1000000000000000C1A0002 /* MovementFragmentMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementFragmentMergeTests.swift; sourceTree = "<group>"; };
 		F10000000000000004DA0004 /* UserEditRollbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserEditRollbackTests.swift; sourceTree = "<group>"; };
+		F10000000000000005F10301 /* SensorTimelineRefreshTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorTimelineRefreshTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTimelinePolicyTests.swift; sourceTree = "<group>"; };
 		B10815000000000000000C04 /* MapHomeAppleCounterStabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleCounterStabilityTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuityTests.swift; sourceTree = "<group>"; };
@@ -1881,6 +1883,7 @@
 				F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */,
 				F1000000000000000C1A0002 /* MovementFragmentMergeTests.swift */,
 				F10000000000000004DA0004 /* UserEditRollbackTests.swift */,
+				F10000000000000005F10301 /* SensorTimelineRefreshTests.swift */,
 				F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */,
 				B10815000000000000000C04 /* MapHomeAppleCounterStabilityTests.swift */,
 				F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */,
@@ -3601,6 +3604,7 @@
 				A10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift in Sources */,
 				A1000000000000000C1A0002 /* MovementFragmentMergeTests.swift in Sources */,
 				A10000000000000004DA0004 /* UserEditRollbackTests.swift in Sources */,
+				A10000000000000005F10301 /* SensorTimelineRefreshTests.swift in Sources */,
 				A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */,
 				B10815000000000000000C03 /* MapHomeAppleCounterStabilityTests.swift in Sources */,
 				A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */,
