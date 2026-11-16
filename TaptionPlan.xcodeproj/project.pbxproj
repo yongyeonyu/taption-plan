@@ -107,6 +107,7 @@
 		A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */; };
 		A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */; };
 		A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */; };
+		607F3CFDF67827418A7A8A47 /* TravelModeClassifier+Signals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F940955247968F220F267E /* TravelModeClassifier+Signals.swift */; };
 		A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */; };
 		A10000000000000000000001 /* TaptionPlanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* TaptionPlanApp.swift */; };
 		A10000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* AppModel.swift */; };
@@ -981,6 +982,7 @@
 		F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthRouteMergeEngine.swift; sourceTree = "<group>"; };
 		F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorEstimator.swift; sourceTree = "<group>"; };
 		F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeClassifier.swift; sourceTree = "<group>"; };
+		53F940955247968F220F267E /* TravelModeClassifier+Signals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TravelModeClassifier+Signals.swift"; sourceTree = "<group>"; };
 		F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSensorMapProjection.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* TaptionPlan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaptionPlan.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000000000000000000002 /* TaptionPlanTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -2342,6 +2344,7 @@
 				F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */,
 				F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */,
 				F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */,
+				53F940955247968F220F267E /* TravelModeClassifier+Signals.swift */,
 				F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */,
 				F10000000000000000000071 /* StationaryContextClassifier.swift */,
 				F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */,
@@ -3327,6 +3330,7 @@
 				A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */,
 				A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */,
 				A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */,
+				607F3CFDF67827418A7A8A47 /* TravelModeClassifier+Signals.swift in Sources */,
 				A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */,
 				A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */,
 				A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */,
