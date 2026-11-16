@@ -458,6 +458,22 @@ extension MapHomeView {
         }
     }
 
+    /// 시간 끌기 중 화랑이를 따라가는 카메라. 벡터 지도면 `focusMap`과 같은 카메라를 통로로 바로 놓고
+    /// `mapPosition` 같은 홈 상태는 쓰지 않는다(PRF1116A01). 손을 떼면 `refreshSelectedTimelineMapPosition`이 최종 위치를 놓는다.
+    func focusVectorMapDirectly(on point: GeoPoint) -> Bool {
+        guard rendersVectorMap, let camera = visibleMapCamera else { return false }
+        let target = MapCamera(
+            centerCoordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+            distance: playbackAwareDistance(current: camera.distance),
+            heading: camera.heading,
+            pitch: camera.pitch
+        )
+        guard work.vectorCameraChannel.send(target) else { return false }
+        setUserTrackingMode(.following)
+        if !isMapCenteredOnUser { isMapCenteredOnUser = true }
+        return true
+    }
+
     func requestAppleMapCenter(
         _ coordinate: CLLocationCoordinate2D,
         distance: CLLocationDistance? = nil

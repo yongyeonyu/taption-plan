@@ -215,7 +215,8 @@ extension MapHomeView {
             },
             activeRouteSegments: recordingShows(\.routes) ? activeSegments : [],
             layerPawprints: playbackLayerPawprints(statics),
-            languageKey: languageRawValue
+            languageKey: languageRawValue,
+            cameraChannel: work.vectorCameraChannel
         ))
         .overlay {
             if !Self.benchHidden("overlay") {
@@ -267,6 +268,7 @@ extension MapHomeView {
                 }
                 guard shouldFocus, playbackDriver == nil else { return }
                 guard let point = displayedPlaybackFocusPoint else { return }
+                if !isDayPlaybackRunning, focusVectorMapDirectly(on: point) { return }
                 focusMap(on: point, using: nil, followsTracking: true)
             } else {
                 refreshSelectedTimelineMapPosition(minute: minute, using: nil)
