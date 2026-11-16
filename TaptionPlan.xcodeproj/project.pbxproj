@@ -118,6 +118,11 @@
 		A5B1102A020000000000002B /* AppModel+Bootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002A /* AppModel+Bootstrap.swift */; };
 		A1000000000000000B1105C7 /* SensorTimelineDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C7 /* SensorTimelineDerivation.swift */; };
 		A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000028 /* AppModel+Classification.swift */; };
+		A10000000000000005F10312 /* AppModel+SensorRefreshEvidence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000005F10312 /* AppModel+SensorRefreshEvidence.swift */; };
+		A10000000000000005F10313 /* AppModel+SensorRefreshRebuild.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000005F10313 /* AppModel+SensorRefreshRebuild.swift */; };
+		A10000000000000005F10314 /* AppModel+ClassifierOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000005F10314 /* AppModel+ClassifierOutput.swift */; };
+		A10000000000000005F10315 /* AppModel+SleepClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000005F10315 /* AppModel+SleepClassification.swift */; };
+		A10000000000000005F10316 /* AppModel+RecordNaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000005F10316 /* AppModel+RecordNaming.swift */; };
 		C1CA1111A010000000000002 /* AppModel+CarAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CA1111A010000000000001 /* AppModel+CarAudio.swift */; };
 		CA1A1111A010000000000002 /* AITaskQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1A1111A010000000000001 /* AITaskQueue.swift */; };
 		CA1A1111A020000000000002 /* AITaskProducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1A1111A020000000000001 /* AITaskProducer.swift */; };
@@ -1024,6 +1029,11 @@
 		F5B1102A020000000000002A /* AppModel+Bootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Bootstrap.swift"; sourceTree = "<group>"; };
 		F1000000000000000B1105C7 /* SensorTimelineDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorTimelineDerivation.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000028 /* AppModel+Classification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Classification.swift"; sourceTree = "<group>"; };
+		F10000000000000005F10312 /* AppModel+SensorRefreshEvidence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+SensorRefreshEvidence.swift"; sourceTree = "<group>"; };
+		F10000000000000005F10313 /* AppModel+SensorRefreshRebuild.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+SensorRefreshRebuild.swift"; sourceTree = "<group>"; };
+		F10000000000000005F10314 /* AppModel+ClassifierOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+ClassifierOutput.swift"; sourceTree = "<group>"; };
+		F10000000000000005F10315 /* AppModel+SleepClassification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+SleepClassification.swift"; sourceTree = "<group>"; };
+		F10000000000000005F10316 /* AppModel+RecordNaming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+RecordNaming.swift"; sourceTree = "<group>"; };
 		C1CA1111A010000000000001 /* AppModel+CarAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+CarAudio.swift"; sourceTree = "<group>"; };
 		CA1A1111A010000000000001 /* AITaskQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITaskQueue.swift; sourceTree = "<group>"; };
 		CA1A1111A020000000000001 /* AITaskProducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITaskProducer.swift; sourceTree = "<group>"; };
@@ -2332,6 +2342,11 @@
 				F5B1102A020000000000002C /* AppModel+Backup.swift */,
 				F5B1102A020000000000002A /* AppModel+Bootstrap.swift */,
 				F5B1102A0200000000000028 /* AppModel+Classification.swift */,
+				F10000000000000005F10312 /* AppModel+SensorRefreshEvidence.swift */,
+				F10000000000000005F10313 /* AppModel+SensorRefreshRebuild.swift */,
+				F10000000000000005F10314 /* AppModel+ClassifierOutput.swift */,
+				F10000000000000005F10315 /* AppModel+SleepClassification.swift */,
+				F10000000000000005F10316 /* AppModel+RecordNaming.swift */,
 				C1CA1111A010000000000001 /* AppModel+CarAudio.swift */,
 				CA1A1111A010000000000001 /* AITaskQueue.swift */,
 				CA1A1111A020000000000001 /* AITaskProducer.swift */,
@@ -3013,6 +3028,11 @@
 				A5B1102A020000000000002D /* AppModel+Backup.swift in Sources */,
 				A5B1102A020000000000002B /* AppModel+Bootstrap.swift in Sources */,
 				A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */,
+				A10000000000000005F10312 /* AppModel+SensorRefreshEvidence.swift in Sources */,
+				A10000000000000005F10313 /* AppModel+SensorRefreshRebuild.swift in Sources */,
+				A10000000000000005F10314 /* AppModel+ClassifierOutput.swift in Sources */,
+				A10000000000000005F10315 /* AppModel+SleepClassification.swift in Sources */,
+				A10000000000000005F10316 /* AppModel+RecordNaming.swift in Sources */,
 				C1CA1111A010000000000002 /* AppModel+CarAudio.swift in Sources */,
 				CA1A1111A010000000000002 /* AITaskQueue.swift in Sources */,
 				CA1A1111A020000000000002 /* AITaskProducer.swift in Sources */,
