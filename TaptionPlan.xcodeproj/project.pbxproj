@@ -155,6 +155,9 @@
 		01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */; };
 		A10000000000000000000008 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* ReviewView.swift */; };
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
+		AA6377B2DB6190855BE310B6 /* SettingsView+Connections.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDDF9E63D00A2D25D95FE8E /* SettingsView+Connections.swift */; };
+		4765C0DD433E1DC7D1C756D4 /* SettingsView+FrequentPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EBD28CC58EC3980EB620ED /* SettingsView+FrequentPlaces.swift */; };
+		AC65BCB818D84ADC745630DD /* SettingsFrequentPlaceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C367F28ED1FD42AF95FAA8A /* SettingsFrequentPlaceDetailView.swift */; };
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
 		5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */; };
 		F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */; };
@@ -1069,6 +1072,9 @@
 		2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000008 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		F10000000000000000000009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		CCDDF9E63D00A2D25D95FE8E /* SettingsView+Connections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Connections.swift"; sourceTree = "<group>"; };
+		60EBD28CC58EC3980EB620ED /* SettingsView+FrequentPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+FrequentPlaces.swift"; sourceTree = "<group>"; };
+		8C367F28ED1FD42AF95FAA8A /* SettingsFrequentPlaceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsFrequentPlaceDetailView.swift; sourceTree = "<group>"; };
 		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
 		3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSliderScreen.swift; sourceTree = "<group>"; };
 		71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AddPlanSheet+CategoryPickers.swift"; sourceTree = "<group>"; };
@@ -2318,6 +2324,9 @@
 				F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */,
 				F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
+				CCDDF9E63D00A2D25D95FE8E /* SettingsView+Connections.swift */,
+				60EBD28CC58EC3980EB620ED /* SettingsView+FrequentPlaces.swift */,
+				8C367F28ED1FD42AF95FAA8A /* SettingsFrequentPlaceDetailView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
 				3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */,
 				71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */,
@@ -3399,6 +3408,9 @@
 				A1FA11046C5838880ADF9D7F /* RecordDetailViews.swift in Sources */,
 				A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
+				AA6377B2DB6190855BE310B6 /* SettingsView+Connections.swift in Sources */,
+				4765C0DD433E1DC7D1C756D4 /* SettingsView+FrequentPlaces.swift in Sources */,
+				AC65BCB818D84ADC745630DD /* SettingsFrequentPlaceDetailView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
 				5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */,
 				F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */,
