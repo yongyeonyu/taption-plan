@@ -123,6 +123,7 @@ private struct TravelModeCoverModifier<Cover: View>: ViewModifier {
             }
             .fullScreenCover(isPresented: coverBinding) {
                 TravelModeReveal(driver: driver, content: cover)
+                    .background(TravelCoverAccessibilityGuard())
                     .presentationBackground(.clear)
             }
     }
@@ -187,6 +188,41 @@ private struct TravelModeReveal<Content: View>: View {
             // 중간에 방향이 바뀌었으면 앞선 움직임의 끝남 신호는 버린다.
             guard current == run else { return }
             driver.send(revealed ? .revealFinished : .concealFinished)
+        }
+    }
+}
+
+/// 덮개 바탕이 투명해 아래 홈이 접근성 트리(VoiceOver·UI 시험)에 남는다(MRG1117A01).
+/// 덮개가 창에 붙어 있는 동안 덮개를 띄운 화면의 접근성 요소를 숨기고, 떨어지면 되돌린다.
+private struct TravelCoverAccessibilityGuard: UIViewRepresentable {
+    func makeUIView(context: Context) -> GuardView { GuardView() }
+    func updateUIView(_ uiView: GuardView, context: Context) {}
+    static func dismantleUIView(_ uiView: GuardView, coordinator: ()) { uiView.restore() }
+
+    final class GuardView: UIView {
+        private weak var hiddenView: UIView?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard window != nil else { return restore() }
+            guard hiddenView == nil, let presenting = presentedController?.presentingViewController?.view else { return }
+            presenting.accessibilityElementsHidden = true
+            hiddenView = presenting
+            UIAccessibility.post(notification: .screenChanged, argument: nil)
+        }
+
+        func restore() {
+            hiddenView?.accessibilityElementsHidden = false
+            hiddenView = nil
+        }
+
+        private var presentedController: UIViewController? {
+            var responder: UIResponder? = self
+            while let next = responder?.next {
+                if let controller = next as? UIViewController { return controller }
+                responder = next
+            }
+            return nil
         }
     }
 }
