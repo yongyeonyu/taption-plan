@@ -3471,3 +3471,9 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 번역: `scripts/l10n/check.py` 실패 0(새 문구 5개 × 12개 언어). `extract.py`가 만든 `source.json`은 다른 갈래와 충돌을 피하려고 커밋하지 않음 → 합친 뒤 메인 세션이 `extract.py` → `check.py` → `generate.py`.
 - 겪은 일: 빌드 잠금을 02:59까지 다른 세션들이 쥐었고 맥 여유가 6.6GB까지 줄어 빌드를 미룸. 대표 지시(공지)로 외장 작업 볼륨 `/Volumes/TaptionPlanWork/dd/TVY1116B01`에 빌드했고 끝난 뒤 그 폴더와 `sim/TVY1116B01`을 지움(약 2.6GB). HFS+ 볼륨에서는 Xcode 컴파일 캐시(`CompilationCache.noindex`)가 37GB를 통째로 잡아 40GB짜리 전용 볼륨이 꽉 찼음 → `COMPILATION_CACHE_ENABLE_CACHING=NO`로 돌리니 2.6GB.
 - 알고 둘 것: 일차가 많아 칩이 화면 밖에 있으면 끌어서는 닿지 않음(메뉴로), 옮긴 일정이 길면 자정을 넘을 수 있음(길이를 줄이지 않음), 동선은 직선 거리이고 예약·숙소·잠·이동·항공을 넘어 바꾸지 않아 줄어드는 폭이 작을 수 있음, 핀 없는 곳은 순서만 제자리(시각은 밀릴 수 있음), 공유 여행에서는 옮겨도 되돌리기 줄이 없음(기존 결정).
+
+## HUX1116A02~A06 — main(3697d4b3) 합친 뒤 재시험
+- 합침 커밋 `ef62e5fc`. 충돌: l10n 번역 12개(양쪽 문구 모두 살림, `extract.py` 다시 돌림)·`temp.md`·`test.md`(양쪽 기록 유지).
+- 단위 시험: `MapHomeLiveGateTests` 11 + `MapHomeLiveMapTests` 96 + `LedgerTests` 34 = 141개 실패 0, `** TEST SUCCEEDED **`, 같은 실행에서 Debug 시험 빌드 통과(시뮬레이터 99AC6F35). 로그 `build/validation/HUX1116A06/merge-1.log`.
+- l10n `check.py` 실패 0. 구조 지표 「총 줄 수 +10% 초과」 실패는 main 단독에서도 같음(248,597줄) — 이 브랜치 몫 아님.
+- 실기기 시험 없음.
