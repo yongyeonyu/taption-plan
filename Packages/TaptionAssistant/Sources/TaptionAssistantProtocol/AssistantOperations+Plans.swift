@@ -40,9 +40,9 @@ extension AssistantOperations {
     /// 시간 있는 여행 일정 하나를 넣는다(여행 계획표의 손으로 넣기와 같은 `addTripItem`). 일상 쪽 계획도 함께 생긴다.
     public struct AddTripItem: AssistantOperationReading {
         public static let spec = AssistantOperationSpec(
-            name: "addTripItem", fields: ["tripId", "title", "start", "end", "kind", "note"], counter: .schedules, changes: 0,
+            name: "addTripItem", fields: ["tripId", "title", "start", "end", "kind", "note", "status"], counter: .schedules, changes: 0,
             title: { $0.text("시간 있는 여행 일정 더하기", "Add timed trip items") },
-            guide: #""tripId":"<trips[].id>","title":"Dinner","start":"YYYY-MM-DDTHH:MM+09:00","end":"YYYY-MM-DDTHH:MM+09:00","kind":"meal","note":"..."} (adds one timed item to a trip's plan; start and end carry the local offset of the place; kind optional: flight|lodging|meal|cafe|sight|photo|shopping|activity|rest|sleep|transfer|other, default activity; note optional; the new itemId appears in GET /activity trips[].items[])"#
+            guide: #""tripId":"<trips[].id>","title":"Dinner","start":"YYYY-MM-DDTHH:MM+09:00","end":"YYYY-MM-DDTHH:MM+09:00","kind":"meal","note":"..."} (adds one timed item to a trip's plan; start and end carry the local offset of the place; kind optional: flight|lodging|meal|cafe|sight|photo|shopping|activity|rest|sleep|transfer|other, default activity; note optional; status optional: booked|planned|tentative, default planned — tentative makes it a puzzle piece the user fits into the plan; the new itemId appears in GET /activity trips[].items[])"#
         )
 
         public let tripID: String
@@ -53,17 +53,21 @@ extension AssistantOperations {
         /// 종류 이름(`tripItemKinds` 가운데 하나). 주지 않으면 activity.
         public let kindName: String
         public let note: String
+        /// 예약·계획·미정(조각). 주지 않으면 계획(AIT1116A01).
+        public let statusName: String?
 
         public init?(fields: AssistantFields) {
             let kind = fields.choice("kind", among: AssistantOperations.tripItemKinds), note = fields.string("note", max: 500)
+            let status = fields.choice("status", among: ["booked", "planned", "tentative"])
             guard let tripID = fields.string("tripId", max: 100), let title = fields.string("title", max: 200),
                   let start = fields.instant("start"), let end = fields.instant("end"), end > start,
-                  let offset = AssistantOperations.offsetSeconds(fields.raw("start")), fields.ok("kind", kind), fields.ok("note", note) else { return nil }
+                  let offset = AssistantOperations.offsetSeconds(fields.raw("start")), fields.ok("kind", kind), fields.ok("note", note), fields.ok("status", status) else { return nil }
             self.tripID = tripID
             self.title = title
             self.start = start
             self.end = end
             self.offset = offset
+            statusName = status
             kindName = kind ?? "activity"
             self.note = note ?? ""
         }

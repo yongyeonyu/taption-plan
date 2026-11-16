@@ -17,6 +17,9 @@ struct FirstRunTutorialView: View {
     @State private var confirmation = ""
     @State private var passwordMessage: String?
     @State private var isFinishing = false
+    /// AI 연결 단계의 「지금 연결」(AIT1116A01).
+    @State private var aiStore = AssistantConnectionStore()
+    @State private var isAIChooserPresented = false
 
     private let store = FirstRunTutorialStore()
     private let language = MapHomeLanguage.current
@@ -51,6 +54,9 @@ struct FirstRunTutorialView: View {
         .frame(maxWidth: .infinity)
         .background(Color.tpBackground.ignoresSafeArea())
         .disabled(isFinishing)
+        .sheet(isPresented: $isAIChooserPresented, onDismiss: { Task { await aiStore.reload() } }) {
+            FirstRunAIProviderChooser(language: language, store: aiStore) { isAIChooserPresented = false }
+        }
         // 묶지 않으면 이 이름이 안쪽 단추의 이름을 덮어쓴다.
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("firstRunTutorial")
@@ -178,7 +184,7 @@ struct FirstRunTutorialView: View {
         case .counters: language.text("카운터", "Counters")
         case .calendar: language.text("캘린더 연결", "Connect calendars")
         case .appleWatch: language.text("Apple Watch", "Apple Watch")
-        case .aiConnect: language.text("AI 연결", "Connect an AI")
+        case .aiConnect: language.text("AI와 함께 쓰기", "Use it with an AI")
         case .shortcuts: language.text("단축어 · Siri", "Shortcuts · Siri")
         case .password: language.text("백업 비밀번호", "Backup password")
         case .finish: language.text("준비됐습니다", "You're ready")
@@ -204,7 +210,7 @@ struct FirstRunTutorialView: View {
         case .counters: language.text("지도 위 고양이 곁에 보여 줄 것을 고릅니다.", "Choose what appears next to the cat on the map.")
         case .calendar: language.text("일정을 하루 기록과 함께 봅니다. 읽기만 합니다.", "See events with your day. Read only.")
         case .appleWatch: language.text("손목의 움직임까지 더해 하루를 기록합니다.", "Adds movement from your wrist to your day.")
-        case .aiConnect: language.text("AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.", "Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections.")
+        case .aiConnect: language.text("AI와 대화로 짠 일정과 정리한 기록을 이 앱이 일정표·지도·가계부로 보여 줍니다. 연결하면 앱을 더 알차게 쓸 수 있어요.", "Chat a plan out with an AI and this app shows it as schedule, map and ledger. Connect one to get more out of the app.")
         case .shortcuts: language.text("결제 문자·앱 알림이 오면 가계부에 저절로 들어가게 하고, Siri로 말해서 바로 넣습니다. 나중에 메뉴 › 연결에서도 볼 수 있습니다.", "Let payment texts and app alerts flow into the ledger, and add things by talking to Siri. Also in Menu › Connections.")
         case .password: language.text("앱 잠금과 iCloud 백업에 같은 비밀번호를 씁니다.", "App lock and iCloud backup share this password.")
         case .finish: language.text("지금 상태입니다. 비어 있는 것은 나중에 해도 됩니다.", "Here's where things stand. Anything open can wait.")
@@ -264,6 +270,7 @@ struct FirstRunTutorialView: View {
             FirstRunAppleWatchPage(model: model, language: language)
         case .aiConnect:
             FirstRunAIConnectPage(language: language)
+                .task { if TripRelay.isAvailable { await aiStore.reload() } }
         case .shortcuts:
             List { BokkiShortcutsGuideSections(language: language) }.tpListStyle()
         case .calendar:
@@ -280,7 +287,7 @@ struct FirstRunTutorialView: View {
             Button { confirmStep() } label: {
                 HStack(spacing: 8) {
                     Text(primaryTitle)
-                    if step != .finish { Image(systemName: "arrow.right") }
+                    if step != .finish, !(step == .aiConnect && !isAIConnected) { Image(systemName: "arrow.right") }
                 }
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                 .foregroundStyle(.white)
@@ -290,6 +297,14 @@ struct FirstRunTutorialView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("firstRunNext")
+            if step == .aiConnect, !isAIConnected {
+                Button(language.text("나중에", "Later")) { advance() }
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .buttonStyle(.plain)
+                    .frame(minHeight: 40)
+                    .accessibilityIdentifier("firstRunAILater")
+            }
             if step == .welcome {
                 Button(language.text("바로 시작", "Start now")) { finish(.skipped) }
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
@@ -307,12 +322,20 @@ struct FirstRunTutorialView: View {
     private var primaryTitle: String {
         switch step {
         case .welcome: language.text("차근차근 따라 하기", "Walk me through")
+        case .aiConnect: isAIConnected ? language.text("계속", "Continue") : language.text("지금 연결", "Connect now")
         case .finish: mode == .replay ? language.text("닫기", "Close") : language.text("시작하기", "Get started")
         default: language.text("계속", "Continue")
         }
     }
 
+    private var isAIConnected: Bool { AssistantProviderConnections.hasAny(aiStore) }
+
     private func confirmStep() {
+        if step == .aiConnect, !isAIConnected {
+            // 서버를 쓸 수 없는 빌드는 연결할 길이 없어 그대로 지나간다.
+            if TripRelay.isAvailable { isAIChooserPresented = true } else { advance() }
+            return
+        }
         if step == .password, !savePasswordEntry() { return }
         advance()
     }

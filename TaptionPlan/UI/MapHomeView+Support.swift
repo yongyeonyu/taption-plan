@@ -647,12 +647,9 @@ extension MapHomeView {
         }
         .onChange(of: TripShareInbox.shared.pending != nil, initial: true) { _, invited in if invited { isTravelHomePresented = true } }
         .fullScreenCover(isPresented: $isTravelHomePresented) {
-            TravelModeView(model: model, language: language) { day in
-                // 일정 편집은 계획표가 생길 때까지 지도 여행 모드에서 한다.
-                isTravelHomePresented = false
-                model.selectedDate = day
-                isTravelMode = true
-            }
+            // 받은 여행 계획(붙여넣기·중계)도 여기서 가져온다. 예전 지도 여행 모드로는 가지 않는다(TVX1116A01).
+            TravelModeView(model: model, language: language, importText: pastedTripText)
+                .onDisappear { pastedTripText = nil }
         }
         .fullScreenCover(isPresented: $isPlaceBookPresented) {
             MapHomePlaceBookSheet(

@@ -269,6 +269,7 @@ struct TravelDayChips: View {
                             .background(day.key == selected ? TravelInk.plan : TravelInk.planTint, in: Capsule())
                     }
                     .buttonStyle(.plain)
+                    .travelDayChipDrop(day.key)
                 }
             }
             .padding(.horizontal, 10)
@@ -504,6 +505,8 @@ struct TravelCourseView: View {
     var placePhotos: [String: TravelPlacePhoto] = [:]
     /// 순서를 바꿀 수 없을 때 잠깐 보이는 안내.
     @State private var notice = ""
+    /// 「순서 편집」: 길게 누르기·밀기를 몰라도 손잡이와 지우기 단추로 고친다(TVX1116A01).
+    @State private var isEditing = false
 
     @State private var images: [String: UIImage] = [:]
 
@@ -532,21 +535,21 @@ struct TravelCourseView: View {
                                 // 지금 일정이거나 고른 곳은 펼쳐서 세부 계획과 「세부 더하기」를 보인다.
                                 if index == current || selectedID == block.id { detailRows(block) }
                             }
+                                .travelDayBoardDrag(block.id)
                                 .listRowInsets(EdgeInsets())
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(index == current ? TravelInk.planTint : Color.clear)
-                                .swipeActions(edge: .trailing) {
-                                    Button(language.text("지우기", "Delete"), role: .destructive) { onDelete(block) }
-                                }
                         }
-                        // 길게 눌러 끌면 순서가 바뀌고, 시각은 그 구간 안에서 순서대로 다시 잡힌다.
+                        // 길게 눌러 끌면 순서가 바뀌고, 시각은 그 구간 안에서 순서대로 다시 잡힌다. 「순서 편집」을 누르면 손잡이와 지우기 단추가 보인다.
                         .onMove { from, to in reorder(blocks, from: from, to: to) }
-                        addStopButton.frame(maxWidth: .infinity).padding(.vertical, 8)
+                        .onDelete { offsets in offsets.map { blocks[$0] }.forEach(onDelete) }
+                        HStack(spacing: 8) { addStopButton; TravelCourseSortButton(language: language) }.frame(maxWidth: .infinity).padding(.vertical, 8)
                             .listRowInsets(EdgeInsets()).listRowSeparator(.hidden).listRowBackground(Color.clear)
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
                     .environment(\.defaultMinListRowHeight, 44)
+                    .environment(\.editMode, .constant(isEditing ? .active : .inactive))
                     .onChange(of: current) { _, index in withAnimation(.snappy(duration: 0.25)) { proxy.scrollTo(blocks[index].id, anchor: .center) } }
                 }
             } else {
@@ -627,6 +630,16 @@ struct TravelCourseView: View {
                 HStack {
                     Text(clock(playMinute)).font(.caption2.monospacedDigit()).opacity(0.7)
                     Spacer()
+                    if blocks.count > 1 {
+                        Button { withAnimation(.snappy(duration: 0.2)) { isEditing.toggle() } } label: {
+                            Text(isEditing ? language.text("완료", "Done") : language.text("순서 편집", "Reorder")).font(.caption.weight(.medium))
+                                .padding(.horizontal, 10).frame(height: 28)
+                                .foregroundStyle(isEditing ? TravelInk.land : TravelInk.plan)
+                                .background(isEditing ? TravelInk.plan : TravelInk.planTint, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("travelCourseEdit")
+                    }
                     step("backward.end.fill", language.text("이전 일정", "Previous plan"), to: TravelCourse.neighborStart(blocks, current: index, step: -1))
                     step("forward.end.fill", language.text("다음 일정", "Next plan"), to: TravelCourse.neighborStart(blocks, current: index, step: 1))
                 }

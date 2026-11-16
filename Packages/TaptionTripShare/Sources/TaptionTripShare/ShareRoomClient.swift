@@ -108,6 +108,32 @@ public actor ShareRoomClient {
         }
     }
 
+    // MARK: 동행 위치 (LOC1116S01)
+
+    /// 위치 암호문 하나를 보낸다. 소켓이 있으면 소켓으로, 아니면 HTTP로. 도움 요청은 `help`(서버가 간격 제한에서 빼고 오래 둔다).
+    @discardableResult
+    public func sendLocation(epoch: Int, cipher: String, help: Bool) async throws -> Int {
+        let body = ShareLocationBody(epoch: epoch, cipher: cipher, help: help)
+        return try await viaSocket("loc", body, retryOverHTTP: true) {
+            try await self.http("PUT", "loc", body: body, as: ShareLocationAccepted.self)
+        }.now
+    }
+
+    /// 서버에 둔 내 마지막 위치를 지우고 동행에게 「껐음」을 알린다.
+    public func deleteLocation() async throws {
+        try await httpEmpty("DELETE", "loc")
+    }
+
+    /// 서버가 들고 있는 동행의 마지막 위치와 기간 창(HTTP만 되는 때의 따라잡기).
+    func locationList() async throws -> ShareLocationList {
+        try await http("GET", "loc", as: ShareLocationList.self)
+    }
+
+    /// 주인만: 위치를 보낼 수 있는 기간(밀리초).
+    public func setLocationWindow(_ window: ShareLocWindow) async throws {
+        _ = try await http("POST", "locwindow", body: ShareLocWindowBody(from: window.from, until: window.until), owner: true, as: ShareLocWindow.self)
+    }
+
     // MARK: 참여자 (HTTP만)
 
     public func leave() async throws {
