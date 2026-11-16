@@ -448,6 +448,9 @@
 		A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000095 /* RoutePolylineDecimator.swift */; };
 		A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000086 /* RouteTimelineDataTests.swift */; };
 		A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000087 /* MapHomeLocationPresentation.swift */; };
+		090C0E05BE215655607CA5AA /* MapHomeStickmanAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B259E6BEF3249FFF11B5C3 /* MapHomeStickmanAction.swift */; };
+		9CC78DD635FB9737A79FB408 /* MapHomeStickmanActionResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F3816672287B4F48039597A /* MapHomeStickmanActionResolver.swift */; };
+		D2D35180B769E6A9754A1E06 /* MapHomeStickmanMarker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2513A32EA4ABA9F5A424BC91 /* MapHomeStickmanMarker.swift */; };
 		A10000000000000000000088 /* BiometricDataProtection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000088 /* BiometricDataProtection.swift */; };
 		A10000000000000000000092 /* PlanDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000092 /* PlanDayDatabase.swift */; };
 		A10000000000000000000093 /* WatchDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000093 /* WatchDayDatabase.swift */; };
@@ -1312,6 +1315,9 @@
 		F10000000000000000000095 /* RoutePolylineDecimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePolylineDecimator.swift; sourceTree = "<group>"; };
 		F10000000000000000000086 /* RouteTimelineDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineDataTests.swift; sourceTree = "<group>"; };
 		F10000000000000000000087 /* MapHomeLocationPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLocationPresentation.swift; sourceTree = "<group>"; };
+		90B259E6BEF3249FFF11B5C3 /* MapHomeStickmanAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanAction.swift; sourceTree = "<group>"; };
+		8F3816672287B4F48039597A /* MapHomeStickmanActionResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanActionResolver.swift; sourceTree = "<group>"; };
+		2513A32EA4ABA9F5A424BC91 /* MapHomeStickmanMarker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanMarker.swift; sourceTree = "<group>"; };
 		F10000000000000000000088 /* BiometricDataProtection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricDataProtection.swift; sourceTree = "<group>"; };
 		F10000000000000000000091 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = ../Products.storekit; sourceTree = "<group>"; };
 		F10000000000000000000092 /* PlanDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDatabase.swift; sourceTree = "<group>"; };
@@ -2257,6 +2263,9 @@
 				F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */,
 				F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
+				90B259E6BEF3249FFF11B5C3 /* MapHomeStickmanAction.swift */,
+				8F3816672287B4F48039597A /* MapHomeStickmanActionResolver.swift */,
+				2513A32EA4ABA9F5A424BC91 /* MapHomeStickmanMarker.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
 				F10000000000000000000006 /* ScheduleView.swift */,
 				F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */,
@@ -3548,6 +3557,9 @@
 				A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */,
 				A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */,
 				A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */,
+				090C0E05BE215655607CA5AA /* MapHomeStickmanAction.swift in Sources */,
+				9CC78DD635FB9737A79FB408 /* MapHomeStickmanActionResolver.swift in Sources */,
+				D2D35180B769E6A9754A1E06 /* MapHomeStickmanMarker.swift in Sources */,
 				A10000000000000000000088 /* BiometricDataProtection.swift in Sources */,
 				A10000000000000000000092 /* PlanDayDatabase.swift in Sources */,
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */,
