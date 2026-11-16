@@ -24,9 +24,9 @@
 
 | # | 파일 | 줄 | 최장 함수 | 타입 | 3개월 수정 | 점수 | 문제 | 할 일 | 위험 | 겹침 | 상태 | 뒤 줄 수 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- | ---: |
-| 1 | `TaptionPlan/UI/MapHomeTimeSidebar.swift` (동결) | 2,733 | 461 `sidebarBody` | 27 | 115 | 174.3 | 한도의 2.3배, 타입 25개, 본문 461줄 | 타입별 파일, 본문을 구역별로 | 중 | home-ux | 합친 뒤 | |
+| 1 | `TaptionPlan/UI/MapHomeTimeSidebar.swift` (동결) | 2,733 | 461 `sidebarBody` | 27 | 115 | 174.3 | 한도의 2.3배, 타입 25개, 본문 461줄 | 타입별 파일, 본문을 구역별로 | 중 | home-ux | 성능 작업 뒤(RFT1116A02 때 성능 세션이 고치는 중) | |
 | 2 | `TaptionPlan/Core/RouteTimelineData.swift` (동결) | 2,754 | 191 `requests` | 18 | 36 | 145.3 | 값 타입·색인·예상 경로 엔진(730줄)·타임라인 엔진(1,392줄)이 한 파일 | 값·색인 / 예상 경로 엔진 / 타임라인 엔진(extension으로 둘)로 가름 | 하 | 없음 | 완료 `7dcd30c1` | 641 |
-| 3 | `TaptionPlan/UI/SettingsView.swift` (동결) | 2,097 | 455 `body` | 10 | 47 | 135.9 | 본문 455줄, 한 타입 1,402줄 | 구역별 하위 뷰 파일 | 중 | mode-transition | 합친 뒤 | |
+| 3 | `TaptionPlan/UI/SettingsView.swift` (동결) | 2,097 | 455 `body` | 10 | 47 | 135.9 | 본문 455줄, 한 타입 1,402줄 | 구역별 하위 뷰 파일 | 중 | mode-transition | 완료 `77dea72b`(RFT1116A02) — 연결·자주 가는 곳 extension, 장소 상세 화면 파일. `body` 455줄은 그대로 | 826 |
 | 4 | `TaptionPlan/Core/PlanningEngine.swift` (동결) | 2,260 | 187 `make` | 29 | 25 | 128.4 | 서로 무관한 엔진 29개(타임라인·메모·목표·관계·날씨·수면) | 주제별 파일 5~6개 | 하 | 없음 | 완료 `d0fff0b9` | 532 |
 | 5 | `Packages/TaptionPlanCore/…/DayStoreV3.swift` (동결) | 2,409 | 163 `rawEventPage` | 11 | 13 | 115.9 | actor 하나가 2,127줄 | 값 타입 파일, actor를 원본 사건·outbox·확정 하루 extension으로 | 중(사설 상태 공개 범위) | 없음 | 완료 `2e2fcbc1` | 548 |
 | 6 | `TaptionPlanWatch/WatchWorkoutManager.swift` (동결) | 2,336 | 202 `startSensorCollection` | 10 | 10 | 114.7 | 클래스 1,930줄, 보관 actor·취소 도우미 동거 | 도우미 타입 파일, 클래스를 기능 extension으로 | 중(Watch는 빌드로만 확인) | 없음 | 완료 `a8fb9c48` | 972 |
@@ -34,16 +34,16 @@
 | 8 | `TaptionPlan/UI/AddPlanSheet.swift` (동결) | 2,123 | 141 `body` | 8 | 8 | 98.7 | 시트 1,053줄에 편집기·화면 5개 동거 | 하위 화면별 파일, 시트는 extension으로 | 하 | 없음 | 완료 `613207a4` | 983 |
 | 9 | `TaptionPlan/Core/TaptionActivityEngineAdapter.swift` (동결) | 1,872 | 121 | 7 | 30 | 94.7 | enum 하나가 1,424줄 | 잠금 엔진·색인 파일, 어댑터를 주제 extension으로 | 하 | 없음 | 완료 `4bc88223` | 777 |
 | 10 | `TaptionPlan/UI/GoalsView.swift` (동결) | 1,832 | 125 | 14 | 6 | 92.5 | 목록·상세(637줄)·슬라이더·작은 부품 동거 | 상세·엔진·슬라이더·부품 파일 | 하 | 없음 | 완료 `38e15e1e` | 518 |
-| 11 | `TaptionPlan/UI/MapHomeView+Support.swift` | 1,193 | 451 `presentationModifiers` | 1 | 37 | 91.4 | 시트 연결 함수 하나가 451줄, 옛 지도 여행 모드 코드 | 시트 묶음별 수정자, 죽은 코드 걷기 | 중 | home-ux, mode-transition | 합친 뒤 | |
+| 11 | `TaptionPlan/UI/MapHomeView+Support.swift` | 1,193 | 451 `presentationModifiers` | 1 | 37 | 91.4 | 시트 연결 함수 하나가 451줄, 옛 지도 여행 모드 코드 | 시트 묶음별 수정자, 죽은 코드 걷기 | 중 | home-ux, mode-transition | 완료 죽은 코드 `f2bf0878`, 가르기 `f30c27f7`(RFT1116A02) — 시트 연결을 수식어 순서 그대로 세 덩어리로 | 631 |
 | 12 | `TaptionPlan/UX/AppModel.swift` | 977 | 259 `init` | 1 | 170 | 88.4 | 수정 170회, `init` 259줄 | `init`의 구독·복원 단계를 사설 함수로 | 중(초기화 순서) | 없음 | 완료 `49421478` (`init` 259→154줄) | 984 |
 | 13 | `TaptionPlan/Core/WatchConnectivitySupport.swift` | 1,154 | 254 `receiveEnvelope` | 11 | 25 | 88.3 | 정책·저장소 10개와 서비스 881줄, 수신 함수 254줄 | 정책·저장소 파일, 수신 함수를 종류별로 | 중 | 없음 | 완료(파일만) `46a96957` — `receiveEnvelope` 254줄은 그대로 | 884 |
-| 14 | `TaptionPlan/UI/AppShellView.swift` (동결) | 1,420 | 106 `body` | 5 | 71 | 88.1 | 한도 초과, 수정 71회 | 시작 관문·잠금 화면 분리 | 중 | mode-transition | 합친 뒤 | |
-| 15 | `TaptionPlan/UI/MapHomeLocationPresentation.swift` | 1,199 | 102 | 11 | 63 | 86.4 | 한도 1줄 앞, 타입 11개 | 타입별 파일 | 하 | 홈 영역 | 합친 뒤 | |
+| 14 | `TaptionPlan/UI/AppShellView.swift` (동결) | 1,420 | 106 `body` | 5 | 71 | 88.1 | 한도 초과, 수정 71회 | 시작 관문·잠금 화면 분리 | 중 | mode-transition | 성능 작업 뒤(RFT1116A02 때 성능 세션이 고치는 중) | |
+| 15 | `TaptionPlan/UI/MapHomeLocationPresentation.swift` | 1,199 | 102 | 11 | 63 | 86.4 | 한도 1줄 앞, 타입 11개 | 타입별 파일 | 하 | 홈 영역 | 완료 `4a319fc8`(RFT1116A02) | 168 |
 | 16 | `TaptionPlan/UX/AppModel+Classification.swift` | 1,160 | 534 `performSensorTimelineRefresh` | 1 | 27 | 86.3 | 함수 하나가 534줄 | 단계별 함수로 쪼개기 | 상(하루 갱신 본줄기) | 없음 | 보류 — 534줄 함수가 지역 되돌리기 상태와 취소 확인을 끝까지 함께 쓰고 직접 시험이 없어, 쪼개면 하루 갱신 결과가 달라질 위험 | 1,160 |
 | 17 | `TaptionPlan/Core/TravelModeClassifier.swift` (동결) | 1,368 | 839 `classify` | 1 | 4 | 84.2 | 함수 하나가 839줄 | 판정 단계별 함수로 쪼개기 | 상(분류 결과) | 없음 | 완료(파일만) `bcf9f3e6` — `classify` 839줄은 그대로(판정 순서가 결과라 시험을 먼저 늘린 뒤) | 864 |
 | 18 | `TaptionPlanWidget/TaptionPlanWidget.swift` | 1,162 | 148 `body` | 13 | 39 | 83.1 | 제공자·뷰·트랙·고양이·인텐트 동거 | 뷰·트랙·인텐트 파일(위젯 타깃) | 하 | 없음 | 완료 `3bbb1c97` | 175 |
 | 19 | `TaptionPlanWatch/WatchConnectivityController.swift` (동결) | 1,620 | 122 | 2 | 16 | 79.6 | 클래스 하나가 1,612줄, 중복 15 | 기능 extension 파일 | 중(Watch는 빌드로만 확인) | 없음 | 완료 `078ff6ef` | 888 |
-| 20 | `TaptionPlan/UI/MapHomeLiveMapPolicies.swift` | 1,188 | 75 | 31 | 27 | 79.4 | 정책 타입 31개 | 주제별 파일 | 하 | 홈 영역 | 합친 뒤 | |
+| 20 | `TaptionPlan/UI/MapHomeLiveMapPolicies.swift` | 1,188 | 75 | 31 | 27 | 79.4 | 정책 타입 31개 | 주제별 파일 | 하 | 홈 영역 | 완료 `32b99917`(RFT1116A02) | 236 |
 
 겹치지 않는 것 14개(2·4~10·12·13·16~19), 합친 뒤 6개(1·3·11·14·15·20).
 
@@ -54,6 +54,21 @@
 - 방법: 줄 범위를 그대로 새 파일로 옮기고, 클래스·actor는 `extension`으로 감쌌습니다. 저장 속성은 원래 타입에 남겼습니다. 다른 파일에서 쓰게 된 `private` 이름만 컴파일러가 알려 준 만큼 internal로 풀었습니다(공개 API·저장 형식·문구·접근성 식별자·번역 키 변경 없음). `extension` 안에 둘 수 없는 저장 상수 하나(`pendingAccelerationChunksFile`)는 같은 값을 돌려주는 계산 속성으로 바꿨습니다.
 - 확인: 앱 시험 890개(7개 건너뜀 — 원본 기록 재생용, 자료가 없으면 건너뜀)+103개, `TaptionPlanCore` 패키지 XCTest 89개·Swift Testing 11개(저장 바이트 고정 시험 포함), Watch 스킴 빌드, 구조 점검·import 경계. 14개 묶음을 합친 상태에서 한 번에 돌렸고 중간 커밋 하나하나를 따로 빌드하지는 않았습니다. 실기기 확인 없음.
 - 함수 쪼개기는 `AppModel.init`만 했습니다. `classify`(839줄)·`receiveEnvelope`(254줄)·`performSensorTimelineRefresh`(534줄)는 결과를 고정하는 시험을 먼저 늘린 뒤 따로 합니다.
+
+## 결과 2 (RFT1116A02, 2026-11-16)
+
+「합친 뒤」 6개 중 성능 작업과 겹치지 않는 4개를 갈랐고(커밋 4개), 죽은 코드를 걷었습니다(커밋 1개). `MapHomeTimeSidebar`·`AppShellView`는 성능 작업 뒤로 둡니다.
+
+| 원본 | 전 | 후 | 새 파일(줄) |
+| --- | ---: | ---: | --- |
+| `SettingsView.swift` | 2,096 | 826 | `SettingsView+Connections`(294)·`SettingsView+FrequentPlaces`(342)·`SettingsFrequentPlaceDetailView`(644) |
+| `MapHomeView+Support.swift` | 1,195 | 631 | 죽은 코드 −21줄, `MapHomeView+Presentation`(454)·`MapHomeView+Lifecycle`(120) |
+| `MapHomeLocationPresentation.swift` | 1,200 | 168 | `MapHomeStickmanAction`(194)·`MapHomeStickmanActionResolver`(607)·`MapHomeStickmanMarker`(237) |
+| `MapHomeLiveMapPolicies.swift` | 1,187 | 236 | `MapHomeRouteSpeedGradient`(159)·`MapHomeLiveZoomPolicies`(399)·`MapHomePlaybackDiagnostics`(214)·`MapHomeRenderMemo`(191) |
+
+- 방법은 앞과 같음(줄 범위 그대로, extension, 다른 파일에서 쓰게 된 `private`만 internal: `SettingsView`의 상태 5개·`settingsRow`·옮긴 행 9개·`SettingsTypography`·`UserTransitLocationsSettingsView`·`FrequentPlaceDetailView`). `presentationModifiers`는 `lifecycleModifiers`처럼 수식어 순서 그대로 하루·지도·화면 세 함수로 나눠 겹쳐 부릅니다.
+- `SettingsView`가 1,200줄 아래로 내려가 `frozen_files`에서 뺐습니다. 번역 추출기가 읽는 표(`englishName`)는 원래 파일에 남아 경로를 고칠 일이 없었고, 추출·생성 뒤 위젯 카탈로그는 그대로, 앱 카탈로그에서 빠지는 것은 걷은 선택 창 제목 하나뿐입니다(아래).
+- 동작 고정 시험: 뷰 파일(`SettingsView`·시트 연결)은 단위 시험으로 고정할 수 없어 Debug 빌드와 전체 시험으로 확인했습니다. 순수 타입(화랑이 판정·줌·캐시)은 기존 시험(`MapHomeStickmanTests`·`MapHomeLiveMapTests` 등)이 있었습니다.
 
 ## 옛 「지도 여행 모드」 죽은 코드 (RFT1116A02)
 
