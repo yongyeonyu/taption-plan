@@ -824,6 +824,10 @@
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
 		A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */; };
+		733D3E485C90FB5E2205FD08 /* MapHomeRouteSpeedGradient.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8B98F2F35737F3F3C9AEFE /* MapHomeRouteSpeedGradient.swift */; };
+		D7D1BF75BEA1E485287CFB0C /* MapHomeLiveZoomPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52DFB1FCF52F58A934D0221 /* MapHomeLiveZoomPolicies.swift */; };
+		2D84661F137B146508FC8D3B /* MapHomePlaybackDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1177AFF722418A5D27EB3C97 /* MapHomePlaybackDiagnostics.swift */; };
+		2973B92D955BAA51E9C682DA /* MapHomeRenderMemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = C95DD96D397BAA473F32095B /* MapHomeRenderMemo.swift */; };
 		C1A1116A04B0000000000000 /* TravelPuzzleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */; };
 		A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */; };
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
@@ -1691,6 +1695,10 @@
 		F51002000000000000000001 /* PlanDayDataSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDataSnapshot.swift; sourceTree = "<group>"; };
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
 		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
+		EE8B98F2F35737F3F3C9AEFE /* MapHomeRouteSpeedGradient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRouteSpeedGradient.swift; sourceTree = "<group>"; };
+		A52DFB1FCF52F58A934D0221 /* MapHomeLiveZoomPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveZoomPolicies.swift; sourceTree = "<group>"; };
+		1177AFF722418A5D27EB3C97 /* MapHomePlaybackDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackDiagnostics.swift; sourceTree = "<group>"; };
+		C95DD96D397BAA473F32095B /* MapHomeRenderMemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRenderMemo.swift; sourceTree = "<group>"; };
 		C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialTests.swift; sourceTree = "<group>"; };
 		F52000000000000000000002 /* MapHomeLiveMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapTests.swift; sourceTree = "<group>"; };
@@ -2060,6 +2068,10 @@
 				F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */,
 				F51002000000000000000002 /* MapHomeInteractionPolicy.swift */,
 				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
+				EE8B98F2F35737F3F3C9AEFE /* MapHomeRouteSpeedGradient.swift */,
+				A52DFB1FCF52F58A934D0221 /* MapHomeLiveZoomPolicies.swift */,
+				1177AFF722418A5D27EB3C97 /* MapHomePlaybackDiagnostics.swift */,
+				C95DD96D397BAA473F32095B /* MapHomeRenderMemo.swift */,
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F50000000000000000000002 /* MapHomeVectorLabels.swift */,
 				B10809000000000000000F01 /* MapHomeVectorStyle.swift */,
@@ -3152,6 +3164,10 @@
 				A100000000000000C1102A1E /* TwoFingerGestureAttachments.swift in Sources */,
 				A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */,
 				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
+				733D3E485C90FB5E2205FD08 /* MapHomeRouteSpeedGradient.swift in Sources */,
+				D7D1BF75BEA1E485287CFB0C /* MapHomeLiveZoomPolicies.swift in Sources */,
+				2D84661F137B146508FC8D3B /* MapHomePlaybackDiagnostics.swift in Sources */,
+				2973B92D955BAA51E9C682DA /* MapHomeRenderMemo.swift in Sources */,
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
 				A5000000000000000000A002 /* MapHomeVectorLabels.swift in Sources */,
 				B10809000000000000000A01 /* MapHomeVectorStyle.swift in Sources */,
