@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## DCB1116A01 · 하루 카드 1시간 전 AI 말풍선 요청 (2026-11-17, 시뮬레이터만, 실기기 없음)
+
+- 원인: 하루 카드 알림(기본 08:00)을 눌러 열면 오늘 지도 위에 카드가 뜨는데, 화랑이 말풍선은 AI가 어제를 보고 쓴 것이 아니었다. 카드 그림 자체에는 말풍선이 없다.
+- 해결: `TaptionPlan/UX/DailyCardBubblePrompt.swift`. 하루 카드 알림이 켜져 있고(알림 권한 포함), 지금이 카드 시각 −1시간 ~ 카드 시각 전이며, 그 카드 날에 아직 안 올렸으면 기존 `.other` 종류로 AI 일 목록에 넣는다. 글: 「어제(YYYY-MM-DD)를 get_activity로 읽고 set_bubble로 date 오늘, kind "event" 말풍선(80자 이내)」. context: `purpose`·`cardDate`·`readDate`·`cardTime`·`bubbleKind`(좌표·개인 정보 없음). 연결이 없으면 `enqueue`가 false라 기억 키(`dailyCardBubblePromptDay`)도 남기지 않는다. 부르는 곳: 앱이 앞으로 올 때(`scenePhase == .active`)와 백그라운드 새로고침 끝(`TaptionPlanApp.swift`). 백그라운드 새로고침 `earliestBeginDate`는 다음 창 시작이 앞으로 올 시각이고 기본 예약보다 이를 때만 그때로 당긴다(창 안에서는 당기지 않아 곧바로 다시 깨우는 고리가 없다). 새 문구·권한·서버 배포 없음.
+- 시험(시뮬레이터 `99AC6F35…`, `-parallel-testing-enabled NO`): `DailyCardBubblePromptTests` 6건(창 안/밖, 카드 시각 지남, 이미 올림, 꺼짐, 자정 걸침 00:30, 예약 당기기, 연결 없을 때 기억 안 함, 알림 꺼짐) + `BackgroundSignalPolicyTests`·`AssistantPhase3Tests`·`LedgerTests`·`AssistantMoreActionTests` 합계 92건 통과, 실패 0(`build/validation/DCB1116A01/unit-tests-retry2.log`). 앞의 두 번(`unit-tests.log`·`unit-tests-retry.log`)은 기계 부하(load 약 290)로 시험 실행기가 붙지 못하거나 앱 실행 실패로 시험이 돌지 않았다(시험 실패 아님).
+- 빌드: Debug `build-for-testing` 성공(`build-for-testing.log`). 구조 지표 기준선 통과, 앱 엔진 경계 점검 통과.
+- 제한: iOS가 카드 1시간 전에 앱을 깨운다는 보장이 없다. 그 창에 앱이 앞으로 오지도, 백그라운드 새로고침도 돌지 않으면 그날은 요청이 나가지 않고, 카드 시각이 지나면 그날은 건너뛴다. AI가 실제로 일을 가져가 말풍선을 쓰는지는 실기기·실제 AI 연결에서 확인하지 않았다.
+
 ## TFB1116A348 · TestFlight 348 (2026-11-16 저녁)
 
 - 담은 것: MRG1116A01로 합친 main(`ff95818d`) — 여행 A·B·C안, 홈 UX 1~8, 일상↔여행 전환·스타일, AI 튜토리얼·조각 맞추기, 공통 규칙·위치 공유(서버 미배포라 기능은 서버 배포 뒤 동작), 재생 음악 10곡, 성능 고침 2·3, 리팩토링.

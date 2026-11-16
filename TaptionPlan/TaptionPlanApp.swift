@@ -102,6 +102,8 @@ struct TaptionPlanApp: App {
         .onChange(of: scenePhase) { _, phase in
             // 앱이 백그라운드로 가거나 꺼질 때 현재 설정을 파일에 적는다.
             if phase == .background || phase == .inactive { AppSettingsFile.save() }
+            // 하루 카드 1시간 전 창이면 연결된 AI에게 말풍선을 맡긴다(DCB1116A01).
+            if phase == .active { Task { await DailyCardBubblePrompt.run() } }
         }
     }
 }
@@ -192,8 +194,9 @@ enum TaptionPlanBackgroundRefresh {
             taskRequestWithIdentifier: taskIdentifier
         )
         let request = BGAppRefreshTaskRequest(identifier: taskIdentifier)
-        request.earliestBeginDate = Date.now.addingTimeInterval(
-            SensorBackgroundRefreshPolicy.savedDelay()
+        // 하루 카드 1시간 전 창이 더 이르면 그때로 당긴다(DCB1116A01).
+        request.earliestBeginDate = DailyCardBubblePrompt.earliestBegin(
+            defaultDate: Date.now.addingTimeInterval(SensorBackgroundRefreshPolicy.savedDelay())
         )
         do {
             try BGTaskScheduler.shared.submit(request)
@@ -223,6 +226,7 @@ enum TaptionPlanBackgroundRefresh {
             )
             // 앱을 열지 않아도 AI 비서 명령을 반영하고 바뀐 날을 올린다(AIR1110A02).
             await AssistantCommandRunner.runInBackground(model: model)
+            await DailyCardBubblePrompt.run()
             taskBox.complete(success: success)
             logger.notice(
                 "Background refresh completed: success=\(success, privacy: .public)"
