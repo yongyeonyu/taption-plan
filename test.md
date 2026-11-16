@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## RFT1116A01 · 리팩토링 상위 20개 중 겹치지 않는 14개 (2026-11-16, 메인 머지 전)
+
+- 결과: 완료 13개(파일마다 커밋 하나), 보류 1개(`AppModel+Classification`), 합친 뒤 6개. 원본 14개 24,706줄 → 10,383줄, 새 파일 40개. 표와 이유는 `docs/REFACTOR_TOP20.md`.
+- 동작·저장 형식: 줄 범위를 그대로 옮기고 `extension`으로 감쌌으며, 컴파일러가 알려 준 `private` 이름만 internal로 풀었습니다. 저장 바이트를 고정하는 `TaptionPlanCore` 시험(`DomainRecordCompatibilityTests` 등)이 통과했습니다.
+- 시험(시뮬레이터 `99AC6F35…`, 로그 `build/validation/RFT1116A01/`): 합친 14개 묶음 상태에서 앱 시험 890개(7개 건너뜀, `35-app-try1`)+103개(`36-app-extra`), 패키지 XCTest 89개·Swift Testing 11개(`21-core-test`), Watch 스킴 빌드(`37-watch-build`). `main`(`3697d4b3`)을 합친 뒤 다시: 앱 시험 993개(7개 건너뜀 — `RawSensorReplayTests` 원본 기록 재생용, 0 실패, `40-merge-app`), Watch 빌드(`41-merge-watch`), 패키지 89+11개(`42-merge-core-test`) 모두 통과.
+- 구조 점검: 합치기 전 브랜치는 `architecture-metrics.py --check`와 import 경계 검사 모두 통과. 합친 뒤에는 「총 줄 수 +10% 초과」(225,717 → 248,757)로 실패하는데, `main`만으로도 248,597이라 실패합니다(이 브랜치 몫은 +160줄). 기준선의 `lines`는 건드리지 않았습니다.
+- 제한: 중간 커밋을 하나씩 따로 빌드하지는 않았습니다. 실기기 확인은 없습니다.
+
 ## AIT1116A01 · 튜토리얼 AI 연결을 앞으로 + 「조각 맞추기」 1차 (2026-11-16, 메인 머지 전)
 
 - 바꾼 것: 튜토리얼 순서 `welcome → aiConnect → …`(전에는 「연결과 보호」 장 안쪽). AI 연결 장면은 3컷 시연(대화 → AI가 올림 → 일정표·지도·가계부)·할 수 있는 일 3가지·주 단추 「지금 연결」(AI 고르기 창)·작은 「나중에」. 건너뛴 사람에게 AI로 만들기 창에서 한 번만 안내(`AIConnectNudge.swift`, 키 `aiConnectNudgeShown`). 연결 키·PIN 보안은 그대로.
