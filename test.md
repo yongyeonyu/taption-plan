@@ -11,6 +11,7 @@
 - 하단 메뉴: 스타일 변경 전(`home-after.png`)과 모든 변경 뒤(`home-style-after.png`) 사진의 하단 막대 영역(아래 8.5%)이 화소 단위로 같음(차이 0화소, `bottom-bar-before-after.png`). 홈 배치·고양이 크기도 같음(`home-before-after.png`, 다른 곳은 시각·고양이 동작 차이).
 - 스타일: 값이 같은 모서리 41곳 → `TaptionCorner`. 대표 결정(객관식 세 물음 모두 추천안)에 따라 사이 값 모서리 111곳을 네 단계로, 옛 `TaptionRadius` 값을 네 단계에 연결, 모양 바로 뒤 테두리 19곳을 1pt(강조 1.5)로. 표와 결정은 `docs/STYLE_UNIFY.md`, 다시 세는 도구 `scripts/style-survey.py`.
 - 동작 줄이기: 처음에는 켜면 크로스페이드가 아니라 아래에서 올라오는 것을 녹화로 찾음(시스템 움직임을 한 틱 뒤에 되돌려 덮개가 뜨기 전에 다시 켜짐). 고침: 덮개 안 화면이 나타난 뒤(40ms)에 되돌리고, 0.5초 예비. 다시 빌드(`build-sim-3.log`) 후 녹화: 닫기는 크로스페이드로 바뀜(`transition-reduce-motion-frames.png`), 열기는 올라오는 움직임이 없음(녹화가 늦게 시작돼 페이드 중간 프레임은 못 잡음, `transition-reduce-motion-open-frames.png`). 동작 줄이기를 끈 기본 원형 퍼짐도 그대로 동작(`transition-open-frames-2.png`). 공용 시뮬레이터의 동작 줄이기 설정은 끝난 뒤 다시 끔(0 확인).
+- main(4866007f)을 합침: `MapHomeView+Support.swift`의 여행 덮개 호출이 A안의 `importText:` 형태로 바뀐 것과 충돌 → A안 호출에 `.travelModeCover`를 씌워 풂. 합친 코드로 `TravelModeTransitionTests` 7건 통과(앱 Debug 빌드 포함, 지정 시뮬레이터, `unit-tests-2.log`). 외장 볼륨이 가득 차(0바이트) 이 실행은 맥북 작업 공간 파생 데이터로 했고 끝난 뒤 지움(2.8GB). 구조 점검은 「총 줄 수 +10% 초과」만 남음(main 쪽 증가, 이 브랜치는 약 400줄).
 - 못 한 것: 공유 초대로 저절로 열릴 때(단추 자리에서 퍼짐) 확인, 동작 줄이기 열기 페이드의 중간 프레임, 시트가 떠 있을 때 누름, 여행 단추 높이 44·40·32 맞춤(여행 세션 변경이 합쳐진 뒤), 실기기(아이폰 11) 확인. 시트 안 화면의 모서리 변경 전후 사진은 홈 첫 화면만 찍음.
 ## AIT1116A01 · 튜토리얼 AI 연결을 앞으로 + 「조각 맞추기」 1차 (2026-11-16, 메인 머지 전)
 
