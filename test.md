@@ -2,6 +2,16 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TBH1116A01 · 여행 단추 높이 44·40·32와 머리 둥근 단추 한 가지 (2026-11-16, 시뮬레이터, 실기기 없음)
+
+- 바꾼 것: `Theme.swift`에 `TaptionControl`(주 44·둥근 40·칩 32·둥근 그림 17pt 굵게). 여행 묶음 11개 파일에서 칩 28·30·34·36 → 32, 주 단추 46·48 → 44, 아이콘 단추 36 → 40, 작아진 단추는 `taptionTouchTarget`으로 누르는 영역 44. 머리 둥근 단추 다섯은 `TravelRoundButtonLabel`(보이는 40·누르는 44·테두리 1·그림 글꼴 하나). 문구·접근성 이름·식별자·동작은 그대로. 자세한 목록은 `docs/STYLE_UNIFY.md` 7절.
+- 앱 Debug 빌드(generic iOS): 성공(`build/validation/TBH1116A01/build-device-after.log`). 시뮬레이터 build-for-testing 성공.
+- 단위 시험(시뮬레이터 99AC6F35, 병렬 끔): `TravelModeTransitionTests` 7·`TravelTodayTests` 14·`TravelDayBoardTests` 14·`TripItemStatusTests` 10, 합계 45건 실패 0(`unit-after.log`).
+- UI 시험 `TaptionPlanTravelScreensUITests`: 3건 중 통과 2·건너뜀 1(`testMoveItemEditorForTheRecord` — 시뮬레이터 여행에 이동 일정이 없어 건너뜀, 바꾸기 전 실행에서도 같음), 실패 0(`ui-after.log`). 같은 시험을 바꾸기 전 코드로도 한 번 돌려 사진을 남김(`ui-before.log`, 같은 결과).
+- 전후 사진: `shots-before/`·`shots-after/`의 `a-travel-opened`·`b-table`·`f-trip-list`(.png·.txt). 눈으로 본 차이: 여행 화면 머리의 목록으로·공유·집 단추에 테두리가 생기고 그림 굵기가 하나로 됨, 「여행」 이름 판·장부 띠가 2pt 낮아짐, 지구본 아래 단추 46 → 44. 그 밖의 배치는 같음. 화면 글자 목록(.txt)으로 단추 이름이 같음을 확인.
+- `style-survey.py` 여행 묶음 단추·줄 높이 숫자: 전 44×9 32×6 40×6 34×6 28×5 36×4 → 후 32×3 44×2(나머지는 토큰으로 바뀜, 남은 숫자는 배지·눈금 등 단추 아닌 것).
+- 못 한 것: 아이폰 11 실기기 눈 확인, 칩 줄의 누르는 영역이 이웃과 겹치는지 손으로 확인.
+
 ## TFB1116A348 · TestFlight 348 (2026-11-16 저녁)
 
 - 담은 것: MRG1116A01로 합친 main(`ff95818d`) — 여행 A·B·C안, 홈 UX 1~8, 일상↔여행 전환·스타일, AI 튜토리얼·조각 맞추기, 공통 규칙·위치 공유(서버 미배포라 기능은 서버 배포 뒤 동작), 재생 음악 10곡, 성능 고침 2·3, 리팩토링.

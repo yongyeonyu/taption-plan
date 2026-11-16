@@ -54,7 +54,8 @@ struct TravelTodayCard: View {
                         Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
                     }
                     .font(.footnote.weight(.semibold)).foregroundStyle(TravelInk.actual)
-                    .frame(minHeight: 28).contentShape(Rectangle())
+                    .frame(minHeight: TaptionControl.chip)
+                    .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("travelTodayReviewCount")
@@ -121,9 +122,9 @@ private struct TravelTodayChip: View {
             Label(title, systemImage: symbol)
                 .font(.footnote.weight(.semibold)).lineLimit(1)
                 .foregroundStyle(isFilled ? TravelInk.land : TravelInk.plan)
-                .padding(.horizontal, 11).frame(height: 34)
+                .padding(.horizontal, 11).frame(height: TaptionControl.chip)
                 .background(isFilled ? TravelInk.plan : TravelInk.planTint, in: Capsule())
-                .frame(minHeight: 44)
+                .frame(minHeight: TaptionControl.primary)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -152,9 +153,9 @@ struct TravelTodayConfirmRow: View {
                     Label(mark.title(language), systemImage: mark.symbol)
                         .font(.footnote.weight(.semibold)).lineLimit(1)
                         .foregroundStyle(isPicked ? TravelInk.land : TravelInk.plan)
-                        .padding(.horizontal, 10).frame(height: 34)
+                        .padding(.horizontal, 10).frame(height: TaptionControl.chip)
                         .background(isPicked ? TravelInk.plan : TravelInk.planTint, in: Capsule())
-                        .frame(minHeight: 44)
+                        .frame(minHeight: TaptionControl.primary)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -215,7 +216,7 @@ struct TravelTodayReviewSheet: View {
                                         TravelTodayText.confirm(nil, model: model, tripID: tripID, itemID: done.stop.id)
                                     }
                                     .font(.footnote.weight(.semibold))
-                                    .frame(minHeight: 44)
+                                    .frame(minHeight: TaptionControl.primary)
                                 }
                                 .font(.subheadline)
                             }

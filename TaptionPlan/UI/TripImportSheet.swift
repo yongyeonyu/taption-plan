@@ -946,7 +946,7 @@ struct MapHomeTripImportSheet: View {
             Text(title)
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                 .foregroundStyle(prominent ? Color.tpBackground : Color.tpInk)
-                .frame(maxWidth: .infinity, minHeight: 46)
+                .frame(maxWidth: .infinity, minHeight: TaptionControl.primary)
                 .background(prominent ? Color.tpInk : Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         .buttonStyle(.plain)

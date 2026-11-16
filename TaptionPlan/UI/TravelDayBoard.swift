@@ -223,8 +223,9 @@ struct TravelCourseSortButton: View {
         if let board, board.canSort {
             Button(action: board.sort) {
                 Label(language.text("동선 정리", "Tidy route"), systemImage: "point.topleft.down.curvedto.point.bottomright.up").font(.footnote.weight(.medium))
-                    .padding(.horizontal, 14).frame(height: 36)
+                    .padding(.horizontal, 14).frame(height: TaptionControl.chip)
                     .foregroundStyle(TravelInk.plan).background(TravelInk.planTint, in: Capsule())
+                    .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("travelCourseSort")

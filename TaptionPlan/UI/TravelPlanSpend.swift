@@ -67,9 +67,10 @@ struct TravelMoneyBar: View {
             }
             .font(.footnote.weight(.medium))
             .padding(.horizontal, 12)
-            .frame(height: 34)
+            .frame(height: TaptionControl.chip)
             .background(TravelInk.panel, in: Capsule())
             .overlay { Capsule().stroke(TravelInk.border, lineWidth: TaptionBorder.width) }
+            .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: TaptionControl.chip)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("travelMoneyBar")
