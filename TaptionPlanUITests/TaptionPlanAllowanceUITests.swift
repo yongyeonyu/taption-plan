@@ -26,9 +26,17 @@ final class TaptionPlanAllowanceUITests: XCTestCase {
         let menu = app.buttons.matching(NSPredicate(format: "label == %@", "메뉴")).firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 40))
         menu.tap()
-        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "표시")).firstMatch.tap()
+        // 메뉴 판이 옆에서 미끄러져 들어오는 동안 누르면 줄 밖을 누른다(MRG1117A01, 부하 큰 맥의 첫 시험). 자리가 멈춘 뒤 누른다.
+        let display = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "표시")).firstMatch
+        XCTAssertTrue(display.waitForExistence(timeout: 10), "메뉴에 표시 줄이 없다")
+        XCTAssertTrue(UITestWait.until(10) {
+            let before = display.frame
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            return display.isHittable && display.frame == before
+        }, "메뉴가 멈추지 않았다")
+        display.tap()
         let counters = app.buttons["카운터 메뉴 열기"]
-        XCTAssertTrue(counters.waitForExistence(timeout: 5))
+        XCTAssertTrue(counters.waitForExistence(timeout: 10))
         counters.tap()
         let gear = app.buttons["연봉 카운터 설정"]
         XCTAssertTrue(gear.waitForExistence(timeout: 5))

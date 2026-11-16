@@ -737,7 +737,13 @@ final class TaptionPlanOverwriteUITests: XCTestCase {
         XCTAssertTrue(categoryButton.waitForExistence(timeout: 10), "분류 단추가 없다")
         categoryButton.tap()
         let entry = app.buttons["전체 덮기"].firstMatch
-        XCTAssertTrue(entry.waitForExistence(timeout: 5), "분류 메뉴에 '전체 덮기'가 없다")
+        // 분류가 많으면 메뉴가 스크롤되고, 화면 밖 줄은 접근성 트리에 아직 없다. 메뉴를 넘겨 가며 찾는다(MRG1117A01).
+        let menuList = app.collectionViews.firstMatch
+        if !entry.waitForExistence(timeout: 3), menuList.exists {
+            for _ in 0..<3 where !entry.exists { menuList.swipeDown() }
+            for _ in 0..<4 where !entry.exists { menuList.swipeUp() }
+        }
+        XCTAssertTrue(entry.waitForExistence(timeout: 2), "분류 메뉴에 '전체 덮기'가 없다")
         entry.tap()
 
         // 창은 분류를 고르기 전에 '무엇을 할지'만 보여 주고 덮기 단추를 잠근다.
@@ -1112,8 +1118,15 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         shot(app, "1-table")
 
         // 재생 헤드 위쪽의 빈 곳(식사 열)을 누른다: 계획표는 그대로 있고 선택 칸과 「+」가 뜬다.
+        // 계획표 위에 「조각 서랍」(미정 일정) 같은 줄이 끼면 칸이 아래로 밀리므로, 손잡이가 아니라 열 머리말과 재생 헤드로 자리를 잡는다(MRG1117A01).
         let frame = handle.frame
-        let cellSpot = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.minX + frame.width * 0.47, dy: frame.maxY + 170))
+        let playheadButton = app.buttons["재생 헤드"].firstMatch
+        XCTAssertTrue(playheadButton.waitForExistence(timeout: 3), "계획표에 재생 헤드가 있다")
+        let playheadFrame = playheadButton.frame
+        let mealHeader = try XCTUnwrap(app.staticTexts.matching(NSPredicate(format: "label == %@", "식사")).allElementsBoundByIndex
+            .first { $0.frame.minY > frame.maxY && $0.frame.maxY < playheadFrame.minY }, "계획표에 식사 열 머리말이 있다")
+        let headerFrame = mealHeader.frame
+        let cellSpot = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: headerFrame.midX, dy: (headerFrame.maxY + playheadFrame.minY) / 2))
         cellSpot.tap()
         let plus = app.buttons["일정 넣기"]
         XCTAssertTrue(plus.waitForExistence(timeout: 3), "빈 셀을 누르면 선택 칸과 +가 뜬다")
@@ -1131,7 +1144,11 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         shot(app, "3b-after-entry")
 
         // 있는 일정(재생 헤드 바로 아래 이동 열의 첫 일정)을 한 번 누르면 선택 막대, 다시 누르면 편집기.
-        let blockSpot = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.minX + frame.width * 0.24, dy: frame.maxY + 290))
+        let firstBlock = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "travelPlanBlock-")).allElementsBoundByIndex
+            .filter { $0.frame.minY >= playheadFrame.minY - 4 && $0.isHittable }
+            .min { $0.frame.minY < $1.frame.minY }
+        let blockFrame = try XCTUnwrap(firstBlock, "재생 헤드 아래에 일정이 있다").frame
+        let blockSpot = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: blockFrame.midX, dy: blockFrame.minY + min(20, blockFrame.height / 2)))
         blockSpot.tap()
         XCTAssertTrue(app.buttons["속성"].waitForExistence(timeout: 3), "일정을 누르면 선택 막대가 뜬다")
         XCTAssertFalse(app.buttons["저장"].exists, "한 번 눌러서는 편집기가 뜨지 않는다")

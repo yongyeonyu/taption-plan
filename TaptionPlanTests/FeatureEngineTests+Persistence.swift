@@ -477,6 +477,9 @@ extension FeatureEngineTests {
         )
         let sceneReady = expectation(description: "Local data is ready before save finishes")
         var sceneReadyBeforeSaveRelease = false
+        // 시험 호스트(앱)가 막 떠서 첫 화면을 그리는 동안은 메인 스레드가 수 초 막힐 수 있다(시뮬레이터에서 시간 막대
+        // drawingGroup의 첫 그리기, MRG1117A01). 1초 한도는 AppModel의 일만 재도록 메인이 한가해진 뒤부터 잰다.
+        let settleMilliseconds = await Self.waitForMainActorToSettle()
         let startedAt = ProcessInfo.processInfo.systemUptime
         let scene = Task { @MainActor in
             await model.sceneBecameActive()
@@ -505,8 +508,21 @@ extension FeatureEngineTests {
         XCTAssertTrue(model.snapshot.travel.allSatisfy(\.isClassificationLocked))
         let persisted = try await repository.load()
         XCTAssertEqual(persisted.travel, model.snapshot.travel)
-        print("LOG1006A01 initial_scene_ms=\(presentationMilliseconds) ready_before_save_release=\(wasReady)")
+        print("LOG1006A01 initial_scene_ms=\(presentationMilliseconds) ready_before_save_release=\(wasReady) host_settle_ms=\(settleMilliseconds)")
         await model.sceneEnteredBackground()
+    }
+
+    /// 20ms 잠이 60ms 안에 다섯 번 잇달아 깨어나면(메인이 한가함) 돌아온다. 최대 15초. 기다린 ms를 돌려준다.
+    @MainActor
+    private static func waitForMainActorToSettle(timeout: TimeInterval = 15) async -> Int {
+        let start = ProcessInfo.processInfo.systemUptime
+        var calmTicks = 0
+        while calmTicks < 5, ProcessInfo.processInfo.systemUptime - start < timeout {
+            let before = ProcessInfo.processInfo.systemUptime
+            try? await Task.sleep(for: .milliseconds(20))
+            calmTicks = ProcessInfo.processInfo.systemUptime - before < 0.06 ? calmTicks + 1 : 0
+        }
+        return Int((ProcessInfo.processInfo.systemUptime - start) * 1_000)
     }
 
     @MainActor

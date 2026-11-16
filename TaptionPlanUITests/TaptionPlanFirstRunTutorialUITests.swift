@@ -113,7 +113,8 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
     private func assertTutorialStaysClosed(_ app: XCUIApplication) {
         let menu = app.buttons.matching(NSPredicate(format: "label == %@", "메뉴")).firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 40))
-        XCTAssertFalse(element(app, "firstRunTutorial").exists)
+        // 닫기는 사라지는 움직임이 있어, 메뉴가 먼저 잡혀도 튜토리얼이 잠깐 남는다(MRG1117A01). 사라질 때까지 기다린다.
+        XCTAssertTrue(UITestWait.until(10) { !self.element(app, "firstRunTutorial").exists }, "튜토리얼이 닫히지 않았다")
         capture("closed")
         app.terminate()
         app.launchWithoutPrompts()
