@@ -358,6 +358,9 @@ struct AppShellView: View {
         scheduleMapShellGraceIfNeeded()
         guard isInitialLaunchOverlayVisible, initialLaunchReady else { return }
         initialLaunchProgressTask?.cancel()
+        #if DEBUG || BENCH
+        MapHomePerfBench.stage("overlay_dismissed")
+        #endif
         initialLaunchProgressTarget = 1
         withAnimation(.easeOut(duration: 0.18)) {
             initialLaunchProgressValue = 1

@@ -874,6 +874,9 @@ extension MapHomeView {
         )
         dayDataSnapshot = dayData
         reportInitialMapShellReadyIfNeeded(for: model.selectedDate)
+        #if DEBUG || BENCH
+        MapHomePerfBench.stage("day_snapshot_loaded")
+        #endif
         routeActualIndex = nil
         dayDataIsPreview = showsCachedPreview
         let merged = MapHomeRouteReadingsPolicy.merging(

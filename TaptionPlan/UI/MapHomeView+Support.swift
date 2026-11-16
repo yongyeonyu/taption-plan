@@ -499,6 +499,9 @@ extension MapHomeView {
 
     func runDaySourceTask() async {
         guard model.isBootstrapped, isHomeLive else { return }
+        #if DEBUG || BENCH
+        MapHomePerfBench.stage("day_source_begin")
+        #endif
         let date = model.selectedDate
         guard let prepared = await model.planDaySourceSnapshot(for: date, reusing: dayDataSnapshot),
               !Task.isCancelled, prepared.sourceRevision == model.dayProjectionRevision,
@@ -506,6 +509,9 @@ extension MapHomeView {
         if currentDayDataSnapshot == nil
             || (prepared.isComplete && prepared.sourceRevision != dayDataSnapshot?.sourceRevision) {
             dayDataSnapshot = prepared
+            #if DEBUG || BENCH
+            MapHomePerfBench.stage("day_source_ready")
+            #endif
             dayDataIsPreview = !prepared.isComplete
             reportInitialMapShellReadyIfNeeded(for: model.selectedDate)
         }

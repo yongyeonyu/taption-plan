@@ -88,6 +88,9 @@ struct AppLockBiometricAttemptGate {
 /// 무엇을 손댈지 바로 보이게 한다. 값은 단조 시계라 기록 순서와 무관하다.
 enum AppShellLaunchGateRecorder {
     static func record(_ gate: String, startedAt: TimeInterval?) {
+        #if DEBUG || BENCH
+        MapHomePerfBench.stage(gate)
+        #endif
         // 첫 화면이 그려진 시점(onAppear)은 시작 과제(.task)보다 빠를 수 있다.
         // 그때는 0으로 적어 "시작 전에 이미 끝난 단계"로 읽히게 한다.
         let elapsed = startedAt.map {

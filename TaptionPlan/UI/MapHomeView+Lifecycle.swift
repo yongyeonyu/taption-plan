@@ -15,6 +15,9 @@ extension MapHomeView {
     func lifecycleSessionModifiers(_ content: some View) -> some View {
         content
         .onAppear {
+            #if DEBUG || BENCH
+            MapHomePerfBench.stage("map_home_appear")
+            #endif
             if scenePhase == .active { restoreInitialMapZoom() }
             prepareRouteProjectionReadings()
             refreshHomeGrowth(at: .now)
