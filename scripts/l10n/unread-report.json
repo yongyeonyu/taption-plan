@@ -129,6 +129,12 @@
    "en": "Double?"
   },
   {
+   "file": "TaptionPlan/Core/LiveActivityShared.swift",
+   "line": 199,
+   "ko": "koreanTitle",
+   "en": "englishTitle"
+  },
+  {
    "file": "TaptionPlan/Core/PaymentAlertSources.swift",
    "line": 242,
    "ko": "saved.amount",
@@ -157,12 +163,6 @@
    "line": 168,
    "ko": "spent",
    "en": "\"KRW\""
-  },
-  {
-   "file": "TaptionPlan/Core/WidgetShared.swift",
-   "line": 203,
-   "ko": "koreanTitle",
-   "en": "englishTitle"
   },
   {
    "file": "TaptionPlan/UI/ArrivalCardView.swift",

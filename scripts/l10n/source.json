@@ -610,7 +610,7 @@
    "ko": "6시간",
    "en": "6h",
    "files": [
-    "WidgetShared.swift:682"
+    "WidgetShared.swift:151"
    ],
    "args": [],
    "targets": [
@@ -1531,7 +1531,7 @@
    "ko": "Apple Watch 미페어링",
    "en": "Apple Watch not paired",
    "files": [
-    "WatchConnectivitySupport.swift:26"
+    "AppleWatchConnectionModels.swift:26"
    ],
    "args": [],
    "targets": [
@@ -2205,7 +2205,7 @@
    "ko": "GPS 트래킹 권한 안내 열기",
    "en": "Open GPS tracking permission guidance",
    "files": [
-    "TaptionPlanWidget.swift:393"
+    "TaptionScheduleWidgetView.swift:258"
    ],
    "args": [],
    "targets": [
@@ -3197,7 +3197,7 @@
    "ko": "iPhone 실시간 연결",
    "en": "iPhone connected",
    "files": [
-    "WatchConnectivityController.swift:1284"
+    "WatchConnectivityController.swift:880"
    ],
    "args": [],
    "targets": [
@@ -3222,7 +3222,7 @@
    "en": "Connecting to iPhone",
    "files": [
     "WatchConnectivityController.swift:23",
-    "WatchConnectivityController.swift:1279"
+    "WatchConnectivityController.swift:875"
    ],
    "args": [],
    "targets": [
@@ -11810,7 +11810,7 @@
    "ko": "액션",
    "en": "Actions",
    "files": [
-    "WidgetShared.swift:613"
+    "WidgetShared.swift:82"
    ],
    "args": [],
    "targets": [
@@ -13243,7 +13243,7 @@
    "ko": "Apple Watch 미페어링",
    "en": "Apple Watch not paired",
    "files": [
-    "WatchConnectivitySupport.swift:27"
+    "AppleWatchConnectionModels.swift:27"
    ],
    "args": [],
    "targets": [
@@ -13282,7 +13282,7 @@
    "ko": "어플",
    "en": "Apps",
    "files": [
-    "WidgetShared.swift:611"
+    "WidgetShared.swift:80"
    ],
    "args": [],
    "targets": [
@@ -14982,7 +14982,7 @@
    "files": [
     "MapHomeLanguage.swift:0",
     "MovementModels.swift:0",
-    "WidgetShared.swift:0"
+    "LiveActivityShared.swift:0"
    ],
    "args": [],
    "targets": [
@@ -15340,7 +15340,7 @@
    "en": "Checking",
    "files": [
     "AppModel+WidgetLiveActivity.swift:144",
-    "WidgetShared.swift:0"
+    "LiveActivityShared.swift:0"
    ],
    "args": [],
    "targets": [
@@ -16091,7 +16091,7 @@
    "ko": "연결됨 · 백그라운드 동기화",
    "en": "Connected · Background sync",
    "files": [
-    "WatchConnectivitySupport.swift:45"
+    "AppleWatchConnectionModels.swift:45"
    ],
    "args": [],
    "targets": [
@@ -16103,7 +16103,7 @@
    "ko": "연결됨 · 실시간",
    "en": "Connected · Live",
    "files": [
-    "WatchConnectivitySupport.swift:51"
+    "AppleWatchConnectionModels.swift:51"
    ],
    "args": [],
    "targets": [
@@ -16115,7 +16115,7 @@
    "ko": "연결됨 · 최근 데이터 없음",
    "en": "Connected · No recent data",
    "files": [
-    "WatchConnectivitySupport.swift:39"
+    "AppleWatchConnectionModels.swift:39"
    ],
    "args": [],
    "targets": [
@@ -16794,7 +16794,7 @@
    "files": [
     "MapHomeSupportViews.swift:0",
     "MovementModels.swift:0",
-    "WidgetShared.swift:0"
+    "LiveActivityShared.swift:0"
    ],
    "args": [],
    "targets": [
@@ -17852,7 +17852,7 @@
    "en": "Driving",
    "files": [
     "MapHomeSupportViews.swift:0",
-    "WidgetShared.swift:0"
+    "LiveActivityShared.swift:0"
    ],
    "args": [],
    "targets": [
@@ -18369,7 +18369,7 @@
    "en": "Ferry",
    "files": [
     "MapHomeSupportViews.swift:0",
-    "WidgetShared.swift:0"
+    "LiveActivityShared.swift:0"
    ],
    "args": [],
    "targets": [
@@ -18419,7 +18419,7 @@
    "en": "Flight",
    "files": [
     "MapHomeSupportViews.swift:0",
-    "WidgetShared.swift:0"
+    "LiveActivityShared.swift:0"
    ],
    "args": [],
    "targets": [
@@ -23318,7 +23318,7 @@
    "ko": "위치",
    "en": "Location",
    "files": [
-    "WidgetShared.swift:603"
+    "WidgetShared.swift:72"
    ],
    "args": [],
    "targets": [
@@ -23887,7 +23887,7 @@
    "ko": "",
    "en": "Meal",
    "files": [
-    "WidgetShared.swift:0"
+    "LiveActivityShared.swift:0"
    ],
    "args": [],
    "targets": [
@@ -24418,7 +24418,7 @@
    "ko": "이동",
    "en": "Movement",
    "files": [
-    "WidgetShared.swift:605",
+    "WidgetShared.swift:74",
     "AppModel+WidgetLiveActivity.swift:106",
     "TaptionPlanWatchWidget.swift:719"
    ],
@@ -27373,7 +27373,7 @@
    "ko": "일정",
    "en": "Schedule",
    "files": [
-    "WidgetShared.swift:601"
+    "WidgetShared.swift:70"
    ],
    "args": [],
    "targets": [
@@ -28542,7 +28542,7 @@
    "en": "Sleep",
    "files": [
     "HealthAndSensorModels.swift:37",
-    "WidgetShared.swift:607",
+    "WidgetShared.swift:76",
     "AppModel+WidgetLiveActivity.swift:105"
    ],
    "args": [],
@@ -29093,7 +29093,7 @@
    "files": [
     "AppModel+WidgetLiveActivity.swift:103",
     "MapHomeTimeSidebar.swift:0",
-    "WidgetShared.swift:0"
+    "LiveActivityShared.swift:0"
    ],
    "args": [],
    "targets": [
@@ -31597,7 +31597,7 @@
    "ko": "이 iPhone에서 사용 불가",
    "en": "Unavailable on this iPhone",
    "files": [
-    "WatchConnectivitySupport.swift:21"
+    "AppleWatchConnectionModels.swift:21"
    ],
    "args": [],
    "targets": [
@@ -32216,7 +32216,7 @@
    "ko": "워치 앱 설치 필요",
    "en": "Watch app installation needed",
    "files": [
-    "WatchConnectivitySupport.swift:33"
+    "AppleWatchConnectionModels.swift:33"
    ],
    "args": [],
    "targets": [
@@ -38047,7 +38047,7 @@
    "ko": "기록 중",
    "en": "Recording",
    "files": [
-    "TaptionPlanWidget.swift:522"
+    "TaptionScheduleWidgetView.swift:387"
    ],
    "args": [],
    "targets": [
@@ -39110,7 +39110,7 @@
    "files": [
     "MapHomeDailyCard.swift:365",
     "MapHomePlaceBookTools.swift:782",
-    "MapHomePlaceBookTools.swift:782"
+    "TravelNewTripSheet.swift:58"
    ],
    "args": [],
    "targets": [
@@ -43090,8 +43090,6 @@
    "ko": "메일 보내기",
    "en": "Send email",
    "files": [
-    "MapHomePlaceBookTools.swift:629",
-    "MapHomePlaceBookTools.swift:629",
     "MapHomePlaceBookTools.swift:629"
    ],
    "args": [],
@@ -44314,7 +44312,7 @@
    "ko": "백그라운드 동기화",
    "en": "Background sync",
    "files": [
-    "WatchConnectivityController.swift:1285"
+    "WatchConnectivityController.swift:881"
    ],
    "args": [],
    "targets": [
@@ -46530,7 +46528,7 @@
    "files": [
     "LedgerMessageRules.swift:264",
     "MapHomePlaceBookTools.swift:845",
-    "MapHomePlaceBookTools.swift:845"
+    "MapHomeSettingsSheets.swift:111"
    ],
    "args": [],
    "targets": [
@@ -47334,8 +47332,6 @@
    "ko": "설명",
    "en": "Description",
    "files": [
-    "MapHomePlaceBookTools.swift:593",
-    "MapHomePlaceBookTools.swift:593",
     "MapHomePlaceBookTools.swift:593"
    ],
    "args": [],
@@ -48064,7 +48060,7 @@
    "en": "Sleep",
    "files": [
     "HealthAndSensorModels.swift:37",
-    "WidgetShared.swift:607",
+    "WidgetShared.swift:76",
     "MapHomeAlarm.swift:677"
    ],
    "args": [],
@@ -49522,8 +49518,6 @@
    "ko": "아직 담은 곳이 없습니다.",
    "en": "No stops yet.",
    "files": [
-    "MapHomePlaceBookTools.swift:788",
-    "MapHomePlaceBookTools.swift:788",
     "MapHomePlaceBookTools.swift:788"
    ],
    "args": [],
@@ -50082,7 +50076,7 @@
    "ko": "액션",
    "en": "Actions",
    "files": [
-    "WidgetShared.swift:613"
+    "WidgetShared.swift:82"
    ],
    "args": [],
    "targets": [
@@ -50520,7 +50514,7 @@
    "ko": "앱을 열어 오늘 기록을 동기화하세요",
    "en": "Open the app to sync today's records",
    "files": [
-    "TaptionPlanWidget.swift:329"
+    "TaptionScheduleWidgetView.swift:194"
    ],
    "args": [],
    "targets": [
@@ -50532,7 +50526,7 @@
    "ko": "앱을 열어 잠금을 해제하세요",
    "en": "Open the app to unlock",
    "files": [
-    "TaptionPlanWidget.swift:312"
+    "TaptionScheduleWidgetView.swift:177"
    ],
    "args": [],
    "targets": [
@@ -50713,7 +50707,7 @@
    "ko": "어플",
    "en": "Apps",
    "files": [
-    "WidgetShared.swift:611"
+    "WidgetShared.swift:80"
    ],
    "args": [],
    "targets": [
@@ -50992,8 +50986,6 @@
    "ko": "여권으로 돌아가기",
    "en": "Back to passport",
    "files": [
-    "MapHomePlaceBookTools.swift:941",
-    "MapHomePlaceBookTools.swift:941",
     "MapHomePlaceBookTools.swift:941"
    ],
    "args": [],
@@ -51216,8 +51208,6 @@
    "ko": "여행 계획",
    "en": "Trip plan",
    "files": [
-    "MapHomePlaceBookTools.swift:780",
-    "MapHomePlaceBookTools.swift:780",
     "MapHomePlaceBookTools.swift:780"
    ],
    "args": [],
@@ -51669,7 +51659,6 @@
    "en": "Trip",
    "files": [
     "LedgerSummary.swift:16",
-    "MapHomePlaceBookTools.swift:968",
     "MapHomePlaceBookTools.swift:968"
    ],
    "args": [],
@@ -51706,8 +51695,6 @@
    "ko": "여행으로 가기",
    "en": "Go to travel",
    "files": [
-    "MapHomePlaceBookTools.swift:983",
-    "MapHomePlaceBookTools.swift:983",
     "MapHomePlaceBookTools.swift:983"
    ],
    "args": [],
@@ -51818,7 +51805,7 @@
    "ko": "연결 대기",
    "en": "Waiting for connection",
    "files": [
-    "WatchConnectivityController.swift:1281"
+    "WatchConnectivityController.swift:877"
    ],
    "args": [],
    "targets": [
@@ -51842,7 +51829,7 @@
    "ko": "연결 상태 확인 중",
    "en": "Checking connection",
    "files": [
-    "WatchConnectivityController.swift:1287"
+    "WatchConnectivityController.swift:883"
    ],
    "args": [],
    "targets": [
@@ -52336,7 +52323,7 @@
    "ko": "연결됨 · 백그라운드 동기화",
    "en": "Connected · Background sync",
    "files": [
-    "WatchConnectivitySupport.swift:44"
+    "AppleWatchConnectionModels.swift:44"
    ],
    "args": [],
    "targets": [
@@ -52348,7 +52335,7 @@
    "ko": "연결됨 · 실시간",
    "en": "Connected · Live",
    "files": [
-    "WatchConnectivitySupport.swift:50"
+    "AppleWatchConnectionModels.swift:50"
    ],
    "args": [],
    "targets": [
@@ -52360,7 +52347,7 @@
    "ko": "연결됨 · 최근 데이터 없음",
    "en": "Connected · No recent data",
    "files": [
-    "WatchConnectivitySupport.swift:38"
+    "AppleWatchConnectionModels.swift:38"
    ],
    "args": [],
    "targets": [
@@ -54168,7 +54155,7 @@
    "ko": "운동 저장을 완료하지 못했습니다. {0}",
    "en": "Couldn't finish saving the workout. {0}",
    "files": [
-    "WatchWorkoutManager.swift:800"
+    "WatchWorkoutManager.swift:529"
    ],
    "args": [
     "error.localizedDescription"
@@ -54182,7 +54169,7 @@
    "ko": "운동 측정이 중단됐습니다. {0}",
    "en": "Workout tracking stopped. {0}",
    "files": [
-    "WatchWorkoutManager.swift:2287"
+    "WatchWorkoutManager.swift:924"
    ],
    "args": [
     "error.localizedDescription"
@@ -54249,7 +54236,7 @@
    "ko": "운동을 시작하지 못했습니다. {0}",
    "en": "Couldn't start the workout. {0}",
    "files": [
-    "WatchWorkoutManager.swift:673"
+    "WatchWorkoutManager.swift:402"
    ],
    "args": [
     "error.localizedDescription"
@@ -54347,7 +54334,7 @@
    "ko": "워치 앱 설치 필요",
    "en": "Watch app installation needed",
    "files": [
-    "WatchConnectivitySupport.swift:32"
+    "AppleWatchConnectionModels.swift:32"
    ],
    "args": [],
    "targets": [
@@ -55004,7 +54991,7 @@
    "ko": "위치",
    "en": "Location",
    "files": [
-    "WidgetShared.swift:603",
+    "WidgetShared.swift:72",
     "MapHomeStickerEditor.swift:617",
     "MapHomeView+Menu.swift:925"
    ],
@@ -55306,7 +55293,7 @@
    "ko": "이 iPhone에서 사용 불가",
    "en": "Unavailable on this iPhone",
    "files": [
-    "WatchConnectivitySupport.swift:20"
+    "AppleWatchConnectionModels.swift:20"
    ],
    "args": [],
    "targets": [
@@ -56453,7 +56440,7 @@
    "ko": "이동",
    "en": "Movement",
    "files": [
-    "WidgetShared.swift:605",
+    "WidgetShared.swift:74",
     "MapHomeLocationPresentation.swift:308",
     "AppModel+WidgetLiveActivity.swift:106"
    ],
@@ -57214,8 +57201,6 @@
    "ko": "일상",
    "en": "Everyday",
    "files": [
-    "MapHomePlaceBookTools.swift:968",
-    "MapHomePlaceBookTools.swift:968",
     "MapHomePlaceBookTools.swift:968"
    ],
    "args": [],
@@ -57255,8 +57240,8 @@
    "en": "Back to everyday",
    "files": [
     "MapHomePlaceBookTools.swift:982",
-    "MapHomePlaceBookTools.swift:982",
-    "MapHomePlaceBookTools.swift:982"
+    "TravelModeView.swift:600",
+    "TravelModeView.swift:790"
    ],
    "args": [],
    "targets": [
@@ -57322,7 +57307,7 @@
    "ko": "일정 · 위치 · 이동 · 활동이 여기에 표시됩니다",
    "en": "Plans, places, trips and activity appear here",
    "files": [
-    "TaptionPlanWidget.swift:333"
+    "TaptionScheduleWidgetView.swift:198"
    ],
    "args": [],
    "targets": [
@@ -57519,7 +57504,7 @@
    "ko": "일정",
    "en": "Schedule",
    "files": [
-    "WidgetShared.swift:601",
+    "WidgetShared.swift:70",
     "AssistantDigest.swift:79",
     "MapHomeStickerEditor.swift:669"
    ],
@@ -58357,7 +58342,7 @@
    "files": [
     "MapHomePlaceBookTools.swift:597",
     "MapHomePlaceBookTools.swift:783",
-    "MapHomePlaceBookTools.swift:597"
+    "MapHomeView+Map.swift:158"
    ],
    "args": [],
    "targets": [
@@ -58432,7 +58417,6 @@
    "en": "Request a place",
    "files": [
     "MapHomePlaceBook.swift:572",
-    "MapHomePlaceBookTools.swift:589",
     "MapHomePlaceBookTools.swift:589"
    ],
    "args": [],
@@ -58495,7 +58479,7 @@
    "files": [
     "MapHomeInfoSheets.swift:46",
     "MapHomePlaceBookTools.swift:591",
-    "MapHomePlaceBookTools.swift:591"
+    "PlanSpotFields.swift:130"
    ],
    "args": [],
    "targets": [
@@ -60725,8 +60709,6 @@
    "ko": "지도를 움직여 핀을 맞춰 주세요.",
    "en": "Move the map to place the pin.",
    "files": [
-    "MapHomePlaceBookTools.swift:624",
-    "MapHomePlaceBookTools.swift:624",
     "MapHomePlaceBookTools.swift:624"
    ],
    "args": [],
@@ -60739,8 +60721,6 @@
    "ko": "지도를 움직이거나 검색해 핀을 맞춰 주세요. 지금 위치를 보내려면 위치 단추를 누르세요.",
    "en": "Move the map or search to place the pin. To send where you are, tap the location button.",
    "files": [
-    "MapHomePlaceBookTools.swift:625",
-    "MapHomePlaceBookTools.swift:625",
     "MapHomePlaceBookTools.swift:625"
    ],
    "args": [],
@@ -61628,7 +61608,7 @@
    "ko": "집중 중",
    "en": "Focusing",
    "files": [
-    "TaptionPlanWidget.swift:518"
+    "TaptionScheduleWidgetView.swift:383"
    ],
    "args": [],
    "targets": [
@@ -62141,7 +62121,7 @@
    "files": [
     "MapHomeCalendarSheet.swift:349",
     "MapHomePlaceBookTools.swift:947",
-    "MapHomePlaceBookTools.swift:947"
+    "MapHomeSettingsSheets.swift:99"
    ],
    "args": [],
    "targets": [
@@ -65115,8 +65095,8 @@
    "en": "Current location",
    "files": [
     "MapHomePlaceBookTools.swift:605",
-    "MapHomePlaceBookTools.swift:605",
-    "MapHomePlaceBookTools.swift:605"
+    "MapHomeTransitSheets.swift:399",
+    "MapHomeView+Menu2.swift:480"
    ],
    "args": [],
    "targets": [
@@ -65806,9 +65786,9 @@
    "ko": "활동",
    "en": "Activity",
    "files": [
-    "LiveActivitySupport.swift:426",
-    "LiveActivitySupport.swift:470",
-    "LiveActivitySupport.swift:502"
+    "LiveActivityShared.swift:31",
+    "LiveActivityShared.swift:45",
+    "LiveActivityShared.swift:80"
    ],
    "args": [],
    "targets": [
