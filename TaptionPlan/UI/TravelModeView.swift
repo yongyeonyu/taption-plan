@@ -389,7 +389,8 @@ struct TravelModeView: View {
             // 위쪽 핀에 선 고양이가 머리말에 가리지 않게 고양이 키만큼 더 띄운다.
             insets: UIEdgeInsets(top: area.minY + 74, left: 28, bottom: viewSize.height - area.maxY + 24, right: viewSize.width - area.maxX + 28),
             fitKey: "\(entry.id)|\(dayKey(entry))|\(isPlanUp)|\(Int(viewSize.width))x\(Int(viewSize.height))|\(Int(tableHeight))",
-            onSelect: { selectPin(entry, itemID: $0) }, isCourse: isCourse, onLongPress: { addEntry(entry, at: $0) }
+            onSelect: { selectPin(entry, itemID: $0) }, isCourse: isCourse, onLongPress: { addEntry(entry, at: $0) },
+            companions: TripLiveLocationService.shared.marks(tripID: entry.id, language: language)
         )
     }
 
@@ -792,6 +793,7 @@ struct TravelModeView: View {
             .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: 1) }
             moneyBar(entry)
             TripShareStatusBand(language: language, tripID: entry.id)
+            TripLiveLocationBand(language: language, tripID: entry.id)
             TripShareNoticeBand(model: model, language: language, tripID: entry.id)
         }
         .foregroundStyle(TravelInk.plan)
@@ -894,6 +896,7 @@ struct TravelModeView: View {
                     }
                 )
                 dayChips(entry)
+                TravelPuzzleDrawer(model: model, tripID: entry.id, language: language)
                 if showsCourse(entry) {
                     TravelCourseView(
                         table: table(entry), items: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }, language: language,
@@ -933,6 +936,7 @@ struct TravelModeView: View {
             }
             tripFooter(entry)
         }
+        .travelDayBoard(model: model, tripID: entry.id, trip: entry.trip, dayKey: dayKey(entry), language: language, history: $planHistory)
         .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: corner, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: corner, style: .continuous).stroke(TravelInk.border, lineWidth: 1) }
         .frame(maxWidth: Self.isWide(viewSize) ? min(460, viewSize.width * 0.5) : .infinity)

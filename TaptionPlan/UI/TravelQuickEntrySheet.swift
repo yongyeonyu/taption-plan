@@ -203,6 +203,15 @@ struct TravelQuickEntrySheet: View {
                 Button(language.text("바로 뒤에 복제", "Duplicate right after"), systemImage: "plus.square.on.square") { Task { await duplicate() } }
                 Button(language.text("전날로", "Move to previous day"), systemImage: "arrow.left") { Task { await shiftDay(-1) } }
                 Button(language.text("다음 날로", "Move to next day"), systemImage: "arrow.right") { Task { await shiftDay(1) } }
+                if let item = target.editing {
+                    TravelDayMoveMenu(model: model, item: item, language: language) { step in
+                        didFail = step == nil
+                        if let step {
+                            onHistory(step)
+                            dismiss()
+                        }
+                    }
+                }
             } label: {
                 Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(TravelInk.plan).frame(width: 40, height: 32)
             }

@@ -12,6 +12,8 @@ enum FirstRunTutorialChapter: Int, CaseIterable {
 /// 처음 실행 튜토리얼 단계. 저장 값이 이름이라 순서를 바꿔도 이어 보기가 어긋나지 않는다.
 enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     case welcome
+    /// AI 연결(AIR1110A04, AIT1116A01에서 첫 소개 바로 뒤로). 피클·ChatGPT·Claude·Gemini를 받고 잇는다.
+    case aiConnect
     case permissions
     case dayCardTime
     case home
@@ -29,8 +31,6 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     case counters
     case calendar
     case appleWatch
-    /// AI 연결(AIR1110A04). 피클·ChatGPT·Claude·Gemini를 받고 잇는다.
-    case aiConnect
     /// 결제 문자·알림 자동 넣기와 Siri(SHT1111A01).
     case shortcuts
     case password
@@ -48,10 +48,10 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
 
     var chapter: FirstRunTutorialChapter {
         switch self {
-        case .welcome: .start
+        case .welcome, .aiConnect: .start
         case .permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat: .setup
         case .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters: .learn
-        case .calendar, .appleWatch, .aiConnect, .shortcuts, .password: .connect
+        case .calendar, .appleWatch, .shortcuts, .password: .connect
         case .finish: .finish
         }
     }
@@ -59,7 +59,8 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     /// 입력이 있는 단계에만 건너뛰기를 둔다. 설명 단계는 다음이 곧 건너뛰기다.
     var hasInput: Bool {
         switch self {
-        case .permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat, .counters, .calendar, .appleWatch, .aiConnect, .shortcuts, .password: true
+        case .permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat, .counters, .calendar, .appleWatch, .shortcuts, .password: true
+        // AI 연결은 아래 「지금 연결」·「나중에」가 맡는다.
         default: false
         }
     }

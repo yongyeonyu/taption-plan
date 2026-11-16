@@ -1,0 +1,14 @@
+[
+  {"id": "home", "background": "bg-map.jpg", "capture": "01-home.png",
+   "headline": "하루가 지도 위에\n그려져요", "sub": "고양이가 오늘 다닌 길을 따라 걸어요"},
+  {"id": "replay", "background": "bg-replay.jpg", "capture": "02-replay.png",
+   "headline": "지난 하루를\n한눈에 돌아봐요", "sub": "시간표와 지도로 하루를 다시 보기"},
+  {"id": "ledger", "background": "bg-ledger.jpg", "capture": "03-ledger.png",
+   "headline": "결제 알림이\n가계부가 돼요", "sub": "받은 문자를 읽어 지출을 정리해요"},
+  {"id": "travel", "background": "bg-travel.jpg", "capture": "04-travel.png",
+   "headline": "여행 계획과 실제를\n나란히", "sub": "계획한 곳, 간 곳, 쓴 돈을 비교해요"},
+  {"id": "ai", "background": "bg-ai.jpg", "capture": "05-ai.png",
+   "headline": "쓰던 AI에게\n정리를 맡겨요", "sub": "AI를 연결해 일정·기록을 함께 고쳐요"},
+  {"id": "stamp", "background": "bg-stamp.jpg", "capture": "06-stamp.png",
+   "headline": "가 본 곳마다\n도장이 쌓여요", "sub": "여권에 모으는 나만의 여행 기록"}
+]

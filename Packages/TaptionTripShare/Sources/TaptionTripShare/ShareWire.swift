@@ -10,6 +10,8 @@ public enum ShareKind: String, Sendable, Codable, CaseIterable {
     case notice
     case member
     case meta
+    /// 모이는 곳(LOC1116S01). id는 `meet-point` 하나.
+    case meet
 
     /// 고치기·지우기 전에 잠금을 잡아야 하는 종류(여럿이 고칠 수 있는 것).
     public var needsLock: Bool { self == .plan || self == .expenseShared }
@@ -91,6 +93,10 @@ public struct ShareRoomState: Codable, Sendable, Equatable {
     public var counts: ShareCounts
     public var limits: ShareLimits
     public var now: Int
+    /// 위치를 보낼 수 있는 기간(주인이 정함). 아직 안 정했으면 nil.
+    public var locWindow: ShareLocWindow?
+    /// `hello`에만: 서버가 짧게 들고 있는 동행의 마지막 위치(암호문).
+    public var locs: [ShareWireLocation]?
 }
 
 /// 서버가 주는 항목. 묘비는 `deleted`가 true이고 `epoch`·`cipher`가 없다.
@@ -246,6 +252,10 @@ public struct ShareRotateItem: Codable, Sendable, Equatable {
 }
 
 struct ShareProofBody: Encodable, Sendable { var proof: String }
+struct ShareLocationBody: Encodable, Sendable { var epoch: Int; var cipher: String; var help: Bool }
+struct ShareLocWindowBody: Encodable, Sendable { var from: Int; var until: Int }
+struct ShareLocationList: Decodable, Sendable { var locs: [ShareWireLocation]; var locWindow: ShareLocWindow?; var now: Int }
+struct ShareLocationAccepted: Decodable, Sendable { var now: Int }
 struct ShareLockBody: Encodable, Sendable { var acquire: [String]; var release: [String] }
 struct ShareWriteBody: Encodable, Sendable { var epoch: Int; var writes: [ShareWrite] }
 struct ShareAckBody: Encodable, Sendable { var id: String }

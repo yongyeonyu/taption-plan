@@ -80,6 +80,7 @@ JSON format (keys in English, text values in {LANGUAGE})
 - "items" are in time order across the whole trip. Use "flight" only for flights; for a flight, "place" is the arrival airport, "start" uses the departure time zone and "end" uses the arrival time zone.
 - Types: "sight" for sights and must-see places, "photo" for photo spots, "activity" for things to do such as the hotel pool, spa, gym, a show or a class, "rest" for free time or resting at the hotel, "sleep" for the night from bedtime to wake-up (place is the hotel).
 - Status: "booked" if I said it is reserved or paid, "tentative" for candidates I am unsure about, otherwise "planned".
+- Puzzle pieces: when I have not decided between options (two lunch spots, an optional sight), add each option as its own item with status "tentative" in the time slot it would take. I fit the ones I want into the plan in the app. Never invent tentative items we did not talk about.
 - If I paste this prompt again later with changes, keep the same "tripId".
 """#
 }

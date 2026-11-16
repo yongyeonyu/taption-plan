@@ -33,9 +33,18 @@ export const SHARE = {
   opsPerMinute: 240,
   changesPage: 200,
   changesChars: 256 * 1024,
+  // 여행 중 동행 위치(LOC1116S01). 서버는 암호문만 다룬다.
+  locBytes: 512, // 위치 암호문 하나(풀기 전 바이트)
+  locGapMs: 5_000, // 한 사람이 위치를 보내는 최소 간격(도움 요청은 제외)
+  locPerMinute: 20,
+  locKeep: true, // 암호화된 마지막 위치를 짧게 둔다. false면 전달만 한다.
+  locStoreGapMs: 90_000, // 저장은 이 간격보다 자주 하지 않는다(방송은 매번).
+  locKeepMs: 10 * MINUTE_MS,
+  locHelpKeepMs: 24 * 60 * MINUTE_MS,
+  locWindowMaxMs: 40 * DAY_MS,
 };
 
-export const KINDS = ["plan", "expense-shared", "expense-own", "notice", "member", "meta"];
+export const KINDS = ["plan", "expense-shared", "expense-own", "notice", "member", "meta", "meet"];
 const LOCKED_KINDS = new Set(["plan", "expense-shared"]); // 여럿이 고칠 수 있는 종류만 잠금을 본다.
 export const ROOM_PATH = /^\/share\/rooms\/([A-Za-z0-9_-]{22})(?:\/([a-z]+))?$/;
 const ROOM_ID = /^[A-Za-z0-9_-]{22}$/;
@@ -78,7 +87,7 @@ function writeError(w) {
 }
 
 // kind마다 누가 쓰는가. old: 지금 있는 항목(없으면 만들기). 반환: null이면 됨.
-function denied(kind, me, old, w, room) {
+function denied(kind, me, old, w, room, now) {
   const mine = !old || old.cb === me.no;
   switch (kind) {
     case "plan": return null;
@@ -87,6 +96,13 @@ function denied(kind, me, old, w, room) {
     case "notice": return mine || (w.delete && me.no === 1) ? null : [403, "forbidden"];
     case "member": return w.id === "member-" + me.no && !w.delete ? null : [403, "forbidden"];
     case "meta": return me.no === 1 ? null : [403, "forbidden"];
+    // 모이는 곳(LOC1116S01): 방에 하나(id 고정), 누구나 정한다. 지우지 않고 「해제」 내용으로 덮어쓴다(지운 id는 다시 못 쓰므로).
+    // 좌표가 든 항목이라 위치 기간 창 안에서만 올린다.
+    case "meet": {
+      if (w.id !== "meet-point" || w.delete) return [422, "bad_request"];
+      const window = room.locWindow;
+      return window && now >= window.from && now < window.until ? null : [403, "loc_closed"];
+    }
     default: return [422, "bad_request"];
   }
 }
@@ -125,6 +141,7 @@ export class ShareRoom {
     this.storage = ctx.storage;
     this.env = env ?? {};
     this.chain = Promise.resolve();
+    this.locRates = new Map(); // 참여자 번호 → 위치 보내기 횟수·마지막 시각(메모리)
     this.rates = new Map(); // 참여자 번호 → 이번 분의 요청 수(메모리, 잠들면 0부터)
     // 글자 "ping"에는 DO를 깨우지 않고 "pong"을 돌려준다.
     if (typeof WebSocketRequestResponsePair !== "undefined") ctx.setWebSocketAutoResponse?.(new WebSocketRequestResponsePair("ping", "pong"));
@@ -176,9 +193,12 @@ export class ShareRoom {
       case "POST items": return this.withBody(request, (body) => this.write(room, me, body, now));
       case "POST locks": return this.withBody(request, (body) => this.lock(room, me, body, now));
       case "POST acks": return this.withBody(request, (body) => this.ack(room, me, body, now));
+      case "PUT loc": return this.withBody(request, (body) => this.loc(room, me, body, now));
+      case "DELETE loc": return this.locOff(room, me, now);
+      case "GET loc": return reply(200, { locs: await this.readLocs(now), locWindow: room.locWindow ?? null, now });
       default:
     }
-    const ownerOps = { "DELETE ": "erase", "POST kick": "kick", "POST close": "close", "POST expiry": "extend", "POST rotate": "rotate" };
+    const ownerOps = { "POST locwindow": "locWindow", "DELETE ": "erase", "POST kick": "kick", "POST close": "close", "POST expiry": "extend", "POST rotate": "rotate" };
     const name = ownerOps[op];
     if (!name) return fail(ROOM_SUBS.has(sub) ? 405 : 404, ROOM_SUBS.has(sub) ? "method_not_allowed" : "not_found");
     const ownerKey = request.headers.get("x-share-owner") ?? "";
@@ -282,6 +302,7 @@ export class ShareRoom {
     return {
       roomId: room.id, you: me.no, owner: 1, epoch: room.epoch, rev: room.rev, closed: room.closed, createdAt: room.createdAt, expiresAt: room.expiresAt,
       members: activeMembers(room).map((m) => ({ no: m.no, joinedAt: m.joinedAt, online: online.has(m.no), ...(m.epoch !== room.epoch ? { stale: true } : {}) })),
+      locWindow: room.locWindow ?? null,
       locks: liveLocks(room, now), counts: { items: room.live, ids: room.ids, bytes: room.bytes }, limits: publicLimits(), now,
     };
   }
@@ -375,7 +396,7 @@ export class ShareRoom {
       if (creating ? old : !old || old.del || old.rev !== w.baseRev) { conflicts.push({ index, id: w.id, current: old ? wire(old) : null }); continue; }
       if (!creating && !w.delete && w.kind !== old.kind) return fail(422, "kind_immutable", { index });
       const kind = creating ? w.kind : old.kind;
-      const no = denied(kind, me, old, w, room);
+      const no = denied(kind, me, old, w, room, now);
       if (no) return fail(no[0], no[1], { index, kind });
       w.nextGroup = w.delete ? undefined : w.group === undefined ? old?.group : w.group ?? undefined;
       if (LOCKED_KINDS.has(kind)) {
@@ -452,7 +473,9 @@ export class ShareRoom {
       this.broadcast({ t: "items", rev, items: [wire(tomb)] });
     }
     batch.put("room", room);
+    batch.delete("l:" + member.no);
     await batch.commit();
+    this.broadcast({ t: "loc", by: member.no, off: true });
     for (const ws of this.ctx.getWebSockets("m:" + member.no)) this.bye(ws, reason, reason === "kicked" ? CLOSE.kicked : 1000);
     this.broadcast({ t: "member", event: reason === "kicked" ? "kick" : "leave", no: member.no, now });
     return reason === "kicked" ? reply(200, { ok: true, member: member.no, rekeyRecommended: true }) : reply(204);
@@ -484,7 +507,68 @@ export class ShareRoom {
   }
 
   roomEvent(room, now) {
-    this.broadcast({ t: "room", closed: room.closed, expiresAt: room.expiresAt, epoch: room.epoch, now });
+    this.broadcast({ t: "room", closed: room.closed, expiresAt: room.expiresAt, epoch: room.epoch, locWindow: room.locWindow ?? null, now });
+  }
+
+  // MARK: 동행 위치 (LOC1116S01)
+
+  // 저장된 위치 중 기한이 남은 것. 지난 것은 지운다.
+  async readLocs(now) {
+    const rows = [...(await this.storage.list({ prefix: "l:" })).entries()];
+    const live = [], dead = [];
+    for (const [key, row] of rows) (row.until > now ? live : dead).push(row.until > now ? row : key);
+    if (dead.length) await this.storage.delete(dead);
+    return live.map((r) => ({ by: r.no, cipher: r.cipher, epoch: r.epoch, at: r.at, ...(r.help ? { help: true } : {}) })).sort((a, b) => a.by - b.by);
+  }
+
+  // 위치 하나를 동행에게 전달한다. 내용은 읽지 않는다. 주인이 기간 창을 올리기 전과 창 밖에서는 받지 않는다.
+  async loc(room, me, body, now, origin) {
+    const error = cipherError(body.cipher);
+    if (error) return fail(error[0], error[1]);
+    if (cipherBytes(body.cipher) > SHARE.locBytes) return fail(413, "item_too_large");
+    if (!isInt(body.epoch, 1)) return fail(422, "bad_request");
+    if (body.epoch !== room.epoch) return fail(409, "epoch_mismatch", { epoch: room.epoch });
+    const window = room.locWindow;
+    if (!window || now < window.from || now >= window.until) return fail(403, "loc_closed", { locWindow: window ?? null });
+    const help = body.help === true;
+    const state = this.locRates.get(me.no) ?? { minute: -1, count: 0, last: 0 };
+    const minute = Math.floor(now / MINUTE_MS);
+    if (state.minute !== minute) { state.minute = minute; state.count = 0; }
+    if (state.count >= SHARE.locPerMinute) return busy("loc_rate", (minute + 1) * MINUTE_MS - now);
+    if (!help && now - state.last < SHARE.locGapMs) return busy("loc_rate", state.last + SHARE.locGapMs - now);
+    state.count++;
+    state.last = now;
+    this.locRates.set(me.no, state);
+    this.broadcast({ t: "loc", by: me.no, cipher: body.cipher, epoch: room.epoch, at: now, ...(help ? { help: true } : {}) }, origin);
+    if (SHARE.locKeep) {
+      const old = await this.storage.get("l:" + me.no);
+      if (!old || old.until <= now || help || old.help || now - old.storedAt >= SHARE.locStoreGapMs) {
+        await this.storage.put("l:" + me.no, { no: me.no, cipher: body.cipher, epoch: room.epoch, at: now, storedAt: now, help, until: now + (help ? SHARE.locHelpKeepMs : SHARE.locKeepMs) });
+      }
+    }
+    return reply(200, { now });
+  }
+
+  // 내 저장된 위치를 지우고 동행에게 「껐음」을 알린다.
+  async locOff(room, me, now) {
+    await this.storage.delete("l:" + me.no);
+    this.locRates.delete(me.no);
+    this.broadcast({ t: "loc", by: me.no, off: true });
+    return reply(204);
+  }
+
+  // 주인만: 위치를 보낼 수 있는 기간(밀리초). 이 기간 밖에는 서버가 위치를 받지 않는다.
+  async locWindow(room, me, body, now) {
+    const { from, until } = body;
+    if (!isInt(from) || !isInt(until) || until <= from || until - from > SHARE.locWindowMaxMs || until <= now) return fail(422, "bad_request", { max: SHARE.locWindowMaxMs });
+    room.locWindow = { from, until };
+    await this.storage.put("room", room);
+    if (now < from || now >= until) {
+      for (const key of (await this.storage.list({ prefix: "l:" })).keys()) await this.storage.delete(key);
+      this.broadcast({ t: "loc", off: true, all: true });
+    }
+    this.roomEvent(room, now);
+    return reply(200, { from, until });
   }
 
   // 비밀번호 바꾸기 = 키 교체. 주인 기기가 살아 있는 모든 항목을 새 키로 다시 잠가 한 번에 올린다.
@@ -518,6 +602,7 @@ export class ShareRoom {
     Object.assign(room, { join, bytes, locks: {}, fails: {} });
     me.epoch = room.epoch;
     batch.put("room", room);
+    for (const key of (await this.storage.list({ prefix: "l:" })).keys()) batch.delete(key); // 옛 키로 잠근 위치는 버린다.
     await batch.commit();
     for (const ws of this.ctx.getWebSockets()) {
       if (ws.deserializeAttachment()?.no === 1) this.send(ws, { t: "room", closed: room.closed, expiresAt: room.expiresAt, epoch: room.epoch, rekeyed: true, now });
@@ -564,7 +649,7 @@ export class ShareRoom {
     const [client, server] = this.env.SOCKETS?.pair() ?? Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server, ["m:" + me.no]);
     server.serializeAttachment({ no: me.no, at: now });
-    this.send(server, { t: "hello", ...this.describe(room, me, now) });
+    this.send(server, { t: "hello", ...this.describe(room, me, now), locs: await this.readLocs(now) });
     if (!wasOnline) this.broadcast({ t: "member", event: "online", no: me.no, now }, server);
     return this.env.SOCKETS?.response(client) ?? new Response(null, { status: 101, webSocket: client });
   }
@@ -588,6 +673,7 @@ export class ShareRoom {
     switch (body.op) {
       case "lock": return this.lock(room, me, body, now, ws);
       case "write": return this.write(room, me, body, now, ws);
+      case "loc": return this.loc(room, me, body, now, ws);
       case "ack": return this.ack(room, me, { id: body.notice }, now, ws); // 소켓에서는 id가 요청 번호라 공지는 notice 칸으로 받는다.
       case "changes": return this.changes(room, { since: body.since ?? 0, limit: body.limit ?? SHARE.changesPage });
       case "state": return reply(200, this.describe(room, me, now));
@@ -613,7 +699,7 @@ export class ShareRoom {
   }
 }
 
-const ROOM_SUBS = new Set(["", "join", "rekey", "leave", "changes", "items", "locks", "acks", "kick", "close", "expiry", "rotate", "ws"]);
+const ROOM_SUBS = new Set(["", "join", "rekey", "leave", "changes", "items", "locks", "acks", "kick", "close", "expiry", "rotate", "ws", "loc", "locwindow"]);
 
 // MARK: Worker 쪽
 

@@ -3,7 +3,7 @@ import Observation
 import os
 import SwiftUI
 
-/// 재생 영상의 배경 음악(BGM1104A02). 코드로 합성한 곡만 앱 target에 넣는다.
+/// 재생 영상의 배경 음악(BGM1104A02). 곡은 일레븐랩스 뮤직으로 만든 1분 안팎 반복용 곡이다(BGM1115A01, 파일 이름은 그대로).
 enum MapHomePlaybackMusicTrack: String, CaseIterable, Identifiable, Sendable {
     /// 고른 곡을 기억하는 저장 키. 영상 시트·여행 영상·재생이 같은 값을 쓴다.
     static let storageKey = "playbackVideoMusic"

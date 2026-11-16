@@ -317,7 +317,12 @@ extension AssistantOperations.AddTripItem: AssistantOperation {
         guard let itemID = await model.addTripItem(tripID: tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: offset, note: note),
               let item = model.snapshot.settings.travelTripItems?.first(where: { $0.tripID == tripID && $0.itemID == itemID })
         else { return .rejected("trip_failed") }
-        return AssistantEditResult(after: AssistantOperations.describe(item))
+        // 조각(미정)이나 예약으로 올라온 일정은 상태를 함께 정한다(AIT1116A01).
+        if let statusName, statusName != "planned" {
+            model.setTripItemStatus(TripItemStatus(raw: statusName), tripID: tripID, itemID: itemID)
+        }
+        let saved = model.snapshot.settings.travelTripItems?.first(where: { $0.tripID == tripID && $0.itemID == itemID }) ?? item
+        return AssistantEditResult(after: AssistantOperations.describe(saved))
     }
 }
 

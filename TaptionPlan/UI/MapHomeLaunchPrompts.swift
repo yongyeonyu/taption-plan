@@ -161,13 +161,20 @@ extension MapHomeView {
         if ProcessInfo.processInfo.arguments.contains("-ledgerPreview") {
             try? await Task.sleep(for: .seconds(3))
             await LedgerBook.shared.load()
-            if LedgerBook.shared.entries.isEmpty {
+            // 이번 달 기록이 없으면 지어낸 보기를 넣는다(App Store 화면도 이것으로 찍는다, APS1115A01).
+            let monthStart = Calendar.autoupdatingCurrent.dateInterval(of: .month, for: .now)?.start ?? .now
+            if !LedgerBook.shared.entries.contains(where: { $0.occurredAt >= monthStart && $0.tripID == nil }) {
+                let hour: TimeInterval = 3_600
                 let samples: [(String, Double, LedgerCategory, TimeInterval)] = [
-                    ("회사 커피숍 라떼", 4_500, .cafe, -3_600), ("점심 국밥", 9_000, .food, -7_200), ("경인고속도로 통행료", 900, .transport, -10_800),
+                    ("아침 라떼", 4_500, .cafe, -1 * hour), ("점심 김치찌개", 9_000, .food, -3 * hour),
+                    ("지하철", 1_550, .transport, -5 * hour), ("동네 마트 장보기", 32_400, .living, -26 * hour),
+                    ("영화 관람", 15_000, .culture, -50 * hour), ("서점 에세이", 16_800, .education, -74 * hour),
+                    ("월급", 2_800_000, .salary, -min(Date.now.timeIntervalSince(monthStart) - hour, 98 * hour)),
                 ]
                 for sample in samples {
                     var entry = LedgerEntry(occurredAt: Date.now.addingTimeInterval(sample.3), amount: sample.1, title: sample.0)
                     entry.category = sample.2
+                    if sample.2 == .salary { entry.kind = .income }
                     await LedgerBook.shared.save(entry)
                 }
             }

@@ -152,6 +152,8 @@ test("actions batch 2: plans and timed trip items", () => {
   const item = { tripId: "trip-1", title: "Dinner", start: "2026-12-01T18:00+09:00", end: "2026-12-01T19:30+09:00" };
   accepts("addTripItem", item);
   accepts("addTripItem", { ...item, kind: "meal", note: "window seat" });
+  accepts("addTripItem", { ...item, status: "tentative" });
+  refuses("addTripItem", { ...item, status: "maybe" });
   refuses("addTripItem", { ...item, end: "2026-12-01T18:00+09:00" });
   refuses("addTripItem", { ...item, start: "2026-12-01 18:00" });
   refuses("addTripItem", { ...item, kind: "party" });
