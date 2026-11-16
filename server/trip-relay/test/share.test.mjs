@@ -839,3 +839,111 @@ test("share privacy: the room code writes no logs and room paths carry no secret
   assert.equal((await call(room.env, "POST", `${room.path}/join?proof=${room.proof}`, { body: {} })).status, 422);
   assert.equal((await call(room.env, "GET", `${room.path}?token=${room.owner.token}`)).status, 401);
 });
+
+// MARK: 동행 위치 (LOC1116S01)
+
+const openWindow = (room, from = room.clock.now - DAY, until = room.clock.now + 2 * DAY) =>
+  call(room.env, "POST", room.path + "/locwindow", { token: room.owner.token, owner: room.ownerKey, body: { from, until } });
+const sendLoc = (room, member, extra = {}) => call(room.env, "PUT", room.path + "/loc", { token: member.token, body: { epoch: 1, cipher: cipher(80), ...extra } });
+
+test("share loc: nothing is accepted before the owner opens a window, and only the owner can open it", async () => {
+  const room = await makeRoom();
+  const guest = await join(room);
+  assert.deepEqual((await sendLoc(room, guest)).body, { error: "loc_closed", locWindow: null });
+  assert.equal((await call(room.env, "POST", room.path + "/locwindow", { token: guest.token, body: { from: 1, until: 2 } })).status, 403);
+  assert.equal((await openWindow(room, room.clock.now, room.clock.now + SHARE.locWindowMaxMs + 1)).status, 422);
+  assert.equal((await openWindow(room, room.clock.now + DAY, room.clock.now)).status, 422);
+  assert.equal((await openWindow(room)).status, 200);
+  assert.equal((await sendLoc(room, guest)).status, 200);
+  // 창이 끝난 뒤에는 다시 거절한다.
+  room.clock.now += 3 * DAY;
+  assert.equal((await sendLoc(room, guest)).status, 403);
+});
+
+test("share loc: a position reaches the others but not the sender's socket, is kept once per member and replaced", async () => {
+  const room = await makeRoom();
+  const guest = await join(room);
+  await openWindow(room);
+  const ownerSocket = await connect(room, room.owner), guestSocket = await connect(room, guest);
+  ownerSocket.take(); guestSocket.take();
+  const sealed = cipher(80);
+  const sent = await ask(room, guestSocket, { op: "loc", epoch: 1, cipher: sealed });
+  assert.deepEqual(sent, { t: "res", id: 7, status: 200, now: room.clock.now });
+  assert.deepEqual(ownerSocket.take("loc"), [{ t: "loc", by: 2, cipher: sealed, epoch: 1, at: room.clock.now }]);
+  assert.equal(guestSocket.take("loc").length, 0);
+  // 너무 잦으면 거절(도움 요청은 예외), 저장은 첫 건과 90초 뒤에만.
+  assert.equal((await ask(room, guestSocket, { op: "loc", epoch: 1, cipher: cipher(80) })).error, "loc_rate");
+  room.clock.now += 10_000;
+  const second = cipher(80);
+  assert.equal((await ask(room, guestSocket, { op: "loc", epoch: 1, cipher: second })).status, 200);
+  assert.equal((await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body.locs[0].cipher, sealed);
+  room.clock.now += 90_000;
+  const third = cipher(80);
+  assert.equal((await ask(room, guestSocket, { op: "loc", epoch: 1, cipher: third })).status, 200);
+  const kept = (await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body;
+  assert.deepEqual(kept.locs.map((l) => [l.by, l.cipher]), [[2, third]]);
+  // 새로 붙은 소켓의 hello에 마지막 위치가 실려 온다.
+  const later = await connect(room, room.owner);
+  assert.deepEqual(later.sent.find((m) => m.t === "hello").locs.map((l) => l.by), [2]);
+  // 10분이 지나면 없다.
+  room.clock.now += 11 * MINUTE;
+  assert.deepEqual((await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body.locs, []);
+});
+
+test("share loc: help is stored for a day, bypasses the gap and is cleared by sending a normal position", async () => {
+  const room = await makeRoom();
+  const guest = await join(room);
+  await openWindow(room);
+  assert.equal((await sendLoc(room, guest)).status, 200);
+  const help = cipher(90);
+  assert.equal((await sendLoc(room, guest, { cipher: help, help: true })).status, 200); // 간격 안이어도
+  room.clock.now += 20 * MINUTE;
+  let locs = (await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body.locs;
+  assert.deepEqual(locs.map((l) => [l.cipher, l.help]), [[help, true]]);
+  room.clock.now += 10_000;
+  const calm = cipher(90);
+  assert.equal((await sendLoc(room, guest, { cipher: calm })).status, 200); // 도움이 켜져 있었으므로 바로 저장
+  locs = (await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body.locs;
+  assert.deepEqual(locs.map((l) => [l.cipher, l.help]), [[calm, undefined]]);
+});
+
+test("share loc: stopping, leaving, kicking and changing the password clear stored positions", async () => {
+  const room = await makeRoom();
+  const guest = await join(room), other = await join(room);
+  await openWindow(room);
+  await sendLoc(room, guest); await sendLoc(room, other);
+  const ownerSocket = await connect(room, room.owner);
+  ownerSocket.take();
+  assert.equal((await call(room.env, "DELETE", room.path + "/loc", { token: guest.token })).status, 204);
+  assert.deepEqual(ownerSocket.take("loc"), [{ t: "loc", by: 2, off: true }]);
+  assert.deepEqual((await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body.locs.map((l) => l.by), [3]);
+  assert.equal((await call(room.env, "POST", room.path + "/kick", { token: room.owner.token, owner: room.ownerKey, body: { member: 3 } })).status, 200);
+  assert.deepEqual((await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body.locs, []);
+});
+
+test("share loc: wrong epoch, bad or oversized ciphertext and a plain write of kind loc are refused", async () => {
+  const room = await makeRoom();
+  const guest = await join(room);
+  await openWindow(room);
+  assert.deepEqual((await sendLoc(room, guest, { epoch: 2 })).body, { error: "epoch_mismatch", epoch: 1 });
+  assert.equal((await sendLoc(room, guest, { cipher: "nope" })).body.error, "bad_cipher");
+  assert.equal((await sendLoc(room, guest, { cipher: cipher(SHARE.locBytes + 40) })).status, 413);
+  assert.equal((await write(room, guest, { id: itemId(), kind: "loc", baseRev: 0, cipher: cipher() })).status, 422);
+  assert.equal((await call(room.env, "PUT", room.path + "/loc", { body: { epoch: 1, cipher: cipher() } })).status, 401);
+});
+
+test("share meet: one gathering point per room, anyone sets it, only inside the location window, never deleted", async () => {
+  const room = await makeRoom();
+  const guest = await join(room);
+  const make = (member, baseRev) => write(room, member, { id: "meet-point", kind: "meet", baseRev, cipher: cipher(120) });
+  assert.equal((await make(guest, 0)).body.error, "loc_closed"); // 창이 없으면 못 올린다.
+  await openWindow(room);
+  const first = await make(guest, 0);
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  const second = await make(room.owner, first.body.items[0].rev); // 다른 사람이 고친다.
+  assert.equal(second.status, 200);
+  assert.equal((await write(room, guest, { id: "meet-point", baseRev: second.body.items[0].rev, delete: true })).status, 422);
+  assert.equal((await write(room, guest, { id: itemId(), kind: "meet", baseRev: 0, cipher: cipher(120) })).status, 422); // id는 고정
+  room.clock.now += 3 * DAY; // 창이 끝난 뒤에는 고치지 못한다.
+  assert.equal((await make(guest, second.body.items[0].rev)).status, 403);
+});

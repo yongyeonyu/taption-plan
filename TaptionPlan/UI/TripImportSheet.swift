@@ -552,6 +552,7 @@ struct MapHomeTripImportSheet: View {
             VStack(alignment: .leading, spacing: 18) {
                 Text(language.text("AI로 여행 계획 만들기", "Plan a trip with AI"))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.headline), weight: .bold))
+                AIConnectNudgeSlot(model: model, language: language)
                 talkStep
                 if TripRelay.isAvailable { relayStep }
                 pasteStep

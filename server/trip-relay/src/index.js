@@ -8,6 +8,7 @@
 import * as apns from "./apns.js";
 import * as rules from "./rules.js";
 import * as share from "./share.js";
+import * as shared from "./shared.js";
 import { createSetup, readSetup } from "./setup.js";
 import { fxRoute } from "./fx.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
@@ -352,6 +353,13 @@ const ROUTES = {
   "/rules/ack": {
     POST: ["master", withBody(rules.ackRules)],
   },
+  // 공통 규칙(SRL1116A01). 받기는 등록한 앱이면 누구나(AI 연결이 없어도), 후보 올리기는 동의한 사용자의 앱만.
+  "/shared/rules": {
+    GET: ["search", (request, ctx) => shared.readShared(ctx, query(request, "since"))],
+  },
+  "/shared/candidates": {
+    POST: ["master", withBody(shared.submitCandidates)],
+  },
   // 맡기·끝내기는 쓰기 연결만(AIP1114A05). 읽기 연결은 `GET /tasks`로 보기만 한다.
   "/tasks/claim": {
     POST: ["write", (request, ctx) => store.claimTasks(ctx)],
@@ -521,6 +529,7 @@ async function route(request, env, url, exec) {
       // Claude 맞춤 커넥터 「로그인 없음」용: `/mcp/<연결 키>`(CLD1110A01). 모바일에서 주소 하나만 붙여 넣는다.
       const setup = SETUP_PATH.exec(url.pathname);
       if (setup) return request.method === "GET" ? readSetup(env, setup[1], now) : json({ error: "method_not_allowed" }, 405);
+      if (url.pathname.startsWith("/shared/admin/")) return shared.adminRoute(request, env, url, now);
       const room = share.ROOM_PATH.exec(url.pathname);
       if (room) return share.roomRoute(request, env, room, now);
       const keyed = MCP_KEY_PATH.exec(url.pathname);

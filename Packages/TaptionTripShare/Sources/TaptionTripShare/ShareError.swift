@@ -61,6 +61,8 @@ public struct ShareErrorDetail: Decodable, Sendable, Equatable {
     public var missing: Int?
     public var extra: Int?
     public var now: Int?
+    /// `loc_closed`일 때 서버의 기간 창.
+    public var locWindow: ShareLocWindow?
 
     public init(error: String) { self.error = error }
 }

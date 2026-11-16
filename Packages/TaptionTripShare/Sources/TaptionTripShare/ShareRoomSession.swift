@@ -7,6 +7,9 @@ public actor ShareRoomSession {
     public nonisolated let roomID: String
     /// 변화 알림. 받으면 `view()`를 다시 읽는다. 한 곳에서만 듣는다.
     public nonisolated let events: AsyncStream<ShareSessionEvent>
+    /// 동행 위치가 바뀌었음을 알린다(위치는 방 개정 번호와 별개라 `events`와 따로). 받으면 `locationView()`를 읽는다.
+    public nonisolated let locationEvents: AsyncStream<Void>
+    let locationContinuation: AsyncStream<Void>.Continuation
 
     let client: ShareRoomClient
     let environment: ShareSessionEnvironment
@@ -29,6 +32,9 @@ public actor ShareRoomSession {
     var rotating = false
     /// 다음 따라잡기는 처음부터 받아 로컬 사본을 통째로 맞춘다.
     var needsFullSync = true
+    /// 동행 위치(메모리에만, 참여자 번호 → 푼 값). 저장하지 않는다.
+    var peerLocations: [Int: ShareReceivedLocation] = [:]
+    var locWindow: ShareLocWindow?
 
     private var tombstones: [String: Int] = [:]
     private var clockOffsetMs = 0
@@ -53,6 +59,7 @@ public actor ShareRoomSession {
         me = member
         self.epoch = epoch
         (events, continuation) = AsyncStream.makeStream(of: ShareSessionEvent.self)
+        (locationEvents, locationContinuation) = AsyncStream.makeStream(of: Void.self)
         guard let snapshot, snapshot.roomID == roomID, snapshot.me == member else { return }
         closed = snapshot.closed
         expiresAt = snapshot.expiresAt
@@ -220,6 +227,7 @@ public actor ShareRoomSession {
         do {
             let state = try await guarded { try await client.state() }
             absorb(state)
+            absorbLocations(state)
             guard shouldRun else { return }
             setStatus(.live)
             if state.rev > rev || needsFullSync { try await catchUp() } else { emit(.caughtUp) }
@@ -231,6 +239,7 @@ public actor ShareRoomSession {
         switch message {
         case .hello(let state):
             absorb(state)
+            absorbLocations(state)
             guard shouldRun else { return await client.disconnect() }
             setStatus(.live)
             if state.rev > rev || needsFullSync { try? await catchUp() } else { emit(.caughtUp) }
@@ -243,7 +252,10 @@ public actor ShareRoomSession {
             receive(event)
         case .member(let event):
             receive(event)
+        case .loc(let event):
+            receiveLocation(event)
         case .room(let event):
+            receiveLocationWindow(event)
             receive(event)
             if !shouldRun { await client.disconnect() }
         case .bye(let reason):

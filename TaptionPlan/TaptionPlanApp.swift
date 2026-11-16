@@ -312,6 +312,8 @@ final class TaptionPlanAppDelegate:
         Task { @MainActor in await AssistantPush.syncRegistration() }
         // 지난번에 받아 둔 규칙을 바로 쓴다. 서버와 맞추는 것은 명령 확인 때 한다(AIX1114A01 P3).
         AssistantRuleStore.refreshSnapshot()
+        // 공통 규칙은 하루에 한 번만 확인한다(SRL1116A01). 백그라운드 작업은 만들지 않고 앱이 켜질 때 한다.
+        Task { @MainActor in await SharedRuleStore.sync() }
         AppleHealthService.shared.startObservingChanges {
             guard await TaptionProAccessController.currentAccessGranted() else {
                 return

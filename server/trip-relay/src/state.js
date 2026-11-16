@@ -352,6 +352,61 @@ const OPS = {
     return { ok: true };
   },
 
+  // MARK: 공통 규칙 (SRL1116A01). `shared:rules` 인스턴스 하나에 내보낸 묶음과 검토 전 후보를 둔다.
+
+  async sharedGet(s) {
+    return (await s.get("sharedBundle")) ?? { version: 0 };
+  },
+
+  // 버전은 오르기만 한다(앱은 낮은 버전을 받지 않는다). 규칙을 거둘 때도 그 규칙을 뺀 새 버전을 낸다.
+  async sharedPut(s, { version, payload, signature, now }) {
+    const current = (await s.get("sharedBundle")) ?? { version: 0 };
+    if (version <= current.version) return { error: "stale_version", version: current.version };
+    await s.put("sharedBundle", { version, payload, signature, updatedAt: now });
+    return { ok: true, version };
+  },
+
+  // 후보: 지문마다 본문과 올린 기기 수. 시각은 날짜까지만 적고, 오래 다시 올라오지 않은 것은 지운다.
+  async sharedCandidatePut(s, { items, now, cap, maxAgeMs }) {
+    const day = Math.floor(now / DAY_MS) * DAY_MS;
+    let count = 0;
+    for (const [key, old] of await values(s, "cand:")) {
+      if (old.lastAt < now - maxAgeMs) await s.delete(key); else count++;
+    }
+    let added = 0;
+    for (const { fp, ...body } of items) {
+      const old = await s.get("cand:" + fp);
+      if (old) await s.put("cand:" + fp, { ...old, count: old.count + 1, lastAt: day });
+      else if (count < cap) { await s.put("cand:" + fp, { ...body, count: 1, firstAt: day, lastAt: day }); count++; added++; }
+    }
+    return { ok: true, added };
+  },
+
+  async sharedCandidateList(s, { min, now, maxAgeMs }) {
+    const all = (await values(s, "cand:")).filter(([, c]) => c.lastAt >= now - maxAgeMs).map(([key, c]) => ({ fp: key.slice(5), ...c }));
+    const items = all.filter((c) => c.count >= min).sort((a, b) => b.count - a.count || a.fp.localeCompare(b.fp));
+    return { total: all.length, items };
+  },
+
+  async sharedCandidateDrop(s, { fps }) {
+    let removed = 0;
+    for (const fp of fps) if (await s.delete("cand:" + fp)) removed++;
+    return { removed };
+  },
+
+  // 사용자 인스턴스: 이미 올린 후보의 지문. 같은 기기가 같은 규칙을 두 번 세지 않게 하고 하루 수를 막는다.
+  async sharedMark(s, { fps, now, perDay, keep }) {
+    const sent = (await s.get("sharedSent")) ?? [];
+    const fresh = [...new Set(fps)].filter((fp) => !sent.includes(fp));
+    if (!fresh.length) return { fresh };
+    const day = Math.floor(now / DAY_MS), row = (await s.get("count:shared")) ?? {};
+    const count = row.day === day ? row.count : 0;
+    if (count + fresh.length > perDay) return { error: "shared_daily_limit", retryAfter: seconds((day + 1) * DAY_MS - now) };
+    await s.put("count:shared", { day, count: count + fresh.length });
+    await s.put("sharedSent", [...sent, ...fresh].slice(-keep));
+    return { fresh };
+  },
+
   // MARK: 등록·입장
 
   async register(s, { purpose, now }) {

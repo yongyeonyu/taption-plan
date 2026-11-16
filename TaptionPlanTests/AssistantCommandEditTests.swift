@@ -531,7 +531,7 @@ extension AssistantCommandEditTests {
 
     /// 가르기 전(커밋 0ad7ffed 위의 값 타입 이동까지) 코드에서 뽑은 값.
     private static let pinnedSpecPrints: [String: String] = [
-        "addLedgerTrip": "097e9465", "addMyStop": "5ec85368", "addTripItem": "d0baa71d", "classifyInboxItem": "ec44fee2", "deleteCategory": "a2ef8504",
+        "addLedgerTrip": "097e9465", "addMyStop": "5ec85368", "addTripItem": "772a1a78", "classifyInboxItem": "ec44fee2", "deleteCategory": "a2ef8504",
         "deleteLedgerTrip": "bd70f0ea", "deleteManualRecord": "9db67c89", "deleteMyStop": "414e7552", "deleteTripItem": "69a1100f",
         "disconnectCalendar": "ca014f72", "extendRetention": "1367f581", "linkRecordToPlan": "4896d45c", "lowerShareLevel": "ae53b08d",
         "moveCategory": "03a27304", "openBackup": "7a21b93e", "planQuickAction": "86651dcb", "raiseShareLevel": "b322a8ae", "refreshNow": "c1486930",
@@ -541,7 +541,7 @@ extension AssistantCommandEditTests {
         "shortenRetention": "4aa60173", "stopTracking": "a60657b3", "turnOffHealth": "f3b53880", "updateLedgerTrip": "d36d1e6a",
         "updateMyStop": "21d82c5f", "updateTripItem": "b8137b48",
     ]
-    private static let pinnedGuidePrint = "950704ed14cf05ab"
+    private static let pinnedGuidePrint = "20d6919c5a9eef77"
 
     func testOperationsParseWithTheServerRulesAndCarryTheirKind() throws {
         let id = UUID().uuidString

@@ -21,14 +21,15 @@ final class FirstRunTutorialTests: XCTestCase {
         XCTAssertEqual(
             FirstRunTutorialStep.allCases,
             [
-                .welcome, .permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat,
+                .welcome, .aiConnect, .permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat,
                 .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters,
-                .calendar, .appleWatch, .aiConnect, .shortcuts, .password, .finish,
+                .calendar, .appleWatch, .shortcuts, .password, .finish,
             ]
         )
         XCTAssertNil(FirstRunTutorialStep.welcome.previous)
         XCTAssertNil(FirstRunTutorialStep.finish.next)
-        XCTAssertEqual(FirstRunTutorialStep.welcome.next, .permissions)
+        XCTAssertEqual(FirstRunTutorialStep.welcome.next, .aiConnect)
+        XCTAssertEqual(FirstRunTutorialStep.aiConnect.next, .permissions)
         XCTAssertEqual(FirstRunTutorialStep.finish.previous, .password)
     }
 
@@ -38,13 +39,45 @@ final class FirstRunTutorialTests: XCTestCase {
         XCTAssertEqual(Set(chapters).count, FirstRunTutorialChapter.allCases.count)
     }
 
+    // AIT1116A01
+    func testAIConnectComesRightAfterWelcomeAndHasOwnButtons() {
+        XCTAssertEqual(FirstRunTutorialStep.welcome.next, .aiConnect)
+        XCTAssertEqual(FirstRunTutorialStep.aiConnect.chapter, .start)
+        XCTAssertFalse(FirstRunTutorialStep.aiConnect.hasInput)
+    }
+
+    func testSavedAIConnectStepStillResolvesByName() {
+        defaults.set("aiConnect", forKey: FirstRunTutorialStore.stepKey)
+        XCTAssertEqual(FirstRunTutorialStore(defaults: defaults).savedStep, .aiConnect)
+    }
+
+    func testDemoCutsLoopThroughThree() {
+        XCTAssertEqual((0..<AIConnectDemoCuts.count).map { AIConnectDemoCuts.next(after: $0) }, [1, 2, 0])
+    }
+
+    func testBenefitsAreThreeInBothLanguages() {
+        for language in [MapHomeLanguage.korean, .english] {
+            let benefits = FirstRunAIConnectPage.benefits(language)
+            XCTAssertEqual(benefits.count, 3)
+            XCTAssertTrue(benefits.allSatisfy { !$0.title.isEmpty && !$0.detail.isEmpty })
+        }
+    }
+
+    func testNudgeShowsOnlyOnceAndNeverWhenConnected() {
+        XCTAssertTrue(AIConnectNudgePolicy.shouldShow(isConnected: false, alreadyShown: false))
+        XCTAssertFalse(AIConnectNudgePolicy.shouldShow(isConnected: true, alreadyShown: false))
+        XCTAssertFalse(AIConnectNudgePolicy.shouldShow(isConnected: false, alreadyShown: true))
+        AIConnectNudgePolicy.markShown(defaults: defaults)
+        XCTAssertTrue(AIConnectNudgePolicy.alreadyShown(defaults: defaults))
+    }
+
     func testFreshInstallStartsAtWelcome() {
         XCTAssertEqual(decision(), .present(.welcome))
     }
 
     func testOnlyInputStepsOfferStepSkip() {
         let skippable = FirstRunTutorialStep.allCases.filter(\.hasInput)
-        XCTAssertEqual(skippable, [.permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat, .counters, .calendar, .appleWatch, .aiConnect, .shortcuts, .password])
+        XCTAssertEqual(skippable, [.permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat, .counters, .calendar, .appleWatch, .shortcuts, .password])
     }
 
     func testEveryGuideStepHasRowsInBothLanguages() {

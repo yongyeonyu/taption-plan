@@ -1,0 +1,34 @@
+{
+ "format": "bokki-shared-rule-fixtures",
+ "version": 1,
+ "personal": ["끝자리 1234", "홍길동님", "홍*동", "김 철수 님 입금", "a@example.com", "잔액 120000원"],
+ "notPersonal": ["승인", "고객님", "카드고객님", "토스뱅크 체크", "Web발신", "1호점", "회원님 혜택 안내"],
+ "literals": [
+  { "pattern": "\\[Web발신\\]\\s*(?<merchant>.+) (?<amount>[\\d,]+)원 승인", "personal": false },
+  { "pattern": "토스뱅크 체크\\((?:\\d{4})\\) (?<amount>[\\d,]+)원", "personal": false },
+  { "pattern": "체크\\(1234\\) (?<amount>[\\d,]+)원", "personal": true },
+  { "pattern": "홍\\*동님 (?<amount>[\\d,]+)원 (?<merchant>.+)", "personal": true },
+  { "pattern": "홍길동님 (?<amount>[\\d,]+)원 입금", "personal": true },
+  { "pattern": ".+님 (?<amount>[\\d,]+)원 입금", "personal": false }
+ ],
+ "accept": [
+  { "in": { "type": "payment_text", "match": { "pattern": "(?<merchant>.+) (?<amount>[\\d,]+)원 승인", "sample": "동네가게 12,000원 승인" }, "result": { "kind": "expense", "name": "내 카드" } },
+    "out": { "type": "payment_text", "match": { "pattern": "(?<merchant>.+) (?<amount>[\\d,]+)원 승인" }, "result": { "kind": "expense" } } },
+  { "in": { "type": "text_ignore", "match": { "contains": ["혜택 안내", "광고"], "source": "토스" }, "result": { "reason": "광고 알림" } },
+    "out": { "type": "text_ignore", "match": { "contains": ["광고", "혜택 안내"], "source": "토스" }, "result": {} } },
+  { "in": { "type": "merchant_category", "match": { "contains": ["스타벅스"] }, "result": { "category": "cafe", "title": "커피" } },
+    "out": { "type": "merchant_category", "match": { "contains": ["스타벅스"] }, "result": { "category": "cafe" } } },
+  { "in": { "type": "receipt_hint", "match": { "contains": ["합계", "부가세"] }, "result": { "isReceipt": true } },
+    "out": { "type": "receipt_hint", "match": { "contains": ["부가세", "합계"] }, "result": { "isReceipt": true } } }
+ ],
+ "refuse": [
+  { "why": "a personal type", "rule": { "type": "own_account", "match": { "name": "비상금" }, "result": {} } },
+  { "why": "the user's own switch", "rule": { "type": "source_switch", "match": { "app": "토스" }, "result": { "expense": true, "income": false } } },
+  { "why": "a place pair", "rule": { "type": "place_pair_mode", "match": { "from": "집", "to": "회사" }, "result": { "mode": "bus" } } },
+  { "why": "a card's last digits in the pattern", "rule": { "type": "payment_text", "match": { "pattern": "체크\\(1234\\) (?<amount>[\\d,]+)원", "sample": "체크(1234) 5,000원" }, "result": { "kind": "expense" } } },
+  { "why": "a name in the pattern", "rule": { "type": "payment_text", "match": { "pattern": "홍길동님 (?<amount>[\\d,]+)원 입금", "sample": "홍길동님 5,000원 입금" }, "result": { "kind": "income" } } },
+  { "why": "a name in the words", "rule": { "type": "text_ignore", "match": { "contains": ["홍길동님", "입금"] }, "result": {} } },
+  { "why": "digits in a merchant word", "rule": { "type": "merchant_category", "match": { "equals": "가게 02123" }, "result": { "category": "food" } } },
+  { "why": "an unsafe pattern", "rule": { "type": "payment_text", "match": { "pattern": "(a+)+(?<amount>\\d+)", "sample": "aa1" }, "result": { "kind": "expense" } } }
+ ]
+}

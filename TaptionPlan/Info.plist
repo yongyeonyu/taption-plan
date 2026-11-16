@@ -115,6 +115,8 @@
 	<string>$(PAYMENT_ALERT_SHORTCUT_ICLOUD_ID)</string>
 	<key>PAYMENT_SHORTCUT_ICLOUD_ID</key>
 	<string>$(PAYMENT_SHORTCUT_ICLOUD_ID)</string>
+	<key>SHARED_RULES_PUBLIC_KEY</key>
+	<string>$(SHARED_RULES_PUBLIC_KEY)</string>
 	<key>TRIP_RELAY_HOST</key>
 	<string>$(TRIP_RELAY_HOST)</string>
 	<key>UIAppFonts</key>

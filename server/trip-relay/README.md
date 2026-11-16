@@ -135,3 +135,13 @@ curl -s -o /dev/null -w '%{http_code}\n' https://trip.bokkiyaw.com/plan -H "Auth
 배포하려면 `wrangler.local.toml`에도 `wrangler.toml` 끝의 `SHARE_ROOM` 바인딩과 migration `v2-share-room`을 더합니다. 없으면 `/share/…`만 503이고 나머지는 그대로입니다. 새 비밀값은 없습니다.
 
 배포 뒤 확인: 앱 새 빌드로 실행 → 「AI 연결」에서 PIN 설정 → 연결 키 만들기 → claude.ai 사용자 지정 커넥터에 `https://trip.bokkiyaw.com/mcp` 추가 → 앱의 연결 코드와 PIN으로 승인 → 「AI 연결」에 Claude가 연결됨으로 보이는지.
+
+## 공통 규칙 (SRL1116A01)
+
+운영자가 서명한 규칙 묶음을 모든 앱이 받아 쓰고, 동의한 사용자의 기기가 거른 후보를 모아 대표가 검토한다. 설계와 배포 순서는 `docs/SHARED_RULES_PLAN.md`.
+
+- 앱: `GET /shared/rules?since=<판>`(등록된 검색·주 키, 같으면 304), `POST /shared/candidates`(주 키, 동의한 사용자만).
+- 운영자: `GET /shared/admin/bundle`, `GET /shared/admin/candidates?min=2`, `DELETE /shared/admin/candidates?fps=a,b`, `POST /shared/admin/publish {payload, signature}`. `Authorization: Bearer <SHARED_RULES_ADMIN_TOKEN>`. 보통은 `scripts/shared-rules/admin.mjs`로 쓴다.
+- 비밀값(둘 다 없으면 관리 길은 503): `npx wrangler secret put SHARED_RULES_PUBLIC_KEY`(Ed25519 공개 키 base64), `npx wrangler secret put SHARED_RULES_ADMIN_TOKEN`(32자 이상). 서명 개인 키는 서버에 두지 않는다.
+- 저장: Durable Object 인스턴스 `shared:rules`(묶음 하나·후보 지문별 한 줄, 누가 올렸는지는 적지 않음)와 사용자 인스턴스의 `sharedSent`(올린 지문) 및 하루 수.
+
