@@ -422,6 +422,8 @@ extension MapHomeView {
             }
             .padding(.bottom, 8)
 
+            menuFinderSection
+
             if !sensorCollectionPermissionGate.sensorCollectionReady, menuPanelKind.columns == 1 {
                 sensorPermissionCard
                     .padding(.bottom, 10)
@@ -434,13 +436,9 @@ extension MapHomeView {
                 categoryMenuItem
                 menuGroupDivider
                 // 등록 장소·랜드마크 도장을 모은 장소 도감(INK1108A01).
-                menuRowButton("seal.fill", language.text("장소 도감", "Place book"), tint: .tpMenuChip(MapHomeInkWash.sealHex)) { isPlaceBookPresented = true }
+                menuShortcutRow(.placeBook)
                 menuGroupDivider
-                menuRowButton("book.closed.fill", language.text("여권", "Passport"), tint: .tpMenuChip(MapHomeInkWash.sealHex)) {
-                    passportStartPage = 0
-                    passportReturnPage = nil
-                    isPassportPresented = true
-                }
+                menuShortcutRow(.passport)
             }
             menuGroupLabel(language.text("화면", "View"))
             menuGroupCard {
@@ -458,17 +456,17 @@ extension MapHomeView {
             menuGroupCard {
                 MapHomeAppleWatchMenuItem(model: model, language: language)
                 menuGroupDivider
-                menuRowButton("calendar.badge.plus", language.text("캘린더 연결", "Calendar"), tint: .tpMenuChip("#3E8FDC")) { isCalendarConnectPresented = true }
+                menuShortcutRow(.calendarConnect)
                 menuGroupDivider
                 // 차량 오디오(블루투스·CarPlay)가 연결된 이동은 자동차로 확정한다(CAR1029A01).
-                menuRowButton("car.fill", language.text("내 차 등록", "My car"), tint: .tpMenuChip("#4F86B8")) { isCarAudioSheetPresented = true }
+                menuShortcutRow(.car)
                 menuGroupDivider
                 // 결제 문자·결제 앱 알림 자동 넣기와 Siri로 넣기(SHT1111A01).
-                menuRowButton("square.2.layers.3d", language.text("단축어 · Siri", "Shortcuts · Siri"), tint: .tpMenuChip("#C2557A")) { isShortcutsGuidePresented = true }
+                menuShortcutRow(.shortcuts)
                 // 「AI 연결」(AIR1110A03, 예전 AI 비서): AI별 연결·PIN·공유 수준. 중계 서버가 없으면 숨긴다.
                 if TripRelay.isAvailable {
                     menuGroupDivider
-                    menuRowButton("sparkles", language.text("AI 연결", "AI connections"), tint: .tpMenuChip("#7A6FD0")) { isAssistantPresented = true }
+                    menuShortcutRow(.ai)
                 }
             }
             } trailing: {
@@ -477,13 +475,13 @@ extension MapHomeView {
             menuGroupCard {
                 settingsMenuItem
                 menuGroupDivider
-                menuRowButton("bell.badge", language.text("알림", "Alerts"), tint: .tpMenuChip("#D9952B")) { isAlarmSettingsPresented = true }
+                menuShortcutRow(.alerts)
                 menuGroupDivider
-                menuRowButton("photo.on.rectangle.angled", language.text("하루 카드", "Day card"), tint: .tpMenuChip("#D9627F")) { isDailyCardPresented = true }
+                menuShortcutRow(.dayCard)
                 menuGroupDivider
-                menuRowButton("chart.bar.xaxis", language.text("계획과 실제", "Plan vs actual"), tint: .tpMenuChip("#2F3E6B")) { isPlanRealityPresented = true }
+                menuShortcutRow(.planReality)
                 menuGroupDivider
-                menuRowButton("info.circle", language.text("지도 출처", "Map attribution"), tint: .tpMenuChip("#8C8574")) { isMapAttributionPresented = true }
+                menuShortcutRow(.attribution)
             }
 
             Spacer(minLength: 28)
@@ -506,9 +504,11 @@ extension MapHomeView {
                     .fill(currentCoordinate == nil ? Color.tpInk.opacity(0.3) : Color.tpAccent)
                     .frame(width: 7, height: 7)
                 Text(
-                    currentCoordinate == nil
-                        ? language.text("위치 기록을 기다리는 중", "Waiting for location")
-                        : language.text("현재 위치 기록 중", "Recording current location")
+                    currentCoordinate != nil
+                        ? language.text("현재 위치 기록 중", "Recording current location")
+                        : sensorCollectionPermissionGate.sensorCollectionMissing.contains(where: { $0 == .locationAlways || $0 == .locationPrecise })
+                            ? language.text("위치 권한이 모자라요", "Location access is limited")
+                            : language.text("위치 기록을 기다리는 중", "Waiting for location")
                 )
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(.secondary)
@@ -540,6 +540,11 @@ extension MapHomeView {
         VStack(alignment: .leading, spacing: 0) {
             displayGroupHeader(language.text("사이드바", "Sidebar"), systemImage: "sidebar.right", isExpanded: $isSidebarGroupExpanded)
             if isSidebarGroupExpanded {
+                displayToggle(
+                    language.text("날짜 줄 늘 펼치기", "Date strip from any day"),
+                    systemImage: "calendar.day.timeline.leading",
+                    isOn: $dateBadgeAlwaysStrip
+                )
                 displayToggle(
                     language.text("날씨", "Weather"),
                     systemImage: "cloud.sun.fill",
@@ -586,7 +591,7 @@ extension MapHomeView {
                 .lineLimit(1)
             Image(systemName: "chevron.up.chevron.down")
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.tpInk.opacity(0.55))
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
@@ -602,7 +607,7 @@ extension MapHomeView {
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.tpInk.opacity(0.55))
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
@@ -624,7 +629,7 @@ extension MapHomeView {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.tpInk.opacity(0.55))
             }
             .foregroundStyle(Color.tpInk)
             .modifier(MapHomeMenuRowPadding())
@@ -674,7 +679,7 @@ extension MapHomeView {
                     Spacer()
                     Image(systemName: isCategoryMenuExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.tpInk.opacity(0.55))
                 }
                 .foregroundStyle(Color.tpInk)
                 .modifier(MapHomeMenuRowPadding())
@@ -714,7 +719,7 @@ extension MapHomeView {
                                     } label: {
                                         Image(systemName: expandedCategoryDetails.contains(category.id) ? "chevron.up" : "chevron.down")
                                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color.tpInk.opacity(0.55))
                                             .frame(width: 32, height: 32)
                                             .contentShape(Rectangle())
                                     }
@@ -922,7 +927,7 @@ extension MapHomeView {
                     Spacer()
                     Image(systemName: isLocationMenuExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.tpInk.opacity(0.55))
                 }
                 .foregroundStyle(Color.tpInk)
                 .modifier(MapHomeMenuRowPadding())
@@ -969,7 +974,7 @@ extension MapHomeView {
                     Spacer()
                     Image(systemName: isUserLocationsMenuExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.tpInk.opacity(0.55))
                 }
                 .foregroundStyle(Color.primary)
                 .padding(.vertical, 7)
@@ -1034,7 +1039,7 @@ extension MapHomeView {
                     Spacer()
                     Image(systemName: isDisplayMenuExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.tpInk.opacity(0.55))
                 }
                 .foregroundStyle(Color.tpInk)
                 .modifier(MapHomeMenuRowPadding())
@@ -1080,6 +1085,11 @@ extension MapHomeView {
                 .accessibilityLabel(language.text("안개 탐험 선택", "Choose fog of exploration"))
 
                 counterMenuItem
+                displayToggle(
+                    language.text("하루 요약 띠 (시험)", "Day summary bar (trial)"),
+                    systemImage: "sun.max.fill",
+                    isOn: $showsDaySummaryBand
+                )
                 sidebarDisplayGroup
                 mapDisplayGroup
             }
@@ -1098,7 +1108,7 @@ extension MapHomeView {
                 Spacer()
                 Image(systemName: isExpanded.wrappedValue ? "chevron.up" : "chevron.down")
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.tpInk.opacity(0.55))
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 12)

@@ -97,6 +97,10 @@ struct LedgerSheet: View {
                 summary = LedgerMonthSummary(book: book, month: month)
             }
             .task {
+                if LedgerPresenter.shared.startsAdding {
+                    LedgerPresenter.shared.startsAdding = false
+                    isAdding = true
+                }
                 await book.load()
                 await book.refreshRates()
                 await book.fillMissingKRW()

@@ -1733,6 +1733,11 @@ final class TodoPanelTests: XCTestCase {
 
     func testTabsPutCheckAndScheduleRightAfterAll() {
         XCTAssertEqual(LedgerMemoFilter.allCases, [.today, .check, .schedule, .memos, .inbox, .ai])
+        XCTAssertNil(LedgerMemoFilter.badgeText(nil))
+        XCTAssertNil(LedgerMemoFilter.badgeText(0))
+        XCTAssertEqual(LedgerMemoFilter.badgeText(3), "3")
+        XCTAssertEqual(LedgerMemoFilter.badgeText(120), "99+")
+        XCTAssertEqual(Set(LedgerMemoFilter.allCases.map(\.systemImage)).count, LedgerMemoFilter.allCases.count)
         XCTAssertEqual(LedgerMemoFilter.inbox.title(.korean), "내역")
         XCTAssertEqual(LedgerMemoFilter.today.title(.korean), "지출")
         XCTAssertEqual(LedgerMemoFilter.check.title(.korean), "확인")

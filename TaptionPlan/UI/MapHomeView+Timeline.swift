@@ -114,7 +114,8 @@ extension MapHomeView {
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .foregroundStyle(Color.tpInk.opacity(0.85))
                 .frame(width: 26, height: 26)
-                .contentShape(Circle())
+                // 위쪽은 날짜 배지라 옆과 아래로만 넓힌다(HUX1116A02).
+                .taptionHitOutset(horizontal: 9, vertical: 4)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(language.text("사이드바 펼치기", "Show sidebar"))
@@ -382,6 +383,7 @@ extension MapHomeView {
                                 .foregroundStyle(Color(hex: sticker.colorHex))
                                 .frame(width: 22, height: 22)
                                 .taptionRaised(.circle, fill: .white)
+                                .taptionHitOutset(horizontal: 8, vertical: 11)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(
@@ -420,9 +422,10 @@ extension MapHomeView {
                                 .foregroundStyle(memo.isSticker ? Color(hex: memo.stickerColorHex ?? "#F28FA9") : Color.tpInk)
                                 .frame(width: 22, height: 22)
                                 .taptionRaised(.circle, fill: .white)
+                                .taptionHitOutset(horizontal: 8, vertical: 11)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(memo.text) 메모")
+                        .accessibilityLabel(language.text("\(memo.text) 메모", "\(memo.text) memo"))
                         .position(
                             x: scheduleBadgeBaseX + scheduleBadgeOffset(id: "memo-\(memo.id)", minute: minute, isEvent: false, columns: badgeColumns),
                             y: min(max(y, MapHomeTimeSidebarMath.verticalInset), railHeight - MapHomeTimeSidebarMath.verticalInset)
@@ -445,9 +448,10 @@ extension MapHomeView {
                                 .padding(3)
                                 .frame(width: 22, height: 22)
                                 .taptionRaised(.circle, fill: .white)
+                                .taptionHitOutset(horizontal: 8, vertical: 11)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(event.title) 일정")
+                        .accessibilityLabel(language.text("\(event.title) 일정", "\(event.title) event"))
                         .position(
                             x: scheduleBadgeBaseX + scheduleBadgeOffset(id: "event-\(event.id)", minute: minute, isEvent: true, columns: badgeColumns),
                             y: min(max(y, MapHomeTimeSidebarMath.verticalInset), railHeight - MapHomeTimeSidebarMath.verticalInset)
@@ -517,7 +521,8 @@ extension MapHomeView {
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                 .foregroundStyle(enabled ? Color.tpInk : Color.tpSecondary.opacity(0.4))
                 .frame(width: timeRailWidth / 2, height: 22)
-                .contentShape(Rectangle())
+                // 위는 연필 단추와 닿아 8pt까지만 넓힌다(HUX1116A02).
+                .taptionHitOutset(vertical: 8)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)

@@ -183,6 +183,13 @@ struct MapHomeView: View {
 
     @AppStorage("mapHomeShowsFootprints") var showsFootprintsOnMap = true
 
+    /// 시험 옵션(HUX1116A03): 날짜 배지를 누르면 어느 날에서든 날짜 줄을 펼치고, 오늘이 아니면 줄 맨 앞에 「오늘」 칸을 둔다. 기본은 끔.
+    @AppStorage("mapHomeDateBadgeAlwaysStrip") var dateBadgeAlwaysStrip = false
+
+    /// 시험 옵션(HUX1116A06): 아래 메뉴 위 하루 요약 띠. 기본은 끔.
+    @AppStorage(MapHomeDaySummaryBandPolicy.storageKey) var showsDaySummaryBand = false
+    @State var daySummaryBandCache = MapHomeDaySummaryBandCache()
+
     @AppStorage(MapHomeSidebarTimeFormat.storageKey) var sidebarTimeFormatRaw = MapHomeSidebarTimeFormat.twentyFourHour.rawValue
 
 
@@ -211,6 +218,11 @@ struct MapHomeView: View {
     @State var pendingMemoLocationID: UUID?
 
     @State var isMapAttributionPresented = false
+
+    /// 홈 사용법 한 장과 메뉴 찾기·최근에 연 줄(HUX1116A05).
+    @State var isHomeGuidePresented = false
+    @State var menuSearchQuery = ""
+    @AppStorage("mapHomeMenuRecent") var menuRecentRaw = ""
 
     @State var isAlarmSettingsPresented = false
 
@@ -646,7 +658,14 @@ struct MapHomeView: View {
     var layoutStyle: MapHomeLayoutStyle { .tabBar }
 
     /// 사이드바를 펼치고 접는 튕김. 펼칠 때는 위에서 아래로 쫙 내려오고, 접을 때는 아래부터 위로 줄어든다.
-    static let sidebarToggleSpring = Animation.spring(response: 0.5, dampingFraction: 0.62)
+    /// 「동작 줄이기」가 켜져 있으면 튕기지 않고 짧게 바뀐다(HUX1116A02).
+    static var sidebarToggleSpring: Animation {
+        UIAccessibility.isReduceMotionEnabled ? .easeInOut(duration: 0.2) : .spring(response: 0.5, dampingFraction: 0.62)
+    }
+
+    static var dateBadgeSpring: Animation {
+        UIAccessibility.isReduceMotionEnabled ? .easeInOut(duration: 0.15) : .spring(response: 0.3, dampingFraction: 0.85)
+    }
 
     var selectedDaySpan: TimeSpan { MapHomeCounterTimelinePolicy.daySpan(of: model.selectedDate) }
 }

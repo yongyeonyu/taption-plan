@@ -3446,6 +3446,42 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - `release.sh --yes --request-id TFB1115A347` 종료 코드 0: VALID, 「TP Taption Plan 내부 테스트」 그룹 연결, 테스터 1명(`build/validation/TFB1115A347/testflight-report.json`). 서버 변경 없음. 아카이브용 중간 폴더는 디스크 때문에 지움.
 - 대표 기기 설치·기존 입금 제목 변경 확인은 하지 않음(받은 문자함 7일 안, 11-22 전에 깔아야 함).
 
+## HUX1116A01 · 메인 홈 화면 UI·UX 검토와 시안 (2026-11-16)
+
+- 만든 것: `docs/HOME_UX_REVIEW.md`(지금 구조·기존 진단 대조·참고 앱·제안 8개·물음 초안), `design/HUX1116A01/preview.html`(제안별 「지금 → 바꾼 뒤」 9쌍, 한 파일, 외부 자원 없음), `AGENTS.md` 문서 위치 한 줄. 앱 Swift 코드는 바꾸지 않음.
+- 근거: 커밋 `b5e79263`의 홈 코드를 읽어 정리. 핵심 몇 곳(여행 단추 그림, 날짜 배지 동작, 달력 날짜 누르기, 홈 배치 고정, 아래 메뉴 글자, 메뉴 상태 문구)은 해당 줄을 직접 다시 확인. 나머지 크기·개수는 조사 결과를 옮긴 것이고 줄마다 다시 세지는 않음.
+- 시안 확인: 앱 안 브라우저로 열어 9개 구역·그림 19장이 그려지고 콘솔 오류 없음, 밝은·어두운 화면 전환을 눈으로 확인.
+- 하지 않은 것: 앱 빌드·시뮬레이터·기기 확인(요청 범위 밖). 시안은 코드를 읽고 그린 그림이라 실제 화면과 세부가 다를 수 있음. 어두운 화면 색은 시안용으로 지어낸 값. 참고 앱은 직접 써 보지 않고 공개 자료 기준. 좁은 폭(휴대폰)에서 시안 페이지 배치는 확인하지 않음.
+
+## HUX1116A02 — 홈 제안 1·2·3 (터치 영역·집 이름표·기록 없는 날/권한 띠)
+- 단위 시험: `MapHomeLiveMapTests` 96개 실행, 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔). 시험 빌드(Debug)가 같은 실행에서 통과. 로그 `build/validation/HUX1116A02/unit-1.log`.
+- 첫 실행은 `MapHomeView+Support3.swift`의 옵셔널 폭 오류로 실패해 고친 뒤 다시 통과.
+- l10n `check.py` 실패 0, 구조 검사 통과.
+- 제한: 실기기·눈으로 본 확인은 아직 없음. 아래 막대 글자 최소 배율, 「가장 가까운 기록 날로 가기」는 달력 열기로 단순화.
+
+## HUX1116A03 — 홈 제안 4 (달력 날짜 고르면 시트 낮춤, 「날짜 줄 늘 펼치기」 시험 옵션)
+- 단위 시험: `MapHomeLiveMapTests` 96개 실행, 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A03/unit-1.log`.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 시트 낮춤·뒤 지도 만지기·「오늘」 칸은 화면 시험·기기 눈 확인을 하지 않음. 새 동작 전용 단위 시험 없음(보기 코드만 바뀜).
+
+## HUX1116A04 — 홈 제안 5 (할 일 판 탭 개수)
+- 단위 시험: `MapHomeLiveMapTests` 96개 + `LedgerTests` 34개, 합 130개 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A04/unit-1.log`.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 탭 줄 모양·긴 언어 잘림 여부는 눈으로 보지 않음(기기·화면 시험 없음). 「AI」 탭 개수는 넣지 않음.
+
+## HUX1116A05 — 홈 제안 6·7 (홈 사용법·첫 세 번 길잡이·₩ ＋·메뉴 찾기·최근·시트 전 메뉴 닫기)
+- 단위 시험: `MapHomeLiveGateTests` 10 + `MapHomeLiveMapTests` 96 + `LedgerTests` 34 = 140개 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔, 파생 데이터는 워크트리 `build/dd-hux`). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A05/unit-4.log`.
+- 앞선 실행: unit-1(LiveMap·Ledger 130개 통과, LiveGate 빠짐), unit-2(LiveGate 10개 중 메뉴 찾기 1개 실패 — 「·」 기호를 거르지 않음 → 글자·숫자·₩만 비교하게 고침), unit-3(외장 볼륨 공간 없음으로 결과 저장 실패, 시험 결과 아님).
+- 바로잡음: HUX1116A02~A04 기록의 단위 시험에는 `MapHomeLiveGateTests`(안내 띠 시험 2개 포함)가 빠져 있었음. 이번 unit-4에서 그 2개를 포함해 통과.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 화면·기기 눈 확인 없음(찾기 칸·최근 줄·사용법 시트·₩ ＋·길잡이 띠 모두 보지 않음).
+
+## HUX1116A06 — 홈 제안 8 (하루 요약 띠, 시험 옵션·기본 끔)
+- 단위 시험: `MapHomeLiveGateTests` 11 + `MapHomeLiveMapTests` 96 + `LedgerTests` 34 = 141개 실패 0, `** TEST SUCCEEDED **` (시뮬레이터 99AC6F35, 병렬 끔, 파생 데이터 `build/dd-hux`). 같은 실행에서 Debug 시험 빌드 통과. 로그 `build/validation/HUX1116A06/unit-2.log`.
+- 첫 실행(unit-1)은 `LedgerMoney.text`를 MainActor 밖에서 불러 컴파일 오류 → 정책에 `@MainActor`를 붙여 고침.
+- 구조 지표 통과, l10n `check.py` 실패 0.
+- 제한: 띠를 켠 화면·사진 반달과의 겹침·하루 요약 열림은 눈으로 보지 않음(기기·화면 시험 없음).
+
 ## TVY1116B01 · 여행 모드 B안 「지도 + 날짜 보드」 (2026-11-16 새벽, 시뮬레이터)
 
 - 넣은 것: ① 코스 줄을 길게 눌러 일차 칩에 놓으면 그 날 코스 끝으로 옮김(`TravelDayBoard.swift`), 편집기 「⋯」 메뉴에 「다른 날로…」(날짜 목록) ② 그날 코스의 「동선 정리」 단추(`TravelCourseSort.swift`, 가장 가까운 이웃 + 2-opt, 직선 거리) ③ 여행 시작일을 바꾸면 일정이 함께 옮겨지는 것은 이미 `TravelNewTripSheet.create` → `shiftTravelTrip`이 묻지 않고 함(공유 여행은 막음). 대표 객관식 답(2026-11-16) 「지금처럼 묻지 않기」라 코드는 그대로 두고 세부 계획까지 따라가는지 보는 시험만 더함. 예약·잠을 다른 날로 옮길 때는 대표 답 「시각 그대로, 날만 바꾸기」. 저장 형식은 바꾸지 않음.
@@ -3456,3 +3492,9 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 번역: `scripts/l10n/check.py` 실패 0(새 문구 5개 × 12개 언어). `extract.py`가 만든 `source.json`은 다른 갈래와 충돌을 피하려고 커밋하지 않음 → 합친 뒤 메인 세션이 `extract.py` → `check.py` → `generate.py`.
 - 겪은 일: 빌드 잠금을 02:59까지 다른 세션들이 쥐었고 맥 여유가 6.6GB까지 줄어 빌드를 미룸. 대표 지시(공지)로 외장 작업 볼륨 `/Volumes/TaptionPlanWork/dd/TVY1116B01`에 빌드했고 끝난 뒤 그 폴더와 `sim/TVY1116B01`을 지움(약 2.6GB). HFS+ 볼륨에서는 Xcode 컴파일 캐시(`CompilationCache.noindex`)가 37GB를 통째로 잡아 40GB짜리 전용 볼륨이 꽉 찼음 → `COMPILATION_CACHE_ENABLE_CACHING=NO`로 돌리니 2.6GB.
 - 알고 둘 것: 일차가 많아 칩이 화면 밖에 있으면 끌어서는 닿지 않음(메뉴로), 옮긴 일정이 길면 자정을 넘을 수 있음(길이를 줄이지 않음), 동선은 직선 거리이고 예약·숙소·잠·이동·항공을 넘어 바꾸지 않아 줄어드는 폭이 작을 수 있음, 핀 없는 곳은 순서만 제자리(시각은 밀릴 수 있음), 공유 여행에서는 옮겨도 되돌리기 줄이 없음(기존 결정).
+
+## HUX1116A02~A06 — main(3697d4b3) 합친 뒤 재시험
+- 합침 커밋 `ef62e5fc`. 충돌: l10n 번역 12개(양쪽 문구 모두 살림, `extract.py` 다시 돌림)·`temp.md`·`test.md`(양쪽 기록 유지).
+- 단위 시험: `MapHomeLiveGateTests` 11 + `MapHomeLiveMapTests` 96 + `LedgerTests` 34 = 141개 실패 0, `** TEST SUCCEEDED **`, 같은 실행에서 Debug 시험 빌드 통과(시뮬레이터 99AC6F35). 로그 `build/validation/HUX1116A06/merge-1.log`.
+- l10n `check.py` 실패 0. 구조 지표 「총 줄 수 +10% 초과」 실패는 main 단독에서도 같음(248,597줄) — 이 브랜치 몫 아님.
+- 실기기 시험 없음.

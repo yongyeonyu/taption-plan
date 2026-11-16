@@ -1969,4 +1969,72 @@ final class MapHomeLiveGateTests: XCTestCase {
         presenter.isPresented = false
         XCTAssertFalse(MapHomeLiveGate.shared.isCovered)
     }
+
+    // MARK: - Status band (HUX1116A02)
+
+    func testStatusBandShowsEmptyDayOnlyOnPastDaysAndPermissionsOnlyToday() {
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: false, dayIsEmpty: true, permissionsReady: false), .emptyDay)
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: false, dayIsEmpty: false, permissionsReady: false))
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: true, permissionsReady: false), .permissions)
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: true, permissionsReady: true))
+    }
+
+    func testStatusBandHomeTipOnlyFirstThreeLaunchesTodayAfterPermissions() {
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: true, tipLaunches: 0))
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: true, tipLaunches: 1), .homeTip)
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: true, tipLaunches: 3), .homeTip)
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: true, tipLaunches: 4))
+        XCTAssertEqual(MapHomeStatusBandPolicy.kind(isToday: true, dayIsEmpty: false, permissionsReady: false, tipLaunches: 1), .permissions)
+        XCTAssertNil(MapHomeStatusBandPolicy.kind(isToday: false, dayIsEmpty: false, permissionsReady: true, tipLaunches: 1))
+    }
+
+    func testMenuFinderMatchesBothLanguagesAndKeywords() {
+        let all = MapHomeMenuShortcut.allCases
+        XCTAssertEqual(MapHomeMenuFinder.matches("카운터", in: all), [.counter])
+        XCTAssertTrue(MapHomeMenuFinder.matches("COUNTER", in: all).contains(.counter))
+        XCTAssertTrue(MapHomeMenuFinder.matches("백업", in: all).contains(.dataProtection))
+        XCTAssertTrue(MapHomeMenuFinder.matches("  ", in: all).isEmpty)
+        XCTAssertTrue(MapHomeMenuFinder.matches("단축어Siri", in: all).contains(.shortcuts))
+    }
+
+    @MainActor
+    func testDaySummaryBandTextSkipsEmptyPartsAndCacheReusesValue() {
+        XCTAssertNil(MapHomeDaySummaryBandPolicy.summary(places: 0, steps: nil, spent: 0, language: .korean))
+        XCTAssertEqual(MapHomeDaySummaryBandPolicy.summary(places: 4, steps: 0, spent: 0, language: .korean), "머문 곳 4")
+        let full = MapHomeDaySummaryBandPolicy.summary(places: 4, steps: 6240, spent: 18500, language: .korean)
+        XCTAssertEqual(full?.components(separatedBy: " · ").count, 3)
+        let cache = MapHomeDaySummaryBandCache()
+        let key = MapHomeDaySummaryBandCache.Key(revision: 1, day: .distantPast, ledgerRevision: 0, english: false, minute: 0)
+        var calls = 0
+        _ = cache.value(for: key) { calls += 1; return "a" }
+        XCTAssertEqual(cache.value(for: key) { calls += 1; return "b" }, "a")
+        XCTAssertEqual(calls, 1)
+        var next = key
+        next.revision = 2
+        XCTAssertEqual(cache.value(for: next) { calls += 1; return "c" }, "c")
+    }
+
+    func testMenuRecentsKeepsNewestThreeWithoutDuplicates() {
+        var raw = ""
+        for shortcut in [MapHomeMenuShortcut.alerts, .dayCard, .alerts, .ledger, .car] {
+            raw = MapHomeMenuFinder.recents(raw, adding: shortcut)
+        }
+        XCTAssertEqual(MapHomeMenuFinder.recentShortcuts(raw), [.car, .ledger, .alerts])
+        XCTAssertEqual(MapHomeMenuFinder.recentShortcuts("alerts,unknown,car"), [.alerts, .car])
+        XCTAssertFalse(MapHomeMenuShortcut.counter.opensSheet)
+        XCTAssertTrue(MapHomeMenuShortcut.placeBook.opensSheet)
+    }
+
+    func testStatusBandDismissalIsPerKindAndDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let day = calendar.date(from: DateComponents(year: 2026, month: 11, day: 3, hour: 23))!
+        let key = MapHomeStatusBandPolicy.dayKey(day, calendar: calendar)
+        XCTAssertEqual(key, "2026-11-03")
+        XCTAssertEqual(MapHomeStatusBandPolicy.dismissalToken(.emptyDay, dayKey: key), "emptyDay:2026-11-03")
+        XCTAssertNotEqual(
+            MapHomeStatusBandPolicy.dismissalToken(.emptyDay, dayKey: key),
+            MapHomeStatusBandPolicy.dismissalToken(.permissions, dayKey: key)
+        )
+    }
 }
