@@ -104,7 +104,10 @@ private final class TravelModeTransitionDriver {
         UIView.setAnimationsEnabled(false)
         withTransaction(transaction) { isCoverShown = shown }
         // 덮개 안 화면이 나타나면 되돌린다. 나타나지 않는 경우를 위해 0.5초 뒤에도 되돌린다.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { UIView.setAnimationsEnabled(true) }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
+            UIView.setAnimationsEnabled(true)
+        }
     }
 }
 
