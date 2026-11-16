@@ -70,8 +70,8 @@
 | `keygen` | 서명 키 쌍 생성, 공개 키 표시 |
 | `candidates [--min N]` | 기기 N대(기본 2) 이상이 올린 후보를 번호와 함께 표시 |
 | `draft 1,3,4` | 고른 후보를 초안(`drafts/next.json`)에 더함. 결제 정규식은 **대표가 지어낸 견본 글**을 직접 채워야 함(실제 문자 금지) |
-| `status` | 서버 묶음과 초안 비교 |
-| `publish` | 초안을 다음 판으로 서명해 올림 — 이 순간부터 모든 앱이 받는다 |
+| `status` | 서버 묶음과 초안 비교(더한 것 +, 뺀 것 −, 기준 판) |
+| `publish` | 초안을 다음 판으로 서명해 올림 — 이 순간부터 모든 앱이 받는다. 올린 초안은 `drafts/published-v<판>.json`으로 옮겨 다음 `draft`는 서버의 새 판에서 시작. 초안이 만든 때의 판(`baseVersion`)과 서버 판이 다르면(그 사이 `withdraw` 등) 거둔 규칙이 되살아나지 않게 거절(REV1117A02) |
 | `withdraw id,…` | 그 규칙을 뺀 새 판을 올림 |
 | (서버) `DELETE /shared/admin/candidates?fps=` | 검토 뒤 후보 버림 |
 
