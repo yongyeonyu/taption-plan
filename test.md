@@ -10,6 +10,7 @@
 - 고침 2 `c03801ba`(지도 위 화랑이·집 고양이 Canvas 비동기): 대기 메인 CPU 3,556 → 2,923ms(2,832~3,003), 전체 CPU·프레임 그대로. `MapHomeStickmanTests` 기기 83개 통과(5개 건너뜀, 0 실패), Debug 빌드 통과.
 - 고침 3 `cf063cf2`(시간 끌기 카메라를 홈 상태 없이 벡터 지도에 직접): 시간 끌기 154 → 207프레임(199~221), 메인 CPU 4,934 → 3,025ms, 40ms 넘는 끊김 56 → 42, 다른 항목 오차 안(맥 부하 8~47). `RuntimeEfficiencyTests` 기기 12개 통과(새 시험 `testVectorCameraChannelDeliversOnlyToLiveSink` 포함). 첫 시도는 시험 실행기가 연결 전에 멈춤(기기 쪽 오류), 다시 돌려 통과.
 - main 합친 뒤(`e15cae0c`, main `1b3844d7`까지): 앱 Debug build-for-testing 통과, 기기에서 `MapHomeStickmanTests`·`MapHomeTimeRailCardTests`·`RuntimeEfficiencyTests` 99개 통과(5개 건너뜀, 0 실패, 맥 부하 23). 합친 뒤 성능은 다시 재지 않았다.
+- 인수인계: 2026-11-16 메인 세션에 머지 요청을 보냄(끝 커밋 `d5dbf912`). 기기 잠금 해제, 작업 볼륨 `PRF1116Work`는 꺼냈고 이미지 셋(약 42GB) 삭제는 안전 검사에 막혀 대표·메인 세션 몫으로 넘김.
 - 못 잰 것: Time Profiler(`xctrace`가 기기를 오프라인으로 봄), 손가락 핀치 확대, 120Hz(기기 60Hz), 실제 GPS 이동 중 수치, 손으로 끄는 실제 손짓(측정은 같은 경로를 코드로 흉내). 고침 3의 화면 모습(끄는 동안 지도가 화랑이를 따라가는지)은 눈으로 보지 않았다 — 카메라 값은 `focusMap`과 같은 식이다.
 
 ## STY1116A01 · 일상↔여행 전환 효과·전환 아이콘·스타일 통일 1차 (2026-11-16)
