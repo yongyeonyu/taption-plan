@@ -1101,13 +1101,12 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
             sleep(1)
             app.buttons["계획표"].tap()
             // 날을 바꿨다 돌아오면 재생 헤드가 그날 첫 일정으로 돌아간다(아래 단계의 누를 자리를 맞추려고).
-            // 당일 여행(예: 견본 여행)이 먼저 열리면 2일차가 없으니 날 바꾸기를 건너뛴다.
+            // 아래 단계는 여러 날 여행의 계획표 칸 자리를 누른다. 당일 여행(예: 견본 여행)이 먼저 열리면 칸 배치가 달라 재지 않는다.
             let secondDay = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "2일차")).firstMatch
-            if secondDay.waitForExistence(timeout: 2) {
-                secondDay.tap()
-                sleep(1)
-                app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "1일차")).firstMatch.tap()
-            }
+            try XCTSkipUnless(secondDay.waitForExistence(timeout: 2), "처음 열리는 여행이 당일 여행인 기기")
+            secondDay.tap()
+            sleep(1)
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "1일차")).firstMatch.tap()
         }
         sleep(1)
         shot(app, "1-table")

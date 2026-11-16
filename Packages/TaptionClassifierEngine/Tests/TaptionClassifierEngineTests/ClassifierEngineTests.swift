@@ -2,12 +2,13 @@ import XCTest
 @testable import TaptionClassifierEngine
 
 final class ClassifierTaxonomyAndKeywordTests: XCTestCase {
-    func testTaxonomyV3HasHealthRunningAndSplitStudy() {
+    /// v5(DTL1111A01): 센서로 정할 수 없는 상세(공부의 「수업」 등)는 기본 목록에서 빠지고 직접 추가로 돌렸다.
+    func testTaxonomyHasHealthRunningAndStudyAcademy() {
         let taxonomy = ClassifierTaxonomy.current
-        XCTAssertEqual(taxonomy.version, 3)
+        XCTAssertEqual(taxonomy.version, 5)
         XCTAssertNotNil(taxonomy.category("health"))
         XCTAssertNotNil(taxonomy.detail(categoryID: "movement", behavior: "running"))
-        XCTAssertNotNil(taxonomy.detail(categoryID: "study", behavior: "class"))
+        XCTAssertNil(taxonomy.detail(categoryID: "study", behavior: "class"))
         XCTAssertNotNil(taxonomy.detail(categoryID: "study", behavior: "academy"))
         XCTAssertNotNil(taxonomy.detail(categoryID: "movement", behavior: "train"))
     }
