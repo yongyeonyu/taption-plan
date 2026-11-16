@@ -2,6 +2,13 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1117A349 · TestFlight 349 (2026-11-17 새벽)
+
+- 판: main `25176d78`(TBH1116A01·RFT1116A02·RFT1116A03·PRF1116A02·DCB1116A01·MRG1117A01을 합침). 올리기 전 전체 시험 실패 0(`MRG1117A01` 절), 서버 206·패키지 시험 통과.
+- `scripts/testflight/release.sh --yes --request-id TFB1117A349` 종료 0: 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출(보고서 `build/validation/TFB1117A349/testflight-report.json`).
+- 빌드 번호: `CURRENT_PROJECT_VERSION` 8곳과 앱·위젯·Watch·Watch 위젯 `Info.plist` 349, 아카이브 안 네 번들(`TaptionPlan.app`·`TaptionPlanWidget.appex`·`TaptionPlanWatch.app`·`TaptionPlanWatchWidget.appex`)도 349.
+- 실기기 설치·눈 확인은 아직 없음(대표 아이폰 11에서 시간 막대 모양·여행 단추·하루 카드 말풍선 확인 필요).
+
 ## MRG1117A01 · 합친 main(`b4081747`) 전체 시험 실패 0 (2026-11-17 새벽, 시뮬레이터, 실기기 없음)
 
 - 환경: 시뮬레이터 `99AC6F35…`(iOS 27.0), Debug, `-parallel-testing-enabled NO`, 공유 빌드 잠금. 로그·결과 묶음 `build/validation/MRG1117A01-fix/`(각 `.load`에 시작·끝 `uptime`).
