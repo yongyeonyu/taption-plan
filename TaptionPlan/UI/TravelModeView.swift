@@ -894,6 +894,7 @@ struct TravelModeView: View {
                     }
                 )
                 dayChips(entry)
+                TravelPuzzleDrawer(model: model, tripID: entry.id, language: language)
                 if showsCourse(entry) {
                     TravelCourseView(
                         table: table(entry), items: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }, language: language,

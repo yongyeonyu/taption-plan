@@ -579,6 +579,9 @@
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
 		CC4A1111A010000000000002 /* FirstRunCarPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A1111A010000000000001 /* FirstRunCarPage.swift */; };
 		A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000005 /* AssistantSafetyViews.swift */; };
+		C1A1116A01B0000000000000 /* AIConnectNudge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A01F0000000000000 /* AIConnectNudge.swift */; };
+		C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A02F0000000000000 /* TravelPuzzle.swift */; };
+		C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */; };
 		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
 		B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */; };
 		B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */; };
@@ -753,6 +756,7 @@
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
 		A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */; };
+		C1A1116A04B0000000000000 /* TravelPuzzleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */; };
 		A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */; };
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
 		A1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift */; };
@@ -1387,6 +1391,9 @@
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
 		CC4A1111A010000000000001 /* FirstRunCarPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunCarPage.swift; sourceTree = "<group>"; };
 		F1A1110A0200000000000005 /* AssistantSafetyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSafetyViews.swift; sourceTree = "<group>"; };
+		C1A1116A01F0000000000000 /* AIConnectNudge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConnectNudge.swift; sourceTree = "<group>"; };
+		C1A1116A02F0000000000000 /* TravelPuzzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzle.swift; sourceTree = "<group>"; };
+		C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleDrawer.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationAlwaysPrompt.swift; sourceTree = "<group>"; };
 		B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeIslandOutlines.swift; sourceTree = "<group>"; };
@@ -1557,6 +1564,7 @@
 		F51002000000000000000001 /* PlanDayDataSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDataSnapshot.swift; sourceTree = "<group>"; };
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
 		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
+		C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialTests.swift; sourceTree = "<group>"; };
 		F52000000000000000000002 /* MapHomeLiveMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapTests.swift; sourceTree = "<group>"; };
 		F1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackStaticLayersTests.swift; sourceTree = "<group>"; };
@@ -1799,6 +1807,7 @@
 				F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */,
 				B10816000000000000000006 /* LiveActivityDaySummaryTests.swift */,
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
+				C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */,
 				F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */,
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
 				F1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift */,
@@ -1977,6 +1986,9 @@
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
 				CC4A1111A010000000000001 /* FirstRunCarPage.swift */,
 				F1A1110A0200000000000005 /* AssistantSafetyViews.swift */,
+				C1A1116A01F0000000000000 /* AIConnectNudge.swift */,
+				C1A1116A02F0000000000000 /* TravelPuzzle.swift */,
+				C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */,
 				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
 				B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */,
 				B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */,
@@ -3012,6 +3024,9 @@
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
 				CC4A1111A010000000000002 /* FirstRunCarPage.swift in Sources */,
 				A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */,
+				C1A1116A01B0000000000000 /* AIConnectNudge.swift in Sources */,
+				C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */,
+				C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */,
 				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
 				B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */,
 				B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */,
@@ -3419,6 +3434,7 @@
 				A5B1102A0200000000000020 /* FeatureEngineTests+Widget.swift in Sources */,
 				B10816000000000000000007 /* LiveActivityDaySummaryTests.swift in Sources */,
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
+				C1A1116A04B0000000000000 /* TravelPuzzleTests.swift in Sources */,
 				A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */,
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
 				A1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift in Sources */,
