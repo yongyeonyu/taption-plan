@@ -7,7 +7,7 @@ extension MapHomeView {
 
     /// 가계부 화면 호스트. 지도 앞 층에 늘 둔다(하단 막대·왼쪽 위 단추는 화면에 따라 숨는다).
     var ledgerSheetHost: some View {
-        LedgerSheetHost(language: language, tripID: isTravelMode ? ledgerTripID : nil, model: model)
+        LedgerSheetHost(language: language, tripID: nil, model: model)
     }
 
     /// 화면이 앞에 있고 가계부가 홈을 덮고 있지 않을 때만 홈의 화면용 갱신을 돌린다(LGS1115A01).
@@ -23,11 +23,5 @@ extension MapHomeView {
     /// 홈이 읽는 실시간 경로. `homeLatestReading`과 같은 규칙.
     var homeLiveRoute: LiveRouteState {
         work.heldLiveRoute.read(isCovered: MapHomeLiveGate.shared.isCovered) { model.liveRouteState }
-    }
-
-    /// 여행 모드에서 고른 날의 여행. 그 여행에 가계부 기록을 묶는다.
-    var ledgerTripID: String? {
-        let calendar = Calendar.autoupdatingCurrent
-        return model.settings.travelPlanStops.first { $0.tripID != nil && calendar.isDate($0.day, inSameDayAs: model.selectedDate) }?.tripID
     }
 }

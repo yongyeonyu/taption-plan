@@ -155,6 +155,9 @@
 		01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */; };
 		A10000000000000000000008 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* ReviewView.swift */; };
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
+		AA6377B2DB6190855BE310B6 /* SettingsView+Connections.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDDF9E63D00A2D25D95FE8E /* SettingsView+Connections.swift */; };
+		4765C0DD433E1DC7D1C756D4 /* SettingsView+FrequentPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EBD28CC58EC3980EB620ED /* SettingsView+FrequentPlaces.swift */; };
+		AC65BCB818D84ADC745630DD /* SettingsFrequentPlaceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C367F28ED1FD42AF95FAA8A /* SettingsFrequentPlaceDetailView.swift */; };
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
 		5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */; };
 		F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */; };
@@ -448,6 +451,9 @@
 		A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000095 /* RoutePolylineDecimator.swift */; };
 		A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000086 /* RouteTimelineDataTests.swift */; };
 		A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000087 /* MapHomeLocationPresentation.swift */; };
+		090C0E05BE215655607CA5AA /* MapHomeStickmanAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B259E6BEF3249FFF11B5C3 /* MapHomeStickmanAction.swift */; };
+		9CC78DD635FB9737A79FB408 /* MapHomeStickmanActionResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F3816672287B4F48039597A /* MapHomeStickmanActionResolver.swift */; };
+		D2D35180B769E6A9754A1E06 /* MapHomeStickmanMarker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2513A32EA4ABA9F5A424BC91 /* MapHomeStickmanMarker.swift */; };
 		A10000000000000000000088 /* BiometricDataProtection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000088 /* BiometricDataProtection.swift */; };
 		A10000000000000000000092 /* PlanDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000092 /* PlanDayDatabase.swift */; };
 		A10000000000000000000093 /* WatchDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000093 /* WatchDayDatabase.swift */; };
@@ -505,6 +511,8 @@
 		A1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */; };
 		A10000000000000001A70001 /* MapHomeView+Work.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000001A70001 /* MapHomeView+Work.swift */; };
 		A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */; };
+		1EE60D1A9993E94AB6D30D31 /* MapHomeView+Presentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 421CE17672A71C5D8551BD47 /* MapHomeView+Presentation.swift */; };
+		83C870242587C168ECDEE4DC /* MapHomeView+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B8D737162C25999DE9E3DD1 /* MapHomeView+Lifecycle.swift */; };
 		C51A1111A010000000000004 /* MapHomeView+Siri.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51A1111A010000000000003 /* MapHomeView+Siri.swift */; };
 		A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */; };
 		A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E4358522139E5590681710 /* MapHomeView+Support3.swift */; };
@@ -819,6 +827,10 @@
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
 		A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */; };
+		733D3E485C90FB5E2205FD08 /* MapHomeRouteSpeedGradient.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8B98F2F35737F3F3C9AEFE /* MapHomeRouteSpeedGradient.swift */; };
+		D7D1BF75BEA1E485287CFB0C /* MapHomeLiveZoomPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52DFB1FCF52F58A934D0221 /* MapHomeLiveZoomPolicies.swift */; };
+		2D84661F137B146508FC8D3B /* MapHomePlaybackDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1177AFF722418A5D27EB3C97 /* MapHomePlaybackDiagnostics.swift */; };
+		2973B92D955BAA51E9C682DA /* MapHomeRenderMemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = C95DD96D397BAA473F32095B /* MapHomeRenderMemo.swift */; };
 		C1A1116A04B0000000000000 /* TravelPuzzleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */; };
 		A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */; };
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
@@ -1060,6 +1072,9 @@
 		2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000008 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		F10000000000000000000009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		CCDDF9E63D00A2D25D95FE8E /* SettingsView+Connections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Connections.swift"; sourceTree = "<group>"; };
+		60EBD28CC58EC3980EB620ED /* SettingsView+FrequentPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+FrequentPlaces.swift"; sourceTree = "<group>"; };
+		8C367F28ED1FD42AF95FAA8A /* SettingsFrequentPlaceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsFrequentPlaceDetailView.swift; sourceTree = "<group>"; };
 		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
 		3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSliderScreen.swift; sourceTree = "<group>"; };
 		71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AddPlanSheet+CategoryPickers.swift"; sourceTree = "<group>"; };
@@ -1310,6 +1325,9 @@
 		F10000000000000000000095 /* RoutePolylineDecimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePolylineDecimator.swift; sourceTree = "<group>"; };
 		F10000000000000000000086 /* RouteTimelineDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineDataTests.swift; sourceTree = "<group>"; };
 		F10000000000000000000087 /* MapHomeLocationPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLocationPresentation.swift; sourceTree = "<group>"; };
+		90B259E6BEF3249FFF11B5C3 /* MapHomeStickmanAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanAction.swift; sourceTree = "<group>"; };
+		8F3816672287B4F48039597A /* MapHomeStickmanActionResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanActionResolver.swift; sourceTree = "<group>"; };
+		2513A32EA4ABA9F5A424BC91 /* MapHomeStickmanMarker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanMarker.swift; sourceTree = "<group>"; };
 		F10000000000000000000088 /* BiometricDataProtection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricDataProtection.swift; sourceTree = "<group>"; };
 		F10000000000000000000091 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = ../Products.storekit; sourceTree = "<group>"; };
 		F10000000000000000000092 /* PlanDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDatabase.swift; sourceTree = "<group>"; };
@@ -1371,6 +1389,8 @@
 		F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Playback2.swift"; sourceTree = "<group>"; };
 		F10000000000000001A70001 /* MapHomeView+Work.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Work.swift"; sourceTree = "<group>"; };
 		F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support.swift"; sourceTree = "<group>"; };
+		421CE17672A71C5D8551BD47 /* MapHomeView+Presentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Presentation.swift"; sourceTree = "<group>"; };
+		5B8D737162C25999DE9E3DD1 /* MapHomeView+Lifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Lifecycle.swift"; sourceTree = "<group>"; };
 		C51A1111A010000000000003 /* MapHomeView+Siri.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Siri.swift"; sourceTree = "<group>"; };
 		F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support2.swift"; sourceTree = "<group>"; };
 		F1E4358522139E5590681710 /* MapHomeView+Support3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support3.swift"; sourceTree = "<group>"; };
@@ -1681,6 +1701,10 @@
 		F51002000000000000000001 /* PlanDayDataSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDataSnapshot.swift; sourceTree = "<group>"; };
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
 		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
+		EE8B98F2F35737F3F3C9AEFE /* MapHomeRouteSpeedGradient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRouteSpeedGradient.swift; sourceTree = "<group>"; };
+		A52DFB1FCF52F58A934D0221 /* MapHomeLiveZoomPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveZoomPolicies.swift; sourceTree = "<group>"; };
+		1177AFF722418A5D27EB3C97 /* MapHomePlaybackDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackDiagnostics.swift; sourceTree = "<group>"; };
+		C95DD96D397BAA473F32095B /* MapHomeRenderMemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRenderMemo.swift; sourceTree = "<group>"; };
 		C1A1116A04F0000000000000 /* TravelPuzzleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialTests.swift; sourceTree = "<group>"; };
 		F52000000000000000000002 /* MapHomeLiveMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapTests.swift; sourceTree = "<group>"; };
@@ -1992,6 +2016,8 @@
 				99362D6409E1783BF738F707 /* MapHomeMenuShortcuts.swift */,
 				F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */,
 				F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */,
+				421CE17672A71C5D8551BD47 /* MapHomeView+Presentation.swift */,
+				5B8D737162C25999DE9E3DD1 /* MapHomeView+Lifecycle.swift */,
 				C51A1111A010000000000003 /* MapHomeView+Siri.swift */,
 				F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */,
 				F10000000000000001A70001 /* MapHomeView+Work.swift */,
@@ -2048,6 +2074,10 @@
 				F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */,
 				F51002000000000000000002 /* MapHomeInteractionPolicy.swift */,
 				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
+				EE8B98F2F35737F3F3C9AEFE /* MapHomeRouteSpeedGradient.swift */,
+				A52DFB1FCF52F58A934D0221 /* MapHomeLiveZoomPolicies.swift */,
+				1177AFF722418A5D27EB3C97 /* MapHomePlaybackDiagnostics.swift */,
+				C95DD96D397BAA473F32095B /* MapHomeRenderMemo.swift */,
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F50000000000000000000002 /* MapHomeVectorLabels.swift */,
 				B10809000000000000000F01 /* MapHomeVectorStyle.swift */,
@@ -2251,6 +2281,9 @@
 				F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */,
 				F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
+				90B259E6BEF3249FFF11B5C3 /* MapHomeStickmanAction.swift */,
+				8F3816672287B4F48039597A /* MapHomeStickmanActionResolver.swift */,
+				2513A32EA4ABA9F5A424BC91 /* MapHomeStickmanMarker.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
 				F10000000000000000000006 /* ScheduleView.swift */,
 				F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */,
@@ -2291,6 +2324,9 @@
 				F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */,
 				F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
+				CCDDF9E63D00A2D25D95FE8E /* SettingsView+Connections.swift */,
+				60EBD28CC58EC3980EB620ED /* SettingsView+FrequentPlaces.swift */,
+				8C367F28ED1FD42AF95FAA8A /* SettingsFrequentPlaceDetailView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
 				3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */,
 				71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */,
@@ -3079,6 +3115,8 @@
 				B2C00275D48DA8EE0E78A918 /* MapHomeMenuShortcuts.swift in Sources */,
 				A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */,
 				A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */,
+				1EE60D1A9993E94AB6D30D31 /* MapHomeView+Presentation.swift in Sources */,
+				83C870242587C168ECDEE4DC /* MapHomeView+Lifecycle.swift in Sources */,
 				C51A1111A010000000000004 /* MapHomeView+Siri.swift in Sources */,
 				A1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift in Sources */,
 				A10000000000000001A70001 /* MapHomeView+Work.swift in Sources */,
@@ -3135,6 +3173,10 @@
 				A100000000000000C1102A1E /* TwoFingerGestureAttachments.swift in Sources */,
 				A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */,
 				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
+				733D3E485C90FB5E2205FD08 /* MapHomeRouteSpeedGradient.swift in Sources */,
+				D7D1BF75BEA1E485287CFB0C /* MapHomeLiveZoomPolicies.swift in Sources */,
+				2D84661F137B146508FC8D3B /* MapHomePlaybackDiagnostics.swift in Sources */,
+				2973B92D955BAA51E9C682DA /* MapHomeRenderMemo.swift in Sources */,
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
 				A5000000000000000000A002 /* MapHomeVectorLabels.swift in Sources */,
 				B10809000000000000000A01 /* MapHomeVectorStyle.swift in Sources */,
@@ -3366,6 +3408,9 @@
 				A1FA11046C5838880ADF9D7F /* RecordDetailViews.swift in Sources */,
 				A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
+				AA6377B2DB6190855BE310B6 /* SettingsView+Connections.swift in Sources */,
+				4765C0DD433E1DC7D1C756D4 /* SettingsView+FrequentPlaces.swift in Sources */,
+				AC65BCB818D84ADC745630DD /* SettingsFrequentPlaceDetailView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
 				5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */,
 				F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */,
@@ -3540,6 +3585,9 @@
 				A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */,
 				A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */,
 				A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */,
+				090C0E05BE215655607CA5AA /* MapHomeStickmanAction.swift in Sources */,
+				9CC78DD635FB9737A79FB408 /* MapHomeStickmanActionResolver.swift in Sources */,
+				D2D35180B769E6A9754A1E06 /* MapHomeStickmanMarker.swift in Sources */,
 				A10000000000000000000088 /* BiometricDataProtection.swift in Sources */,
 				A10000000000000000000092 /* PlanDayDatabase.swift in Sources */,
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */,

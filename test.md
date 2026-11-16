@@ -12,6 +12,14 @@
 - `style-survey.py` 여행 묶음 단추·줄 높이 숫자: 전 44×9 32×6 40×6 34×6 28×5 36×4 → 후 32×3 44×2(나머지는 토큰으로 바뀜, 남은 숫자는 배지·눈금 등 단추 아닌 것).
 - 못 한 것: 아이폰 11 실기기 눈 확인, 칩 줄의 누르는 영역이 이웃과 겹치는지 손으로 확인.
 
+## RFT1116A02 · 옛 지도 여행 모드 걷기와 「합친 뒤」 4개 가르기 (2026-11-16, 작업 공간 브랜치, 메인 머지 전, 실기기 없음)
+
+- 대상: `isTravelMode` 죽은 코드(`f2bf0878`), `MapHomeView+Support`(`f30c27f7`), `MapHomeLocationPresentation`(`4a319fc8`), `MapHomeLiveMapPolicies`(`32b99917`), `SettingsView`(`77dea72b`). 전후 줄 수·근거는 `docs/REFACTOR_TOP20.md` 「결과 2」.
+- 커밋마다 Debug 빌드(generic iOS) 통과와 관련 시험(시뮬레이터 `99AC6F35…`, `-parallel-testing-enabled NO`, 로그 `build/validation/RFT1116A02/`): 죽은 코드 InkWash·TripItemStatus·MapHomeLiveMap·MapHomeDateStrip 171개(1개 건너뜀, `01-deadcode`), Support MapHomeLiveMap·WideLayoutPolicy 107개(`02-support`), LocationPresentation MapHomeStickman·MapHomeLiveMap 179개(5개 건너뜀, `03-location`), LiveMapPolicies MapHomeLiveMap·LastKnownLocationPolicy·PlaybackContinuity·HomeSky 120개(1개 건너뜀, `04-livemap`), SettingsView는 빌드만(`05-settings`, 전용 단위 시험 없음).
+- 끝에 `-only-testing:TaptionPlanTests` 전체 한 번(`06-full`): 2,996개 중 25개 건너뜀, 실패 1개 시험(단언 6개) — `TripSharePlanTests.testConflictKeepsTheRoomVersionAndTellsTheUser`가 「겨울 님이 고치는 중」(남의 잠금이 아직 풀리지 않음)을 받음. 이번에 고친 파일과 닿지 않는 여행 공유 비동기 시험이고, 바로 `TripSharePlanTests`·`TripShareRoomTests`만 다시 돌리니 19개 모두 통과(`07-tripshare`). 전체 실행 안에서의 순서·시간 의존 실패로 보지만 전체를 다시 돌려 깨끗한 결과를 얻지는 않았음.
+- 구조 점검·import 경계: 커밋마다 통과. `SettingsView`를 `frozen_files`에서 뺌.
+- 번역: `extract.py`→`check.py`(실패 0)→`generate.py` 뒤 위젯 카탈로그 변화 없음, 앱 카탈로그에서는 걷은 선택 창 제목 「여행 계획 추가|Add to trip」 하나만 빠짐. 카탈로그 생성은 메인 세션 몫이라 되돌려 두고 커밋하지 않음.
+
 ## TFB1116A348 · TestFlight 348 (2026-11-16 저녁)
 
 - 담은 것: MRG1116A01로 합친 main(`ff95818d`) — 여행 A·B·C안, 홈 UX 1~8, 일상↔여행 전환·스타일, AI 튜토리얼·조각 맞추기, 공통 규칙·위치 공유(서버 미배포라 기능은 서버 배포 뒤 동작), 재생 음악 10곡, 성능 고침 2·3, 리팩토링.

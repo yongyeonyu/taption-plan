@@ -379,18 +379,9 @@ private func < (lhs: DateComponents, rhs: DateComponents) -> Bool {
 private func > (lhs: DateComponents, rhs: DateComponents) -> Bool { rhs < lhs }
 
 extension MapHomeView {
-    /// 여행 모드에서 그날의 여행 일정(시간 막대의 계획 띠).
-    var travelSidebarSegments: [MapHomeTimeRailSegment]? {
-        guard isTravelMode, let items = model.settings.travelTripItems, !items.isEmpty else { return nil }
-        let segments = TravelTripRail.segments(items, day: model.selectedDate)
-        return segments.isEmpty ? nil : segments
-    }
-
-    /// 여행 모드의 시간 막대는 계획과 실제 기록을 나란히 그린다(TVC1112A01). 계획이 없는 날은 비어 있어 예전 모습 그대로다.
-    var travelPlanBand: [MapHomeRailPlanSpan] {
-        guard let plan = travelSidebarSegments else { return [] }
-        return TravelPlanBand.spans(plan: plan, actual: timeRailSegments, day: model.selectedDate, now: .now)
-    }
+    /// 시간 막대의 여행 계획 띠(TVC1112A01). 계획 띠를 켜던 옛 지도 여행 모드를 걷어 늘 비어 있다(RFT1116A02).
+    /// 시간 막대(`MapHomeView+Timeline`·`MapHomeTimeSidebar`)는 성능 작업 중이라 넘기는 자리는 그대로 둔다.
+    var travelPlanBand: [MapHomeRailPlanSpan] { [] }
 }
 
 /// 여행 모드에서 실제 기록 옆에 나란히 그리는 계획 한 칸(TVC1112A01).
