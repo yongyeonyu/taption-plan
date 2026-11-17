@@ -104,6 +104,9 @@ enum TripShareMapping {
         _ content: SharePlanContent, roomItemID: String, tripID: String, existing: [TravelTripItem], fallbackOffsetSeconds: Int = 0
     ) -> PlanDraft? {
         guard let base = midnight(content.day) else { return nil }
+        // 방의 값은 믿지 않는다: 분·시차가 하루 안팎의 상식 범위를 벗어나면 읽지 않는다(곱셈이 넘치지 않게).
+        let minutes = [content.start, content.end, content.startOffset, content.endOffset].compactMap { $0 }
+        guard minutes.allSatisfy({ abs($0) <= 10_000_000 }) else { return nil }
         let startOffset = content.startOffset.map { $0 * 60 } ?? fallbackOffsetSeconds
         let endOffset = content.endOffset.map { $0 * 60 } ?? startOffset
         let startMinute = content.start ?? 0
@@ -134,7 +137,14 @@ enum TripShareMapping {
     private static let wholeCurrencies: Set<String> = ["KRW", "JPY", "VND", "IDR", "CLP", "ISK", "HUF", "TWD", "PYG", "UGX", "XAF", "XOF", "XPF"]
 
     static func minorUnits(_ amount: Double, currency: String) -> Int {
-        Int((amount * (wholeCurrencies.contains(currency.uppercased()) ? 1 : 100)).rounded())
+        clampedWhole(amount * (wholeCurrencies.contains(currency.uppercased()) ? 1 : 100))
+    }
+
+    /// 정수로 바꾼다. 유한하지 않거나 터무니없이 크면 정산이 거르는 상한으로 맞춘다(`Int(inf)`는 앱을 멈춘다).
+    static func clampedWhole(_ value: Double) -> Int {
+        guard value.isFinite else { return 0 }
+        let limit = Double(ShareSettlementCalculator.maxAmount)
+        return Int(min(max(value.rounded(), -limit), limit))
     }
 
     static func amount(minorUnits: Int, currency: String) -> Double {
@@ -155,7 +165,7 @@ enum TripShareMapping {
         guard split.count == (entry.shareNames?.count ?? names.parties.count), !split.isEmpty else { return nil }
         return ShareExpenseContent(
             title: entry.title, amount: minorUnits(entry.amount, currency: entry.currency), currency: entry.currency,
-            amountKRW: entry.amountKRW.map { Int($0.rounded()) }, payer: payer, split: split.sorted(),
+            amountKRW: entry.amountKRW.map(clampedWhole), payer: payer, split: split.sorted(),
             category: entry.category.rawValue, memo: entry.note, at: milliseconds(entry.occurredAt), by: by
         )
     }
