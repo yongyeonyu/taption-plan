@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## FRT1117A02 · 한 번도 돌지 않던 Watch 단계 시험 (2026-11-18, 시뮬레이터 `99AC6F35…`)
+
+- 원인: `testWatchStageFollowsAnswerAndRealInstallState`가 `FirstRunTutorialTests`가 아니라 `private final class InMemoryCredentialStore` 안에 있어 XCTest가 찾지 않음(FRT1117A01 보고).
+- 고침: 시험 클래스 extension으로 옮김(시험 내용 그대로).
+- 결과: `-only-testing:TaptionPlanTests/FirstRunTutorialTests` 27건 실패 0(26 → 27), 옮긴 시험 통과. 로그 `build/validation/FRT1117A02/unit.log`.
+
 ## UIT1117A01 · main 전체 UI 시험 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `6a84c788`(REV1117A01~04·LGC1117A01·PRF1117A02·WSY1117A01 합친 뒤)을 고정 작업 폴더로 꺼내 실행. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안. 로그 `build/validation/UIT1117A01/r2/`.
