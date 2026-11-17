@@ -221,6 +221,33 @@ final class TripShareRoomTests: XCTestCase {
         }
     }
 
+    /// 입장 직후 끊겨 카드를 못 올린 기기: 방을 다시 열면 연결을 기다려 카드를 올린다(TSA1117A01).
+    func testAMissingCardIsPublishedOnceTheRoomIsLive() async throws {
+        let server = ShareFakeServer()
+        let model = await makeModel()
+        await seed(model, count: 1)
+        let (owner, invite) = try await shared(server, model: model)
+        let keys = try ShareKeys.derive(roomID: invite.roomID, linkSecret: invite.linkSecret, password: ownerPassword, iterations: rounds)
+        let entry = try await ShareRoomClient.join(transport: server.transport, roomID: invite.roomID, proof: keys.proof)
+        let guest = device(server)
+        let tripID = TripShareMapping.joinedTripID(roomID: invite.roomID)
+        try guest.register(
+            TripShareLink(roomID: invite.roomID, tripID: tripID, role: .member, phase: .sharing),
+            secrets: ShareRoomSecrets(root: keys.root, linkSecret: invite.linkSecret, token: entry.token, member: entry.member, epoch: entry.epoch)
+        )
+        TripShareRoomWork.savedNickname = "단풍"
+
+        await TripShareRoomWork.ensureCard(store: guest, tripID: tripID)
+        XCTAssertEqual(guest.view(tripID: tripID)?.cards[entry.member]?.name, "단풍", "연결을 기다린 뒤 카드를 올린다")
+        await waitUntil("주인이 카드를 봄") { owner.names(tripID: "t1")?.name(.member(entry.member)) == "단풍" }
+
+        // 이미 카드가 있으면 다시 올리지 않는다.
+        let rev = await server.rev(roomID: invite.roomID)
+        await TripShareRoomWork.ensureCard(store: guest, tripID: tripID)
+        let after = await server.rev(roomID: invite.roomID)
+        XCTAssertEqual(after, rev)
+    }
+
     func testJoinFailuresHaveTheirOwnMessagesAndLeaveNothingBehind() async throws {
         let server = ShareFakeServer()
         let model = await makeModel()

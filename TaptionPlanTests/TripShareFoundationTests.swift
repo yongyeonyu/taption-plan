@@ -53,6 +53,24 @@ final class TripShareFoundationTests: XCTestCase {
 
     // MARK: 변환
 
+    /// 메모 500자를 이모지로 채워도 방 한 칸(4KB)에 들어가게 바이트 한도 안에서 글자 단위로 줄인다(TSA1117A01).
+    func testALongEmojiMemoStillFitsOneRoomItem() throws {
+        var long = item("m-1a2b3c4d", "성", "2031-10-02T01:00:00Z", "2031-10-02T03:30:00Z")
+        let family = "👨‍👩‍👧‍👦"
+        long.note = String(repeating: family, count: 500)
+        let content = TripShareMapping.plan(long, place: "성문")
+        let memo = try XCTUnwrap(content.memo)
+        XCTAssertLessThanOrEqual(memo.utf8.count, TripShareMapping.memoBytes)
+        XCTAssertTrue(memo.allSatisfy { String($0) == family }, "글자 중간을 자르지 않는다")
+        XCTAssertTrue(long.note?.hasPrefix(memo) ?? false)
+        let plaintext = try JSONEncoder().encode(content)
+        XCTAssertLessThanOrEqual(ShareCipher.sealedBytes(plaintextBytes: plaintext.count + 64), ShareLimits.v1.itemBytes, "방 한 칸에 들어간다")
+
+        // 짧은 메모는 그대로다.
+        long.note = "표는 현장에서 👍"
+        XCTAssertEqual(TripShareMapping.plan(long).memo, "표는 현장에서 👍")
+    }
+
     func testPlanRoundTripsThroughRoomContent() throws {
         var parent = item("m-1a2b3c4d", "성", "2031-10-02T01:00:00Z", "2031-10-02T03:30:00Z")
         parent.colorHex = "#AA3322"
@@ -261,6 +279,92 @@ final class TripShareFoundationTests: XCTestCase {
         XCTAssertNil(sidecar.snapshot(roomID: link.roomID))
     }
 
+    /// 빈 방 사본(패키지가 만드는 값이라 저장된 모양에서 읽어 만든다).
+    private func emptyRoom(_ roomID: String, me: Int) throws -> ShareRoomSnapshot {
+        let limits = try JSONSerialization.jsonObject(with: JSONEncoder().encode(ShareLimits.v1))
+        let stored: [String: Any] = [
+            "format": 1, "roomID": roomID, "me": me, "epoch": 1, "rev": 0, "cursor": 0, "closed": false, "expiresAt": 9, "members": [Any](),
+            "items": [Any](), "unreadable": [Any](), "limits": limits,
+        ]
+        return try JSONDecoder().decode(ShareRoomSnapshot.self, from: JSONSerialization.data(withJSONObject: stored))
+    }
+
+    /// 방 사본 한 칸이 깨져도 연결은 남고, 다음 사본 쓰기가 연결을 지우지 않는다(TSA1117A01).
+    func testABrokenRoomCopyKeepsTheLink() throws {
+        let sidecar = TripShareSidecar(directory: folder)
+        let link = TripShareLink(roomID: ShareIdentifiers.roomID(), tripID: "t1", role: .member, phase: .sharing, joinedAt: Date(timeIntervalSince1970: 1_950_000_000))
+        try sidecar.save(link)
+        let url = folder.appendingPathComponent(link.roomID + ".json")
+        var file = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        file["room"] = ["roomID": link.roomID, "items": "깨짐"]
+        try JSONSerialization.data(withJSONObject: file).write(to: url)
+
+        XCTAssertEqual(sidecar.links(), [link], "깨진 사본 때문에 연결을 잃지 않는다")
+        XCTAssertNil(sidecar.snapshot(roomID: link.roomID), "깨진 사본은 없는 것으로 보고 방에서 다시 받는다")
+        XCTAssertEqual(TripShareStore(environment: environment(transport: nil)).links, [], "서버 없는 빌드는 그대로 숨긴다")
+        try sidecar.save(emptyRoom(link.roomID, me: 2))
+        XCTAssertEqual(sidecar.link(roomID: link.roomID), link, "사본을 다시 써도 연결은 남는다")
+        XCTAssertEqual(sidecar.snapshot(roomID: link.roomID)?.me, 2)
+
+        // 연결이 없는 방(잊은 방)에는 늦게 온 사본 쓰기가 파일을 되살리지 않는다.
+        let forgotten = ShareIdentifiers.roomID()
+        try sidecar.save(emptyRoom(forgotten, me: 1))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: folder.appendingPathComponent(forgotten + ".json").path))
+
+        // 예전 형식(지난 이름 칸이 없는 파일)도 그대로 읽는다.
+        let old: [String: Any] = ["format": 1, "link": try JSONSerialization.jsonObject(with: JSONEncoder().encode(link))]
+        try JSONSerialization.data(withJSONObject: old).write(to: url)
+        XCTAssertEqual(sidecar.link(roomID: link.roomID), link)
+        XCTAssertEqual(sidecar.formerNames(roomID: link.roomID), [:])
+        try sidecar.saveFormerNames([3: "봄"], roomID: link.roomID)
+        XCTAssertEqual(sidecar.formerNames(roomID: link.roomID), [3: "봄"])
+        XCTAssertEqual(sidecar.link(roomID: link.roomID), link)
+    }
+
+    /// 키체인 저장은 고쳐 쓰기가 먼저이고 지우지 않는다: 고쳐 쓰기가 실패해도 예전 키가 남는다(TSA1117A01).
+    func testKeychainSaveUpdatesInPlaceAndNeverDeletesFirst() throws {
+        final class Fake: @unchecked Sendable {
+            let lock = NSLock()
+            var stored: Data?
+            var calls: [String] = []
+            var failUpdate = false
+        }
+        let fake = Fake()
+        let writes = TripShareKeychain.Writes(
+            update: { _, attributes in
+                fake.lock.withLock {
+                    fake.calls.append("update")
+                    guard !fake.failUpdate else { return errSecInteractionNotAllowed }
+                    guard fake.stored != nil else { return errSecItemNotFound }
+                    fake.stored = attributes[kSecValueData as String] as? Data
+                    return errSecSuccess
+                }
+            },
+            add: { item in
+                fake.lock.withLock {
+                    fake.calls.append("add")
+                    XCTAssertEqual(item[kSecAttrService as String] as? String, "com.taption.plan.tripshare", "항목 이름은 그대로")
+                    fake.stored = item[kSecValueData as String] as? Data
+                    return errSecSuccess
+                }
+            }
+        )
+        let keychain = TripShareKeychain(writes: writes)
+        let roomID = ShareIdentifiers.roomID()
+        var secrets = ShareRoomSecrets(root: ShareBytes.random(32), linkSecret: ShareIdentifiers.linkSecret(), token: "token-1", ownerKey: nil, member: 2, epoch: 1)
+        try keychain.save(secrets, roomID: roomID)
+        XCTAssertEqual(fake.calls, ["update", "add"], "없으면 더한다")
+        secrets.epoch = 2
+        try keychain.save(secrets, roomID: roomID)
+        XCTAssertEqual(fake.calls, ["update", "add", "update"], "있으면 고쳐 쓴다")
+        let kept = fake.stored
+        fake.failUpdate = true
+        secrets.epoch = 3
+        XCTAssertThrowsError(try keychain.save(secrets, roomID: roomID))
+        XCTAssertEqual(fake.stored, kept, "고쳐 쓰기가 실패해도 예전 키는 남는다")
+        XCTAssertEqual(try JSONDecoder().decode(ShareRoomSecrets.self, from: XCTUnwrap(kept)).epoch, 2)
+    }
+
     func testSecretStoresRoundTrip() throws {
         let roomID = ShareIdentifiers.roomID()
         let secrets = ShareRoomSecrets(root: ShareBytes.random(32), linkSecret: ShareIdentifiers.linkSecret(), token: "token-1", ownerKey: "owner-1", member: 1, epoch: 3)
@@ -335,6 +439,56 @@ final class TripShareFoundationTests: XCTestCase {
         XCTAssertFalse(store.isShared("t1"))
         XCTAssertNil(try store.environment.secrets.secrets(roomID: invite.roomID))
         XCTAssertEqual(store.environment.sidecar.links(), [])
+    }
+
+    /// 열기·닫기·잊기가 겹쳐 불려도 차례대로 돈다: 닫은 방이 다시 살아나거나 잊은 방의 곁 파일이 되살아나지 않는다(TSA1117A01).
+    func testOpenCloseAndForgetDoNotInterleave() async throws {
+        let server = ShareFakeServer()
+        let store = TripShareStore(environment: environment(transport: server.transport))
+        let invite = ShareInvite.make()
+        let keys = try ShareKeys.derive(roomID: invite.roomID, linkSecret: invite.linkSecret, password: "가을여행-2031", iterations: 20)
+        let ownerKey = ShareIdentifiers.ownerKey()
+        let entry = try await ShareRoomClient.createRoom(
+            transport: server.transport, appKey: "test-app-key",
+            request: ShareCreateRequest(roomID: invite.roomID, proof: keys.proof, ownerKey: ownerKey, expiresAt: await server.now + 86_400_000)
+        )
+        try store.register(
+            TripShareLink(roomID: invite.roomID, tripID: "t1", role: .owner, phase: .sharing),
+            secrets: ShareRoomSecrets(root: keys.root, linkSecret: invite.linkSecret, token: entry.token, ownerKey: ownerKey, member: entry.member, epoch: entry.epoch)
+        )
+
+        // 열기 도중에 닫기가 들어온다: 닫기가 이긴다(살아 있는 세션·화면 값이 남지 않는다).
+        let opening = Task { await store.open(tripID: "t1") }
+        let closing = Task { await store.close(tripID: "t1") }
+        let opened = await opening.value
+        await closing.value
+        XCTAssertNil(store.session(tripID: "t1"), "닫은 뒤에 세션이 남지 않는다")
+        XCTAssertNil(store.view(tripID: "t1"), "닫은 뒤에 화면 값이 남지 않는다")
+        let status = await opened?.view().status
+        XCTAssertNotEqual(status, .live, "닫은 세션이 다시 이어지지 않는다")
+
+        // 닫기 도중에 잊기가 들어온다: 늦은 사본 쓰기가 곁 파일을 되살리지 않는다.
+        await store.open(tripID: "t1")
+        let closingAgain = Task { await store.close(tripID: "t1") }
+        let forgetting = Task { await store.forget(tripID: "t1") }
+        await closingAgain.value
+        await forgetting.value
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(store.environment.sidecar.links(), [])
+        let left = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        XCTAssertEqual(left, [], "잊은 방의 곁 파일이 되살아나지 않는다")
+        XCTAssertNil(try store.environment.secrets.secrets(roomID: invite.roomID))
+    }
+
+    /// 지구본에서 연 공유 판이 닫히면 그 방도 닫는다. 보고 있는 여행의 방은 그대로 둔다(TSA1117A01).
+    func testClosingThePanelClosesARoomThatIsNotOnScreen() {
+        XCTAssertEqual(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: nil, opened: nil), "t1")
+        XCTAssertEqual(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: nil, opened: "t2"), "t1")
+        XCTAssertNil(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: nil, opened: "t1"), "보고 있는 여행은 닫지 않는다")
+        XCTAssertNil(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: .panel(tripID: "t1"), opened: nil))
+        XCTAssertEqual(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: .panel(tripID: "t2"), opened: nil), "t1")
+        XCTAssertNil(TripShareHost.roomToClose(from: .join(nil), to: nil, opened: nil))
+        XCTAssertNil(TripShareHost.roomToClose(from: nil, to: .panel(tripID: "t1"), opened: nil))
     }
 
     // MARK: 투영·가드

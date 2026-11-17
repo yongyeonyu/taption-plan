@@ -147,10 +147,14 @@ enum TripShareRoomWork {
         return ShareMemberCard(name: nickname, color: old?.color ?? colors[(max(member, 1) - 1) % colors.count], sent: old?.sent)
     }
 
-    /// 내 카드가 방에 없으면 올린다(입장 직후 끊겼을 때를 잇는다).
+    /// 내 카드가 방에 없으면 올린다(입장 직후 끊겼을 때를 잇는다). 방을 연 직후는 아직 연결 중이라
+    /// 창구 값으로는 쓸 수 없다: 연결을 기다리고 방을 다 받은 뒤 세션 값으로 본다(TSA1117A01).
     static func ensureCard(store: TripShareStore, tripID: String) async {
-        guard let view = store.view(tripID: tripID), view.canWrite, view.cards[view.me] == nil,
-              let session = store.session(tripID: tripID) else { return }
+        guard store.link(tripID: tripID)?.phase == .sharing,
+              let session = try? await liveSession(store: store, tripID: tripID) else { return }
+        try? await session.catchUp()
+        let view = await session.view()
+        guard view.canWrite, view.cards[view.me] == nil else { return }
         _ = try? await session.publish(card: card(nickname: savedNickname, member: view.me))
         await store.refresh(tripID: tripID)
     }
@@ -206,6 +210,11 @@ struct TripShareHost: ViewModifier {
                 inbox.pending = nil
                 route = .join(invite)
             }
+            .onChange(of: route) { old, new in
+                // 지구본에서 연 판이 닫히면 판이 연 방도 닫는다.
+                guard let tripID = Self.roomToClose(from: old, to: new, opened: openedID) else { return }
+                Task { await leave(tripID) }
+            }
             .task(id: openedID) { await enter(openedID) }
             .onChange(of: openedID) { old, new in
                 guard let old, old != new else { return }
@@ -226,6 +235,12 @@ struct TripShareHost: ViewModifier {
             .alert(store.notice ?? "", isPresented: Binding(get: { store.notice != nil }, set: { if !$0 { store.notice = nil } })) {
                 Button(language.text("확인", "OK")) { store.notice = nil }
             }
+    }
+
+    /// 공유 판이 닫히거나 다른 판으로 바뀌면 닫을 방. 판이 연 방이라도 보고 있는 여행의 방이면 그대로 둔다(TSA1117A01).
+    static func roomToClose(from old: TripShareRoute?, to new: TripShareRoute?, opened: String?) -> String? {
+        guard case .panel(let tripID)? = old, new != old, tripID != opened else { return nil }
+        return tripID
     }
 
     private func enter(_ tripID: String?) async {

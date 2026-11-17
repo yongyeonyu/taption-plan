@@ -166,7 +166,11 @@ enum TripShareLedger {
         moving.insert(entry.id)
         defer { moving.remove(entry.id) }
         if let failure = await send(edits, locking: current == .shared ? [oldID] : [], session: room.session, tripID: tripID) { return failure }
-        if scope != .ownHidden, let roomID = store.link(tripID: tripID)?.roomID { setProjected(projectedIDs(roomID).union([newID]), roomID: roomID) }
+        if let roomID = store.link(tripID: tripID)?.roomID {
+            if scope != .ownHidden { setProjected(projectedIDs(roomID).union([newID]), roomID: roomID) }
+            // 사람이 고친 지출은 그 몫을 따른다: 들어온 동행을 더하지 않는다.
+            setAllTogether(allTogetherIDs(roomID).subtracting([oldID]), roomID: roomID)
+        }
         if value.id != entry.id { await book.delete(entry.id) }
         await keep(value)
         return nil
@@ -268,8 +272,10 @@ enum TripShareLedger {
         case .caughtUp: complete = true
         default: break
         }
-        await project(tripID: link.tripID, roomID: link.roomID, view: view, removed: removed)
+        // 올리는 중에는 공유 전 지출을 나만으로 고정하지 않는다(`shareAllTogether`가 올린다).
+        await project(tripID: link.tripID, roomID: link.roomID, view: view, removed: removed, pinsUnshared: link.phase == .sharing)
         if complete, link.phase == .sharing { await sweep(tripID: link.tripID, roomID: link.roomID, view: view) }
+        if link.role == .owner, link.phase == .sharing { await widenAllTogether(tripID: link.tripID, roomID: link.roomID) }
     }
 
     /// 방을 **다 받은 뒤에만** 부른다: 가계부에 넣어 둔 방 지출 가운데 방에 더는 없는 것을 지운다(TSF1115A01).
@@ -312,10 +318,84 @@ enum TripShareLedger {
         try? store.environment.sidecar.saveProjectedExpenses(ids, roomID: roomID)
     }
 
+    // MARK: 공유 전 「다 같이」 지출(대표 결정 2026-11-17, TSA1117A01)
+
+    /// 공유 전 「다 같이」였던 공동 지출(방 번호 → 항목 id). 곁 파일에서 한 번 읽어 둔다.
+    private static var allTogether: [String: Set<String>] = [:]
+    /// 지금 몫을 늘리는 방(늘리기가 부른 방송이 다시 늘리기를 부르지 않게).
+    private static var widening: Set<String> = []
+
+    private static func allTogetherIDs(_ roomID: String) -> Set<String> {
+        if let ids = allTogether[roomID] { return ids }
+        let ids = store.environment.sidecar.allTogether(roomID: roomID)
+        allTogether[roomID] = ids
+        return ids
+    }
+
+    private static func setAllTogether(_ ids: Set<String>, roomID: String) {
+        guard ids != allTogetherIDs(roomID) else { return }
+        allTogether[roomID] = ids
+        try? store.environment.sidecar.saveAllTogether(ids, roomID: roomID)
+    }
+
+    /// 공유를 시작할 때(주인이 올리는 중) 직접 넣은 「다 같이」 지출을 공동 지출로 올린다. 몫은 그때 방에 있는 사람이고,
+    /// 동행이 들어오면 `widenAllTogether`가 더한다. 자동으로 들어온 지출은 대표 결정대로 올리지 않는다(나만으로 남는다).
+    static func shareAllTogether(tripID: String, roomID: String, session: ShareRoomSession, store: TripShareStore = .shared) async throws {
+        await book.load()
+        var view = await session.view()
+        let present = Set(view.items.map(\.id))
+        let entries = book.tripEntries(tripID).filter {
+            $0.shareNames == nil && $0.source == .manual && canShare($0) && !present.contains(TripShareMapping.roomItemID(entryID: $0.id))
+        }
+        guard !entries.isEmpty else { return }
+        let ids = Set(entries.map { TripShareMapping.roomItemID(entryID: $0.id) })
+        // 쓰기 전에 적어 둔다: 올린 뒤 끊겨도 늘리기가 이 지출을 안다.
+        let marked = store.environment.sidecar.allTogether(roomID: roomID).union(ids)
+        try store.environment.sidecar.saveAllTogether(marked, roomID: roomID)
+        allTogether[roomID] = marked
+        let size = max(1, min(view.limits.batch, 50))
+        for start in stride(from: 0, to: entries.count, by: size) {
+            let names = store.names(view, roomID: roomID)
+            let edits = entries[start..<min(start + size, entries.count)].compactMap { entry -> ShareEdit? in
+                guard let content = TripShareMapping.sharedExpense(entry, names: names, by: view.me) else { return nil }
+                return .create(id: TripShareMapping.roomItemID(entryID: entry.id), content: .sharedExpense(content), group: nil)
+            }
+            if !edits.isEmpty, case .conflict = try await session.write(edits) { throw ShareError.interrupted }
+            view = await session.view()
+        }
+        await store.refresh(tripID: tripID)
+    }
+
+    /// 주인 기기: 공유 전 「다 같이」였던 공동 지출의 몫에 새로 들어온 동행을 더한다. 나간 사람은 빼지 않는다.
+    /// 남이 고치는 중이거나 인터넷이 없으면 다음 변화 때 다시 본다. 마감한 정산은 건드리지 않는다.
+    static func widenAllTogether(tripID: String, roomID: String) async {
+        let ids = allTogetherIDs(roomID)
+        guard !ids.isEmpty, !widening.contains(roomID), let view = store.view(tripID: tripID), view.canWrite, view.isOwner, !view.closed,
+              let session = store.session(tripID: tripID) else { return }
+        let everyone = Set(store.names(view, roomID: roomID).parties)
+        var edits: [ShareEdit] = []
+        for item in view.items where ids.contains(item.id) {
+            guard case .sharedExpense(var content) = item.content else { continue }
+            let split = Set(content.split).union(everyone)
+            guard split != Set(content.split) else { continue }
+            content.split = split.sorted()
+            edits.append(.update(id: item.id, content: .sharedExpense(content)))
+        }
+        guard !edits.isEmpty else { return }
+        widening.insert(roomID)
+        defer { widening.remove(roomID) }
+        let size = max(1, min(view.limits.batch, view.limits.locksPerMember, 50))
+        for start in stride(from: 0, to: edits.count, by: size) {
+            let chunk = Array(edits[start..<min(start + size, edits.count)])
+            guard await send(chunk, locking: chunk.map(\.id), session: session, tripID: tripID) == nil else { return }
+        }
+    }
+
     /// 메모리에 든 것을 잊는다(시험이 앱을 껐다 켠 것처럼 만든다). 곁 파일은 그대로다.
     static func forgetMemory() {
         known = [:]
         projected = [:]
+        allTogether = [:]
         moving = []
     }
 
@@ -330,9 +410,10 @@ enum TripShareLedger {
 
     /// 방의 지출을 가계부에 맞춘다: 넣고, 고치고, 방에서 사라진 것은 지운다. 닉네임이 바뀌었으면 이름도 다시 쓴다.
     /// 값이 그대로면 쓰지 않는다. **방에 없는 로컬 기록(비공개·자동 기록)은 지우지도 올리지도 않는다.**
-    static func project(tripID: String, roomID: String, view: ShareRoomView, removed: [String] = []) async {
+    /// - Parameter pinsUnshared: 방에 없는 「다 같이」 지출을 나만으로 고정한다(공유 중일 때).
+    static func project(tripID: String, roomID: String, view: ShareRoomView, removed: [String] = [], pinsUnshared: Bool = true) async {
         await book.load()
-        let names = TripShareNames(me: view.me, cards: view.cards, guests: view.meta?.guests ?? [])
+        let names = store.names(view, roomID: roomID)
         var touched = false
         for item in view.items where projects(item, me: view.me) {
             guard let id = TripShareMapping.entryID(roomItemID: item.id), !moving.contains(id) else { continue }
@@ -366,7 +447,7 @@ enum TripShareLedger {
         }
         setProjected(marked, roomID: roomID)
         // 방에 없는 지출은 내 것이다: 「다 같이」로 비어 있으면 나만으로 고정한다.
-        for entry in book.tripEntries(tripID) where entry.shareNames == nil && canShare(entry) && !moving.contains(entry.id)
+        for entry in book.tripEntries(tripID) where pinsUnshared && entry.shareNames == nil && canShare(entry) && !moving.contains(entry.id)
             && !live.contains(TripShareMapping.roomItemID(entryID: entry.id)) {
             var value = entry
             value.shareNames = TripShareMapping.privateShare

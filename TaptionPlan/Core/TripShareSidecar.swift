@@ -28,10 +28,26 @@ struct TripShareLink: Codable, Equatable, Identifiable, Sendable {
 /// 곁 파일(TSH1114A26): `Application Support/TripShare/<roomId>.json` 하나에 연결 정보와 방의 로컬 사본을 함께 둔다.
 /// 방이 살아 있으면 처음부터 다시 받을 수 있는 캐시라 기기 백업에서 뺀다. **키·토큰은 넣지 않는다**(키체인).
 struct TripShareSidecar: ShareSnapshotStore {
+    /// 칸마다 따로 푼다: 한 칸(방 사본 등)이 깨져도 연결은 남는다(TSA1117A01). 없는 칸은 예전 파일이다.
     private struct File: Codable {
         var format = 1
         var link: TripShareLink?
         var room: ShareRoomSnapshot?
+        /// 방에서 본 사람들의 이름(참여자 번호 → 닉네임). 나간 사람의 카드는 서버가 지우므로 여기서 읽는다.
+        var names: [Int: String]?
+        /// 공유를 시작할 때 「다 같이」였던 공동 지출의 방 항목 id. 주인 기기가 새로 들어온 동행을 몫에 더한다.
+        var allTogether: [String]?
+
+        init() {}
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            format = try container.decode(Int.self, forKey: .format)
+            link = try? container.decodeIfPresent(TripShareLink.self, forKey: .link)
+            room = try? container.decodeIfPresent(ShareRoomSnapshot.self, forKey: .room)
+            names = try? container.decodeIfPresent([Int: String].self, forKey: .names)
+            allTogether = try? container.decodeIfPresent([String].self, forKey: .allTogether)
+        }
     }
 
     /// 읽고 고쳐 쓰는 사이에 다른 쓰기가 끼지 않게 한다.
@@ -52,15 +68,17 @@ struct TripShareSidecar: ShareSnapshotStore {
         return file
     }
 
-    private func change(_ roomID: String, _ edit: (inout File) -> Void) throws {
+    /// - Parameter linked: 참이면 연결이 적힌 파일에만 쓴다(잊은 방의 파일을 늦은 쓰기가 되살리지 않게).
+    private func change(_ roomID: String, linked: Bool = false, _ edit: (inout File) -> Void) throws {
         guard ShareIdentifiers.isRoomID(roomID) else { throw ShareError.invalidResponse }
         try Self.gate.withLock { _ in
+            var file = read(roomID) ?? File()
+            guard !linked || file.link != nil else { return }
             var folder = directory
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             var values = URLResourceValues()
             values.isExcludedFromBackup = true
             try? folder.setResourceValues(values)
-            var file = read(roomID) ?? File()
             edit(&file)
             try JSONEncoder().encode(file).write(to: url(roomID), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         }
@@ -86,8 +104,23 @@ struct TripShareSidecar: ShareSnapshotStore {
 
     func snapshot(roomID: String) -> ShareRoomSnapshot? { read(roomID)?.room }
 
+    /// 연결이 없는 방(잊었거나 아직 적지 않은 방)이면 쓰지 않는다.
     func save(_ snapshot: ShareRoomSnapshot) throws {
-        try change(snapshot.roomID) { $0.room = snapshot }
+        try change(snapshot.roomID, linked: true) { $0.room = snapshot }
+    }
+
+    // MARK: 지난 이름·공유 전 「다 같이」 지출(TSA1117A01)
+
+    func formerNames(roomID: String) -> [Int: String] { read(roomID)?.names ?? [:] }
+
+    func saveFormerNames(_ names: [Int: String], roomID: String) throws {
+        try change(roomID, linked: true) { $0.names = names.isEmpty ? nil : names }
+    }
+
+    func allTogether(roomID: String) -> Set<String> { Set(read(roomID)?.allTogether ?? []) }
+
+    func saveAllTogether(_ ids: Set<String>, roomID: String) throws {
+        try change(roomID, linked: true) { $0.allTogether = ids.isEmpty ? nil : ids.sorted() }
     }
 
     /// 연결과 사본을 함께 지운다. 로컬 여행(SQLite)은 건드리지 않는다.

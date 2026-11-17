@@ -5,15 +5,20 @@ import TaptionTripShare
 
 /// 방 사람들의 이름표(TSH1114A26): 참여자 번호·앱 없는 일행 ⇄ 가계부가 쓰는 이름 글자.
 /// 같은 닉네임은 번호 순으로 「가을」「가을 (2)」처럼 가른다. 나는 가계부에서 `LedgerTrip.me`다.
+/// 나간 사람은 서버가 카드를 지우므로 `former`(방에서 본 지난 이름)로 찾는다. 새로 고를 사람(`parties`)에는 넣지 않는다.
 struct TripShareNames: Equatable, Sendable {
     let me: Int
     private(set) var names: [ShareParty: String] = [:]
+    /// 지금 방에 있는 사람(카드가 있는 참여자와 앱 없는 일행).
+    private var present: Set<ShareParty> = []
 
-    init(me: Int, cards: [Int: ShareMemberCard], guests: [ShareGuest] = []) {
+    init(me: Int, cards: [Int: ShareMemberCard], guests: [ShareGuest] = [], former: [Int: String] = [:]) {
         self.me = me
         var seen: [String: Int] = [:]
         let people = cards.map { (ShareParty.member($0.key), $0.value.name) } + guests.map { (ShareParty.guest($0.id), $0.name) }
-        for (party, raw) in people.sorted(by: { $0.0 < $1.0 }) {
+        present = Set(people.map(\.0))
+        let gone = former.filter { cards[$0.key] == nil }.map { (ShareParty.member($0.key), $0.value) }
+        for (party, raw) in (people + gone).sorted(by: { $0.0 < $1.0 }) {
             let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             let name = trimmed.isEmpty || trimmed == LedgerTrip.me ? party.code : trimmed
             seen[name, default: 0] += 1
@@ -21,8 +26,8 @@ struct TripShareNames: Equatable, Sendable {
         }
     }
 
-    /// 참여자 번호 순, 그다음 앱 없는 일행.
-    var parties: [ShareParty] { names.keys.sorted() }
+    /// 지금 방에 있는 사람: 참여자 번호 순, 그다음 앱 없는 일행.
+    var parties: [ShareParty] { present.sorted() }
 
     /// 화면에 보일 이름(나도 내 닉네임).
     func name(_ party: ShareParty) -> String { names[party] ?? party.code }
@@ -30,10 +35,10 @@ struct TripShareNames: Equatable, Sendable {
     /// 가계부에 적는 이름: 나는 `@me`.
     func ledgerName(_ party: ShareParty) -> String { party == .member(me) ? LedgerTrip.me : name(party) }
 
-    /// 가계부의 이름에서 사람을 찾는다. 비었거나 `@me`면 나.
+    /// 가계부의 이름에서 사람을 찾는다. 비었거나 `@me`면 나. 이름이 없던 때 적힌 번호(`m3`)도 읽는다.
     func party(ledgerName: String?) -> ShareParty? {
         guard let ledgerName, !ledgerName.isEmpty, ledgerName != LedgerTrip.me else { return .member(me) }
-        return names.first { $0.value == ledgerName }?.key
+        return names.first { $0.value == ledgerName }?.key ?? ShareParty(code: ledgerName)
     }
 
     /// `LedgerTrip.members`에 투영할 이름들(나 빼고).
@@ -79,6 +84,22 @@ enum TripShareMapping {
         var place: String?
     }
 
+    /// 방에 싣는 메모의 바이트 한도. 이모지로 500자를 채워도 방 한 칸(4KB, 잠근 뒤)에 들어가게 한다.
+    static let memoBytes = 2_000
+
+    /// 글자(문자소)를 자르지 않고 UTF-8 `bytes` 안으로 줄인다.
+    static func clipped(_ text: String, bytes: Int) -> String {
+        guard text.utf8.count > bytes else { return text }
+        var out = "", used = 0
+        for character in text {
+            let size = character.utf8.count
+            guard used + size <= bytes else { break }
+            out.append(character)
+            used += size
+        }
+        return out
+    }
+
     /// 일정 → 방 평문. `place`는 그 일정의 장소 이름(핀 이름)만 넘긴다.
     /// 분은 `day`(시작의 현지 날짜) 0시부터 센 벽시계 분이고, 끝은 끝 쪽 시차의 벽시계라 자정을 넘으면 1,440을 넘는다.
     static func plan(_ item: TravelTripItem, place: String? = nil, order: Int? = nil, by: Int? = nil) -> SharePlanContent {
@@ -91,7 +112,7 @@ enum TripShareMapping {
         return SharePlanContent(
             day: day, start: minute(item.start, item.startOffsetSeconds), end: minute(item.end, item.endOffsetSeconds),
             startOffset: item.startOffsetSeconds / 60, endOffset: item.endOffsetSeconds / 60, title: item.title,
-            place: name?.isEmpty == false ? name : nil, memo: item.note,
+            place: name?.isEmpty == false ? name : nil, memo: item.note.map { clipped($0, bytes: memoBytes) },
             cost: item.plannedSpendKRW.map { Int($0.rounded()) }, currency: item.plannedSpendKRW == nil ? nil : ShareSettlementCalculator.baseCurrency,
             order: order, planKind: item.kind, status: item.status, colorHex: item.colorHex,
             parentItemID: item.parentItemID.map { roomItemID(tripID: item.tripID, itemID: $0) }, by: by

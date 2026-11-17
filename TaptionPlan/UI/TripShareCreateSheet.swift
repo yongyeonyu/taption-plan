@@ -113,6 +113,8 @@ enum TripShareCreation {
             link.uploaded += edits.map(\.id)
             try store.save(link)
         }
+        // 공유 전 「다 같이」 지출은 들어온 동행 모두로 나눈다(대표 결정 2026-11-17).
+        try await TripShareLedger.shareAllTogether(tripID: tripID, roomID: link.roomID, session: session, store: store)
         link.phase = .sharing
         link.uploaded = []
         try store.save(link)
