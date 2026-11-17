@@ -6084,6 +6084,10 @@
 "AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호를 한 번만 넣어 주세요.|The AI server still has an old value. Enter your previous app password once.": "เซิร์ฟเวอร์ AI ยังมีค่าเก่าอยู่ ใส่รหัสผ่านแอปก่อนเปลี่ยนเพียงครั้งเดียว",
 "바꾸기 전 앱 비밀번호 6자리|Previous app password (6 digits)": "รหัสผ่านแอปก่อนเปลี่ยน (6 หลัก)",
 "바꾸기 전 앱 비밀번호를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.|Enter your previous app password once, and it switches to your current app password.": "ใส่รหัสผ่านแอปก่อนเปลี่ยนเพียงครั้งเดียว แล้วจะเปลี่ยนเป็นรหัสผ่านแอปปัจจุบัน",
-"바꾸기 전 비밀번호를 잊었어요|I forgot the previous password": "ฉันลืมรหัสผ่านก่อนเปลี่ยน"
+"바꾸기 전 비밀번호를 잊었어요|I forgot the previous password": "ฉันลืมรหัสผ่านก่อนเปลี่ยน",
+"캘린더 일정 {0}개도 함께 옮길까요?|Move {0} calendar event(s) too?": "ย้ายกิจกรรมในปฏิทิน {0} รายการไปด้วยไหม",
+"캘린더 앱의 일정은 그대로예요|The events in the Calendar app stay as they are.": "กิจกรรมในแอปปฏิทินจะยังคงเหมือนเดิม",
+"옮기기|Move": "ย้าย",
+"겹친 일정이 있어 그 구간은 그대로 둡니다|Some plans overlap, so that part stays as it is.": "มีแผนที่ทับซ้อนกัน จึงคงช่วงนั้นไว้ตามเดิม"
 }
 }

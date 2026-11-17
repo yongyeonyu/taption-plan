@@ -1,5 +1,5 @@
 {
- "ui": 5306,
+ "ui": 5310,
  "catalog": 504,
  "unread": [
   {
@@ -172,13 +172,13 @@
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 737,
+   "line": 741,
    "ko": "stop.kind.title",
    "en": "stop.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 156,
+   "line": 160,
    "ko": "before.amount",
    "en": "before.currency"
   },
@@ -850,7 +850,7 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeSupport.swift",
-   "line": 862,
+   "line": 864,
    "ko": "planned",
    "en": "language"
   },
