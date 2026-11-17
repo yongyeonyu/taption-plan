@@ -25,13 +25,13 @@ struct SharedRulesView: View {
                 Text(language.text("""
                     • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.
                     • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.
-                    • 서버는 몇 대에서 올라왔는지와 날짜만 세고 누가 보냈는지는 적지 않아요. 후보는 90일 뒤 지워요.
+                    • 서버는 후보마다 몇 대에서 올라왔는지와 날짜만 세요. 같은 규칙을 두 번 세지 않도록 내가 보낸 규칙의 지문(규칙 내용으로 만든 짧은 값, 기기를 알아볼 수 없어요)만 내 서버 자리에 남기고, 후보에는 누가 보냈는지 적지 않아요. 후보는 90일 뒤 지워요.
                     • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.
                     (초안 · 확정 전, 자세한 내용은 개인정보처리방침)
                     """, """
                     • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.
                     • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.
-                    • The server only counts how many devices and which day; it does not record who sent it. Candidates are deleted after 90 days.
+                    • For each candidate the server only counts how many devices and which day. So the same rule isn't counted twice, it keeps a fingerprint of the rules you sent (a short value made from the rule that can't identify your device) in your own space on the server; candidates don't record who sent them. Candidates are deleted after 90 days.
                     • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.
                     (Draft · not final; see the privacy policy for details)
                     """))

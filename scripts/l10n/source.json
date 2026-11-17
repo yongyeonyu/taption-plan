@@ -1,9 +1,9 @@
 {
  "ui": [
   {
-   "key": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 몇 대에서 올라왔는지와 날짜만 세고 누가 보냈는지는 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)|                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • The server only counts how many devices and which day; it does not record who sent it. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
-   "ko": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 몇 대에서 올라왔는지와 날짜만 세고 누가 보냈는지는 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)",
-   "en": "                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • The server only counts how many devices and which day; it does not record who sent it. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
+   "key": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 후보마다 몇 대에서 올라왔는지와 날짜만 세요. 같은 규칙을 두 번 세지 않도록 내가 보낸 규칙의 지문(규칙 내용으로 만든 짧은 값, 기기를 알아볼 수 없어요)만 내 서버 자리에 남기고, 후보에는 누가 보냈는지 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)|                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • For each candidate the server only counts how many devices and which day. So the same rule isn't counted twice, it keeps a fingerprint of the rules you sent (a short value made from the rule that can't identify your device) in your own space on the server; candidates don't record who sent them. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
+   "ko": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 후보마다 몇 대에서 올라왔는지와 날짜만 세요. 같은 규칙을 두 번 세지 않도록 내가 보낸 규칙의 지문(규칙 내용으로 만든 짧은 값, 기기를 알아볼 수 없어요)만 내 서버 자리에 남기고, 후보에는 누가 보냈는지 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)",
+   "en": "                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • For each candidate the server only counts how many devices and which day. So the same rule isn't counted twice, it keeps a fingerprint of the rules you sent (a short value made from the rule that can't identify your device) in your own space on the server; candidates don't record who sent them. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
    "files": [
     "SharedRulesView.swift:25"
    ],
@@ -278,7 +278,7 @@
    "ko": "14일 무료 체험 · {0}일 남음",
    "en": "14-day free trial · {0} days left",
    "files": [
-    "AppShellView.swift:1226",
+    "AppShellView.swift:1216",
     "MapHomeView+Menu2.swift:250"
    ],
    "args": [
@@ -293,7 +293,7 @@
    "ko": "14일 무료 체험 시작",
    "en": "Start 14-day free trial",
    "files": [
-    "AppShellView.swift:1278"
+    "AppShellView.swift:1268"
    ],
    "args": [],
    "targets": [
@@ -305,7 +305,7 @@
    "ko": "14일 무료 체험",
    "en": "14-day free trial",
    "files": [
-    "AppShellView.swift:1224"
+    "AppShellView.swift:1214"
    ],
    "args": [],
    "targets": [
@@ -317,7 +317,7 @@
    "ko": "14일 무료 체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다.",
    "en": "The trial does not renew automatically. A single purchase unlocks Pro permanently.",
    "files": [
-    "AppShellView.swift:1250"
+    "AppShellView.swift:1240"
    ],
    "args": [],
    "targets": [
@@ -329,7 +329,7 @@
    "ko": "14일 무료 체험이 시작되었습니다.",
    "en": "Your 14-day free trial has started.",
    "files": [
-    "AppShellView.swift:1361"
+    "AppShellView.swift:1351"
    ],
    "args": [],
    "targets": [
@@ -341,7 +341,7 @@
    "ko": "14일 무료 체험이 종료되었습니다",
    "en": "Your 14-day free trial has ended",
    "files": [
-    "AppShellView.swift:1233"
+    "AppShellView.swift:1223"
    ],
    "args": [],
    "targets": [
@@ -695,7 +695,7 @@
    "ko": "AI 고르기",
    "en": "Choose an AI",
    "files": [
-    "AssistantConnectView.swift:621"
+    "AssistantConnectView.swift:624"
    ],
    "args": [],
    "targets": [
@@ -757,7 +757,7 @@
    "ko": "AI 규칙 받음",
    "en": "AI rule received",
    "files": [
-    "AssistantRuleStore.swift:216"
+    "AssistantRuleStore.swift:231"
    ],
    "args": [],
    "targets": [
@@ -1470,7 +1470,7 @@
    "ko": "App Store에서 구매 항목을 아직 불러오지 못했습니다.",
    "en": "The purchase is not available from the App Store yet.",
    "files": [
-    "AppShellView.swift:1379"
+    "AppShellView.swift:1369"
    ],
    "args": [],
    "targets": [
@@ -1707,7 +1707,7 @@
    "ko": "BOKKI Plan 불러오는 중",
    "en": "Loading BOKKI Plan",
    "files": [
-    "AppShellView.swift:427"
+    "AppShellView.swift:417"
    ],
    "args": [],
    "targets": [
@@ -1997,7 +1997,7 @@
    "ko": "Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고 인증은 「로그인 없음」을 고르세요. 클립보드는 10분 뒤 지워져요.",
    "en": "In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:641"
+    "AssistantConnectView.swift:644"
    ],
    "args": [],
    "targets": [
@@ -2084,7 +2084,7 @@
    "ko": "Cue 채팅창에 붙여 넣고 보내 주세요. Cue가 주소를 열어 MCP 주소와 키를 받아 가요. 안 되면 아래에서 MCP 주소와 키를 따로 넣어 주세요.",
    "en": "Paste it into the Cue chat and send. Cue opens the link to get the MCP URL and key. If that fails, enter them separately below.",
    "files": [
-    "AssistantConnectView.swift:653"
+    "AssistantConnectView.swift:656"
    ],
    "args": [],
    "targets": [
@@ -2560,7 +2560,7 @@
    "ko": "Pro 상태 확인 중",
    "en": "Checking Pro status",
    "files": [
-    "AppShellView.swift:1189"
+    "AppShellView.swift:1179"
    ],
    "args": [],
    "targets": [
@@ -2572,7 +2572,7 @@
    "ko": "Pro 영구 구매",
    "en": "Buy Pro permanently",
    "files": [
-    "AppShellView.swift:1354"
+    "AppShellView.swift:1344"
    ],
    "args": [],
    "targets": [
@@ -2584,7 +2584,7 @@
    "ko": "Pro 영구 구매가 완료되었습니다.",
    "en": "Your permanent Pro purchase is complete.",
    "files": [
-    "AppShellView.swift:1375"
+    "AppShellView.swift:1365"
    ],
    "args": [],
    "targets": [
@@ -2596,7 +2596,7 @@
    "ko": "Pro를 영구 이용 중입니다",
    "en": "You own Pro permanently",
    "files": [
-    "AppShellView.swift:1231"
+    "AppShellView.swift:1221"
    ],
    "args": [],
    "targets": [
@@ -2986,7 +2986,7 @@
    "ko": "iCloud 백업과 기기 연동",
    "en": "iCloud backup and device sync",
    "files": [
-    "AppShellView.swift:1175"
+    "AppShellView.swift:1165"
    ],
    "args": [],
    "targets": [
@@ -3481,7 +3481,7 @@
    "ko": "{0} · {1}번째",
    "en": "{0} · #{1}",
    "files": [
-    "AssistantDataActions.swift:691"
+    "AssistantDataActions.swift:693"
    ],
    "args": [
     "visible[from].name",
@@ -4143,7 +4143,7 @@
    "ko": "{0} 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the {0} chat and send.",
    "files": [
-    "AssistantConnectView.swift:655",
+    "AssistantConnectView.swift:658",
     "TripImportSheet.swift:568"
    ],
    "args": [
@@ -4490,7 +4490,7 @@
    "ko": "{0}로 Pro 영구 구매",
    "en": "Buy Pro permanently for {0}",
    "files": [
-    "AppShellView.swift:1349"
+    "AppShellView.swift:1339"
    ],
    "args": [
     "displayPrice"
@@ -5065,7 +5065,7 @@
    "ko": "{0}일(날짜 미정)",
    "en": "{0} day(s), no dates",
    "files": [
-    "AssistantDataActions.swift:509"
+    "AssistantDataActions.swift:511"
    ],
    "args": [
     "trip.wishDays ?? 1"
@@ -5153,7 +5153,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit PIN",
    "files": [
-    "AppShellView.swift:897"
+    "AppShellView.swift:887"
    ],
    "args": [
     "pinDigits"
@@ -5230,7 +5230,7 @@
    "ko": "{0}층",
    "en": "Floor {0}",
    "files": [
-    "AssistantDataActions.swift:673"
+    "AssistantDataActions.swift:675"
    ],
    "args": [
     "$0"
@@ -13203,7 +13203,7 @@
    "ko": "앱 잠금 해제 필요",
    "en": "App unlock required",
    "files": [
-    "AppShellView.swift:806"
+    "AppShellView.swift:796"
    ],
    "args": [],
    "targets": [
@@ -23257,7 +23257,7 @@
    "ko": "BOKKI Plan 불러오는 중",
    "en": "Loading BOKKI Plan",
    "files": [
-    "AppShellView.swift:428"
+    "AppShellView.swift:418"
    ],
    "args": [],
    "targets": [
@@ -23269,7 +23269,7 @@
    "ko": "활동과 이동 경로 불러오는 중",
    "en": "Loading activities and routes",
    "files": [
-    "AppShellView.swift:408"
+    "AppShellLaunchGate.swift:136"
    ],
    "args": [],
    "targets": [
@@ -33672,7 +33672,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit PIN",
    "files": [
-    "AppShellView.swift:898"
+    "AppShellView.swift:888"
    ],
    "args": [
     "pinDigits"
@@ -33701,7 +33701,7 @@
    "ko": "~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작해 주세요.",
    "en": "Paste it into ~/.gemini/settings.json and restart gemini.",
    "files": [
-    "AssistantConnectView.swift:639"
+    "AssistantConnectView.swift:642"
    ],
    "args": [],
    "targets": [
@@ -34683,7 +34683,7 @@
    "ko": "개발자 체험 14일 초기화",
    "en": "Reset developer trial for 14 days",
    "files": [
-    "AppShellView.swift:1292"
+    "AppShellView.swift:1282"
    ],
    "args": [],
    "targets": [
@@ -34695,7 +34695,7 @@
    "ko": "개발자 체험 기록을 초기화하지 못했습니다.",
    "en": "The developer trial record could not be reset.",
    "files": [
-    "AppShellView.swift:1369"
+    "AppShellView.swift:1359"
    ],
    "args": [],
    "targets": [
@@ -34880,7 +34880,7 @@
    "ko": "건강 데이터",
    "en": "Health Data",
    "files": [
-    "AppShellView.swift:1087"
+    "AppShellView.swift:1077"
    ],
    "args": [],
    "targets": [
@@ -35818,7 +35818,7 @@
    "ko": "계속 사용",
    "en": "Continue",
    "files": [
-    "AppShellView.swift:1333"
+    "AppShellView.swift:1323"
    ],
    "args": [],
    "targets": [
@@ -35830,7 +35830,7 @@
    "ko": "계속 사용하려면 Pro를 한 번 구매하거나 기존 구매 내역을 복원해 주세요.",
    "en": "Purchase Pro once or restore an existing purchase to continue.",
    "files": [
-    "AppShellView.swift:1260"
+    "AppShellView.swift:1250"
    ],
    "args": [],
    "targets": [
@@ -35855,7 +35855,7 @@
    "ko": "계절",
    "en": "Seasons",
    "files": [
-    "AssistantDataActions.swift:376",
+    "AssistantDataActions.swift:378",
     "MapHomeView+Map.swift:945"
    ],
    "args": [],
@@ -37066,7 +37066,7 @@
    "ko": "구매 내역을 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
    "en": "Your purchase could not be restored. Please try again later.",
    "files": [
-    "AppShellView.swift:1395"
+    "AppShellView.swift:1385"
    ],
    "args": [],
    "targets": [
@@ -37078,7 +37078,7 @@
    "ko": "구매 내역을 복원했습니다.",
    "en": "Your purchase was restored.",
    "files": [
-    "AppShellView.swift:1391"
+    "AppShellView.swift:1381"
    ],
    "args": [],
    "targets": [
@@ -37090,7 +37090,7 @@
    "ko": "구매 및 체험 상태를 확인하고 있습니다.",
    "en": "Checking your purchase and trial status.",
    "files": [
-    "AppShellView.swift:1240"
+    "AppShellView.swift:1230"
    ],
    "args": [],
    "targets": [
@@ -37102,7 +37102,7 @@
    "ko": "구매 복원",
    "en": "Restore purchase",
    "files": [
-    "AppShellView.swift:1326"
+    "AppShellView.swift:1316"
    ],
    "args": [],
    "targets": [
@@ -37114,7 +37114,7 @@
    "ko": "구매 승인을 기다리고 있습니다.",
    "en": "Waiting for purchase approval.",
    "files": [
-    "AppShellView.swift:1377"
+    "AppShellView.swift:1367"
    ],
    "args": [],
    "targets": [
@@ -37126,7 +37126,7 @@
    "ko": "구매 영수증을 확인하지 못했습니다.",
    "en": "The purchase receipt could not be verified.",
    "files": [
-    "AppShellView.swift:1384"
+    "AppShellView.swift:1374"
    ],
    "args": [],
    "targets": [
@@ -37138,7 +37138,7 @@
    "ko": "구매를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",
    "en": "The purchase could not be completed. Please try again later.",
    "files": [
-    "AppShellView.swift:1386"
+    "AppShellView.swift:1376"
    ],
    "args": [],
    "targets": [
@@ -38419,7 +38419,7 @@
    "ko": "기타 AI (웹 요청)",
    "en": "Other AI (web requests)",
    "files": [
-    "AssistantConnectView.swift:618"
+    "AssistantConnectView.swift:621"
    ],
    "args": [],
    "targets": [
@@ -38671,8 +38671,8 @@
    "en": "Off",
    "files": [
     "LedgerMessageRules.swift:688",
-    "AssistantDataActions.swift:676",
-    "AssistantDataActions.swift:392"
+    "AssistantDataActions.swift:678",
+    "AssistantDataActions.swift:394"
    ],
    "args": [],
    "targets": [
@@ -39607,7 +39607,7 @@
    "ko": "내 차 아님",
    "en": "Not my car",
    "files": [
-    "AssistantDataActions.swift:598"
+    "AssistantDataActions.swift:600"
    ],
    "args": [],
    "targets": [
@@ -39682,7 +39682,7 @@
    "ko": "내 차로 등록",
    "en": "Registered as my car",
    "files": [
-    "AssistantDataActions.swift:598"
+    "AssistantDataActions.swift:600"
    ],
    "args": [],
    "targets": [
@@ -40346,7 +40346,7 @@
    "ko": "다시 묻지 않음",
    "en": "Won't ask again",
    "files": [
-    "AssistantDataActions.swift:581"
+    "AssistantDataActions.swift:583"
    ],
    "args": [],
    "targets": [
@@ -40652,7 +40652,7 @@
    "en": "Close",
    "files": [
     "AIConnectNudge.swift:40",
-    "AppShellView.swift:1131",
+    "AppShellView.swift:1121",
     "ArrivalCardView.swift:67"
    ],
    "args": [],
@@ -41551,7 +41551,7 @@
    "ko": "동작 및 피트니스",
    "en": "Motion & Fitness",
    "files": [
-    "AppShellView.swift:1085",
+    "AppShellView.swift:1075",
     "MapHomeView+Support2.swift:895"
    ],
    "args": [],
@@ -42476,7 +42476,7 @@
    "files": [
     "LedgerTollRepeat.swift:295",
     "AssistantActivity.swift:207",
-    "AssistantActivity.swift:299"
+    "AssistantActivity.swift:300"
    ],
    "args": [],
    "targets": [
@@ -43189,7 +43189,7 @@
    "ko": "모든 권한이 확인되면 GPS와 센서 기록이 5분 간격으로 자동 시작됩니다.",
    "en": "GPS and sensor recording starts automatically every 5 minutes after all permissions are verified.",
    "files": [
-    "AppShellView.swift:959"
+    "AppShellView.swift:949"
    ],
    "args": [],
    "targets": [
@@ -44588,7 +44588,7 @@
    "ko": "백자",
    "en": "Porcelain",
    "files": [
-    "AssistantDataActions.swift:379",
+    "AssistantDataActions.swift:381",
     "MapHomeView+Map.swift:948"
    ],
    "args": [],
@@ -44766,7 +44766,7 @@
    "ko": "버튼을 누르면 14일 무료 체험이 시작됩니다. 자동 결제는 없습니다.",
    "en": "Tap the button to start a 14-day free trial. You will not be charged automatically.",
    "files": [
-    "AppShellView.swift:1245"
+    "AppShellView.swift:1235"
    ],
    "args": [],
    "targets": [
@@ -45279,7 +45279,7 @@
    "ko": "복사했어요. 붙여 넣은 뒤 돌아오세요.",
    "en": "Copied. Paste it, then come back.",
    "files": [
-    "AssistantConnectView.swift:555"
+    "AssistantConnectView.swift:558"
    ],
    "args": [],
    "targets": [
@@ -45327,7 +45327,7 @@
    "ko": "복원할 Pro 구매 내역이 없습니다.",
    "en": "No Pro purchase was found to restore.",
    "files": [
-    "AppShellView.swift:1393"
+    "AppShellView.swift:1383"
    ],
    "args": [],
    "targets": [
@@ -45436,7 +45436,7 @@
    "ko": "분류 안 함",
    "en": "Not classified",
    "files": [
-    "AssistantDataActions.swift:607"
+    "AssistantDataActions.swift:609"
    ],
    "args": [],
    "targets": [
@@ -47419,7 +47419,7 @@
    "ko": "설정 열기",
    "en": "Open Settings",
    "files": [
-    "AppShellView.swift:1070",
+    "AppShellView.swift:1060",
     "MapHomeScreenRecording.swift:669",
     "MapHomeStickerEditor.swift:266"
    ],
@@ -47447,7 +47447,7 @@
    "ko": "설정 필요",
    "en": "Required",
    "files": [
-    "AppShellView.swift:1023"
+    "AppShellView.swift:1013"
    ],
    "args": [],
    "targets": [
@@ -48100,7 +48100,7 @@
    "ko": "수묵",
    "en": "Ink Wash",
    "files": [
-    "AssistantDataActions.swift:378",
+    "AssistantDataActions.swift:380",
     "MapHomeView+Map.swift:947"
    ],
    "args": [],
@@ -48317,7 +48317,7 @@
    "ko": "숨김",
    "en": "Hidden",
    "files": [
-    "AssistantDataActions.swift:481"
+    "AssistantDataActions.swift:483"
    ],
    "args": [],
    "targets": [
@@ -48635,7 +48635,7 @@
    "ko": "시간 사이드바",
    "en": "Time sidebar",
    "files": [
-    "AssistantDataActions.swift:389",
+    "AssistantDataActions.swift:391",
     "MapHomeScreenRecording.swift:592"
    ],
    "args": [],
@@ -48735,7 +48735,7 @@
    "ko": "시간대별 날씨 기록",
    "en": "Hourly weather records",
    "files": [
-    "AppShellView.swift:1163"
+    "AppShellView.swift:1153"
    ],
    "args": [],
    "targets": [
@@ -49113,7 +49113,7 @@
    "ko": "실시간 GPS와 이동 경로",
    "en": "Live GPS and travel routes",
    "files": [
-    "AppShellView.swift:1167"
+    "AppShellView.swift:1157"
    ],
    "args": [],
    "targets": [
@@ -49125,7 +49125,7 @@
    "ko": "실시간 현황",
    "en": "Live Activities",
    "files": [
-    "AppShellView.swift:1093"
+    "AppShellView.swift:1083"
    ],
    "args": [],
    "targets": [
@@ -49137,7 +49137,7 @@
    "ko": "실외(고대비)",
    "en": "Outdoor (high contrast)",
    "files": [
-    "AssistantDataActions.swift:375",
+    "AssistantDataActions.swift:377",
     "MapHomeView+Map.swift:944"
    ],
    "args": [],
@@ -49651,7 +49651,7 @@
    "ko": "아직 연결되지 않았어요. 앞 단계를 다시 확인해 주세요.",
    "en": "Not connected yet. Check the previous steps.",
    "files": [
-    "AssistantConnectView.swift:567"
+    "AssistantConnectView.swift:570"
    ],
    "args": [],
    "targets": [
@@ -49897,7 +49897,7 @@
    "ko": "알림",
    "en": "Notifications",
    "files": [
-    "AppShellView.swift:1091",
+    "AppShellView.swift:1081",
     "AssistantDataCommands.swift:698",
     "PermissionOnboardingSheet.swift:80"
    ],
@@ -50035,7 +50035,7 @@
    "ko": "애플맵",
    "en": "Apple Maps",
    "files": [
-    "AssistantDataActions.swift:372",
+    "AssistantDataActions.swift:374",
     "MapHomeView+Map.swift:940"
    ],
    "args": [],
@@ -50342,7 +50342,7 @@
    "ko": "앱 잠금 해제 필요",
    "en": "App unlock required",
    "files": [
-    "AppShellView.swift:805"
+    "AppShellView.swift:795"
    ],
    "args": [],
    "targets": [
@@ -50585,7 +50585,7 @@
    "ko": "야간",
    "en": "Night",
    "files": [
-    "AssistantDataActions.swift:374",
+    "AssistantDataActions.swift:376",
     "MapHomeView+Map.swift:943"
    ],
    "args": [],
@@ -51877,7 +51877,7 @@
    "ko": "연결 안내를 복사했어요. 10분 뒤 클립보드에서 지워져요.",
    "en": "Setup copied. It is cleared from the clipboard in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:539"
+    "AssistantConnectView.swift:542"
    ],
    "args": [],
    "targets": [
@@ -51901,7 +51901,7 @@
    "ko": "연결 안내를 복사했어요. Cue 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.",
    "en": "Setup copied. Paste it into the Cue chat, or enter the MCP URL and key separately.",
    "files": [
-    "AssistantConnectView.swift:518"
+    "AssistantConnectView.swift:521"
    ],
    "args": [],
    "targets": [
@@ -51913,7 +51913,7 @@
    "ko": "연결 안내를 복사했어요",
    "en": "Setup copied",
    "files": [
-    "AssistantConnectView.swift:631"
+    "AssistantConnectView.swift:634"
    ],
    "args": [],
    "targets": [
@@ -52099,7 +52099,7 @@
    "ko": "연결 키를 복사했어요. GPT 구성 → 작업 → 인증에서 API 키·Bearer를 고르고 붙여 넣어 주세요. 스키마 주소는 이 화면에서 따로 복사해요. 클립보드는 10분 뒤 지워져요.",
    "en": "Key copied. In the GPT's Configure → Actions → Authentication, choose API key and Bearer, then paste it. Copy the schema URL from this screen. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:648"
+    "AssistantConnectView.swift:651"
    ],
    "args": [],
    "targets": [
@@ -52174,7 +52174,7 @@
    "ko": "연결됐어요.",
    "en": "Connected.",
    "files": [
-    "AssistantConnectView.swift:566"
+    "AssistantConnectView.swift:569"
    ],
    "args": [],
    "targets": [
@@ -54456,7 +54456,7 @@
    "ko": "웹 요청을 할 수 있는 AI의 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the chat of an AI that can make web requests, then send.",
    "files": [
-    "AssistantConnectView.swift:646"
+    "AssistantConnectView.swift:649"
    ],
    "args": [],
    "targets": [
@@ -54468,7 +54468,7 @@
    "ko": "위성",
    "en": "Satellite",
    "files": [
-    "AssistantDataActions.swift:373",
+    "AssistantDataActions.swift:375",
     "MapHomeView+Map.swift:941"
    ],
    "args": [],
@@ -54939,7 +54939,7 @@
    "ko": "위치 항상 허용",
    "en": "Always Location",
    "files": [
-    "AppShellView.swift:1081",
+    "AppShellView.swift:1071",
     "MapHomeView+Support2.swift:891"
    ],
    "args": [],
@@ -55399,7 +55399,7 @@
    "ko": "이 기기 또는 iCloud에 저장된 기록에서 14일 무료 체험을 이미 사용했습니다.",
    "en": "The 14-day free trial has already been used on this device or in its synced iCloud record.",
    "files": [
-    "AppShellView.swift:1363"
+    "AppShellView.swift:1353"
    ],
    "args": [],
    "targets": [
@@ -57872,7 +57872,7 @@
    "ko": "자동 기록에 필요한 권한입니다. 빠진 권한이 있으면 기록 화면을 사용할 수 없습니다.",
    "en": "These permissions are required for automatic recording. The timeline remains locked until all are enabled.",
    "files": [
-    "AppShellView.swift:986"
+    "AppShellView.swift:976"
    ],
    "args": [],
    "targets": [
@@ -59375,7 +59375,7 @@
    "en": "Not set",
    "files": [
     "LedgerMessageRules.swift:602",
-    "AssistantDataActions.swift:612",
+    "AssistantDataActions.swift:614",
     "TravelNewTripSheet.swift:74"
    ],
    "args": [],
@@ -59417,7 +59417,7 @@
    "ko": "정확한 위치",
    "en": "Precise Location",
    "files": [
-    "AppShellView.swift:1083",
+    "AppShellView.swift:1073",
     "MapHomeView+Support2.swift:893"
    ],
    "args": [],
@@ -59470,7 +59470,7 @@
    "ko": "제안한 곳",
    "en": "Suggested place",
    "files": [
-    "AssistantDataActions.swift:577"
+    "AssistantDataActions.swift:579"
    ],
    "args": [],
    "targets": [
@@ -60718,7 +60718,7 @@
    "ko": "지도에 경로 선",
    "en": "Route lines on map",
    "files": [
-    "AssistantDataActions.swift:387"
+    "AssistantDataActions.swift:389"
    ],
    "args": [],
    "targets": [
@@ -60742,7 +60742,7 @@
    "ko": "지도에 발자국",
    "en": "Footprints on map",
    "files": [
-    "AssistantDataActions.swift:388"
+    "AssistantDataActions.swift:390"
    ],
    "args": [],
    "targets": [
@@ -60766,7 +60766,7 @@
    "ko": "지도에 사진",
    "en": "Photos on map",
    "files": [
-    "AssistantDataActions.swift:386"
+    "AssistantDataActions.swift:388"
    ],
    "args": [],
    "targets": [
@@ -61136,7 +61136,7 @@
    "ko": "지하철·버스 자동 판정",
    "en": "Automatic subway and bus detection",
    "files": [
-    "AppShellView.swift:1171"
+    "AppShellView.swift:1161"
    ],
    "args": [],
    "targets": [
@@ -62067,7 +62067,7 @@
    "ko": "추가 결제나 자동 갱신 없이 모든 기능을 계속 사용할 수 있습니다.",
    "en": "Keep using every feature with no additional payment or renewal.",
    "files": [
-    "AppShellView.swift:1255"
+    "AppShellView.swift:1245"
    ],
    "args": [],
    "targets": [
@@ -62451,7 +62451,7 @@
    "ko": "층 없음",
    "en": "No floor",
    "files": [
-    "AssistantDataActions.swift:673"
+    "AssistantDataActions.swift:675"
    ],
    "args": [],
    "targets": [
@@ -62655,7 +62655,7 @@
    "ko": "카카오 지도",
    "en": "Kakao Map",
    "files": [
-    "AssistantDataActions.swift:380",
+    "AssistantDataActions.swift:382",
     "MapHomeView+Map.swift:949"
    ],
    "args": [],
@@ -62803,7 +62803,7 @@
    "ko": "캘린더 전체 접근",
    "en": "Full Calendar Access",
    "files": [
-    "AppShellView.swift:1089"
+    "AppShellView.swift:1079"
    ],
    "args": [],
    "targets": [
@@ -63008,8 +63008,8 @@
    "en": "On",
    "files": [
     "LedgerMessageRules.swift:688",
-    "AssistantDataActions.swift:676",
-    "AssistantDataActions.swift:392"
+    "AssistantDataActions.swift:678",
+    "AssistantDataActions.swift:394"
    ],
    "args": [],
    "targets": [
@@ -63165,7 +63165,7 @@
    "ko": "클립보드는 10분 뒤 지워져요.",
    "en": "The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:657"
+    "AssistantConnectView.swift:660"
    ],
    "args": [],
    "targets": [
@@ -63274,7 +63274,7 @@
    "ko": "탈것 표시",
    "en": "Show vehicles",
    "files": [
-    "AssistantDataActions.swift:390",
+    "AssistantDataActions.swift:392",
     "MapHomeView+Menu2.swift:21"
    ],
    "args": [],
@@ -63539,7 +63539,7 @@
    "ko": "판타지",
    "en": "Fantasy",
    "files": [
-    "AssistantDataActions.swift:377",
+    "AssistantDataActions.swift:379",
     "MapHomeView+Map.swift:946"
    ],
    "args": [],
@@ -63932,7 +63932,7 @@
    "ko": "필수 권한 설정",
    "en": "Required permissions",
    "files": [
-    "AppShellView.swift:982"
+    "AppShellView.swift:972"
    ],
    "args": [],
    "targets": [
@@ -64416,7 +64416,7 @@
    "ko": "한 번 결제 · 자동 갱신 없음",
    "en": "One-time purchase · No auto-renewal",
    "files": [
-    "AppShellView.swift:1314"
+    "AppShellView.swift:1304"
    ],
    "args": [],
    "targets": [
@@ -64962,7 +64962,7 @@
    "ko": "허용됨",
    "en": "Allowed",
    "files": [
-    "AppShellView.swift:1024",
+    "AppShellView.swift:1014",
     "FirstRunTutorialPolicy.swift:198"
    ],
    "args": [],
@@ -64975,7 +64975,7 @@
    "ko": "허용됨",
    "en": "Granted",
    "files": [
-    "AppShellView.swift:1049"
+    "AppShellView.swift:1039"
    ],
    "args": [],
    "targets": [
@@ -64987,7 +64987,7 @@
    "ko": "허용하기",
    "en": "Allow",
    "files": [
-    "AppShellView.swift:1072",
+    "AppShellView.swift:1062",
     "FirstRunTutorialGuides.swift:548",
     "MapHomeView+Support2.swift:906"
    ],
@@ -65583,7 +65583,7 @@
    "ko": "확인",
    "en": "OK",
    "files": [
-    "AppShellView.swift:1213",
+    "AppShellView.swift:1203",
     "AssistantConnectView.swift:213",
     "AssistantPINSheet.swift:60"
    ],
@@ -65787,7 +65787,7 @@
    "ko": "활동과 이동 경로 불러오는 중",
    "en": "Loading activities and routes",
    "files": [
-    "AppShellView.swift:407"
+    "AppShellLaunchGate.swift:135"
    ],
    "args": [],
    "targets": [
