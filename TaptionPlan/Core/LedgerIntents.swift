@@ -66,22 +66,42 @@ enum PaymentTextCapture {
         return inFlight[key] == nil ? nil : ""
     }
 
+    enum RuleVerdict: Equatable {
+        case ignored, ownTransfer, unmatched
+        case matched(LedgerMessageRules.Match)
+    }
+
+    /// 서버 규칙(AIX1114A01 P3)과 결제 문자 정규식으로 먼저 판단한다. 내 규칙(넣지 않을 낱말·결제가 아닌 글·
+    /// 내 계좌 사이 이체·내 정규식)이 공통 규칙(SRL1116A01)보다 먼저다(HOF1118A01). 공통 규칙의 「결제가 아닌 글」이
+    /// 내 정규식이 읽는 문자를 막지 않게 한다. 내 정규식 안에서는 AI가 보탠 것이 앞선다(앱 규칙이 못 읽는 형식을 고치려고 넣었다).
+    static func ruleVerdict(_ text: String, source: String?, rules: [Rule], now: Date, defaults: UserDefaults = .standard,
+                            sharedPayment: @autoclosure () -> [LedgerMessageRules.Rule] = SharedRuleStore.paymentRules()) -> RuleVerdict {
+        let name = PaymentAlertSources.name(source)
+        let isShared = { (rule: Rule) in rule.source?.by == "shared" }
+        let own = rules.filter { !isShared($0) }, common = rules.filter(isShared)
+        if RuleEngine.skipWord(in: text, rules: own) != nil || RuleEngine.textIgnore(text, source: name, rules: own) != nil { return .ignored }
+        if RuleEngine.internalTransfer(text, rules: own) != nil { return .ownTransfer }
+        if let match = LedgerMessageRules.match(text, now: now, defaults: defaults) { return .matched(match) }
+        if RuleEngine.skipWord(in: text, rules: common) != nil || RuleEngine.textIgnore(text, source: name, rules: common) != nil { return .ignored }
+        if RuleEngine.internalTransfer(text, rules: common) != nil { return .ownTransfer }
+        if let match = LedgerMessageRules.match(text, now: now, defaults: defaults, shared: sharedPayment()) { return .matched(match) }
+        return .unmatched
+    }
+
     static func process(_ text: String, requiresTime: Bool, source: String? = nil, now: Date = .now) async -> (String, PaymentInbox.Outcome) {
         let language = MapHomeLanguage.current
         // 사용자가 정한 「넣지 않을 낱말」이 든 글은 넣지 않는다(SMS1114A01).
         if let word = PaymentAlertSources.skipWord(in: text) {
             return (language.text("「\(word)」이(가) 든 글은 넣지 않게 해 두었어요.", "Texts containing “\(word)” are set to be skipped."), .skipped)
         }
-        // 서버 규칙(AIX1114A01 P3): 넣지 않을 낱말·결제가 아닌 글·내 계좌 사이 이체는 여기서 끝낸다.
-        let rules = AssistantRuleSnapshot.rules
-        if RuleEngine.skipWord(in: text, rules: rules) != nil || RuleEngine.textIgnore(text, source: PaymentAlertSources.name(source), rules: rules) != nil {
+        switch ruleVerdict(text, source: source, rules: AssistantRuleSnapshot.rules, now: now) {
+        case .ignored:
             return (language.text("가계부에 넣지 않는 문자예요.", "This kind of text is not added to the ledger."), .skipped)
-        }
-        if RuleEngine.internalTransfer(text, rules: rules) != nil {
+        case .ownTransfer:
             return (language.text("내 계좌 사이에서 옮긴 돈이라 넣지 않았어요.", "A transfer between your own accounts, so nothing was added."), .skipped)
-        }
-        // AI가 보탠 규칙이 먼저다. 앱 규칙이 못 읽거나 잘못 읽는 형식을 고치려고 넣은 것이기 때문이다.
-        if let match = LedgerMessageRules.match(text, now: now, shared: SharedRuleStore.paymentRules()) {
+        case .unmatched:
+            break
+        case let .matched(match):
             guard case .draft(var draft, let income) = match else {
                 return (language.text("가계부에 넣지 않는 문자예요.", "This kind of text is not added to the ledger."), .skipped)
             }
