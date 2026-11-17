@@ -490,6 +490,10 @@ final class MapHomeBenchSampler: @unchecked Sendable {
     private let buffer = UnsafeMutablePointer<UInt>.allocate(capacity: 160)
 
     private func capture() -> [UInt]? {
+        #if !arch(arm64)
+        // 표본기는 arm64(기기·Apple 실리콘 시뮬레이터)에서만 쓴다. 범용 시뮬레이터 빌드의 x86_64 조각을 위해 비워 둔다.
+        return nil
+        #else
         var state = arm_thread_state64_t()
         var count = mach_msg_type_number_t(MemoryLayout<arm_thread_state64_t>.size / MemoryLayout<natural_t>.size)
         guard thread_suspend(thread) == KERN_SUCCESS else { return nil }
@@ -513,6 +517,7 @@ final class MapHomeBenchSampler: @unchecked Sendable {
         }
         thread_resume(thread)
         return depth > 0 ? Array(UnsafeBufferPointer(start: buffer, count: depth)) : nil
+        #endif
     }
 
     /// `PRFSAMPLE <이름> total=<표본 수>`, 앱 주소마다 `app <오프셋> <포함> <맨 위>`, 시스템 기호마다 `sys <라이브러리> <기호> <포함> <맨 위>`,
