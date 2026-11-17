@@ -221,7 +221,8 @@ enum AssistantActivityBuilder {
                 AssistantActivityDay.Memo(
                     id: memo.id.uuidString,
                     time: memo.isTimeless == true ? nil : stamp.clock(memo.occurredAt),
-                    text: String(memo.text.prefix(1_000))
+                    // REV1117A02(대표 결정): 보내는 사본만 번호를 가린다. 원문은 그대로 둔다.
+                    text: String(AssistantRedaction.mask(memo.text).prefix(1_000))
                 )
             }
     }

@@ -690,6 +690,20 @@ extension AssistantCommandEditTests {
         XCTAssertEqual(state.settings.fxRates, ["USD": 1_400, "JPY": 9.5])
     }
 
+    /// REV1117A02(대표 결정): AI는 번호를 가린 메모를 본다. 가린 번호를 그대로 돌려보내도 원문 번호는 남는다.
+    func testAnAIMemoEditKeepsTheNumbersItOnlySawMasked() async throws {
+        let model = await emptyModel()
+        let preferences = AssistantPreferenceStore.test(defaults())
+        let original = "택배 기사 010-1234-5678 문 앞"
+        let memoID = try XCTUnwrap(model.addMemo(text: original, kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: .now))
+        let seen = AITaskQueue.mask(original)
+        XCTAssertNotEqual(seen, original)
+        let action = try operation("updateMemo", ["memoId": memoID.uuidString, "text": seen.replacingOccurrences(of: "문 앞", with: "문 앞에 두기")])
+        let result = await model.applyAssistantAction(action, preferences: preferences)
+        XCTAssertNil(result.reason)
+        XCTAssertEqual(model.snapshot.memos.first { $0.id == memoID }?.text, "택배 기사 010-1234-5678 문 앞에 두기")
+    }
+
     /// REV1117A02: 끝난 여행의 지출을 AI가 지우면 자동 정산 짝 기록도 다시 맞춘다.
     func testDeletingAnExpenseOfAnEndedTripResettlesIt() async throws {
         let model = await emptyModel()

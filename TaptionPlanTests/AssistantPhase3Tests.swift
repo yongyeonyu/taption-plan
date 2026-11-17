@@ -248,6 +248,20 @@ final class AssistantPhase3Tests: XCTestCase {
         }
     }
 
+    /// REV1117A02(대표 결정): 하루 기록으로 보내는 메모 사본은 전화·카드 번호를 가린다.
+    func testActivityMemosAreSentWithNumbersMasked() throws {
+        let memo = ActionMemo(occurredAt: at(12), kind: .idea, text: "택배 기사 010-1234-5678, 카드 1234 5678 9012 3456")
+        let input = AssistantActivityInput(
+            day: at(0), calendar: calendar, language: .korean, categories: [], steps: nil, plansScheduled: 0, plansCompleted: 0,
+            actuals: [], categoryTitles: [:], memos: [memo], stays: [], travel: [], registeredNames: [:], now: at(23)
+        )
+        let day = try XCTUnwrap(AssistantActivityBuilder.make(input, level: .summary))
+        let text = try XCTUnwrap(day.memos.first?.text)
+        XCTAssertFalse(text.contains("1234-5678"), text)
+        XCTAssertFalse(text.contains("9012"), text)
+        XCTAssertTrue(text.contains("5678") && text.contains("3456"), "끝 4자리는 남긴다")
+    }
+
     func testSummaryRecordTitlesKeepStoreNamesAndHideAddresses() throws {
         let store = ActualRecord(planID: nil, title: "스타벅스 강남역점", categoryID: "eating", startedAt: at(9), endedAt: at(10), source: .location)
         let address = ActualRecord(planID: nil, title: "강남구 테헤란로", categoryID: "activity", startedAt: at(11), endedAt: at(12), source: .location)
