@@ -272,14 +272,16 @@ extension AssistantLogEntry {
 /// 거절 사유를 사람이 읽는 짧은 글로(AIP1114A05). 사유 낱말은 앱이 명령 결과에 쓰는 그대로다.
 enum AssistantRejection {
     static func message(_ reason: String, language: MapHomeLanguage) -> String {
-        switch reason {
+        // 공유 장부가 막은 까닭은 손 편집과 같은 글로(AIF1118A01).
+        if let failure = TripShareLedger.Failure(assistantReason: reason) { return failure.message(language) }
+        return switch reason {
         case "disabled": language.text("꺼 둔 종류라 하지 않았어요", "This kind of edit is switched off")
         case "invalid", "invalid_time", "invalid_category", "end_before_start", "no_dates":
             language.text("요청 형식이 맞지 않았어요", "The request wasn't valid")
         case "edit_failed", "memo_failed", "schedule_failed", "goal_failed", "trip_failed":
             language.text("앱에서 저장하지 못했어요", "The app couldn't save it")
         case "no_change": language.text("바꿀 것이 없었어요", "There was nothing to change")
-        case "shared_trip": language.text("함께 쓰는 여행이라 AI가 바꾸지 않았어요", "This trip is shared, so the assistant didn't change it")
+        case "shared_trip", AssistantSharedLedger.moved: language.text("함께 쓰는 여행이라 AI가 바꾸지 않았어요", "This trip is shared, so the assistant didn't change it")
         case "duplicate": language.text("이미 있는 내용이에요", "It was already there")
         case "unknown_category": language.text("없는 분류예요", "That category doesn't exist")
         case _ where reason.hasPrefix("no_"): language.text("고칠 대상을 찾지 못했어요", "Couldn't find the item to change")
@@ -396,6 +398,22 @@ extension AppModel {
             )
             return false
         }
+        // 공유 여행 방에 있는 지출은 방으로 되돌린다. 동행이 잠갔거나 보기만이면 되돌리지 않는다(AIF1118A01).
+        var ledgerUndone = false
+        if let before = entry.delta.ledgerBefore, entry.delta.ledgerEntry != nil {
+            switch await AssistantSharedLedger.scope(of: before, ledger: preferences.ledger) {
+            case .local: break
+            case .offline:
+                userFacingError = TripShareLedger.Failure.viewOnly.message(.current)
+                return false
+            case .inRoom:
+                if let failure = await AssistantSharedLedger.save(before) {
+                    userFacingError = failure.message(.current)
+                    return false
+                }
+                ledgerUndone = true
+            }
+        }
         let previous = snapshot
         snapshot = restored
         let lastID = userEditUndoHistory.last?.id
@@ -404,11 +422,15 @@ extension AppModel {
         guard await persistOrRollBack(userEditRollback(from: previous, historyItemID: addedID)) else { return false }
         for change in stored { preferences.set(change.key, value: change.before, model: self) }
         // 되돌린 메모의 금액대로 가계부도 맞춘다(AI가 고친 메모를 되돌리면 금액도 돌아온다).
-        resyncMemoLedger(changed: Set(entry.delta.memos.map(\.id)).subtracting([entry.delta.ledgerEntry?.memoID].compactMap { $0 }))
+        // 지운 메모는 새 id로 되살아나므로 기록의 id가 아니라 되돌리기 전후에 실제로 바뀐 메모로 맞춘다(AIF1118A01).
+        let changedMemos = AppModel.changedMemoIDs(previous.memos, snapshot.memos)
+        resyncMemoLedger(changed: changedMemos.subtracting([entry.delta.ledgerEntry?.memoID].compactMap { $0 }))
         if let bubbleID = entry.delta.bubbleID { AssistantBubbleStore.remove(bubbleID, file: preferences.bubbleFile) }
         // 규칙만 지운다. 그 규칙으로 다시 읽어 넣은 가계부 기록은 그대로 둔다(PRL1112A01).
         if let ruleID = entry.delta.paymentRuleID { LedgerMessageRules.remove(ruleID, defaults: preferences.defaults) }
-        if let before = entry.delta.ledgerBefore {
+        if ledgerUndone {
+            // 방으로 이미 되돌렸다.
+        } else if let before = entry.delta.ledgerBefore {
             await preferences.ledger.save(before)
         } else if let ledgerID = entry.delta.ledgerEntryID {
             await preferences.ledger.delete(ledgerID)
