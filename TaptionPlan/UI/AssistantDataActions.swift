@@ -157,6 +157,8 @@ extension AppModel {
             result.ledgerBefore = before
             if change.delete {
                 await preferences.ledger.delete(entryID)
+                // REV1117A02: 끝난 여행의 기록을 지우면 정산 짝 기록도 다시 맞춘다(고칠 때·되돌릴 때와 같이).
+                if let tripID = before.tripID { await preferences.ledger.syncTrip(tripID) }
                 result.after = language.text("지움", "Deleted")
                 return result
             }
