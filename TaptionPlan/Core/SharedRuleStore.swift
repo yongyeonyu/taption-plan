@@ -118,13 +118,21 @@ enum SharedRuleStore {
         guard reply.status == 200 || reply.status == 304 else { return false }
         defaults.set(now, forKey: checkedKey)
         // 서명이 맞고 지난번보다 새 묶음만 저장한다. 맞지 않으면 버리고 지난번 것을 그대로 쓴다.
+        // 판 번호는 서명 안(payload)의 것과 같아야 한다. 겉의 번호만 큰 예전 묶음이 새 판을 막지 못하게 한다(REV1117A02).
         if reply.status == 200, let bundle = decode(reply.data), bundle.version > (stored(defaults)?.version ?? 0), let publicKey,
-           verified(bundle, publicKey: publicKey), let data = try? JSONEncoder().encode(bundle) { defaults.set(data, forKey: bundleKey) }
+           verified(bundle, publicKey: publicKey), signedVersion(bundle) == bundle.version,
+           let data = try? JSONEncoder().encode(bundle) { defaults.set(data, forKey: bundleKey) }
         AssistantRuleStore.refreshSnapshot(defaults)
         return true
     }
 
     private struct Reply: Decodable { let version: Int; let payload: String?; let signature: String? }
+    private struct SignedVersion: Decodable { let version: Int }
+
+    /// 서명한 글 안의 판 번호.
+    nonisolated static func signedVersion(_ bundle: SignedBundle) -> Int? {
+        bundle.payload.data(using: .utf8).flatMap { try? JSONDecoder().decode(SignedVersion.self, from: $0) }?.version
+    }
 
     nonisolated static func decode(_ data: Data) -> SignedBundle? {
         guard let reply = try? JSONDecoder().decode(Reply.self, from: data), let payload = reply.payload, let signature = reply.signature else { return nil }
@@ -154,7 +162,7 @@ enum SharedRuleStore {
         let defaults = env.defaults
         guard isContributing(defaults), MemoPolishQueue.hasConnection(defaults), let master = env.secrets.read(.master) else { return 0 }
         let sent = Set(defaults.stringArray(forKey: sentKey) ?? [])
-        let batch = Array(pending(rules: AssistantRuleStore.stored(defaults).rules, sent: sent).prefix(20))
+        let batch = Array(pending(rules: AssistantRuleStore.effective(defaults).rules, sent: sent).prefix(20))
         guard !batch.isEmpty, let body = try? JSONEncoder().encode(UploadBody(rules: batch.map(\.upload))),
               let reply = await TripRelay.send(TripRelay.relayRequest("/shared/candidates", method: "POST", body: body, token: master, host: env.host, client: env.client()), session: env.session),
               (200..<300).contains(reply.status) else { return 0 }
