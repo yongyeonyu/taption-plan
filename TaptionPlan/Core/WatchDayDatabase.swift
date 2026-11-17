@@ -42,45 +42,81 @@ actor WatchDayDatabase {
         chunks: [TaptionWatchAccelerationChunk]
     ) async throws {
         guard !summaries.isEmpty || !chunks.isEmpty else { return }
-        let chunkEvents = try chunks.map { chunk -> TaptionPlanRawEvent in
-            let payload = try TaptionPlanCanonicalStorage.encode(chunk)
-            return TaptionPlanRawEvent(
-                device: .appleWatch,
-                day: TaptionPlanDayKey(date: chunk.endedAt),
-                timestamp: chunk.endedAt,
-                sequence: UInt64(max(0, chunk.sequence)),
-                id: chunk.id.uuidString,
-                domain: "watch-acceleration",
-                provenance: [
-                    "source-device:appleWatch",
-                    "source:WatchAcceleration",
-                    "storage:watch-v3",
-                    "derived:downsampled-accelerometer-v1",
-                    "sample-count:\(chunk.samples.count)",
-                ],
-                payload: TaptionPlanCanonicalStorage.envelope(for: payload)
+        try await store.appendRawEvents(
+            try chunks.map(Self.workoutAccelerationEvent)
+                + summaries.map(Self.workoutSummaryEvent)
+        )
+    }
+
+    /// 운동 요약·가속도 묶음을 원본과 함께 outbox에 넣는다. iPhone ack가 올 때까지
+    /// 주변 기록과 같은 outbox 재전송을 탄다(WSY1117A01). 원본 행은 `appendBatch`와 같다.
+    func enqueueWorkoutBatch(
+        _ summaries: [TaptionWatchSensorSummary],
+        chunks: [TaptionWatchAccelerationChunk]
+    ) async throws {
+        guard !summaries.isEmpty || !chunks.isEmpty else { return }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let outboxItems = try chunks.map {
+            TaptionPlanV3OutboxItem(
+                id: "chunk:\($0.id.uuidString)",
+                kind: TaptionWatchEnvelope.accelerationChunkKey,
+                payload: try encoder.encode($0)
+            )
+        } + summaries.map {
+            TaptionPlanV3OutboxItem(
+                id: "summary:\($0.rawEventID)",
+                kind: TaptionWatchEnvelope.sensorSummaryKey,
+                payload: try encoder.encode($0)
             )
         }
-        let summaryEvents = try summaries.map { summary -> TaptionPlanRawEvent in
-            let day = TaptionPlanDayKey(date: summary.endedAt)
-            let id = "\(summary.sessionID.uuidString):\(summary.sequence)"
-            let payload = try TaptionPlanCanonicalStorage.encode(summary)
-            return TaptionPlanRawEvent(
-                device: .appleWatch,
-                day: day,
-                timestamp: summary.endedAt,
-                sequence: UInt64(max(0, summary.sequence)),
-                id: id,
-                domain: "watch-sensor-summary",
-                provenance: [
-                    "source-device:appleWatch",
-                    "source:WatchSensorSummary",
-                    "storage:watch-v3",
-                ],
-                payload: TaptionPlanCanonicalStorage.envelope(for: payload)
-            )
-        }
-        try await store.appendRawEvents(chunkEvents + summaryEvents)
+        try await store.appendRawEvents(
+            try chunks.map(Self.workoutAccelerationEvent)
+                + summaries.map(Self.workoutSummaryEvent),
+            outboxItems: outboxItems
+        )
+    }
+
+    private static func workoutAccelerationEvent(
+        _ chunk: TaptionWatchAccelerationChunk
+    ) throws -> TaptionPlanRawEvent {
+        let payload = try TaptionPlanCanonicalStorage.encode(chunk)
+        return TaptionPlanRawEvent(
+            device: .appleWatch,
+            day: TaptionPlanDayKey(date: chunk.endedAt),
+            timestamp: chunk.endedAt,
+            sequence: UInt64(max(0, chunk.sequence)),
+            id: chunk.id.uuidString,
+            domain: "watch-acceleration",
+            provenance: [
+                "source-device:appleWatch",
+                "source:WatchAcceleration",
+                "storage:watch-v3",
+                "derived:downsampled-accelerometer-v1",
+                "sample-count:\(chunk.samples.count)",
+            ],
+            payload: TaptionPlanCanonicalStorage.envelope(for: payload)
+        )
+    }
+
+    private static func workoutSummaryEvent(
+        _ summary: TaptionWatchSensorSummary
+    ) throws -> TaptionPlanRawEvent {
+        let payload = try TaptionPlanCanonicalStorage.encode(summary)
+        return TaptionPlanRawEvent(
+            device: .appleWatch,
+            day: TaptionPlanDayKey(date: summary.endedAt),
+            timestamp: summary.endedAt,
+            sequence: UInt64(max(0, summary.sequence)),
+            id: "\(summary.sessionID.uuidString):\(summary.sequence)",
+            domain: "watch-sensor-summary",
+            provenance: [
+                "source-device:appleWatch",
+                "source:WatchSensorSummary",
+                "storage:watch-v3",
+            ],
+            payload: TaptionPlanCanonicalStorage.envelope(for: payload)
+        )
     }
 
     func enqueueAmbientBatch(

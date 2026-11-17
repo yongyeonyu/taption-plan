@@ -64,17 +64,25 @@ extension WatchConnectivityController {
             let task = Task { @MainActor [weak self, dayDatabase, pending] in
                 guard let self else { return }
                 defer { self.sensorWriteTasks[taskID] = nil; self.isFlushingSensorSummaries = false }
-                do {
-                    try await dayDatabase.appendBatch(pending)
-                } catch {
-                    WatchLaunchDiagnostics.mark("sensor batch store failed before send")
-                    return
+                let scheduled: [TaptionWatchSensorSummary]
+                if (try? await dayDatabase.enqueueWorkoutBatch(pending, chunks: [])) != nil {
+                    guard !Task.isCancelled, !self.isPurgingData else { return }
+                    // outbox에 들어갔으니 ack까지는 outbox가 다시 보낸다(WSY1117A01).
+                    self.flushPendingAmbientOutbox(using: session)
+                    scheduled = pending
+                } else {
+                    do {
+                        try await dayDatabase.appendBatch(pending)
+                    } catch {
+                        WatchLaunchDiagnostics.mark("sensor batch store failed before send")
+                        return
+                    }
+                    guard !Task.isCancelled, !self.isPurgingData else { return }
+                    scheduled = self.transferPendingSensorSummaries(
+                        pending,
+                        through: session
+                    )
                 }
-                guard !Task.isCancelled, !self.isPurgingData else { return }
-                let scheduled = self.transferPendingSensorSummaries(
-                    pending,
-                    through: session
-                )
                 guard TaptionWatchDurableSpoolPolicy.commitForTransfer(
                     scheduled,
                     from: &self.pendingSensorSummaries,
@@ -125,17 +133,22 @@ extension WatchConnectivityController {
                 guard let self else { return }
                 defer { self.sensorWriteTasks[taskID] = nil; self.isFlushingAccelerationChunks = false }
                 for chunk in pending {
-                    do {
-                        try await dayDatabase.append(chunk)
-                    } catch {
-                        WatchLaunchDiagnostics.mark(
-                            "acceleration batch store failed before send chunk=\(chunk.id.uuidString)"
-                        )
-                        continue
-                    }
-                    guard !Task.isCancelled, !self.isPurgingData else { return }
-                    guard self.sendAccelerationChunkTransport(chunk) else {
-                        continue
+                    if (try? await dayDatabase.enqueueWorkoutBatch([], chunks: [chunk])) != nil {
+                        guard !Task.isCancelled, !self.isPurgingData else { return }
+                        self.flushPendingAmbientOutbox(using: session)
+                    } else {
+                        do {
+                            try await dayDatabase.append(chunk)
+                        } catch {
+                            WatchLaunchDiagnostics.mark(
+                                "acceleration batch store failed before send chunk=\(chunk.id.uuidString)"
+                            )
+                            continue
+                        }
+                        guard !Task.isCancelled, !self.isPurgingData else { return }
+                        guard self.sendAccelerationChunkTransport(chunk) else {
+                            continue
+                        }
                     }
                     guard TaptionWatchDurableSpoolPolicy.commitForTransfer(
                         [chunk],
