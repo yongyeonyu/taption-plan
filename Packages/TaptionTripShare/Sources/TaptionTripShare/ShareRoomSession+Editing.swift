@@ -224,16 +224,24 @@ extension ShareRoomSession {
             try await catchUp()
             guard discardingUnreadable || unreadable.isEmpty else { throw ShareError.unreadableItems(unreadable.keys.sorted()) }
             let entries = try resealed(with: newKeys)
+            let result: ShareRekeyResult
             do {
-                let result = try await guarded { try await client.rotate(rev: rev, proof: newKeys.proof, items: entries) }
-                adopt(newKeys, epoch: result.epoch)
-                try await catchUp()
-                return result
+                result = try await guarded { try await client.rotate(rev: rev, proof: newKeys.proof, items: entries) }
             } catch let error as ShareError where error.serverCode == .conflict {
                 failure = error
+                continue
             }
+            adopt(newKeys, epoch: result.epoch)
+            await resumeWithNewKeys()
+            return result
         }
         throw failure
+    }
+
+    /// 서버가 새 키를 받아 준 뒤: 그것으로 키 교체는 끝났다. 따라잡기는 한 번 해 보고, 안 되면 연결 고리에 맡긴다
+    /// (`needsFullSync`가 남아 다음 `hello`·상태 확인이 처음부터 받는다). 앱은 돌려받은 세대와 새 뿌리 키를 적는다.
+    private func resumeWithNewKeys() async {
+        try? await catchUp()
     }
 
     /// `rotate`가 응답 없이 끊긴 뒤: 서버의 세대가 올랐으면 새 키로 넘어가고 true.
@@ -245,7 +253,7 @@ extension ShareRoomSession {
         adopt(newKeys, epoch: state.epoch)
         absorb(state)
         setStatus(.live)
-        try await catchUp()
+        await resumeWithNewKeys()
         return true
     }
 

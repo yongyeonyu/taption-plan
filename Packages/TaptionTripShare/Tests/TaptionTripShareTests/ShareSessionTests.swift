@@ -451,6 +451,53 @@ final class ShareSessionTests: XCTestCase {
         await assertServerError(.wrongPassword) { try await room.join() }
     }
 
+    /// 서버가 새 키를 받아 준 뒤의 따라잡기가 끊겨도 키 교체는 된 것이다(TSR1117A01): 새 세대를 돌려줘 앱이 새 뿌리 키를
+    /// 키체인에 적을 수 있고, 인터넷이 돌아오면 연결 고리가 처음부터 받는다. 전에는 오류를 던져 새 키를 적지 못했다.
+    func testRotationSucceedsEvenIfTheFollowingCatchUpDrops() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        await room.server.setSocketsRefused(true)
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        _ = try await created(owner, "바꾸기 전 일정")
+        let newKeys = try TestRoom.derive(room.invite, "새 비밀번호 2031")
+
+        await room.server.goOffline(afterResponseTo: "/rotate")
+        let rotated = try await owner.rotate(to: newKeys)
+        XCTAssertEqual(rotated.epoch, 2)
+        let after = await owner.view()
+        XCTAssertEqual(after.epoch, 2)
+        XCTAssertEqual(after.status, .offline)
+        XCTAssertEqual(after.titles, ["바꾸기 전 일정"], "로컬 사본은 그대로 보인다")
+
+        await room.server.setOffline(false)
+        await room.server.setSocketsRefused(false)
+        try await eventually { clock.pending(.reconnect) == 1 }
+        clock.release(.reconnect)
+        try await eventually { await owner.view().status == .live }
+        try await eventually { await owner.view().items.map(\.epoch) == [2] }
+        let outcome = try await owner.write([.create(plan("바꾼 뒤 일정"))])
+        XCTAssertEqual(outcome, .done)
+    }
+
+    /// 응답을 잃은 키 교체를 `confirmRotation`으로 확인한 뒤의 따라잡기가 끊겨도 true다(TSR1117A01). 전에는 오류를 던져
+    /// 앱이 「됐는지 모름」으로 끝내고 새 뿌리 키를 적지 않았다.
+    func testConfirmedRotationHoldsEvenIfTheFollowingCatchUpDrops() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        await room.server.setSocketsRefused(true)
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        _ = try await created(owner, "바꾸기 전 일정")
+        let newKeys = try TestRoom.derive(room.invite, "새 비밀번호 2031")
+
+        await room.server.failNextHTTP(pathSuffix: "/rotate", afterHandling: true)
+        await assertThrows(.offline) { try await owner.rotate(to: newKeys) }
+        await room.server.goOffline(afterResponseTo: room.roomID) // 상태 확인(GET <방>)에 답한 직후 끊긴다.
+        let confirmed = try await owner.confirmRotation(with: newKeys)
+        XCTAssertTrue(confirmed)
+        let epoch = await owner.view().epoch
+        XCTAssertEqual(epoch, 2)
+    }
+
     func testRekeyRequiredOverHTTPAlsoPausesTheSession() async throws {
         let room = try await TestRoom.make()
         let clock = TestClock()
