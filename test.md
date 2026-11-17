@@ -2,6 +2,22 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TSA1117A01 · 앱 여행 공유 결함 아홉 (2026-11-17~18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: main `460635a6` 위 브랜치 `worktree-agent-a7e31a9a986039563`, 도중에 main `b3c520ea`(TSR1117A01 합침)를 합침. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/TSA1117A01`(끝나고 지움). 로그 `build/validation/TSA1117A01/`.
+- 고친 것(결함마다 커밋):
+  1. 곁 파일을 한 덩어리로 풀어 방 사본 한 칸이 깨지면 연결까지 잃고 다음 사본 쓰기가 덮음 → 칸마다 따로 풀고, 사본 쓰기는 연결이 적힌 파일에만(`8244b6be`). 형식 번호 1·파일 이름 그대로, 예전 파일(새 칸 없음)도 읽음을 시험으로 확인.
+  2. 키체인 저장이 지우고 더함 → 고쳐 쓰기 먼저, 없을 때만 더함(`0d884881`). 서비스·계정 이름·접근 등급 그대로.
+  3. 나간 사람 카드를 서버가 지워 `m2`로 보이고 그 사람이 낀 지출 고치기가 `unknownPerson` → 본 닉네임을 곁 파일 `names` 칸에 적고 이름표가 찾음, 고를 사람에는 안 넣음, 번호(`m3`)로 적힌 이름도 읽음(`d3dc5992`).
+  4. `open`/`close`/`forget`이 기다림 사이에 끼어 닫은 세션이 다시 이어지고 잊은 곁 파일이 되살아남 → 방마다 차례로(`2038c5e1`).
+  5. `ensureCard`가 연결 전 창구 값을 보고 늘 돌아감 → 연결·따라잡기 뒤 세션 값으로(`f472cf1d`).
+  6. 지구본에서 연 공유 판이 방을 닫지 않음 → 판이 닫히면 보고 있지 않은 여행의 방을 닫음(`24e7c4b3`, 순수 함수 시험만, 화면 시험 없음).
+  7. 세부 일정 20개 넘게 한 번에 고치면 `too_many_locks` → 한도를 넘으면 날 묶음 잠금으로(`747c7c68`).
+  8. 이모지 메모 500자가 4KB를 넘어 일정이 늘 못 올라감(TSR1117A01이 넘김) → 방에 싣는 메모를 UTF-8 2,000바이트 안으로 문자소 단위로 줄임(`b00190f8`, 시험 고침 `31fb5af2`).
+  9. 대표 결정(2026-11-17): 공유 시작 전 「다 같이」 지출을 나만으로 바꾸던 것 → 올리기 끝에 직접 넣은 「다 같이」 지출을 공동 지출로 올리고, 주인 기기가 들어온 동행을 몫에 더함(곁 파일 `allTogether` 칸, `8a0f7488`, 시험 고침 `263ddba3`). 자동 기록은 올리지 않음.
+- 시험: 새 단위 시험 9건(곁 파일 1·키체인 1·순서 1·판 닫기 1·메모 1·카드 1·나간 사람 1·「다 같이」 1·잠금 한도 1, 기존 파일에 추가) 모두 통과. 시험은 구현 전에 썼으나 빌드 잠금이 몇 시간 붐벼 **고치기 전 실패 확인은 돌리지 못함**. `-only-testing:TaptionPlanTests` 전체: r3 2,994건 중 실패 1(「다 같이」 시험이 자동 기록 고정을 너무 일찍 봄 → 시험 순서 고침), 끝 판 r4 **2,994 통과·실패 0·건너뜀 25**(`unit-all-r4.xcresult`). `TripShareLedgerTests` 14건과 `TaptionPlanTravelPlanUITests` 3·`TaptionPlanTravelScreensUITests` 4건 통과(`ledger-and-travel-ui.xcresult`). 구조 점검 `architecture-metrics.py --check`·`check-app-engine-import-boundary.sh` 통과.
+- 제한: 실기기·실서버 확인 없음. 새 사용자 문구 없음(번역 팩 손대지 않음). 공유 판을 지구본에서 열고 바로 공유를 만들면 올리기가 끝난 뒤 그 방은 열린 채 남음(다음 장면 전환·뒤로 가기에 닫힘).
+
 ## TSR1117A01 · 여행 공유 패키지·서버 방 결함 아홉 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `460635a6` 위 브랜치 `worktree-agent-a15e6707b6aa4c993`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/TSR1117A01`. 로그 `build/validation/TSR1117A01/`. 설계는 `docs/reviews/REV1117A01.md` 「TSR1117A01 설계」.
