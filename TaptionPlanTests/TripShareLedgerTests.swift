@@ -246,6 +246,30 @@ final class TripShareLedgerTests: XCTestCase {
         XCTAssertEqual(kept.first.map(TripShareLedger.scope(of:)), .ownHidden)
     }
 
+    /// 지출 폼이 방에서 지금 범위를 읽기 전(처음 값 「나만」)에 저장해도 공동 지출이 방에서 지워지지 않는다(REV1117A01).
+    func testSavingBeforeTheFormHasReadTheScopeKeepsASharedExpenseShared() async throws {
+        try await openRoom()
+        let friend = try await join("봄")
+        let dinner = expense("저녁", 30_000)
+        let first = await TripShareLedger.save(dinner, scope: .shared)
+        XCTAssertNil(first)
+        let saved = try XCTUnwrap(book.entries.first { $0.id == dinner.id })
+        let roomID = TripShareMapping.roomItemID(entryID: saved.id)
+
+        TripShareLedger.pendingScopeForms.insert(saved.id)
+        defer { TripShareLedger.pendingScopeForms.remove(saved.id) }
+        var edited = saved
+        edited.title = "저녁(고침)"
+        let second = await TripShareLedger.save(edited, scope: .ownHidden)
+        XCTAssertNil(second, "폼의 처음 값 「나만」은 믿지 않는다")
+
+        try await friend.catchUp()
+        let seen = shared(in: await friend.view())
+        XCTAssertEqual(seen.map(\.id), [roomID], "방의 공동 지출은 그대로 있고")
+        XCTAssertEqual(seen.first?.content.title, "저녁(고침)", "고친 내용이 올라간다")
+        XCTAssertEqual(book.entries.filter { $0.title.hasPrefix("저녁") }.map(\.id), [saved.id], "로컬 기록도 새 번호를 받지 않는다")
+    }
+
     /// 대표 결정: 자동으로 들어온 지출(문자·알림·AI)은 방에 올리지 않는다. 사용자가 직접 「공동」으로 고른 것만 올라간다.
     func testAutomaticEntriesNeverReachTheRoom() async throws {
         try await openRoom(shareAll: true)

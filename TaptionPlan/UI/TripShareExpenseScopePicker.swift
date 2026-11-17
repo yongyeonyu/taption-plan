@@ -44,6 +44,8 @@ struct TripShareExpenseScopePicker: View {
                 .task {
                     // 가계부만 열었을 때도 방을 열어 지금 범위를 읽는다. 한 번만 한다(고른 값을 덮지 않게).
                     guard !hasLoaded else { return }
+                    TripShareLedger.pendingScopeForms.insert(entry.id)
+                    defer { TripShareLedger.pendingScopeForms.remove(entry.id) }
                     await TripShareLedger.open(tripID: tripID)
                     guard !hasLoaded else { return }
                     hasLoaded = true
