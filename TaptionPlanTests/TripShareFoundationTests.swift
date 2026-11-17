@@ -261,6 +261,48 @@ final class TripShareFoundationTests: XCTestCase {
         XCTAssertNil(sidecar.snapshot(roomID: link.roomID))
     }
 
+    /// 빈 방 사본(패키지가 만드는 값이라 저장된 모양에서 읽어 만든다).
+    private func emptyRoom(_ roomID: String, me: Int) throws -> ShareRoomSnapshot {
+        let limits = try JSONSerialization.jsonObject(with: JSONEncoder().encode(ShareLimits.v1))
+        let stored: [String: Any] = [
+            "format": 1, "roomID": roomID, "me": me, "epoch": 1, "rev": 0, "cursor": 0, "closed": false, "expiresAt": 9, "members": [Any](),
+            "items": [Any](), "unreadable": [Any](), "limits": limits,
+        ]
+        return try JSONDecoder().decode(ShareRoomSnapshot.self, from: JSONSerialization.data(withJSONObject: stored))
+    }
+
+    /// 방 사본 한 칸이 깨져도 연결은 남고, 다음 사본 쓰기가 연결을 지우지 않는다(TSA1117A01).
+    func testABrokenRoomCopyKeepsTheLink() throws {
+        let sidecar = TripShareSidecar(directory: folder)
+        let link = TripShareLink(roomID: ShareIdentifiers.roomID(), tripID: "t1", role: .member, phase: .sharing, joinedAt: Date(timeIntervalSince1970: 1_950_000_000))
+        try sidecar.save(link)
+        let url = folder.appendingPathComponent(link.roomID + ".json")
+        var file = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        file["room"] = ["roomID": link.roomID, "items": "깨짐"]
+        try JSONSerialization.data(withJSONObject: file).write(to: url)
+
+        XCTAssertEqual(sidecar.links(), [link], "깨진 사본 때문에 연결을 잃지 않는다")
+        XCTAssertNil(sidecar.snapshot(roomID: link.roomID), "깨진 사본은 없는 것으로 보고 방에서 다시 받는다")
+        XCTAssertEqual(TripShareStore(environment: environment(transport: nil)).links, [], "서버 없는 빌드는 그대로 숨긴다")
+        try sidecar.save(emptyRoom(link.roomID, me: 2))
+        XCTAssertEqual(sidecar.link(roomID: link.roomID), link, "사본을 다시 써도 연결은 남는다")
+        XCTAssertEqual(sidecar.snapshot(roomID: link.roomID)?.me, 2)
+
+        // 연결이 없는 방(잊은 방)에는 늦게 온 사본 쓰기가 파일을 되살리지 않는다.
+        let forgotten = ShareIdentifiers.roomID()
+        try sidecar.save(emptyRoom(forgotten, me: 1))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: folder.appendingPathComponent(forgotten + ".json").path))
+
+        // 예전 형식(지난 이름 칸이 없는 파일)도 그대로 읽는다.
+        let old: [String: Any] = ["format": 1, "link": try JSONSerialization.jsonObject(with: JSONEncoder().encode(link))]
+        try JSONSerialization.data(withJSONObject: old).write(to: url)
+        XCTAssertEqual(sidecar.link(roomID: link.roomID), link)
+        XCTAssertEqual(sidecar.formerNames(roomID: link.roomID), [:])
+        try sidecar.saveFormerNames([3: "봄"], roomID: link.roomID)
+        XCTAssertEqual(sidecar.formerNames(roomID: link.roomID), [3: "봄"])
+        XCTAssertEqual(sidecar.link(roomID: link.roomID), link)
+    }
+
     func testSecretStoresRoundTrip() throws {
         let roomID = ShareIdentifiers.roomID()
         let secrets = ShareRoomSecrets(root: ShareBytes.random(32), linkSecret: ShareIdentifiers.linkSecret(), token: "token-1", ownerKey: "owner-1", member: 1, epoch: 3)
