@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## UIT1117A01 · main 전체 UI 시험 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: main `6a84c788`(REV1117A01~04·LGC1117A01·PRF1117A02·WSY1117A01 합친 뒤)을 고정 작업 폴더로 꺼내 실행. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안. 로그 `build/validation/UIT1117A01/r2/`.
+- 첫 실행(`build/validation/UIT1117A01/ui.log`)은 빌드 도중 main에 WSY1117A01을 합쳐 판이 섞여 시험 대상 컴파일 실패(`forEachWindow` 없음) — 시험 결과 아님. r2 첫 시도는 스크립트 경로 따옴표 빠짐으로 실행 안 됨.
+- 결과: `-only-testing:TaptionPlanUITests` 51건 실행, 통과 42, 건너뜀 9, 실패 0(`** TEST SUCCEEDED **`, 1,880초). 여행 UI(`TaptionPlanTravelPlanUITests` 1·`TaptionPlanTravelScreensUITests` 3) 모두 통과.
+- 건너뜀 9: 넓은 화면 6(`TaptionPlanWideLayoutUITests`, 아이폰 시뮬레이터라 조건 미충족), 언어 팩 걷기 1(언어 지정 환경값 없음), 수당 입력 1, 재생 HUD 1 — 통과로 치지 않음.
+- 이 판 뒤에 합친 FRT1117A01·TSR1117A01·TSA1117A01은 이 결과에 들어 있지 않음.
+
 ## TSA1117A01 · 앱 여행 공유 결함 아홉 (2026-11-17~18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `460635a6` 위 브랜치 `worktree-agent-a7e31a9a986039563`, 도중에 main `b3c520ea`(TSR1117A01 합침)를 합침. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/TSA1117A01`(끝나고 지움). 로그 `build/validation/TSA1117A01/`.
