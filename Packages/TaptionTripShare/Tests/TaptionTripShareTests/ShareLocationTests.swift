@@ -40,6 +40,27 @@ final class ShareLocationTests: XCTestCase {
         XCTAssertEqual(ShareLocationPayload(state: .help, latitude: 1, longitude: 2, at: 0, note: String(repeating: "가", count: 80)).note?.count, 40)
     }
 
+    /// 도움 요청 메모는 40자여도 이모지처럼 큰 글자면 수백 바이트다. 잠근 뒤 서버 한도(512바이트)를 넘으면 늘 413이라
+    /// 메모 끝을 덜어 한도 안에 넣는다(TSR1117A01).
+    func testLongHelpNoteIsTrimmedToFitTheServerLimit() throws {
+        let family = "👨‍👩‍👧‍👦"
+        let help = ShareLocationPayload(state: .help, latitude: -33.123456789, longitude: 151.987654321, accuracy: 1234, at: 1_765_000_000_000,
+                                        note: String(repeating: family, count: 60))
+        XCTAssertEqual(help.note?.count, 40)
+        XCTAssertGreaterThan(help.note?.utf8.count ?? 0, 512)
+        let sealed = try ShareLocationSealer.seal(help, keys: keys, roomID: "AAECAwQFBgcICQoLDA0ODw", member: 2, epoch: 1)
+        XCTAssertLessThanOrEqual(ShareBytes.data(base64URL: sealed)?.count ?? 999, ShareLocationSealer.maxCipherBytes)
+        let opened = try XCTUnwrap(ShareLocationSealer.open(sealed, keys: keys, roomID: "AAECAwQFBgcICQoLDA0ODw", member: 2, epoch: 1))
+        let note = try XCTUnwrap(opened.note)
+        XCTAssertFalse(note.isEmpty)
+        XCTAssertTrue(help.note?.hasPrefix(note) == true, "앞에서부터 글자 단위로 남긴다")
+        XCTAssertEqual([opened.lat, opened.lon], [help.lat, help.lon])
+        // 짧은 메모는 그대로.
+        let short = ShareLocationPayload(state: .help, latitude: 1, longitude: 2, at: 0, note: "역 앞 출구 3번")
+        let plain = try ShareLocationSealer.seal(short, keys: keys, roomID: "AAECAwQFBgcICQoLDA0ODw", member: 2, epoch: 1)
+        XCTAssertEqual(ShareLocationSealer.open(plain, keys: keys, roomID: "AAECAwQFBgcICQoLDA0ODw", member: 2, epoch: 1)?.note, "역 앞 출구 3번")
+    }
+
     /// 모이는 곳을 해제하면 방에 남는 항목에 좌표·이름·시각이 남지 않는다(REV1117A01). 정한 사람만 둔다.
     func testClearedMeetingPointKeepsNoCoordinates() {
         let spot = ShareMeetContent(name: "역 앞", latitude: 35.68, longitude: 139.76, at: 1_800_000_000_000, by: 2)
@@ -66,6 +87,15 @@ final class ShareLocationTests: XCTestCase {
         XCTAssertEqual(ShareLocationFreshness(ageMs: 31 * 60_000), .lost)
     }
 
+    /// 위치 오류(21.3절)도 이름 있는 코드다(TSR1117A01). 모르는 코드(`unknown`)로 떨어지면 앱이 거절·한도를 가리지 못한다.
+    func testLocationErrorCodesAreNamed() {
+        XCTAssertEqual(ShareErrorCode(rawValue: "loc_closed"), .locClosed)
+        XCTAssertEqual(ShareErrorCode(rawValue: "loc_rate"), .locRate)
+        var detail = ShareErrorDetail(error: "loc_rate")
+        detail.retryAfter = 3
+        XCTAssertEqual(ShareServerError(status: 429, detail: detail).code, .locRate)
+    }
+
     func testSocketMessageParsing() throws {
         XCTAssertEqual(try ShareSocketMessage.parse(#"{"t":"loc","by":2,"off":true}"#), .loc(ShareWireLocation(by: 2, off: true)))
         guard case .loc(let wire) = try ShareSocketMessage.parse(#"{"t":"loc","by":3,"cipher":"AQ","epoch":1,"at":9,"help":true}"#) else { return XCTFail() }
@@ -82,7 +112,7 @@ final class ShareLocationTests: XCTestCase {
 
         // 기간 창이 없으면 서버가 거절하고 세션이 창을 안다.
         let first = payload()
-        do { try await guest.sendLocation(first); XCTFail("창이 없으면 거절") } catch ShareError.server(let error) { XCTAssertEqual(error.detail.error, "loc_closed") }
+        do { try await guest.sendLocation(first); XCTFail("창이 없으면 거절") } catch ShareError.server(let error) { XCTAssertEqual(error.code, .locClosed) }
 
         let now = await room.server.now
         try await owner.setLocationWindow(ShareLocWindow(from: now - 1000, until: now + 86_400_000))
@@ -116,6 +146,30 @@ final class ShareLocationTests: XCTestCase {
         XCTAssertEqual(kept, [])
     }
 
+    /// 키 교체 직후 서버가 주인에게 보내는 `room`에도 기간 창이 실린다(TSR1117A01). 전에는 빠져 있어 주인 기기에서 창이 지워져 보였다.
+    func testRotationKeepsTheLocationWindowOnTheOwner() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        let now = await room.server.now
+        let window = ShareLocWindow(from: now - 1000, until: now + 86_400_000)
+        try await owner.setLocationWindow(window)
+        _ = try await owner.rotate(to: try TestRoom.derive(room.invite, "새 비밀번호 2031"))
+        // 소켓으로 쓴 것의 응답은 앞서 온 `room`보다 뒤에 읽힌다.
+        _ = try await owner.write([.create(plan("교체 뒤 일정"))])
+        let seen = await owner.locationView().window
+        XCTAssertEqual(seen, window)
+
+        // 창을 싣지 않던 예전 서버의 교체 알림도 창을 지우지 않는다. 보통 `room`의 null은 닫힘이다.
+        let epoch = await owner.view().epoch
+        await owner.receiveLocationWindow(ShareRoomEvent(closed: false, expiresAt: 0, epoch: epoch, now: now, rekeyed: true, locWindow: nil))
+        let kept = await owner.locationView().window
+        XCTAssertEqual(kept, window)
+        await owner.receiveLocationWindow(ShareRoomEvent(closed: false, expiresAt: 0, epoch: epoch, now: now, rekeyed: nil, locWindow: nil))
+        let closed = await owner.locationView().window
+        XCTAssertNil(closed)
+    }
+
     func testForeignOrBrokenCiphertextIsDropped() async throws {
         let room = try await TestRoom.make()
         let clock = TestClock()
@@ -132,11 +186,67 @@ final class ShareLocationTests: XCTestCase {
         XCTAssertTrue(leftover.isEmpty)
     }
 
+    /// 가짜 서버가 실제 서버(`share.js`)의 위치 규칙을 따른다(TSR1117A01): 모이는 곳은 기간 창 안에서만, 위치는 크기·간격 한도,
+    /// 보관 기한, 창 검사, 나가기·키 교체·창 밖으로 바꾸기에 지움. 전에는 모두 받아 시험이 실제와 다른 길을 탔다.
+    func testFakeServerFollowsTheRealLocationRules() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        let guestEntry = try await room.join()
+        let guest = try await room.liveSession(guestEntry, clock: clock)
+        let spot = ShareMeetContent(name: "광장", latitude: 10, longitude: 20)
+        let meet = ShareEdit.create(id: ShareMeetContent.itemID, content: .meet(spot), group: nil)
+        await assertServerError(.locClosed) { try await guest.write([meet]) }
+
+        let now = await room.server.now
+        await assertServerError(.badRequest) { try await owner.setLocationWindow(ShareLocWindow(from: now, until: now + 41 * 86_400_000)) }
+        try await owner.setLocationWindow(ShareLocWindow(from: now - 1000, until: now + 3_600_000))
+        let placed = try await guest.write([meet])
+        XCTAssertEqual(placed, .done)
+
+        try await guest.sendLocation(payload())
+        let tooSoon = await assertServerError(.locRate) { try await guest.sendLocation(payload()) }
+        XCTAssertNotNil(tooSoon?.detail.retryAfter)
+        try await guest.sendLocation(ShareLocationPayload(state: .help, latitude: 1, longitude: 2, at: 0)) // 도움 요청은 간격 밖
+        let big = "AQ" + String(repeating: "A", count: 800)
+        await assertServerError(.itemTooLarge) { try await guest.client.sendLocation(epoch: 1, cipher: big, help: true) }
+
+        // 내보내면 그 사람의 위치가 지워진다.
+        var kept = await room.server.storedLocationMembers(roomID: room.roomID)
+        XCTAssertEqual(kept, [2])
+        _ = try await owner.kick(member: 2)
+        kept = await room.server.storedLocationMembers(roomID: room.roomID)
+        XCTAssertEqual(kept, [])
+
+        // 보통 위치는 10분 뒤 서버가 내주지 않는다.
+        let other = try await room.liveSession(try await room.join(), clock: clock)
+        try await other.sendLocation(payload())
+        await room.server.advance(milliseconds: 11 * 60_000)
+        await owner.refreshLocations()
+        let stale = await owner.locationView().peers
+        XCTAssertEqual(stale, [])
+
+        // 키 교체는 옛 키로 잠근 위치를 버린다.
+        await room.server.advance(milliseconds: 10_000)
+        try await other.sendLocation(payload())
+        _ = try await owner.rotate(to: try TestRoom.derive(room.invite, "새 비밀번호 2031"))
+        kept = await room.server.storedLocationMembers(roomID: room.roomID)
+        XCTAssertEqual(kept, [])
+
+        // 창이 끝나면 모이는 곳은 다음 요청에서 거둔다(묘비).
+        await room.server.advance(milliseconds: 3_600_000)
+        try await owner.catchUp()
+        let gone = await owner.item(ShareMeetContent.itemID)
+        XCTAssertNil(gone)
+    }
+
     func testMeetingPointIsSharedThroughTheRoomAndNeverDeleted() async throws {
         let room = try await TestRoom.make()
         let clock = TestClock()
         let owner = try await room.liveSession(room.owner, clock: clock)
         let guest = try await room.liveSession(try await room.join(), clock: clock)
+        let now = await room.server.now
+        await room.server.openLocationWindow(roomID: room.roomID, from: now - 1000, until: now + 86_400_000)
         let spot = ShareMeetContent(name: "광장 시계탑", latitude: 37.5, longitude: 127.0, at: 1_765_000_000_000, by: 2)
         XCTAssertTrue(spot.isValid)
         let outcome = try await guest.write([.create(id: ShareMeetContent.itemID, content: .meet(spot), group: nil)])

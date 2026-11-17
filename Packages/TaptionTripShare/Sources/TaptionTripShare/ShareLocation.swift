@@ -126,11 +126,20 @@ public enum ShareLocationMath {
 /// 위치 평문 ↔ 암호문. 암호문은 방 키로 잠그고, 항목 id는 `loc-<참여자 번호>`, 종류는 `loc`이다.
 public enum ShareLocationSealer {
     public static let kind = "loc"
+    /// 서버가 받는 위치 암호문의 상한(21.1절, 풀기 전 바이트).
+    public static let maxCipherBytes = 512
     public static func itemID(member: Int) -> String { "loc-\(member)" }
 
     public static func seal(_ payload: ShareLocationPayload, keys: ShareKeys, roomID: String, member: Int, epoch: Int, nonce: Data? = nil) throws -> String {
         guard payload.isValid else { throw ShareError.crypto }
-        let plain = ShareCipher.padded(try ShareJSON.data(payload))
+        var payload = payload
+        var plain = ShareCipher.padded(try ShareJSON.data(payload))
+        // 메모는 글자 수로 자르지만 이모지처럼 큰 글자는 바이트가 많다. 한도 안에 들 때까지 메모 끝을 덜어 낸다.
+        while ShareCipher.sealedBytes(plaintextBytes: plain.count) > maxCipherBytes, let note = payload.note, !note.isEmpty {
+            payload.note = note.count > 1 ? String(note.dropLast()) : nil
+            plain = ShareCipher.padded(try ShareJSON.data(payload))
+        }
+        guard ShareCipher.sealedBytes(plaintextBytes: plain.count) <= maxCipherBytes else { throw ShareError.itemTooLarge }
         return try ShareCipher.seal(plain, key: keys.encKey, context: ShareItemContext(roomID: roomID, itemID: itemID(member: member), kind: kind, epoch: epoch), nonce: nonce)
     }
 

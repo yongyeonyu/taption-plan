@@ -37,6 +37,10 @@ public enum ShareErrorCode: String, Sendable, CaseIterable {
     case joinIPLimit = "join_ip_limit"
     case roomDailyLimit = "room_daily_limit"
     case unavailable
+    /// 위치 기간 창이 없거나 그 밖이다(21.2절, `detail.locWindow`에 서버의 창).
+    case locClosed = "loc_closed"
+    /// 위치를 너무 자주 보냈다(21.3절, `retryAfter`초 뒤에).
+    case locRate = "loc_rate"
     /// 소켓에서 모르는 `op`(서버 구현에만 있고 규약 표에는 없다).
     case unknownOp = "unknown_op"
     /// 이 판이 모르는 코드. 원래 글자는 `ShareServerError.rawCode`.

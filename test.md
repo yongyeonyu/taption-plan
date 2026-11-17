@@ -2,6 +2,26 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TSR1117A01 · 여행 공유 패키지·서버 방 결함 아홉 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: main `460635a6` 위 브랜치 `worktree-agent-a15e6707b6aa4c993`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/TSR1117A01`. 로그 `build/validation/TSR1117A01/`. 설계는 `docs/reviews/REV1117A01.md` 「TSR1117A01 설계」.
+- 고친 것(결함마다 시험 먼저·커밋 하나):
+  1. 키 교체 직후 따라잡기가 끊기면 `rotate`·`confirmRotation`이 오류를 던져 앱이 새 뿌리 키·세대를 적지 못함 → 서버가 받아 준 것을 성공으로 보고 따라잡기는 연결 고리에 맡김(`58cdf2cd`). 키체인·스냅샷 형식과 적는 값은 그대로.
+  2. `confirmRotation`이 `needsRekey`로 멈춘 연결 고리를 다시 시작하지 않음 → 다시 붙임(`17480dc6`).
+  3. 키 교체 뒤 날 묶음 이름이 옛 키 HMAC에 남아 새 이름의 묶음 잠금이 `lock_required` → `rotate` 항목에 선택 칸 `group`, 서버는 있으면 바꾸고 없으면 그대로(`b70e36b7`).
+  4. 키 교체 뒤 주인에게 가는 `room`에 `locWindow` 없음 → 서버·가짜 서버가 싣고, 세션은 창이 빠진 교체 알림(예전 서버)에 창을 지우지 않음(`577285f7`).
+  5. 위치 행을 읽을 때만 지움 → 위치 기한에 맞춘 알람으로 지움(`b07d2462`).
+  6. 도움 요청 메모가 40자여도 이모지면 잠근 뒤 1,181바이트(한도 512) → 메모 끝을 덜어 맞춤(`c576631e`).
+  7. `ShareErrorCode`에 `loc_closed`·`loc_rate` 없음 → 더함(`7f0d1fa6`).
+  8. 잠금 연장이 상태가 잠깐 흔들리면 끝남 + 소켓이 안 되는 망에서 열지도 못한 재연결 시도마다 HTTP 잠금을 지움 + 소켓이 살아도 offline이 안 풀림 → 연장은 차례만 건너뛰고, pong 등 소켓 소식이 오면 live, 연 적 있는 소켓만 끊김으로 봄(`60d5607b`).
+  9. 가짜 서버가 실제와 다름(모이는 곳 창 검사·재생성·거두기, 위치 크기·간격·보관, 내보내기·교체·창 변경 때 지움, 창 검사) → `share.js`와 같게(`f7ffe130`).
+- 시험(앞선 실패 확인): 새 시험은 고치기 전 실패를 먼저 봄(`swift-c*-before.log`, 서버는 새 시험 실패 후 통과).
+- 패키지 `TaptionTripShare` `swift test`: 82건 실패 0, 세 번 연속(`swift-test-all-1..3.log`).
+- 서버 `npm test`: 218건 실패 0(`npm-test.log`).
+- 앱 `-only-testing:TaptionPlanTests` 전체: 2,982건, 건너뜀 25, **실패 0**(`unit-r1.log`). 그 안의 관련 묶음 `TripShareRoomTests` 13(새 `testPasswordChangeKeepsTheNewKeyWhenTheNetworkDropsRightAfter` 포함)·`TripSharePlanTests` 7·`TripShareLedgerTests` 12·`TripShareFoundationTests` 16·`TripLiveLocationTests` 9 통과. 관련 묶음만 따로 돌린 첫 실행(`related-r1.log`)은 「test runner hung before establishing connection」으로 시험 전에 멈춤(시뮬레이터 연결 문제, 결과 없음) — 같은 시험을 전체 실행이 통과시킴.
+- 구조 지표 기준선 통과, import 경계 통과.
+- 제한: 서버는 **배포하지 않음**(대표 지시 대기). 운영 Workers 런타임의 알람·`getAlarm` 없는 `setAlarm` 덮어쓰기는 가짜 저장소로만 봄. 예전 서버에서는 3(묶음 이름 옮김)이 무시되어 이름이 옛 키에 남음 — 배포 뒤에야 고쳐짐. 실기기·실제 `URLSessionWebSocketTask` 확인 없음. 일정 메모(500자)가 이모지로 4KB를 넘는 경우는 앱 변환(`TripShareMapping`) 쪽이라 손대지 않음.
+
 ## WSY1117A01 · Watch 동기화 결함 넷 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `0551fecb` 위 브랜치 `worktree-agent-a433e19835cbb9b8d`, 끝 커밋 `b1ad953b`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/WSY1117A01`. 로그 `build/validation/WSY1117A01/`.

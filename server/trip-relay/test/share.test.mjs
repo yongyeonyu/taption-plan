@@ -578,7 +578,7 @@ test("share rotate: the owner re-seals every live item under a new proof; others
   assert.deepEqual(done.body, { epoch: 2, rev: 9 });
   assert.deepEqual(guestSocket.closed, { code: CLOSE.rekey, reason: "rekey" });
   assert.equal(ownerSocket.closed, null);
-  assert.deepEqual(ownerSocket.take("room")[0], { t: "room", closed: false, expiresAt: room.expiresAt, epoch: 2, rekeyed: true, now: room.clock.now });
+  assert.deepEqual(ownerSocket.take("room")[0], { t: "room", closed: false, expiresAt: room.expiresAt, epoch: 2, rekeyed: true, locWindow: null, now: room.clock.now });
 
   // 주인은 바로 계속 쓴다. 새 암호문·세대, 확인 기록과 만든 사람은 그대로, 잠금은 모두 풀렸다.
   const snapshot = (await changes(room, room.owner)).body;
@@ -840,11 +840,38 @@ test("share privacy: the room code writes no logs and room paths carry no secret
   assert.equal((await call(room.env, "GET", `${room.path}?token=${room.owner.token}`)).status, 401);
 });
 
+test("share rotate: an entry may carry the day group re-derived under the new key; without it the group stays (TSR1117A01)", async () => {
+  const room = await makeRoom();
+  const moved = await add(room, room.owner, "plan", { group: "oldDayName" });
+  const kept = await add(room, room.owner, "plan", { group: "otherRule" });
+  const rotate = (items) => call(room.env, "POST", room.path + "/rotate", { token: room.owner.token, owner: room.ownerKey, body: { rev: 2, proof: secret(), items } });
+  assert.equal((await rotate([{ id: moved.id, cipher: cipher(), group: "bad name!" }, { id: kept.id, cipher: cipher() }])).body.error, "bad_request");
+  assert.equal((await rotate([{ id: moved.id, cipher: cipher(), group: 12 }, { id: kept.id, cipher: cipher() }])).status, 422);
+  assert.equal((await rotate([{ id: moved.id, cipher: cipher(), group: "newDayName" }, { id: kept.id, cipher: cipher() }])).status, 200);
+  const items = (await changes(room, room.owner)).body.items;
+  assert.deepEqual(items.map((i) => [i.id, i.group]).sort(), [[moved.id, "newDayName"], [kept.id, "otherRule"]].sort());
+  // 새 이름의 묶음 잠금이 그 항목을 덮는다.
+  assert.equal((await lock(room, room.owner, ["g:newDayName"])).status, 200);
+  const guestless = await write(room, room.owner, { id: moved.id, kind: "plan", baseRev: items.find((i) => i.id === moved.id).rev, cipher: cipher() }, 2);
+  assert.equal(guestless.status, 200, JSON.stringify(guestless.body));
+});
+
 // MARK: 동행 위치 (LOC1116S01)
 
 const openWindow = (room, from = room.clock.now - DAY, until = room.clock.now + 2 * DAY) =>
   call(room.env, "POST", room.path + "/locwindow", { token: room.owner.token, owner: room.ownerKey, body: { from, until } });
 const sendLoc = (room, member, extra = {}) => call(room.env, "PUT", room.path + "/loc", { token: member.token, body: { epoch: 1, cipher: cipher(80), ...extra } });
+
+test("share rotate: the owner's room message after a key change carries the location window like every room message (TSR1117A01)", async () => {
+  const room = await makeRoom();
+  const from = room.clock.now - DAY, until = room.clock.now + DAY;
+  assert.equal((await openWindow(room, from, until)).status, 200);
+  const ownerSocket = await connect(room, room.owner);
+  ownerSocket.take();
+  const done = await call(room.env, "POST", room.path + "/rotate", { token: room.owner.token, owner: room.ownerKey, body: { rev: 0, proof: secret(), items: [] } });
+  assert.equal(done.status, 200);
+  assert.deepEqual(ownerSocket.take("room")[0].locWindow, { from, until });
+});
 
 test("share loc: nothing is accepted before the owner opens a window, and only the owner can open it", async () => {
   const room = await makeRoom();
@@ -947,6 +974,28 @@ test("share loc: stored positions never outlive the location window, even a help
   assert.equal((await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body.locs.length, 1);
   room.clock.now += 2 * MINUTE; // 창이 끝났다. 도움 요청은 24시간 보관이어도 남기지 않는다.
   assert.deepEqual((await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body.locs, []);
+});
+
+test("share loc: a stored position is erased by an alarm at its expiry even if nobody reads it (TSR1117A01)", async () => {
+  const room = await makeRoom();
+  const guest = await join(room);
+  const storage = room.instance.ctx.storage;
+  const windowEnd = room.clock.now + 2 * DAY;
+  await openWindow(room, room.clock.now - DAY, windowEnd);
+  const sentAt = room.clock.now;
+  assert.equal((await sendLoc(room, guest)).status, 200);
+  assert.equal(storage.alarm, sentAt + SHARE.locKeepMs, "알람은 저장한 위치의 기한에 맞춘다");
+  // 기한을 바꾸거나 창을 다시 올려도 위치 기한보다 늦추지 않는다.
+  assert.equal((await call(room.env, "POST", room.path + "/expiry", { token: room.owner.token, owner: room.ownerKey, body: { expiresAt: room.expiresAt + DAY } })).status, 200);
+  assert.equal(storage.alarm, sentAt + SHARE.locKeepMs);
+
+  room.clock.now = sentAt + SHARE.locKeepMs;
+  await room.instance.room.alarm();
+  assert.equal(storage.map.has("l:2"), false, "아무도 읽지 않아도 지운다");
+  assert.equal(storage.alarm, windowEnd, "다음은 위치 기간 끝(모이는 곳 거두기)");
+  // 도움 요청은 하루(창이 먼저 끝나면 창 끝)까지라 알람도 그때다.
+  assert.equal((await sendLoc(room, guest, { help: true })).status, 200);
+  assert.equal(storage.alarm, Math.min(room.clock.now + SHARE.locHelpKeepMs, windowEnd));
 });
 
 test("share write: a non-string item id or group is a 422, not a crash (REV1117A01)", async () => {
