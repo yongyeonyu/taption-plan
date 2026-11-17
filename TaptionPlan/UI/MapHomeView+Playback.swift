@@ -6,6 +6,17 @@ import SwiftUI
 import UIKit
 import TaptionPlanCore
 
+/// 전후 비교용(PRF1117A02): `-benchBefore=art,coverage`처럼 고침 이름을 주면 그 고침 전 동작으로 돈다. 같은 판에서 번갈아 잰다.
+enum PerfBenchBefore {
+    private static let names: Set<String> = Set(
+        ProcessInfo.processInfo.arguments
+            .first { $0.hasPrefix("-benchBefore=") }
+            .map { $0.dropFirst("-benchBefore=".count).split(separator: ",").map(String.init) } ?? []
+    )
+
+    static func has(_ name: String) -> Bool { names.contains(name) }
+}
+
 extension MapHomeView {
     var dayPlaybackCurrentMinute: Double? {
         get {

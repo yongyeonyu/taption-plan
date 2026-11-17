@@ -2192,4 +2192,65 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(Set(merged.stickers.map(\.id)), [localSticker.id, remoteSticker.id])
         XCTAssertFalse(merged.stickers.contains(where: { $0.id == deletedSticker.id }))
     }
+
+    /// 집 그림을 따로 담아도(PRF1117A02) 같은 자리에 같은 그림이 나온다: 원으로 자른 하늘과 칸 밖으로 나가는 화랑이.
+    func testIsolatedHomeArtDrawsLikeInlineArt() throws {
+        let side = MapHomePlacePinLayout.avatarSize
+        let place = CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.978)
+        let date = Calendar(identifier: .gregorian).date(from: DateComponents(timeZone: TimeZone(identifier: "Asia/Seoul"), year: 2026, month: 11, day: 17, hour: 17, minute: 20))!
+        let state = MapHomeSkyState(date: date, window: MapHomeSkyWindow(
+            dayNumber: MapHomeAstronomy.solarDayNumber(at: date, longitude: place.longitude),
+            latitude: place.latitude, longitude: place.longitude
+        ))
+        let sky = MapHomeHomeSkyFrame(state: state, kind: .partlyCloudy, sec: 12.5, size: side)
+            .frame(width: side, height: side).clipShape(Circle())
+        let cat = HwarangSceneView(scene: MapHomeStickmanAction.activity.hwarangScene, sec: 3.25,
+                                   width: 36 * 1.6, anchorHeight: 36, showsBackdrop: true, keepsBodySize: false)
+            .frame(width: 36, height: 36)
+        func pin(isolated: Bool) -> some View {
+            ZStack {
+                Circle().fill(Color(hex: "#FDF8EC"))
+                if isolated { MapHomeIsolatedArt(side: side) { sky } } else { sky }
+            }
+            .frame(width: side, height: side)
+            .clipShape(Circle())
+            .overlay {
+                Group {
+                    if isolated { MapHomeIsolatedArt(side: 108) { cat }.frame(width: 36, height: 36) } else { cat }
+                }
+                .offset(x: 6, y: -20)
+            }
+            .frame(width: 160, height: 160)
+            .background(Color.white)
+        }
+        let inline = try snapshot(pin(isolated: false))
+        let isolated = try snapshot(pin(isolated: true))
+        XCTAssertEqual(inline.count, isolated.count)
+        var total = 0, differing = 0
+        for index in 0..<inline.count {
+            let delta = abs(Int(inline[index]) - Int(isolated[index]))
+            total += delta
+            if delta > 24 { differing += 1 }
+        }
+        XCTAssertLessThan(Double(total) / Double(inline.count), 1.0)
+        XCTAssertLessThan(Double(differing) / Double(inline.count), 0.005)
+    }
+
+    private func snapshot(_ view: some View) throws -> [UInt8] {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 160, height: 160))
+        window.rootViewController = UIHostingController(rootView: view)
+        window.isHidden = false
+        window.layoutIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+        window.layoutIfNeeded()
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 2
+        let image = UIGraphicsImageRenderer(bounds: window.bounds, format: format).image { _ in
+            window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+        }
+        window.isHidden = true
+        let cgImage = try XCTUnwrap(image.cgImage)
+        let data = try XCTUnwrap(cgImage.dataProvider?.data as Data?)
+        return [UInt8](data)
+    }
 }

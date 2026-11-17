@@ -589,7 +589,9 @@ struct MapHomeView: View {
                     }
                 },
                 setLedger: { LedgerPresenter.shared.isPresented = $0 },
-                setTravel: { isTravelHomePresented = $0 }
+                setTravel: { isTravelHomePresented = $0 },
+                startPlayback: { startDayPlayback(fromMidnight: true) },
+                isPlaybackRunning: { isDayPlaybackRunning }
             ))
             return
         }
@@ -686,3 +688,4 @@ struct MapHomeView: View {
 
     var selectedDaySpan: TimeSpan { MapHomeCounterTimelinePolicy.daySpan(of: model.selectedDate) }
 }
+

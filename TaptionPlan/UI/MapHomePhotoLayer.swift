@@ -174,8 +174,26 @@ final class MapHomePhotoImageLoader {
         }
     }
 
+    /// 한 번 읽은 영상 길이(사진이면 nil). 같은 항목은 바뀌지 않는다.
+    private var durations: [String: TimeInterval?] = [:]
+
     /// 영상이면 길이(초), 사진이면 nil. 저장 형식을 늘리지 않고 사진 앱 항목에서 바로 읽는다.
-    func videoDuration(localIdentifier: String) -> TimeInterval? {
+    /// 사진 앱 항목 찾기는 메인 밖에서 하고 결과를 기억한다. 재생 중 사진이 나타날 때마다 메인을 막았다(PRF1117A02).
+    func videoDuration(localIdentifier: String) async -> TimeInterval? {
+        if PerfBenchBefore.has("photo") {
+            // 고치기 전처럼 메인에서 찾는다(전후 비교용).
+            guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject,
+                  asset.mediaType == .video else { return nil }
+            return asset.duration
+        }
+        if let known = durations[localIdentifier] { return known }
+        let value = await Self.fetchVideoDuration(localIdentifier)
+        if durations.count >= 512 { durations.removeAll() }
+        durations[localIdentifier] = value
+        return value
+    }
+
+    nonisolated private static func fetchVideoDuration(_ localIdentifier: String) async -> TimeInterval? {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject,
               asset.mediaType == .video else { return nil }
         return asset.duration
@@ -184,11 +202,17 @@ final class MapHomePhotoImageLoader {
     func image(localIdentifier: String, side: CGFloat) async -> UIImage? {
         let key = "\(localIdentifier)|\(Int(side))" as NSString
         if let cached = cache.object(forKey: key) { return cached }
+        let scale = UIScreen.main.scale
+        if PerfBenchBefore.has("photo") { _ = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject }
+        let image = await Self.requestImage(localIdentifier, size: CGSize(width: side * scale, height: side * scale))
+        if let image { cache.setObject(image, forKey: key) }
+        return image
+    }
+
+    nonisolated private static func requestImage(_ localIdentifier: String, size: CGSize) async -> UIImage? {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else {
             return nil
         }
-        let scale = UIScreen.main.scale
-        let size = CGSize(width: side * scale, height: side * scale)
         let requestID = LockedRequestID()
         let image: UIImage? = await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
@@ -212,7 +236,6 @@ final class MapHomePhotoImageLoader {
         } onCancel: {
             requestID.cancel()
         }
-        if let image { cache.setObject(image, forKey: key) }
         return image
     }
 }
@@ -245,7 +268,7 @@ struct MapHomePhotoThumbnail: View {
             if image != nil { image = nil }
             let marked = ReceiptPhotoMarks.contains(localIdentifier)
             if marked != isReceipt { isReceipt = marked }
-            let duration = MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier)
+            let duration = await MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier)
             if duration != videoDuration { videoDuration = duration }
             image = await MapHomePhotoImageLoader.shared.image(localIdentifier: localIdentifier, side: side)
         }
@@ -376,7 +399,7 @@ struct MapHomePhotoFullImage: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: localIdentifier) {
             stopVideo()
-            isVideo = MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier) != nil
+            isVideo = await MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier) != nil
             image = await MapHomePhotoImageLoader.shared.image(localIdentifier: localIdentifier, side: 1_000)
         }
         // 옆으로 넘기면 소리가 남지 않게 멈춘다. 받는 중이던 영상도 재생하지 않는다.
@@ -454,7 +477,7 @@ struct MapHomeRingVideo: View {
         .task(id: localIdentifier) {
             // 가운데 항목이 바뀌면 이전 영상부터 멈춘다. 사진이면 아무것도 남기지 않는다.
             stop()
-            guard MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier) != nil,
+            guard await MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier) != nil,
                   let item = await MapHomePhotoImageLoader.shared.playerItem(localIdentifier: localIdentifier),
                   !Task.isCancelled else { return }
             if seamless {

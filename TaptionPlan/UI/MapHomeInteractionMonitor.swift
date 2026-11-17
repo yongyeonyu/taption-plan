@@ -1,4 +1,5 @@
 import Foundation
+import MachO
 import QuartzCore
 import UIKit
 
@@ -263,7 +264,20 @@ enum MapHomePerfBench {
         let setScrubbing: (Bool) -> Void
         let setLedger: (Bool) -> Void
         let setTravel: (Bool) -> Void
+        let startPlayback: () -> Void
+        let isPlaybackRunning: () -> Bool
     }
+
+    /// `-benchOnly=idle,date,playback`처럼 고른 항목만 잰다(PRF1117A02). 없으면 예전 순서(재생 빼고) 그대로다.
+    static func runs(_ phase: String) -> Bool {
+        guard let only = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchOnly=") }) else {
+            return phase != "playback"
+        }
+        return only.dropFirst("-benchOnly=".count).split(separator: ",").contains { $0 == phase }
+    }
+
+    /// `-benchSample`이면 항목마다 메인 스레드 표본을 뜬다(측정값이 조금 늘어 전후 비교와 섞지 않는다).
+    static let samples = ProcessInfo.processInfo.arguments.contains("-benchSample")
 
     static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains("-autoBenchPerf") }
 
@@ -283,45 +297,60 @@ enum MapHomePerfBench {
             return
         }
         try? await Task.sleep(for: .seconds(25))
-        for round in 0..<3 {
-            let main = mainCPUMs(), all = processCPUMs()
-            try? await Task.sleep(for: .seconds(10))
-            emit("idle", ["round": Double(round), "main_cpu_ms": mainCPUMs() - main, "all_cpu_ms": processCPUMs() - all, "footprint_mb": footprintMB().now])
+        if runs("idle") {
+            for round in 0..<3 {
+                let main = mainCPUMs(), all = processCPUMs()
+                if samples, round == 0 { MapHomeBenchSampler.shared.start() }
+                try? await Task.sleep(for: .seconds(10))
+                if samples, round == 0 { MapHomeBenchSampler.shared.stop("idle") }
+                emit("idle", ["round": Double(round), "main_cpu_ms": mainCPUMs() - main, "all_cpu_ms": processCPUMs() - all, "footprint_mb": footprintMB().now])
+            }
         }
         // 날짜 바꾸기: 처음 여는 날 셋(-1·-2·-3), 다시 여는 날 셋.
-        for (index, days) in [1, 2, 3, 1, 2, 3].enumerated() {
-            let name = "date_\(index < 3 ? "cold" : "warm")"
-            let began = ProcessInfo.processInfo.systemUptime, main = mainCPUMs()
-            MapHomeInteractionMonitor.shared.begin("bench_\(name)", duration: 3)
-            actions.selectDaysAgo(days)
-            await Task.yield()
-            await waitUntil(timeout: 20, actions.isDayLoaded)
-            let loaded = (ProcessInfo.processInfo.systemUptime - began) * 1_000
-            try? await Task.sleep(for: .seconds(4))
-            emit(name, ["days_ago": Double(days), "loaded_ms": loaded, "main_cpu_4s_ms": mainCPUMs() - main, "rows": Double(actions.dayRowCount())])
+        if runs("date") {
+            for (index, days) in [1, 2, 3, 1, 2, 3].enumerated() {
+                let name = "date_\(index < 3 ? "cold" : "warm")"
+                let began = ProcessInfo.processInfo.systemUptime, main = mainCPUMs()
+                MapHomeInteractionMonitor.shared.begin("bench_\(name)", duration: 3)
+                if samples { MapHomeBenchSampler.shared.start() }
+                actions.selectDaysAgo(days)
+                await Task.yield()
+                await waitUntil(timeout: 20, actions.isDayLoaded)
+                let loaded = (ProcessInfo.processInfo.systemUptime - began) * 1_000
+                if samples {
+                    try? await Task.sleep(for: .seconds(max(0, 3 - loaded / 1_000)))
+                    MapHomeBenchSampler.shared.stop("date")
+                    try? await Task.sleep(for: .seconds(1))
+                } else {
+                    try? await Task.sleep(for: .seconds(4))
+                }
+                emit(name, ["days_ago": Double(days), "loaded_ms": loaded, "main_cpu_4s_ms": mainCPUMs() - main, "rows": Double(actions.dayRowCount())])
+            }
         }
         // 시간 끌기: 손가락으로 끌 때처럼 「끄는 중」을 켜고 화면 틱(16ms)마다 고른 분을 옮긴다(3초에 하루 왕복).
         // 사이드바의 손짓 판정만 거치지 않는다.
-        actions.selectDaysAgo(1)
-        await waitUntil(timeout: 20, actions.isDayLoaded)
-        try? await Task.sleep(for: .seconds(4))
-        for _ in 0..<3 {
-            MapHomeInteractionMonitor.shared.begin("bench_scrub")
-            actions.setScrubbing(true)
-            let began = CACurrentMediaTime()
-            var last: Int?
-            while CACurrentMediaTime() - began < 6 {
-                let phase = (CACurrentMediaTime() - began).truncatingRemainder(dividingBy: 3) / 3
-                let minute = Int((1 - abs(phase * 2 - 1)) * 1_439)
-                if minute != last { actions.setMinute(minute); last = minute }
-                try? await Task.sleep(for: .milliseconds(16))
+        if runs("scrub") {
+            actions.selectDaysAgo(1)
+            await waitUntil(timeout: 20, actions.isDayLoaded)
+            try? await Task.sleep(for: .seconds(4))
+            for _ in 0..<3 {
+                MapHomeInteractionMonitor.shared.begin("bench_scrub")
+                actions.setScrubbing(true)
+                let began = CACurrentMediaTime()
+                var last: Int?
+                while CACurrentMediaTime() - began < 6 {
+                    let phase = (CACurrentMediaTime() - began).truncatingRemainder(dividingBy: 3) / 3
+                    let minute = Int((1 - abs(phase * 2 - 1)) * 1_439)
+                    if minute != last { actions.setMinute(minute); last = minute }
+                    try? await Task.sleep(for: .milliseconds(16))
+                }
+                actions.setScrubbing(false)
+                MapHomeInteractionMonitor.shared.end("bench_scrub")
+                try? await Task.sleep(for: .seconds(2))
             }
-            actions.setScrubbing(false)
-            MapHomeInteractionMonitor.shared.end("bench_scrub")
-            try? await Task.sleep(for: .seconds(2))
+            actions.setMinute(nil)
         }
-        actions.setMinute(nil)
-        if ProcessInfo.processInfo.arguments.contains("-autoBenchMapPan") {
+        if runs("pan"), ProcessInfo.processInfo.arguments.contains("-autoBenchMapPan") {
             for _ in 0..<3 {
                 MapHomeInteractionMonitor.shared.begin("bench_pan")
                 NotificationCenter.default.post(name: MapHomeVectorBenchPan.notification, object: nil)
@@ -330,13 +359,36 @@ enum MapHomePerfBench {
                 try? await Task.sleep(for: .seconds(3))
             }
         }
-        for (name, set) in [("ledger", actions.setLedger), ("travel", actions.setTravel)] {
-            for round in 0..<4 {
-                MapHomeInteractionMonitor.shared.begin("bench_open_\(name)_\(round == 0 ? "cold" : "warm")", duration: 1.5)
-                set(true)
+        if runs("open") {
+            for (name, set) in [("ledger", actions.setLedger), ("travel", actions.setTravel)] {
+                for round in 0..<4 {
+                    MapHomeInteractionMonitor.shared.begin("bench_open_\(name)_\(round == 0 ? "cold" : "warm")", duration: 1.5)
+                    if samples, round > 0 { MapHomeBenchSampler.shared.start() }
+                    set(true)
+                    if samples, round > 0 {
+                        try? await Task.sleep(for: .seconds(1.5))
+                        MapHomeBenchSampler.shared.stop("open_\(name)_warm")
+                        try? await Task.sleep(for: .seconds(1.5))
+                    } else {
+                        try? await Task.sleep(for: .seconds(3))
+                    }
+                    set(false)
+                    try? await Task.sleep(for: .seconds(2.5))
+                }
+            }
+        }
+        // 하루 재생: 어제를 처음부터 끝까지(`playback` 줄은 재생이 끝날 때 구동기가 찍는다).
+        if runs("playback") {
+            for _ in 0..<(samples ? 1 : 3) {
+                actions.selectDaysAgo(1)
+                await waitUntil(timeout: 20, actions.isDayLoaded)
+                try? await Task.sleep(for: .seconds(8))
+                if samples { MapHomeBenchSampler.shared.start() }
+                actions.startPlayback()
+                try? await Task.sleep(for: .seconds(2))
+                await waitUntil(timeout: 240) { !actions.isPlaybackRunning() }
+                if samples { MapHomeBenchSampler.shared.stop("playback") }
                 try? await Task.sleep(for: .seconds(3))
-                set(false)
-                try? await Task.sleep(for: .seconds(2.5))
             }
         }
         actions.selectDaysAgo(0)
@@ -385,6 +437,149 @@ enum MapHomePerfBench {
         }
         guard result == KERN_SUCCESS else { return (-1, -1) }
         return (Double(info.phys_footprint) / 1_048_576, Double(info.ledger_phys_footprint_peak) / 1_048_576)
+    }
+}
+
+/// 측정용 메인 스레드 표본기(PRF1117A02). Time Profiler가 기기를 못 볼 때 쓴다.
+/// 1ms마다 메인 스레드를 잠깐 세우고 프레임 포인터를 따라 스택을 뜬다. 앱 코드는 이미지 안 주소(숫자)만 찍고 맥에서 `atos`로 풀며,
+/// 시스템 코드는 라이브러리 이름과 내보낸 기호 이름만 찍는다. 기록 내용·좌표는 다루지 않는다.
+final class MapHomeBenchSampler: @unchecked Sendable {
+    @MainActor static let shared = MapHomeBenchSampler()
+
+    private let thread: thread_act_t
+    private let stackTop: UInt
+    private let stackBottom: UInt
+    private let lock = NSLock()
+    private var running = false
+    private var stacks: [(time: UInt64, stack: [UInt])] = []
+
+    @MainActor private init() {
+        thread = pthread_mach_thread_np(pthread_self())
+        let top = UInt(bitPattern: pthread_get_stackaddr_np(pthread_self()))
+        stackTop = top
+        stackBottom = top - UInt(pthread_get_stacksize_np(pthread_self()))
+    }
+
+    @MainActor func start() {
+        lock.lock(); stacks = []; running = true; lock.unlock()
+        let worker = Thread { [self] in loop() }
+        worker.qualityOfService = .userInteractive
+        worker.start()
+    }
+
+    @MainActor func stop(_ label: String) {
+        lock.lock(); running = false; let taken = stacks; stacks = []; lock.unlock()
+        Self.report(label, taken)
+    }
+
+    private func loop() {
+        while true {
+            lock.lock(); let isRunning = running; lock.unlock()
+            guard isRunning else { return }
+            if let stack = capture() {
+                let time = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+                lock.lock(); if running { stacks.append((time, stack)) }; lock.unlock()
+            }
+            usleep(1_000)
+        }
+    }
+
+    private static let addressMask: UInt = 0x0000_000F_FFFF_FFFF
+
+    /// 메인을 세운 동안에는 메모리를 잡지 않는다(메인이 malloc 잠금을 쥐고 있으면 멈춘다). 미리 잡은 칸에만 쓴다.
+    private let buffer = UnsafeMutablePointer<UInt>.allocate(capacity: 160)
+
+    private func capture() -> [UInt]? {
+        var state = arm_thread_state64_t()
+        var count = mach_msg_type_number_t(MemoryLayout<arm_thread_state64_t>.size / MemoryLayout<natural_t>.size)
+        guard thread_suspend(thread) == KERN_SUCCESS else { return nil }
+        let result = withUnsafeMutablePointer(to: &state) {
+            $0.withMemoryRebound(to: natural_t.self, capacity: Int(count)) { thread_get_state(thread, thread_state_flavor_t(6), $0, &count) }
+        }
+        var depth = 0
+        if result == KERN_SUCCESS {
+            buffer[0] = UInt(state.__pc) & Self.addressMask
+            depth = 1
+            var frame = UInt(state.__fp)
+            while depth < 160, frame >= stackBottom, frame + 16 <= stackTop, frame % 8 == 0 {
+                guard let pointer = UnsafePointer<UInt>(bitPattern: frame) else { break }
+                let next = pointer[0], returnAddress = pointer[1] & Self.addressMask
+                guard returnAddress > 0 else { break }
+                buffer[depth] = returnAddress
+                depth += 1
+                guard next > frame else { break }
+                frame = next
+            }
+        }
+        thread_resume(thread)
+        return depth > 0 ? Array(UnsafeBufferPointer(start: buffer, count: depth)) : nil
+    }
+
+    /// `PRFSAMPLE <이름> total=<표본 수>`, 앱 주소마다 `app <오프셋> <포함> <맨 위>`, 시스템 기호마다 `sys <라이브러리> <기호> <포함> <맨 위>`,
+    /// 표본마다 맨 위에서 가장 가까운 앱 주소 `near <오프셋> <수> 0`. `<이름>_long`은 메인이 30ms 넘게 쉬지 않은 덩어리 안의 표본만 모은 것이다.
+    private static func report(_ label: String, _ samples: [(time: UInt64, stack: [UInt])]) {
+        var imageOf: [UInt: (image: String, key: String, isApp: Bool)] = [:]
+        let appBase = UInt(bitPattern: _dyld_get_image_header(0))
+        func resolve(_ address: UInt) -> (image: String, key: String, isApp: Bool) {
+            if let known = imageOf[address] { return known }
+            var info = Dl_info()
+            var value = (image: "?", key: String(address, radix: 16), isApp: false)
+            if dladdr(UnsafeRawPointer(bitPattern: address), &info) != 0 {
+                let base = UInt(bitPattern: info.dli_fbase)
+                if base == appBase {
+                    value = ("app", String(address - base, radix: 16), true)
+                } else {
+                    let image = info.dli_fname.map { String(cString: $0).split(separator: "/").last.map(String.init) ?? "?" } ?? "?"
+                    let symbol = info.dli_sname.map { String(cString: $0) } ?? "?"
+                    value = (image, symbol, false)
+                }
+            }
+            imageOf[address] = value
+            return value
+        }
+        // 맨 위가 실행 고리 기다림이면 쉬는 표본이다. 5ms 넘게 비면 덩어리를 끊는다.
+        let busy = samples.map { sample in sample.stack.first.map { resolve($0).key != "mach_msg2_trap" } ?? false }
+        var inLong = [Bool](repeating: false, count: samples.count)
+        var runs: [Double] = []
+        var start = 0
+        while start < samples.count {
+            guard busy[start] else { start += 1; continue }
+            var end = start
+            while end + 1 < samples.count, busy[end + 1], samples[end + 1].time - samples[end].time < 5_000_000 { end += 1 }
+            let ms = Double(samples[end].time - samples[start].time) / 1_000_000
+            if ms >= 30 { runs.append(ms); for index in start...end { inLong[index] = true } }
+            start = end + 1
+        }
+        func emit(_ name: String, _ picked: [[UInt]]) {
+            var inclusive: [String: Int] = [:], leaf: [String: Int] = [:], near: [String: Int] = [:]
+            for stack in picked {
+                var seen = Set<String>()
+                var foundApp = false
+                for (index, address) in stack.enumerated() {
+                    let resolved = resolve(address)
+                    let key = (resolved.isApp ? "app " : "sys \(resolved.image) ") + resolved.key
+                    if index == 0 { leaf[key, default: 0] += 1 }
+                    if seen.insert(key).inserted { inclusive[key, default: 0] += 1 }
+                    if resolved.isApp, !foundApp {
+                        foundApp = true
+                        near["near " + resolved.key, default: 0] += 1
+                    }
+                }
+            }
+            print("PRFSAMPLE \(name) total=\(picked.count)")
+            var systemRows = 0
+            for (key, count) in inclusive.sorted(by: { $0.value > $1.value }) where count >= 2 {
+                if key.hasPrefix("sys ") { systemRows += 1; if systemRows > 200 { continue } }
+                print("PRFSAMPLE \(name) \(key) \(count) \(leaf[key] ?? 0)")
+            }
+            for (key, count) in near.sorted(by: { $0.value > $1.value }).prefix(300) where count >= 2 {
+                print("PRFSAMPLE \(name) \(key) \(count) 0")
+            }
+        }
+        emit(label, samples.map(\.stack))
+        let sorted = runs.sorted()
+        print("PRFSAMPLE \(label)_runs count=\(runs.count) max_ms=\(Int(sorted.last ?? 0)) median_ms=\(Int(sorted.isEmpty ? 0 : sorted[sorted.count / 2]))")
+        emit(label + "_long", samples.indices.filter { inLong[$0] }.map { samples[$0].stack })
     }
 }
 #endif

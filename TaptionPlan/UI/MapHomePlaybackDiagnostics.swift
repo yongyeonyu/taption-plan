@@ -53,6 +53,15 @@ struct MapHomePlaybackFrameStats {
 
     @MainActor func record() {
         guard ticks > 0 else { return }
+        #if DEBUG || BENCH
+        if MapHomePerfBench.isRequested {
+            MapHomePerfBench.emit("playback", [
+                "ticks": Double(ticks), "over20": Double(over20ms), "max_ms": maximumMs,
+                "tk_17_25": Double(buckets[3]), "tk_25_50": Double(buckets[4]), "tk_ge50": Double(buckets[5]),
+                "wall_s": startUptime.map { ProcessInfo.processInfo.systemUptime - $0 } ?? -1,
+            ])
+        }
+        #endif
         TaptionPlanDiagnosticsLogger.shared.record(
             "playback_frame_stats",
             metrics: ["ticks": Double(ticks), "over_12ms": Double(over12ms),

@@ -23,16 +23,26 @@ enum ReviewCoverageEngine {
         )
         guard !targets.isEmpty else { return [] }
 
+        // 우선순위는 비교마다 다시 세지 않고 한 번만 센다(글자 비교가 들어 있어 비쌈, PRF1117A02).
+        // 어느 대상 구간과도 겹치지 않는 기록은 아래 반복에서 늘 건너뛰므로 정렬 전에 뺀다. 결과는 같다.
         let unique = Dictionary(
             actuals.map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
-        ).values.sorted(by: isHigherPriority)
+        ).values
+            .filter { actual in
+                if PerfBenchBefore.has("coverage") { return true }
+                let span = actual.span(asOf: asOf)
+                return targets.contains { span.intersection(with: $0) != nil }
+            }
+            .map { Ranked(actual: $0, precedence: precedence($0)) }
+            .sorted(by: PerfBenchBefore.has("coverage") ? isHigherPriorityRecounting : isHigherPriority)
         var pieceOffsets: [UUID: Int] = [:]
-        var result: [ActualRecord] = []
+        var result: [Ranked] = []
 
         for target in targets {
             var covered: [TimeSpan] = []
-            for actual in unique {
+            for ranked in unique {
+                let actual = ranked.actual
                 guard let visible = actual.span(asOf: asOf)
                     .intersection(with: target) else { continue }
                 let remainders = ActualIntervalMergeEngine.subtracting(
@@ -50,7 +60,7 @@ enum ReviewCoverageEngine {
                         )
                     piece.startedAt = remainder.start
                     piece.endedAt = remainder.end
-                    result.append(piece)
+                    result.append(Ranked(actual: piece, precedence: ranked.precedence))
                     covered.append(remainder)
                 }
             }
@@ -59,14 +69,20 @@ enum ReviewCoverageEngine {
                 covered,
                 from: target
             ) where gap.duration > 0 {
-                result.append(unconfirmedRecord(for: gap))
+                let record = unconfirmedRecord(for: gap)
+                result.append(Ranked(actual: record, precedence: precedence(record)))
             }
         }
         return result.sorted {
-            $0.startedAt == $1.startedAt
-                ? precedence($0) > precedence($1)
-                : $0.startedAt < $1.startedAt
-        }
+            $0.actual.startedAt == $1.actual.startedAt
+                ? $0.precedence > $1.precedence
+                : $0.actual.startedAt < $1.actual.startedAt
+        }.map(\.actual)
+    }
+
+    private struct Ranked {
+        let actual: ActualRecord
+        let precedence: Int
     }
 
     static func unconfirmedRecords(
@@ -79,12 +95,21 @@ enum ReviewCoverageEngine {
         }
     }
 
+    /// 고치기 전처럼 비교마다 우선순위를 다시 센다(`-benchBefore=coverage`, 전후 비교용).
+    private static func isHigherPriorityRecounting(_ lhs: Ranked, _ rhs: Ranked) -> Bool {
+        isHigherPriority(
+            Ranked(actual: lhs.actual, precedence: precedence(lhs.actual)),
+            Ranked(actual: rhs.actual, precedence: precedence(rhs.actual))
+        )
+    }
+
     private static func isHigherPriority(
-        _ lhs: ActualRecord,
-        _ rhs: ActualRecord
+        _ leftRanked: Ranked,
+        _ rightRanked: Ranked
     ) -> Bool {
-        let left = precedence(lhs)
-        let right = precedence(rhs)
+        let lhs = leftRanked.actual, rhs = rightRanked.actual
+        let left = leftRanked.precedence
+        let right = rightRanked.precedence
         if left != right { return left > right }
         if lhs.confidence != rhs.confidence {
             return confidence(lhs.confidence) > confidence(rhs.confidence)
