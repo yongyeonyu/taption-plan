@@ -75,6 +75,60 @@ final class TravelTodayTests: XCTestCase {
         XCTAssertEqual(TravelTodayBoard.make(blocks: table.blocks, nowMinute: 23 * 60 + 30).current?.id, "tonight", "오늘 밤의 잠은 지금")
     }
 
+    /// TVM1117A02: 여행 화면 본문 한 번(계획표를 올린 상태)에 계획표 모델을 20번 묻는다(지구본 그림 6·지도 9·돈 줄 1·계획표 3·날짜 보드 1).
+    /// 내용 번호·날·지금 분이 같으면 한 번만 만들고, 하나라도 바뀌면 다시 만든다. 전후 시간은 로그 `TVM1117A02 perf`로 남긴다.
+    @MainActor
+    func testPlanTableCacheBuildsOncePerBodyAndRebuildsOnChange() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let day = at(0), now = at(12)
+        // 그날 일정 40개, 실제 기록 30일치 1,500건, 지출 600건.
+        let items = (0..<40).map { index in
+            TravelTripItem(tripID: "t1", itemID: "i\(index)", kind: index % 4 == 0 ? "transfer" : "sight", title: "곳 \(index)",
+                           start: day.addingTimeInterval(TimeInterval(index * 1_800)), end: day.addingTimeInterval(TimeInterval(index * 1_800 + 1_500)),
+                           startOffsetSeconds: 0, endOffsetSeconds: 0, planID: nil)
+        }
+        let actuals = (0..<1_500).map { index in
+            ActualRecord(planID: nil, title: "기록", categoryID: index % 3 == 0 ? "movement" : "hobby",
+                         startedAt: day.addingTimeInterval(TimeInterval(-29 * 86_400 + index * 1_700)),
+                         endedAt: day.addingTimeInterval(TimeInterval(-29 * 86_400 + index * 1_700 + 1_500)), source: .motion)
+        }
+        let entries = (0..<600).map { LedgerEntry(occurredAt: day.addingTimeInterval(TimeInterval($0 * 130)), amount: 1_000, title: "지출", tripID: "t1") }
+        func build() -> TravelPlanTableModel {
+            TravelPlanTableModel.make(
+                items: items, tripID: "t1", day: day, actual: MapHomeTimeRailSegmentEngine.segments(from: actuals, on: day, asOf: now, calendar: calendar),
+                now: now, spent: TravelPlanSpend.byItem(items: items, tripID: "t1", entries: entries), calendar: calendar
+            )
+        }
+        let lookupsPerBody = 20
+        let cache = TravelPlanTableCache()
+        let key = TravelPlanTableCache.Key(tripID: "t1", dayKey: "2027-01-15", contentRevision: 7, ledgerRevision: 3, columns: nil, nowMinute: 100, timeZone: "GMT")
+        _ = build() // 처음 한 번은 재지 않는다.
+        let clock = ContinuousClock()
+        let before = clock.measure { for _ in 0..<lookupsPerBody { _ = build() } }
+        var first: TravelPlanTableModel?
+        let after = clock.measure { for _ in 0..<lookupsPerBody { first = cache.table(key, make: build) } }
+        XCTAssertEqual(cache.builds, 1, "본문 한 번에 한 번만 만든다")
+        XCTAssertEqual(cache.lookups, lookupsPerBody)
+        XCTAssertEqual(first, build())
+        print("TVM1117A02 perf: 본문 한 번(묻기 \(lookupsPerBody)) 전 \(before) · 후 \(after) · 만들기 \(lookupsPerBody) → \(cache.builds)")
+
+        var changed = key
+        changed.contentRevision += 1
+        _ = cache.table(changed, make: build)
+        changed.ledgerRevision += 1
+        _ = cache.table(changed, make: build)
+        changed.nowMinute += 1
+        _ = cache.table(changed, make: build)
+        changed.dayKey = "2027-01-16"
+        _ = cache.table(changed, make: build)
+        changed.columns = TravelPlanColumns.defaults
+        _ = cache.table(changed, make: build)
+        XCTAssertEqual(cache.builds, 6, "일정·지출·지금 분·날·열이 바뀌면 다시 만든다")
+        _ = cache.table(changed, make: build)
+        XCTAssertEqual(cache.builds, 6)
+    }
+
     func testDayWithoutPlansIsEmpty() {
         let board = TravelTodayBoard.make(blocks: [], nowMinute: 12 * 60)
         XCTAssertTrue(board.isEmpty)

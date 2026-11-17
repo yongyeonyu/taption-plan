@@ -100,6 +100,41 @@ struct TravelPlanTableModel: Equatable {
     }
 }
 
+/// 여행 화면 본문 한 번에 계획표 모델을 한 번만 만든다(TVM1117A02). 본문이 지도·핀·고양이·돈 줄·계획표마다 따로 물어
+/// 20번 넘게 새로 만들던 것을, 내용 번호(앱 자료·장부)와 날·지금 분·열이 같으면 지난 값으로 돌려준다.
+@MainActor
+final class TravelPlanTableCache {
+    struct Key: Equatable {
+        var tripID: String
+        var dayKey: String
+        /// `AppModel.snapshotContentRevision`: 일정·실제 기록·설정이 바뀔 때만 오른다.
+        var contentRevision: UInt64
+        /// `LedgerBook.revision`: 지출이 바뀔 때만 오른다.
+        var ledgerRevision: Int
+        var columns: [TravelTripColumn]?
+        /// 지금 시각(분). 지금 선과 「갔음·늦음」 판정이 분 단위로 바뀐다.
+        var nowMinute: Int
+        var timeZone: String
+    }
+
+    private var key: Key?
+    private var value: TravelPlanTableModel?
+    /// 실제로 새로 만든 횟수(계측용).
+    private(set) var builds = 0
+    private(set) var lookups = 0
+
+    func table(_ key: Key, make: () -> TravelPlanTableModel) -> TravelPlanTableModel {
+        lookups += 1
+        if let value, self.key == key { return value }
+        let built = make()
+        builds += 1
+        (self.key, value) = (key, built)
+        return built
+    }
+
+    static func minute(_ now: Date) -> Int { Int((now.timeIntervalSinceReferenceDate / 60).rounded(.down)) }
+}
+
 /// 여행의 날짜들(`YYYY-MM-DD`)과 기기 달력의 그날.
 enum TravelPlanDays {
     /// `YYYY-MM-DD` → `11/20`. 일차 칩에 붙인다.

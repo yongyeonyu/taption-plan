@@ -80,14 +80,15 @@ extension TravelDayBoard {
     }
 
     /// 그날 코스의 동선 정리 입력(지도 핀과 캘린더 고정 일정을 붙인 것).
-    static func sortStops(model: AppModel, tripID: String, dayKey: String) -> [TravelCourseSort.Stop] {
+    /// `blocks`를 넘기면(여행 화면이 이미 만든 그날 칸) 계획표를 다시 만들지 않는다.
+    static func sortStops(model: AppModel, tripID: String, dayKey: String, blocks: [TravelPlanTableModel.Block]? = nil) -> [TravelCourseSort.Stop] {
         var pins: [String: (latitude: Double, longitude: Double)] = [:]
         for stop in model.settings.travelPlanStops where stop.tripID == tripID {
             if let itemID = stop.itemID { pins[itemID] = (stop.latitude, stop.longitude) }
         }
         let fixedPlans = Set(model.snapshot.plans.filter(\.isFixed).map(\.id))
         let fixedIDs = Set((model.settings.travelTripItems ?? []).filter { item in item.tripID == tripID && item.planID.map { fixedPlans.contains($0) } == true }.map(\.itemID))
-        return sortStops(table(model: model, tripID: tripID, dayKey: dayKey).blocks, pins: pins, fixedIDs: fixedIDs)
+        return sortStops(blocks ?? table(model: model, tripID: tripID, dayKey: dayKey).blocks, pins: pins, fixedIDs: fixedIDs)
     }
 }
 
@@ -116,13 +117,14 @@ private struct TravelDayBoardHost: ViewModifier {
     let tripID: String
     let trip: TravelTrip
     let dayKey: String
+    let blocks: [TravelPlanTableModel.Block]?
     let language: MapHomeLanguage
     @Binding var history: TravelPlanHistory
     @State private var prompt: Prompt?
 
     func body(content: Content) -> some View {
         let days = TravelDayBoard.days(of: trip, language: language)
-        let stops = TravelDayBoard.sortStops(model: model, tripID: tripID, dayKey: dayKey)
+        let stops = TravelDayBoard.sortStops(model: model, tripID: tripID, dayKey: dayKey, blocks: blocks)
         content
             .environment(\.travelDayBoard, TravelDayBoardLinks(
                 days: days, currentDay: dayKey, canSort: TravelCourseSort.movableGroups(stops).contains { $0.count > 1 },
@@ -205,8 +207,11 @@ private struct TravelDayBoardDrag: ViewModifier {
 
 extension View {
     /// 여행 화면의 계획 판에 붙인다: 일차 칩으로 옮기기와 동선 정리가 켜진다.
-    func travelDayBoard(model: AppModel, tripID: String, trip: TravelTrip, dayKey: String, language: MapHomeLanguage, history: Binding<TravelPlanHistory>) -> some View {
-        modifier(TravelDayBoardHost(model: model, tripID: tripID, trip: trip, dayKey: dayKey, language: language, history: history))
+    func travelDayBoard(
+        model: AppModel, tripID: String, trip: TravelTrip, dayKey: String, blocks: [TravelPlanTableModel.Block]? = nil, language: MapHomeLanguage,
+        history: Binding<TravelPlanHistory>
+    ) -> some View {
+        modifier(TravelDayBoardHost(model: model, tripID: tripID, trip: trip, dayKey: dayKey, blocks: blocks, language: language, history: history))
     }
 
     func travelDayChipDrop(_ dayKey: String) -> some View { modifier(TravelDayChipDrop(dayKey: dayKey)) }
