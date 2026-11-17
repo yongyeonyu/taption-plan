@@ -581,11 +581,33 @@ enum AssistantAppStateSync {
         )
     }
 
+    static let aiCopiesClearedKey = "assistantAICopiesCleared"
+
+    /// REV1117A02(대표 결정): 공유를 끄거나 사생활을 잠그면 AI 일 목록·메모 다듬기 서버 사본을 한 번 지운다.
+    /// 기기의 다듬기 목록과 못 올린 일은 남겨, 다시 켜면 올린다.
+    static func syncAICopies(sharing: Bool, master: String, defaults: UserDefaults, env: AssistantRegistration.Environment) async {
+        guard !sharing else {
+            guard defaults.bool(forKey: aiCopiesClearedKey) else { return }
+            defaults.removeObject(forKey: aiCopiesClearedKey)
+            await MemoPolishQueue.upload(env: env)
+            await AITaskQueue.upload(env: env)
+            return
+        }
+        guard !defaults.bool(forKey: aiCopiesClearedKey) else { return }
+        let tasks = await TripRelay.send(TripRelay.relayRequest("/tasks", method: "DELETE", query: [URLQueryItem(name: "all", value: "1")], token: master, host: env.host, client: env.client()), session: env.session)
+        let polish = await TripRelay.send(TripRelay.relayRequest("/polish", method: "DELETE", token: master, host: env.host, client: env.client()), session: env.session)
+        guard let tasks, let polish, (200..<300).contains(tasks.status), (200..<300).contains(polish.status) else { return }
+        defaults.set(true, forKey: aiCopiesClearedKey)
+        if !MemoPolishQueue.items(defaults).isEmpty { defaults.set(true, forKey: MemoPolishQueue.needsUploadKey) }
+    }
+
     /// 공유를 껐으면 서버 사본을 한 번 지운다. 사생활 잠금 중에는 올리지 않는다.
     static func run(
         model: AppModel, defaults: UserDefaults = .standard, env: AssistantRegistration.Environment = .live, now: Date = .now
     ) async {
         guard let master = env.secrets.read(.master) else { return }
+        let sharing = AITaskQueue.isSharing(.init(level: AssistantShareLevel.current(defaults), debug: false, locked: TaptionExternalPrivacyStore.isLocked))
+        await syncAICopies(sharing: sharing, master: master, defaults: defaults, env: env)
         guard AssistantShareLevel.current(defaults) != .off else {
             guard defaults.string(forKey: hashKey) != nil else { return }
             let reply = await TripRelay.send(TripRelay.relayRequest("/app", method: "DELETE", token: master, host: env.host, client: env.client()), session: env.session)

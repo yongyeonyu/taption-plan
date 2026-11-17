@@ -747,6 +747,28 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertEqual(Phase3RelayStub.requests.last?.summary, "DELETE /polish", "an empty list deletes the server copy")
     }
 
+    /// REV1117A02(대표 결정): 공유 「끔」·사생활 잠금 중에는 AI 일과 메모 다듬기를 올리지 않고, 기기에 남겨 둔다.
+    func testTasksAndPolishWaitOnTheDeviceWhileSharingIsOffOrLocked() async throws {
+        let store = defaults()
+        store.set(["k1": "피클"], forKey: AssistantKeyLabels.labelsKey)
+        XCTAssertTrue(MemoPolishQueue.enqueue(UUID(), text: "회의 잘끝남", day: nil, defaults: store))
+        XCTAssertTrue(AITaskQueue.enqueue(.other, text: "넘긴 일", defaults: store))
+        for client in [AssistantClientState(level: .off, debug: false, locked: false), AssistantClientState(level: .summary, debug: false, locked: true)] {
+            Phase3RelayStub.reset { _ in 201 }
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.protocolClasses = [Phase3RelayStub.self]
+            let env = AssistantRegistration.Environment(
+                secrets: AssistantMemorySecrets([.master: oldMaster]), defaults: store, session: URLSession(configuration: configuration),
+                host: host, clearConnections: {}, client: { client }
+            )
+            await MemoPolishQueue.upload(env: env)
+            await AITaskQueue.upload(env: env)
+            XCTAssertTrue(Phase3RelayStub.requests.isEmpty, "\(client)")
+        }
+        XCTAssertTrue(store.bool(forKey: MemoPolishQueue.needsUploadKey))
+        XCTAssertEqual(AITaskQueue.pendingUploads(store).count, 1)
+    }
+
     /// 웹 요청 AI에는 키가 든 안내 대신 1회용 주소만 복사한다(SET1110A01).
     func testSetupLinkReplacesTheKeyInTheClipboardText() async throws {
         let store = defaults()
@@ -924,6 +946,7 @@ final class Phase3RelayStub: URLProtocol, @unchecked Sendable {
         var path: String
         var token: String?
         var body: Data
+        var query: String?
 
         var summary: String { "\(method) \(path)" }
     }
@@ -968,7 +991,7 @@ final class Phase3RelayStub: URLProtocol, @unchecked Sendable {
         }
         let token = request.value(forHTTPHeaderField: "Authorization").map { String($0.dropFirst("Bearer ".count)) }
         let (code, reply, retry): (Int, String, String?) = Self.lock.withLock {
-            Self.seen.append(Seen(method: request.httpMethod ?? "GET", path: request.url?.path ?? "", token: token, body: body))
+            Self.seen.append(Seen(method: request.httpMethod ?? "GET", path: request.url?.path ?? "", token: token, body: body, query: request.url?.query))
             return (Self.status(request), Self.body, Self.retryAfter)
         }
         var headers = ["Content-Type": "application/json"]
@@ -2107,9 +2130,15 @@ final class AssistantAppControlTests: XCTestCase {
 
         store.set(AssistantShareLevel.off.rawValue, forKey: AssistantShareLevel.defaultsKey)
         await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 10))
-        XCTAssertEqual(Phase3RelayStub.requests.last?.summary, "DELETE /app")
+        // REV1117A02(대표 결정): 끄면 AI 일 목록(열린 일까지)·메모 다듬기 서버 사본도 지운다.
+        XCTAssertEqual(Phase3RelayStub.requests.suffix(3).map(\.summary), ["DELETE /tasks", "DELETE /polish", "DELETE /app"])
+        XCTAssertEqual(Phase3RelayStub.requests.suffix(3).first?.query, "all=1")
         await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 11))
-        XCTAssertEqual(Phase3RelayStub.requests.count, 4, "지운 뒤에는 아무것도 보내지 않는다")
+        XCTAssertEqual(Phase3RelayStub.requests.count, 6, "지운 뒤에는 아무것도 보내지 않는다")
+        store.set(AssistantShareLevel.summary.rawValue, forKey: AssistantShareLevel.defaultsKey)
+        await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 12))
+        XCTAssertFalse(store.bool(forKey: AssistantAppStateSync.aiCopiesClearedKey), "다시 켜면 다음에 끌 때 또 지운다")
+        XCTAssertEqual(Phase3RelayStub.requests.last?.summary, "POST /app")
     }
 
     /// REV1117A02: 제안 id(「suggested-위도,경도」)와 이름 없이 등록한 장소의 좌표 이름은 AI로 나가지 않는다.
