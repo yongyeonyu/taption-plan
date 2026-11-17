@@ -510,7 +510,8 @@ const RAW_VALUES = {
   error: (v) => /^[a-z][a-z_]{0,39}$/.test(v) && SERVER_ERRORS.has(v),
   // 읽기 연결에 주는 서버의 안내 글(AIP1114A05).
   hint: (v) => v === TASK_READ_ONLY_HINT,
-  reason: oneOf("invalid", "no_record", "unknown_category", "memo_failed", "schedule_failed", "noMerchant", "duplicate", "transfer", "toll", "cardBill", "fare"),
+  // 앱 거절 사유는 짧은 snake_case 낱말이다(AIF1118A01: 목록에 없는 앱 사유까지 감싸던 것). 띄어 쓴 글은 사람이 쓴 것이라 감싼다.
+  reason: (v) => /^[a-z][a-z_]{1,39}$/.test(v) || ["noMerchant", "cardBill"].includes(v),
   // NTF1112A01: 문자 자동화의 트리거 낱말(앱이 정한 값).
   paymentTriggerWords: oneOf("원", "승인", "출금", "취소", "입금", "결제", "일시불", "할부"),
 };
