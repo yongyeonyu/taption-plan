@@ -1216,7 +1216,8 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         shot(app, "7-trip-properties")
     }
 
-    /// TVM1117A02: 작은 단추는 보이는 그림 몇 pt 밖을 눌러도 눌린다(누르는 영역 44pt). 지도 접기(44×22)와 여행 카드 ⋯(34×26)로 본다.
+    /// TVM1117A02: 작은 단추는 보이는 그림 몇 pt 밖을 눌러도 눌린다(누르는 영역 44pt).
+    /// 재생 헤드 시각(46×24, 단추)과 여행 카드 ⋯(34×26, 메뉴)로 본다. 지도 접기 단추는 위가 판 밖이라 재지 않는다(눈 확인으로 남김).
     func testSmallTravelButtonsAnswerOutsideTheirPicture() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
@@ -1227,26 +1228,33 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         if later.waitForExistence(timeout: 3) { later.tap() }
         travel.tap()
         let raise = app.buttons["계획표 올리기"].firstMatch
-        try XCTSkipUnless(raise.waitForExistence(timeout: 20), "열 여행이 없는 기기")
-        raise.tap()
-        let fold = app.buttons["지도 접기"].firstMatch, unfold = app.buttons["지도 펼치기"].firstMatch
-        XCTAssertTrue(fold.waitForExistence(timeout: 5) || unfold.exists, "계획표 막대에 지도 접기 단추가 있다")
-        let wasFolded = unfold.exists
-        let toggle = wasFolded ? unfold : fold, flipped = wasFolded ? fold : unfold
-        let frame = toggle.frame
-        // 그림 위 8pt(예전에는 막대의 「계획표 내리기」에 눌렸다).
-        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.minY - 8)).tap()
-        XCTAssertTrue(flipped.waitForExistence(timeout: 3), "그림 8pt 위를 눌러도 지도 접기가 눌린다")
-        XCTAssertTrue(app.descendants(matching: .any)["계획표 내리기"].exists, "계획표는 그대로 올라와 있다")
-        flipped.tap() // 높이를 돌려놓는다.
-        XCTAssertTrue(toggle.waitForExistence(timeout: 3))
-
-        app.buttons["여행 목록으로"].firstMatch.tap()
+        if raise.waitForExistence(timeout: 15) {
+            raise.tap()
+            let tableTab = app.buttons["계획표"].firstMatch
+            if tableTab.waitForExistence(timeout: 3) { tableTab.tap() }
+            let playhead = app.buttons["재생 헤드"].firstMatch
+            XCTAssertTrue(playhead.waitForExistence(timeout: 5), "계획표에 재생 헤드가 있다")
+            let clock = playhead.frame
+            print("TVM1117A02 playhead frame \(clock)")
+            // 단추의 틀은 넓힌 자리(44)까지라 보이는 시각 표(24)는 가운데다. 시각 표 위 7pt는 계획표 칸이다
+            // (넓히지 않았으면 빈 칸이 골라져 「일정 넣기」가 뜬다).
+            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: clock.midX, dy: clock.midY - 12 - 7)).tap()
+            let opened = app.buttons["취소"].firstMatch.waitForExistence(timeout: 3) || app.buttons["닫기"].firstMatch.exists
+            XCTAssertTrue(opened, "시각 표 7pt 위를 눌러도 지출 넣기가 열린다")
+            XCTAssertFalse(app.buttons["일정 넣기"].exists, "빈 칸이 골라지지 않는다")
+            app.terminate()
+            app.launchWithoutPrompts()
+            XCTAssertTrue(travel.waitForExistence(timeout: 40))
+            travel.tap()
+        }
+        let back = app.buttons["여행 목록으로"].firstMatch
+        if back.waitForExistence(timeout: 8) { back.tap() }
         let menu = app.buttons["여행 메뉴"].firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 8), "지구본에 여행 카드가 있다")
         let spot = menu.frame
-        // ⋯ 그림 아래 7pt는 카드 몸통이다(예전에는 그 여행으로 날아갔다).
-        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: spot.midX, dy: spot.maxY + 7)).tap()
+        print("TVM1117A02 menu frame \(spot)")
+        // ⋯ 그림(오른쪽 위 34×26) 아래 7pt는 카드 몸통이다(예전에는 그 여행으로 날아갔다).
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: spot.maxX - 17, dy: spot.minY + 26 + 7)).tap()
         XCTAssertTrue(app.buttons["여행 고치기"].waitForExistence(timeout: 3), "⋯ 그림 7pt 아래를 눌러도 여행 메뉴가 열린다")
     }
 }
