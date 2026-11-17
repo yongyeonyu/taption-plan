@@ -104,10 +104,12 @@ actor TaptionStoreRepository: PlanDataRepository {
         }
         let readMilliseconds = Date().timeIntervalSince(readStartedAt) * 1_000
         let state = Self.groupedRecordRows(rows)
-        known = state.mapValues { $0.mapValues { ($0.ord, Self.bodyPrint($0.body)) } }
+        // 비교 기준은 모든 행을 해석한 뒤에만 정한다. 해석이 중간에 실패했는데 기준이 남으면 다음 저장이
+        // 읽지 못한 행을 「스냅샷에 없음」으로 보고 지운다(REV1117A03).
+        known = nil
         lastSynced = nil
-        nextOrd = Self.nextOrdinals(for: state)
         knownHashes = [:]
+        let loadedKnown = state.mapValues { $0.mapValues { ($0.ord, Self.bodyPrint($0.body)) } }
         // 항목마다 JSONDecoder를 새로 만들면 수만 건을 읽을 때 할당 비용이 그대로 쌓인다.
         let decoder = Self.decoder()
         let decodeStartedAt = Date()
@@ -124,6 +126,8 @@ actor TaptionStoreRepository: PlanDataRepository {
                 decodeMilliseconds: Date().timeIntervalSince(decodeStartedAt) * 1_000
             )
             if state.values.contains(where: { !$0.isEmpty }) { throw RepositoryError.invalidSnapshot }
+            known = loadedKnown
+            nextOrd = Self.nextOrdinals(for: state)
             return .empty
         }
         // 헤더를 해석하지 못하면 빈 스냅샷으로 넘기지 않고 실패시킨다(다음 저장이 전부 지우는 것을 막는다).
@@ -131,7 +135,6 @@ actor TaptionStoreRepository: PlanDataRepository {
         do {
             header = try decoder.decode(Header.self, from: Data(headerBody.utf8))
         } catch {
-            known = nil
             throw RepositoryError.invalidSnapshot
         }
         // 종류별 해석은 서로 독립이라 동시에 돌린다. 항목이 수만 건인 장소·기록이 한 코어를 오래 잡지 않는다.
@@ -173,6 +176,8 @@ actor TaptionStoreRepository: PlanDataRepository {
             yearlyReports: take(decoded.12, .yearlyReport),
             settings: header.settings
         )
+        known = loadedKnown
+        nextOrd = Self.nextOrdinals(for: state)
         knownHashes = hashes
         lastSynced = snapshot
         #if DEBUG || BENCH
