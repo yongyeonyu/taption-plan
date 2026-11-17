@@ -13,6 +13,9 @@ public struct AssistantEnvironment {
     public var saveConnection: (String) -> Bool
     /// 요청 헤더에 싣는 공유 수준·잠금 여부. 요청을 만들 때마다 읽는다.
     public var client: @Sendable () -> AssistantClientState
+    /// 주 키를 바꿀 때 AI 규칙을 예전 키(첫째)에서 새 키(둘째)로 옮기고 예전 자리에서 지운다. 옮기지 못하면 false(AIF1118A01).
+    /// 규칙 사본은 앱에 있어 앱이 넣는다. 시험은 옮길 것이 없다고 본다.
+    public var moveRules: @MainActor (String, String, AssistantEnvironment) async -> Bool = { _, _, _ in true }
 
     public init(
         secrets: AssistantSecretStore, defaults: UserDefaults, session: URLSession, host: String?,

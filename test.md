@@ -17,6 +17,8 @@
 - 결과: 관련 묶음 `r05.log` 159건 중 실패 1(메모 시험 준비 잘못 — `addMemo`는 가계부를 맞추지 않아 손 편집처럼 `updateMemo`로 고침, 이후 `r07-full`에서 확인), 서버 `npm test` 228건 실패 0, `Packages/TaptionAssistant` `swift test` 실패 0, `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과, 번역 extract·check 실패 0(새 문구 없음, 줄 위치만 바뀌어 되돌림). 전체 `-only-testing:TaptionPlanTests`(`r07-full.log`, 앱 Debug 빌드 포함): 3,010건 실패 0, 건너뜀 25(기존 조건부 시험).
 - 남은 것: `setTripItemPhoto` tripId, 하루 카드 요청 시간 창·정적 DateFormatter 시간대·말풍선 파일 크기·넣을 때마다 올리기 Task, 설계 항목(같은 때 사용자 편집 섞임·되돌리기 두 번·다시 쓴 id·`receivedAt`은 쓰이고 있음), `/rules` 처리는 대표 결정 대기. 공유 여행에 AI가 *새로* 넣는 지출은 여전히 이 기기에만(방에 올리지 않음).
 
+- 이어서(대표 결정 2026-11-18 셋, main `a65c4b58` 위): ① 주 키 바꾸기가 예전 자리 규칙(`GET /rules`, 못 올린 내 편집 얹음)을 새 키로 `/rules/ops` 올린 뒤에만 `DELETE /rules?ids=`로 지움, 올리기 실패면 아무것도 지우지 않고 다음에 다시(서버 변경 없음) ② AI가 몫을 말한 새 지출은 손 편집과 같은 `TripShareLedger.save(.shared)`로 방에 올림, 몫을 말하지 않은 지출은 기기에만, 되돌리면 방에서도 지움, 올리지 못하면 `shared_offline` 등 ③ 오프라인: 방 사본이 있으면 그 범위로(비공개는 기기에서 고침, 공유는 `shared_offline`), 방을 못 열면 곁 파일(방에서 옴·방에 올림·「다 같이」 기록)에 없을 때만 비공개로 봄. MCP `add_expense`·앱 안내에 「공유 여행이면 동행에게 감」 덧붙임.
+- 결과: `r09.log` 관련 묶음 160건 중 실패 1(방을 다시 열면 오프라인이어도 방 사본이 있어 범위를 그 사본으로 읽음 — 시험을 곁 파일 판단 함수로 고침), `r10-full.log` `-only-testing:TaptionPlanTests` 3,027건 실패 0(건너뜀 25), 서버 `npm test` 228건 실패 0, `Packages/TaptionAssistant` `swift test` 실패 0, 구조 점검 둘 통과. 새 시험은 새 API(`moveRules`·`AssistantSharedLedger.add`)를 써서 고치기 전에는 컴파일되지 않아 고치기 전 실행은 없음. 결함 ②·③은 같은 파일이라 커밋 하나.
 ## REV1117A03 · 서울도 TAGO로 (2026-11-18, 시뮬레이터 `99AC6F35…`)
 
 - 대표 결정(2026-11-17): 정류장 찾기를 https인 `/tago/stops`로 먼저, TAGO가 응답했는데 가까운 정류장이 없을 때만 평문 `/seoul/stops`(좌표는 POST 본문). 동작 변경: TAGO가 응답하지 않으면 서울시로 넘어가지 않고 nil(다음 판정 때 다시).

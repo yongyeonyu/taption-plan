@@ -68,7 +68,7 @@ public enum AssistantRegistration {
             return false
         case .failed: return false
         }
-        if let old, old != fresh, await !deleteServerData(of: old, env: env) { return false }
+        if let old, old != fresh, await !deleteServerData(of: old, movingTo: fresh, env: env) { return false }
         let hadConnections = !((env.defaults.dictionary(forKey: AssistantKeyLabels.labelsKey) ?? [:]).isEmpty)
         guard env.secrets.write(fresh, to: .master) else { return false }
         env.secrets.write(nil, to: .pendingMaster)
@@ -90,12 +90,14 @@ public enum AssistantRegistration {
 
     /// 예전 주 키의 서버 자료를 지운다. 등록을 확인한 뒤 지우고, 지우기는 2xx만 성공으로 본다(REV1110A06).
     /// 등록할 수 없는 키(422·409)는 주 키로 쓰인 적도 쓰일 수도 없어 지울 것이 없다.
-    private static func deleteServerData(of old: String, env: Environment) async -> Bool {
+    private static func deleteServerData(of old: String, movingTo fresh: String, env: Environment) async -> Bool {
         switch await register(old, env: env) {
         case .registered: break
         case .lowEntropy, .conflict: return true
         case .failed: return false
         }
+        // AI 규칙은 새 자리로 옮긴 뒤에만 지운다. 옮기지 못하면 아무것도 지우지 않고 다음에 다시 한다(대표 결정 2026-11-18).
+        guard await env.moveRules(old, fresh, env) else { return false }
         for path in TripRelay.rotationDeletionPaths {
             let reply = await TripRelay.send(TripRelay.relayRequest(path, method: "DELETE", token: old, host: env.host, client: env.client()), session: env.session)
             guard let reply, (200..<300).contains(reply.status) else { return false }

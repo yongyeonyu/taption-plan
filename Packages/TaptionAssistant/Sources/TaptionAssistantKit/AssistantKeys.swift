@@ -208,7 +208,7 @@ extension TripRelay {
     /// 주 키 바꾸기에서 예전 키로 지울 경로. 순서는 규격대로.
     public static let rotationDeletionPaths = ["/keys", "/activity", "/command", "/plan"]
 
-    /// 그다음 지울 앱이 올린 것들(AIF1118A01). 규칙(`/rules`)은 사용자가 정한 것이라 남긴다.
+    /// 그다음 지울 앱이 올린 것들(AIF1118A01). 규칙(`/rules`)은 `moveRules`가 새 자리로 옮긴 뒤 지운다.
     public static let rotationCleanup: [(path: String, query: [URLQueryItem])] = [
         ("/app", []), ("/polish", []), ("/answers", []), ("/tasks", [URLQueryItem(name: "all", value: "1")]), ("/push/token", []),
     ]

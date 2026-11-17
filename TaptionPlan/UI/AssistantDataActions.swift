@@ -101,6 +101,10 @@ extension AppModel {
         case let .addExpense(entry):
             var value = entry
             await preferences.ledger.load()
+            // 공유 여행에 몫을 말한 새 지출은 방에 공유 지출로 올린다(대표 결정 2026-11-18).
+            if AssistantSharedLedger.uploads(value, ledger: preferences.ledger) {
+                return await AssistantSharedLedger.add(value, ledger: preferences.ledger, language: language)
+            }
             if let problem = AssistantExpenseChange.tripProblem(value, book: preferences.ledger) { return .rejected(problem) }
             value.amountKRW = preferences.ledger.krw(value.amount, currency: value.currency)
             let saved = await preferences.ledger.save(value)
@@ -819,11 +823,38 @@ enum AssistantSharedLedger {
     nonisolated static let offline = "shared_offline"
     nonisolated static let moved = "shared_trip_move"
 
-    /// 공유 여행의 기록이면 방을 열어 지금 범위를 본다. 방을 못 열면 범위를 몰라 고치지 않는다.
+    /// 공유 여행의 기록이면 방을 열어 지금 범위를 본다. 방을 못 열면 기기 기록으로 판단한다(대표 결정 2026-11-18):
+    /// 곁 파일에 방에서 왔거나 방에 올린 적이 적혀 있지 않으면 비공개로 보고 기기에서 고치고, 적혀 있거나 모르면 고치지 않는다.
     static func scope(of entry: LedgerEntry, ledger: LedgerBook) async -> Scope {
         guard ledger === TripShareLedger.book, let tripID = entry.tripID, TripShareLedger.handles(entry) else { return .local }
-        guard await TripShareLedger.open(tripID: tripID) != nil else { return .offline }
+        guard await TripShareLedger.open(tripID: tripID) != nil else { return neverShared(entry, tripID: tripID) ? .local : .offline }
         return TripShareLedger.scope(of: entry) == .ownHidden ? .local : .inRoom
+    }
+
+    static func neverShared(_ entry: LedgerEntry, tripID: String) -> Bool {
+        let store = TripShareStore.shared
+        guard let roomID = store.link(tripID: tripID)?.roomID else { return false }
+        let sidecar = store.environment.sidecar
+        let itemID = TripShareMapping.roomItemID(entryID: entry.id)
+        return !sidecar.projectedExpenses(roomID: roomID).contains(itemID) && !sidecar.allTogether(roomID: roomID).contains(itemID)
+    }
+
+    /// 방에 올릴 새 AI 지출: 공유 여행이고 AI가 몫을 말했다(`shareChosen`). 몫을 말하지 않은 것은 나만이라 올리지 않는다.
+    static func uploads(_ entry: LedgerEntry, ledger: LedgerBook) -> Bool {
+        ledger === TripShareLedger.book && entry.shareChosen == true && TripShareLedger.handles(entry) && TripShareLedger.canShare(entry)
+    }
+
+    /// 손으로 넣은 공유 지출과 같은 길. 몫의 이름은 방이 정본이라 방에 없는 이름이면 `shared_unknown_person`.
+    static func add(_ entry: LedgerEntry, ledger: LedgerBook, language: MapHomeLanguage) async -> AssistantEditResult {
+        guard let tripID = entry.tripID, await TripShareLedger.open(tripID: tripID) != nil else { return .rejected(offline) }
+        var value = entry
+        value.amountKRW = ledger.krw(value.amount, currency: value.currency)
+        if let failure = await TripShareLedger.save(value, scope: .shared) { return .rejected(failure.assistantReason) }
+        let saved = ledger.entries.first { $0.id == value.id } ?? value
+        var result = AssistantEditResult(after: AssistantChangeSummary.expense(saved, language: language))
+        result.ledgerEntryID = saved.id
+        result.ledgerEntry = saved
+        return result
     }
 
     static func edit(
