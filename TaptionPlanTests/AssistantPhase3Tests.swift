@@ -2182,6 +2182,40 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertEqual(AssistantActivityBuilder.placeName(stay, registered: ["frequent-x": "12.34560, 65.43210"], language: .korean), "머문 곳")
         XCTAssertEqual(AssistantActivityBuilder.placeName(stay, registered: ["frequent-x": "회사"], language: .korean), "회사")
     }
+
+    /// HOF1118A01: 기기 안에서도 제안 id·이름 없는 장소 이름에 좌표를 쓰지 않는다. 옛 좌표 id는 같은 안정 id로 읽는다.
+    func testSuggestionIDAndUnnamedPlaceKeepNoCoordinatesAndOldIDsStillMatch() async throws {
+        let point = GeoPoint(latitude: 12.3456, longitude: 65.4321, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 5)
+        let legacy = "suggested-12.3456,65.4321"
+        let id = FrequentPlaceSuggestion.stableID(point)
+        XCTAssertFalse(id.contains("12.34") || id.contains("65.43"), id)
+        XCTAssertEqual(FrequentPlaceSuggestion.stableID(migrating: legacy), id, "an old id reads as the same place")
+        XCTAssertEqual(FrequentPlaceSuggestion.stableID(migrating: id), id, "a new id is kept")
+        XCTAssertEqual(AssistantAppStateSync.suggestionID(id), AssistantAppStateSync.suggestionID(legacy), "the id the AI sees does not change")
+
+        // 오늘 AI에게 넘긴 질문 목록에 남은 옛 id: 같은 질문으로 읽고, 좌표를 지운 꼴로 다시 적는다.
+        let store = defaults()
+        let now = at(11, 12, 9)
+        let today = MapHomeLaunchPromptDeferral.dayKey(now)
+        store.set([today: ["place:" + legacy, "car:Audi"], "2026-11-01": ["place:suggested-1.0000,2.0000"]], forKey: MapHomeLaunchPromptHandoff.key)
+        XCTAssertEqual(MapHomeLaunchPromptHandoff.handed(now: now, defaults: store), ["place:" + id, "car:Audi"])
+        XCTAssertTrue(MapHomeLaunchPromptHandoff.handed(now: now, defaults: store).contains(MapHomeLaunchPrompt.frequentPlace(id).id))
+        let kept = try XCTUnwrap(store.dictionary(forKey: MapHomeLaunchPromptHandoff.key) as? [String: [String]])
+        XCTAssertEqual(kept, [today: ["car:Audi", "place:" + id].sorted()])
+
+        // 이름을 못 받은 제안을 등록해도 이름이 좌표가 아니다.
+        XCTAssertEqual(AppModel.unnamedPlaceName(.custom, language: .korean), "자주 가는 곳")
+        XCTAssertEqual(AppModel.unnamedPlaceName(.restaurant, language: .korean), "식당")
+        let model = await model()
+        model.frequentPlaceSuggestion = FrequentPlaceSuggestion(
+            id: id, point: point, suggestedName: nil, visitCount: 3, firstVisitedAt: at(11, 5, 9), lastVisitedAt: at(11, 12, 9), reason: .weekly
+        )
+        let placeID = try XCTUnwrap(model.registerFrequentPlaceSuggestion(as: .custom))
+        let place = try XCTUnwrap(model.snapshot.settings.frequentPlaces.first { $0.id == placeID })
+        XCTAssertEqual(place.name, AppModel.unnamedPlaceName(.custom))
+        XCTAssertFalse(place.name.contains("12.34"), place.name)
+        XCTAssertEqual(place.point?.latitude, 12.3456)
+    }
 }
 
 // MARK: - 등록부 동작 5·6묶음, 장소 쌍 규칙, 새 규칙 기록 (ACT1114A09)
