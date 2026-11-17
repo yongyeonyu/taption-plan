@@ -1,9 +1,9 @@
 {
  "ui": [
   {
-   "key": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 몇 대에서 올라왔는지와 날짜만 세고 누가 보냈는지는 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)|                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • The server only counts how many devices and which day; it does not record who sent it. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
-   "ko": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 몇 대에서 올라왔는지와 날짜만 세고 누가 보냈는지는 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)",
-   "en": "                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • The server only counts how many devices and which day; it does not record who sent it. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
+   "key": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 후보마다 몇 대에서 올라왔는지와 날짜만 세요. 같은 규칙을 두 번 세지 않도록 내가 보낸 규칙의 지문(규칙 내용으로 만든 짧은 값, 기기를 알아볼 수 없어요)만 내 서버 자리에 남기고, 후보에는 누가 보냈는지 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)|                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • For each candidate the server only counts how many devices and which day. So the same rule isn't counted twice, it keeps a fingerprint of the rules you sent (a short value made from the rule that can't identify your device) in your own space on the server; candidates don't record who sent them. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
+   "ko": "                    • 받기: 하루 한 번 서버에서 내려받아요. 내 기록·문자·위치는 보내지 않아요.\n                    • 보내기(AI 연결 화면, 기본 꺼짐): 켠 경우에만 내 AI가 만든 규칙의 조건과 분류를, 개인 정보를 지워 운영자에게 보내요. 받은 글 원문·금액·이름·계좌·위치·내가 정한 규칙은 보내지 않아요.\n                    • 서버는 후보마다 몇 대에서 올라왔는지와 날짜만 세요. 같은 규칙을 두 번 세지 않도록 내가 보낸 규칙의 지문(규칙 내용으로 만든 짧은 값, 기기를 알아볼 수 없어요)만 내 서버 자리에 남기고, 후보에는 누가 보냈는지 적지 않아요. 후보는 90일 뒤 지워요.\n                    • 운영자가 직접 확인해 승인한 것만 모든 사용자의 공통 규칙이 돼요. 승인 전에는 아무에게도 가지 않아요.\n                    (초안 · 확정 전, 자세한 내용은 개인정보처리방침)",
+   "en": "                    • Receiving: downloaded from the server once a day. Your records, texts and location are not sent.\n                    • Sending (AI connections screen, off by default): only if you turn it on, the conditions and categories of rules your AI made are sent to the operator with personal details removed. Original texts, amounts, names, accounts, locations and rules you set yourself are never sent.\n                    • For each candidate the server only counts how many devices and which day. So the same rule isn't counted twice, it keeps a fingerprint of the rules you sent (a short value made from the rule that can't identify your device) in your own space on the server; candidates don't record who sent them. Candidates are deleted after 90 days.\n                    • Only what the operator reviews and approves becomes a shared rule for everyone. Nothing goes out before approval.\n                    (Draft · not final; see the privacy policy for details)",
    "files": [
     "SharedRulesView.swift:25"
    ],
@@ -695,7 +695,7 @@
    "ko": "AI 고르기",
    "en": "Choose an AI",
    "files": [
-    "AssistantConnectView.swift:621"
+    "AssistantConnectView.swift:624"
    ],
    "args": [],
    "targets": [
@@ -757,7 +757,7 @@
    "ko": "AI 규칙 받음",
    "en": "AI rule received",
    "files": [
-    "AssistantRuleStore.swift:216"
+    "AssistantRuleStore.swift:231"
    ],
    "args": [],
    "targets": [
@@ -860,7 +860,7 @@
    "ko": "AI 비서가 앱으로 바로 보내기",
    "en": "Let the AI send it to the app",
    "files": [
-    "TripImportSheet.swift:633"
+    "TripImportSheet.swift:635"
    ],
    "args": [],
    "targets": [
@@ -934,7 +934,7 @@
    "ko": "AI 앱이 열리면 객관식 질문에 답하며 항공편·숙소·관광지를 정해요. 마지막에 나오는 JSON을 복사해 돌아오세요.",
    "en": "In the AI app, answer multiple-choice questions to pick flights, hotels and places. Copy the JSON it gives you at the end and come back.",
    "files": [
-    "TripImportSheet.swift:606"
+    "TripImportSheet.swift:608"
    ],
    "args": [],
    "targets": [
@@ -1057,7 +1057,7 @@
    "ko": "AI 위치가 지도 검색과 {0} 달라요",
    "en": "AI location is {0} from the map search",
    "files": [
-    "TripImportSheet.swift:731"
+    "TripImportSheet.swift:733"
    ],
    "args": [
     "distanceText(mismatch.meters)"
@@ -1265,7 +1265,7 @@
    "ko": "AI로 여행 계획 만들기",
    "en": "Plan a trip with AI",
    "files": [
-    "TripImportSheet.swift:544"
+    "TripImportSheet.swift:546"
    ],
    "args": [],
    "targets": [
@@ -1446,7 +1446,7 @@
    "ko": "AI와 대화하기",
    "en": "Talk with an AI",
    "files": [
-    "TripImportSheet.swift:605"
+    "TripImportSheet.swift:607"
    ],
    "args": [],
    "targets": [
@@ -1997,7 +1997,7 @@
    "ko": "Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고 인증은 「로그인 없음」을 고르세요. 클립보드는 10분 뒤 지워져요.",
    "en": "In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:641"
+    "AssistantConnectView.swift:644"
    ],
    "args": [],
    "targets": [
@@ -2084,7 +2084,7 @@
    "ko": "Cue 채팅창에 붙여 넣고 보내 주세요. Cue가 주소를 열어 MCP 주소와 키를 받아 가요. 안 되면 아래에서 MCP 주소와 키를 따로 넣어 주세요.",
    "en": "Paste it into the Cue chat and send. Cue opens the link to get the MCP URL and key. If that fails, enter them separately below.",
    "files": [
-    "AssistantConnectView.swift:653"
+    "AssistantConnectView.swift:656"
    ],
    "args": [],
    "targets": [
@@ -2300,7 +2300,7 @@
    "ko": "JSON 일부가 잘렸거나 형식이 달라요. AI에게 JSON을 다시 출력해 달라고 해 주세요.",
    "en": "Part of the JSON is cut off or malformed. Ask the AI to output the JSON again.",
    "files": [
-    "TripImportSheet.swift:913"
+    "TripImportSheet.swift:918"
    ],
    "args": [],
    "targets": [
@@ -2874,7 +2874,7 @@
    "ko": "iCloud Drive를 사용할 수 없습니다. iCloud 로그인과 설정의 iCloud Drive를 확인해 주세요.",
    "en": "iCloud Drive is unavailable. Check that you are signed in to iCloud and iCloud Drive is on.",
    "files": [
-    "PlanBackupPresentation.swift:195"
+    "PlanBackupPresentation.swift:199"
    ],
    "args": [],
    "targets": [
@@ -3047,7 +3047,7 @@
    "ko": "iCloud에 같은 백업의 충돌 버전이 있어 건드리지 않았습니다. 다른 기기의 백업을 정리해 주세요.",
    "en": "iCloud has conflicting versions of this backup, so it was left untouched. Resolve them on your other devices.",
    "files": [
-    "PlanBackupPresentation.swift:210"
+    "PlanBackupPresentation.swift:214"
    ],
    "args": [],
    "targets": [
@@ -3095,7 +3095,7 @@
    "ko": "iCloud에서 아직 내려받지 못했습니다. 네트워크를 확인하고 잠시 뒤 다시 눌러 주세요.",
    "en": "The backup has not finished downloading from iCloud. Check your network and try again shortly.",
    "files": [
-    "PlanBackupPresentation.swift:190"
+    "PlanBackupPresentation.swift:194"
    ],
    "args": [],
    "targets": [
@@ -3107,7 +3107,7 @@
    "ko": "iCloud와 동기화하지 못했습니다. {0}",
    "en": "Could not sync with iCloud. {0}",
    "files": [
-    "AppModel+ExternalData.swift:275"
+    "AppModel+ExternalData.swift:290"
    ],
    "args": [
     "error.localizedDescription"
@@ -3481,7 +3481,7 @@
    "ko": "{0} · {1}번째",
    "en": "{0} · #{1}",
    "files": [
-    "AssistantDataActions.swift:691"
+    "AssistantDataActions.swift:693"
    ],
    "args": [
     "visible[from].name",
@@ -4129,7 +4129,7 @@
    "ko": "{0} 채팅창에 붙여 넣고 보내 주세요. 연결 키가 들어 있어 계획이 앱으로 바로 와요. 클립보드는 10분 뒤 지워져요.",
    "en": "Paste it into the {0} chat and send. It includes a connection key, so the plan comes straight to the app. The clipboard is cleared in 10 minutes.",
    "files": [
-    "TripImportSheet.swift:566"
+    "TripImportSheet.swift:568"
    ],
    "args": [
     "guide.name"
@@ -4143,8 +4143,8 @@
    "ko": "{0} 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the {0} chat and send.",
    "files": [
-    "AssistantConnectView.swift:655",
-    "TripImportSheet.swift:568"
+    "AssistantConnectView.swift:658",
+    "TripImportSheet.swift:570"
    ],
    "args": [
     "name"
@@ -4188,7 +4188,7 @@
    "ko": "{0} 항목의 시각을 읽지 못했어요.",
    "en": "Couldn't read the time of item {0}.",
    "files": [
-    "TripImportSheet.swift:919"
+    "TripImportSheet.swift:924"
    ],
    "args": [
     "itemID"
@@ -4895,7 +4895,7 @@
    "ko": "{0}에 넣을 연결 키를 만들어요. 취소하면 키 없이 복사해요.",
    "en": "Creates a connection key for {0}. Cancel to copy without a key.",
    "files": [
-    "TripImportSheet.swift:579"
+    "TripImportSheet.swift:581"
    ],
    "args": [
     "name"
@@ -4953,7 +4953,7 @@
    "ko": "{0}에서 계획 세우기",
    "en": "Plan in {0}",
    "files": [
-    "TripImportSheet.swift:614"
+    "TripImportSheet.swift:616"
    ],
    "args": [
     "name"
@@ -5051,7 +5051,7 @@
    "ko": "{0}일 달력",
    "en": "Calendar, day {0}",
    "files": [
-    "MapHomeMapAnnotations.swift:1050"
+    "MapHomeMapAnnotations.swift:1118"
    ],
    "args": [
     "day"
@@ -5065,7 +5065,7 @@
    "ko": "{0}일(날짜 미정)",
    "en": "{0} day(s), no dates",
    "files": [
-    "AssistantDataActions.swift:509"
+    "AssistantDataActions.swift:511"
    ],
    "args": [
     "trip.wishDays ?? 1"
@@ -5125,7 +5125,7 @@
    "files": [
     "TravelDayBoard.swift:41",
     "TravelModeView.swift:795",
-    "TravelModeView.swift:957"
+    "TravelModeView.swift:958"
    ],
    "args": [
     "index + 1"
@@ -5230,7 +5230,7 @@
    "ko": "{0}층",
    "en": "Floor {0}",
    "files": [
-    "AssistantDataActions.swift:673"
+    "AssistantDataActions.swift:675"
    ],
    "args": [
     "$0"
@@ -16432,7 +16432,7 @@
    "ko": "건강 데이터를 읽지 못했습니다. {0}",
    "en": "Could not read Health data. {0}",
    "files": [
-    "AppModel+ExternalData.swift:611"
+    "AppModel+ExternalData.swift:626"
    ],
    "args": [
     "error.localizedDescription"
@@ -16446,7 +16446,7 @@
    "ko": "앱 사용시간을 읽지 못했습니다. {0}",
    "en": "Could not read app usage time. {0}",
    "files": [
-    "AppModel+ExternalData.swift:711"
+    "AppModel+ExternalData.swift:726"
    ],
    "args": [
     "error.localizedDescription"
@@ -16574,7 +16574,7 @@
    "ko": "iCloud와 동기화하지 못했습니다. {0}",
    "en": "Could not sync with iCloud. {0}",
    "files": [
-    "AppModel+ExternalData.swift:276"
+    "AppModel+ExternalData.swift:291"
    ],
    "args": [
     "error.localizedDescription"
@@ -16588,7 +16588,7 @@
    "ko": "건강 데이터 자동 갱신을 켜지 못했습니다. ",
    "en": "Could not turn on automatic Health data refresh. ",
    "files": [
-    "AppModel+ExternalData.swift:788"
+    "AppModel+ExternalData.swift:803"
    ],
    "args": [],
    "targets": [
@@ -33591,7 +33591,7 @@
    "ko": "~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작해 주세요.",
    "en": "Paste it into ~/.gemini/settings.json and restart gemini.",
    "files": [
-    "AssistantConnectView.swift:639"
+    "AssistantConnectView.swift:642"
    ],
    "args": [],
    "targets": [
@@ -34496,7 +34496,7 @@
    "ko": "같은 여행이 있어 바꿉니다 · 추가 {0} · 변경 {1} · 삭제 {2}",
    "en": "Replaces the same trip · added {0} · changed {1} · removed {2}",
    "files": [
-    "TripImportSheet.swift:672"
+    "TripImportSheet.swift:674"
    ],
    "args": [
     "diff.added",
@@ -34746,7 +34746,7 @@
    "ko": "건강 데이터 자동 갱신을 켜지 못했습니다. ",
    "en": "Could not turn on automatic Health data refresh. ",
    "files": [
-    "AppModel+ExternalData.swift:787"
+    "AppModel+ExternalData.swift:802"
    ],
    "args": [],
    "targets": [
@@ -34808,7 +34808,7 @@
    "ko": "건강 데이터를 읽지 못했습니다. {0}",
    "en": "Could not read Health data. {0}",
    "files": [
-    "AppModel+ExternalData.swift:610"
+    "AppModel+ExternalData.swift:625"
    ],
    "args": [
     "error.localizedDescription"
@@ -35255,7 +35255,7 @@
    "ko": "검색 위치로",
    "en": "Use search",
    "files": [
-    "TripImportSheet.swift:734"
+    "TripImportSheet.swift:736"
    ],
    "args": [],
    "targets": [
@@ -35745,7 +35745,7 @@
    "ko": "계절",
    "en": "Seasons",
    "files": [
-    "AssistantDataActions.swift:376",
+    "AssistantDataActions.swift:378",
     "MapHomeView+Map.swift:945"
    ],
    "args": [],
@@ -36681,7 +36681,7 @@
    "ko": "과거 위치 {0}",
    "en": "Past location {0}",
    "files": [
-    "MapHomeView+Playback.swift:867"
+    "MapHomeView+Playback.swift:878"
    ],
    "args": [
     "time"
@@ -36896,7 +36896,7 @@
    "ko": "구글 지도에서 보기",
    "en": "Open in Google Maps",
    "files": [
-    "TripImportSheet.swift:746"
+    "TripImportSheet.swift:748"
    ],
    "args": [],
    "targets": [
@@ -37270,7 +37270,7 @@
    "ko": "그 사이 다른 사람이 고쳤어요. 최신 내용을 확인하고 다시 해 주세요.",
    "en": "Someone else changed this meanwhile. Check the latest and try again.",
    "files": [
-    "TripShareLedger.swift:401"
+    "TripShareLedger.swift:405"
    ],
    "args": [],
    "targets": [
@@ -38106,7 +38106,7 @@
    "en": "Use default color",
    "files": [
     "TravelModeView.swift:691",
-    "TravelQuickEntrySheet.swift:262"
+    "TravelQuickEntrySheet.swift:297"
    ],
    "args": [],
    "targets": [
@@ -38130,7 +38130,7 @@
    "ko": "기본 열로",
    "en": "Reset to default columns",
    "files": [
-    "TravelNewTripSheet.swift:202"
+    "TravelNewTripSheet.swift:204"
    ],
    "args": [],
    "targets": [
@@ -38265,7 +38265,7 @@
    "ko": "기존 백업을 만들 때 쓴 비밀번호와 달라 올리지 않았습니다. 비밀번호를 다시 확인해 주세요.",
    "en": "This password differs from the one used for the existing backup, so nothing was uploaded. Check your password.",
    "files": [
-    "PlanBackupPresentation.swift:205"
+    "PlanBackupPresentation.swift:209"
    ],
    "args": [],
    "targets": [
@@ -38333,7 +38333,7 @@
    "ko": "기타 AI (웹 요청)",
    "en": "Other AI (web requests)",
    "files": [
-    "AssistantConnectView.swift:618"
+    "AssistantConnectView.swift:621"
    ],
    "args": [],
    "targets": [
@@ -38585,8 +38585,8 @@
    "en": "Off",
    "files": [
     "LedgerMessageRules.swift:688",
-    "AssistantDataActions.swift:676",
-    "AssistantDataActions.swift:392"
+    "AssistantDataActions.swift:678",
+    "AssistantDataActions.swift:394"
    ],
    "args": [],
    "targets": [
@@ -39557,7 +39557,7 @@
    "ko": "내 차 아님",
    "en": "Not my car",
    "files": [
-    "AssistantDataActions.swift:598"
+    "AssistantDataActions.swift:600"
    ],
    "args": [],
    "targets": [
@@ -39632,7 +39632,7 @@
    "ko": "내 차로 등록",
    "en": "Registered as my car",
    "files": [
-    "AssistantDataActions.swift:598"
+    "AssistantDataActions.swift:600"
    ],
    "args": [],
    "targets": [
@@ -39826,7 +39826,7 @@
    "ko": "낸 사람이나 나눌 사람 가운데 이 여행에 없는 이름이 있어요.",
    "en": "Someone in Paid by or For whom isn't in this trip.",
    "files": [
-    "TripShareLedger.swift:400"
+    "TripShareLedger.swift:404"
    ],
    "args": [],
    "targets": [
@@ -39874,7 +39874,7 @@
    "ko": "넣지 못했습니다. 다시 해 주세요.",
    "en": "Could not save. Try again.",
    "files": [
-    "TravelQuickEntrySheet.swift:170"
+    "TravelQuickEntrySheet.swift:205"
    ],
    "args": [],
    "targets": [
@@ -40244,7 +40244,7 @@
    "ko": "다른 사람이 고치는 중이에요. 잠시 뒤에 다시 해 주세요.",
    "en": "Someone else is editing this. Try again in a moment.",
    "files": [
-    "TripShareLedger.swift:399",
+    "TripShareLedger.swift:403",
     "TripSharePlanEditor.swift:19"
    ],
    "args": [],
@@ -40296,7 +40296,7 @@
    "ko": "다시 묻지 않음",
    "en": "Won't ask again",
    "files": [
-    "AssistantDataActions.swift:581"
+    "AssistantDataActions.swift:583"
    ],
    "args": [],
    "targets": [
@@ -40357,7 +40357,7 @@
    "ko": "다음 날로",
    "en": "Move to next day",
    "files": [
-    "TravelQuickEntrySheet.swift:206"
+    "TravelQuickEntrySheet.swift:241"
    ],
    "args": [],
    "targets": [
@@ -40472,7 +40472,7 @@
    "ko": "다음: {0}",
    "en": "Next: {0}",
    "files": [
-    "TravelModeSupport.swift:849"
+    "TravelModeSupport.swift:854"
    ],
    "args": [
     "$0.title"
@@ -40669,7 +40669,7 @@
    "ko": "달이 끝나기 전에 만든 백업이라 지우지 않았습니다. 지금 백업을 다시 하세요.",
    "en": "The backup was made before the month ended, so nothing was removed. Back up again.",
    "files": [
-    "PlanBackupPresentation.swift:151"
+    "PlanBackupPresentation.swift:152"
    ],
    "args": [],
    "targets": [
@@ -40718,7 +40718,7 @@
    "en": "Day trip",
    "files": [
     "TravelModeView.swift:583",
-    "TravelModeView.swift:956",
+    "TravelModeView.swift:957",
     "TravelNewTripSheet.swift:53"
    ],
    "args": [],
@@ -40962,7 +40962,7 @@
    "ko": "더 보기",
    "en": "More",
    "files": [
-    "TravelQuickEntrySheet.swift:220"
+    "TravelQuickEntrySheet.swift:255"
    ],
    "args": [],
    "targets": [
@@ -41313,7 +41313,7 @@
    "ko": "도착 뒤 입국·짐 찾기로 {0}분은 두세요",
    "en": "Allow {0} min after landing for arrival",
    "files": [
-    "TripImportSheet.swift:759"
+    "TripImportSheet.swift:761"
    ],
    "args": [
     "need"
@@ -41327,7 +41327,7 @@
    "ko": "도착한 계획 불러오기",
    "en": "Load the delivered plan",
    "files": [
-    "TripImportSheet.swift:640"
+    "TripImportSheet.swift:642"
    ],
    "args": [],
    "targets": [
@@ -41339,7 +41339,7 @@
    "ko": "도착한 계획이 없어요.",
    "en": "No plan has arrived.",
    "files": [
-    "TripImportSheet.swift:848"
+    "TripImportSheet.swift:850"
    ],
    "args": [],
    "targets": [
@@ -42425,7 +42425,7 @@
    "files": [
     "LedgerTollRepeat.swift:295",
     "AssistantActivity.swift:207",
-    "AssistantActivity.swift:299"
+    "AssistantActivity.swift:300"
    ],
    "args": [],
    "targets": [
@@ -42724,7 +42724,7 @@
    "ko": "메모 (선택)",
    "en": "Note (optional)",
    "files": [
-    "TravelQuickEntrySheet.swift:276"
+    "TravelQuickEntrySheet.swift:311"
    ],
    "args": [],
    "targets": [
@@ -43712,7 +43712,7 @@
    "ko": "바로 뒤에 복제",
    "en": "Duplicate right after",
    "files": [
-    "TravelQuickEntrySheet.swift:204"
+    "TravelQuickEntrySheet.swift:239"
    ],
    "args": [],
    "targets": [
@@ -43889,7 +43889,7 @@
    "ko": "받은 JSON 붙여 넣기",
    "en": "Paste the JSON",
    "files": [
-    "TripImportSheet.swift:649"
+    "TripImportSheet.swift:651"
    ],
    "args": [],
    "targets": [
@@ -44311,7 +44311,7 @@
    "ko": "백업 내용이 이 기기와 달라 지우지 않았습니다. 지금 백업을 다시 하세요.",
    "en": "The backup differs from this device, so nothing was removed. Back up again.",
    "files": [
-    "PlanBackupPresentation.swift:154"
+    "PlanBackupPresentation.swift:155"
    ],
    "args": [],
    "targets": [
@@ -44415,7 +44415,7 @@
    "ko": "백업 파일을 찾지 못했습니다.",
    "en": "The backup file was not found.",
    "files": [
-    "PlanBackupPresentation.swift:188"
+    "PlanBackupPresentation.swift:192"
    ],
    "args": [],
    "targets": [
@@ -44427,7 +44427,7 @@
    "ko": "백업 파일이 손상되었거나 지원하지 않는 형식입니다.",
    "en": "The backup file is damaged or in an unsupported format.",
    "files": [
-    "PlanBackupPresentation.swift:184"
+    "PlanBackupPresentation.swift:188"
    ],
    "args": [],
    "targets": [
@@ -44439,7 +44439,7 @@
    "ko": "백업 파일이 없거나 읽을 수 없어 지우지 않았습니다.",
    "en": "No readable backup file, so nothing was removed.",
    "files": [
-    "PlanBackupPresentation.swift:148"
+    "PlanBackupPresentation.swift:149"
    ],
    "args": [],
    "targets": [
@@ -44475,7 +44475,7 @@
    "ko": "백업 확인에 실패해(비밀번호가 다르거나 파일이 손상됨) 지우지 않았습니다.",
    "en": "Backup verification failed (wrong password or damaged file), so nothing was removed.",
    "files": [
-    "PlanBackupPresentation.swift:160"
+    "PlanBackupPresentation.swift:164"
    ],
    "args": [],
    "targets": [
@@ -44562,7 +44562,7 @@
    "ko": "백자",
    "en": "Porcelain",
    "files": [
-    "AssistantDataActions.swift:379",
+    "AssistantDataActions.swift:381",
     "MapHomeView+Map.swift:948"
    ],
    "args": [],
@@ -45253,7 +45253,7 @@
    "ko": "복사했어요. 붙여 넣은 뒤 돌아오세요.",
    "en": "Copied. Paste it, then come back.",
    "files": [
-    "AssistantConnectView.swift:555"
+    "AssistantConnectView.swift:558"
    ],
    "args": [],
    "targets": [
@@ -45410,7 +45410,7 @@
    "ko": "분류 안 함",
    "en": "Not classified",
    "files": [
-    "AssistantDataActions.swift:607"
+    "AssistantDataActions.swift:609"
    ],
    "args": [],
    "targets": [
@@ -45800,7 +45800,7 @@
    "ko": "비밀번호를 입력해 주세요.",
    "en": "Enter your password.",
    "files": [
-    "PlanBackupPresentation.swift:177"
+    "PlanBackupPresentation.swift:181"
    ],
    "args": [],
    "targets": [
@@ -46249,7 +46249,7 @@
    "ko": "사진 {0}/{1}, {2}",
    "en": "Photo {0} of {1}, {2}",
    "files": [
-    "MapHomePhotoLayer.swift:693"
+    "MapHomePhotoLayer.swift:716"
    ],
    "args": [
     "index + 1",
@@ -46401,7 +46401,7 @@
    "ko": "사진 접기",
    "en": "Hide photos",
    "files": [
-    "MapHomePhotoLayer.swift:706"
+    "MapHomePhotoLayer.swift:729"
    ],
    "args": [],
    "targets": [
@@ -46413,7 +46413,7 @@
    "ko": "사진 펼치기",
    "en": "Show photos",
    "files": [
-    "MapHomePhotoLayer.swift:751"
+    "MapHomePhotoLayer.swift:774"
    ],
    "args": [],
    "targets": [
@@ -46881,7 +46881,7 @@
    "en": "Color {0}",
    "files": [
     "MapHomeStickerPicker.swift:180",
-    "TravelQuickEntrySheet.swift:262"
+    "TravelQuickEntrySheet.swift:297"
    ],
    "args": [
     "index + 1"
@@ -47870,7 +47870,7 @@
    "files": [
     "TravelModeSupport.swift:696",
     "TravelPlanTable.swift:476",
-    "TravelQuickEntrySheet.swift:186"
+    "TravelQuickEntrySheet.swift:221"
    ],
    "args": [],
    "targets": [
@@ -48074,7 +48074,7 @@
    "ko": "수묵",
    "en": "Ink Wash",
    "files": [
-    "AssistantDataActions.swift:378",
+    "AssistantDataActions.swift:380",
     "MapHomeView+Map.swift:947"
    ],
    "args": [],
@@ -48291,7 +48291,7 @@
    "ko": "숨김",
    "en": "Hidden",
    "files": [
-    "AssistantDataActions.swift:481"
+    "AssistantDataActions.swift:483"
    ],
    "args": [],
    "targets": [
@@ -48609,7 +48609,7 @@
    "ko": "시간 사이드바",
    "en": "Time sidebar",
    "files": [
-    "AssistantDataActions.swift:389",
+    "AssistantDataActions.swift:391",
     "MapHomeScreenRecording.swift:592"
    ],
    "args": [],
@@ -49111,7 +49111,7 @@
    "ko": "실외(고대비)",
    "en": "Outdoor (high contrast)",
    "files": [
-    "AssistantDataActions.swift:375",
+    "AssistantDataActions.swift:377",
     "MapHomeView+Map.swift:944"
    ],
    "args": [],
@@ -49625,7 +49625,7 @@
    "ko": "아직 연결되지 않았어요. 앞 단계를 다시 확인해 주세요.",
    "en": "Not connected yet. Check the previous steps.",
    "files": [
-    "AssistantConnectView.swift:567"
+    "AssistantConnectView.swift:570"
    ],
    "args": [],
    "targets": [
@@ -49637,7 +49637,7 @@
    "ko": "아직 일정이 없습니다",
    "en": "No plans yet",
    "files": [
-    "TravelModeSupport.swift:849"
+    "TravelModeSupport.swift:854"
    ],
    "args": [],
    "targets": [
@@ -49748,7 +49748,7 @@
    "ko": "안전을 위해 지우지 않았습니다.",
    "en": "Not removed, to be safe.",
    "files": [
-    "PlanBackupPresentation.swift:162"
+    "PlanBackupPresentation.swift:166"
    ],
    "args": [],
    "targets": [
@@ -49911,7 +49911,7 @@
    "ko": "암호 키를 만들지 못했습니다.",
    "en": "Could not derive the encryption key.",
    "files": [
-    "PlanBackupPresentation.swift:186"
+    "PlanBackupPresentation.swift:190"
    ],
    "args": [],
    "targets": [
@@ -49947,7 +49947,7 @@
    "ko": "앞에서 이동 {0}분",
    "en": "{0} min from previous",
    "files": [
-    "TripImportSheet.swift:719"
+    "TripImportSheet.swift:721"
    ],
    "args": [
     "Int(minutes)"
@@ -50009,7 +50009,7 @@
    "ko": "애플맵",
    "en": "Apple Maps",
    "files": [
-    "AssistantDataActions.swift:372",
+    "AssistantDataActions.swift:374",
     "MapHomeView+Map.swift:940"
    ],
    "args": [],
@@ -50242,7 +50242,7 @@
    "ko": "앱 사용시간을 읽지 못했습니다. {0}",
    "en": "Could not read app usage time. {0}",
    "files": [
-    "AppModel+ExternalData.swift:710"
+    "AppModel+ExternalData.swift:725"
    ],
    "args": [
     "error.localizedDescription"
@@ -50400,7 +50400,7 @@
    "ko": "앱보다 새 형식이에요. 앱을 업데이트해 주세요.",
    "en": "This format is newer than the app. Please update the app.",
    "files": [
-    "TripImportSheet.swift:915"
+    "TripImportSheet.swift:920"
    ],
    "args": [],
    "targets": [
@@ -50559,7 +50559,7 @@
    "ko": "야간",
    "en": "Night",
    "files": [
-    "AssistantDataActions.swift:374",
+    "AssistantDataActions.swift:376",
     "MapHomeView+Map.swift:943"
    ],
    "args": [],
@@ -51157,7 +51157,7 @@
    "ko": "여행 계획 JSON이 아니에요. AI가 마지막에 준 JSON 전체를 복사해 주세요.",
    "en": "This isn't trip JSON. Copy the whole JSON the AI gave at the end.",
    "files": [
-    "TripImportSheet.swift:911"
+    "TripImportSheet.swift:916"
    ],
    "args": [],
    "targets": [
@@ -51181,7 +51181,7 @@
    "ko": "여행 계획에 반영",
    "en": "Add to trip plan",
    "files": [
-    "TripImportSheet.swift:687"
+    "TripImportSheet.swift:689"
    ],
    "args": [],
    "targets": [
@@ -51851,7 +51851,7 @@
    "ko": "연결 안내를 복사했어요. 10분 뒤 클립보드에서 지워져요.",
    "en": "Setup copied. It is cleared from the clipboard in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:539"
+    "AssistantConnectView.swift:542"
    ],
    "args": [],
    "targets": [
@@ -51875,7 +51875,7 @@
    "ko": "연결 안내를 복사했어요. Cue 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.",
    "en": "Setup copied. Paste it into the Cue chat, or enter the MCP URL and key separately.",
    "files": [
-    "AssistantConnectView.swift:518"
+    "AssistantConnectView.swift:521"
    ],
    "args": [],
    "targets": [
@@ -51887,7 +51887,7 @@
    "ko": "연결 안내를 복사했어요",
    "en": "Setup copied",
    "files": [
-    "AssistantConnectView.swift:631"
+    "AssistantConnectView.swift:634"
    ],
    "args": [],
    "targets": [
@@ -52073,7 +52073,7 @@
    "ko": "연결 키를 복사했어요. GPT 구성 → 작업 → 인증에서 API 키·Bearer를 고르고 붙여 넣어 주세요. 스키마 주소는 이 화면에서 따로 복사해요. 클립보드는 10분 뒤 지워져요.",
    "en": "Key copied. In the GPT's Configure → Actions → Authentication, choose API key and Bearer, then paste it. Copy the schema URL from this screen. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:648"
+    "AssistantConnectView.swift:651"
    ],
    "args": [],
    "targets": [
@@ -52148,7 +52148,7 @@
    "ko": "연결됐어요.",
    "en": "Connected.",
    "files": [
-    "AssistantConnectView.swift:566"
+    "AssistantConnectView.swift:569"
    ],
    "args": [],
    "targets": [
@@ -52541,7 +52541,7 @@
    "ko": "연락 끊김?",
    "en": "Lost?",
    "files": [
-    "TripLiveLocationService.swift:117"
+    "TripLiveLocationService.swift:118"
    ],
    "args": [],
    "targets": [
@@ -52791,7 +52791,7 @@
    "ko": "열 더하기",
    "en": "Add column",
    "files": [
-    "TravelNewTripSheet.swift:183"
+    "TravelNewTripSheet.swift:185"
    ],
    "args": [],
    "targets": [
@@ -52804,7 +52804,7 @@
    "en": "Edit columns",
    "files": [
     "TravelModeView.swift:817",
-    "TravelNewTripSheet.swift:207"
+    "TravelNewTripSheet.swift:209"
    ],
    "args": [],
    "targets": [
@@ -52816,7 +52816,7 @@
    "ko": "열",
    "en": "Columns",
    "files": [
-    "TravelNewTripSheet.swift:187"
+    "TravelNewTripSheet.swift:189"
    ],
    "args": [],
    "targets": [
@@ -52895,7 +52895,7 @@
    "ko": "영상 재생",
    "en": "Play video",
    "files": [
-    "MapHomePhotoLayer.swift:404"
+    "MapHomePhotoLayer.swift:427"
    ],
    "args": [],
    "targets": [
@@ -53148,7 +53148,7 @@
    "ko": "예상 {0}",
    "en": "Planned {0}",
    "files": [
-    "TravelModeSupport.swift:853"
+    "TravelModeSupport.swift:858"
    ],
    "args": [
     "plannedText"
@@ -53187,7 +53187,7 @@
    "ko": "예상 요금 {0}원",
    "en": "Estimated fare ₩{0}",
    "files": [
-    "TripImportSheet.swift:722"
+    "TripImportSheet.swift:724"
    ],
    "args": [
     "fare.formatted()"
@@ -53213,8 +53213,8 @@
    "ko": "예상 지출",
    "en": "Planned spend",
    "files": [
-    "TravelQuickEntrySheet.swift:239",
-    "TravelQuickEntrySheet.swift:251"
+    "TravelQuickEntrySheet.swift:274",
+    "TravelQuickEntrySheet.swift:286"
    ],
    "args": [],
    "targets": [
@@ -53830,7 +53830,7 @@
    "ko": "올린 파일을 다시 확인하지 못했습니다. 기존 백업은 그대로입니다.",
    "en": "The uploaded file could not be verified. The existing backup is unchanged.",
    "files": [
-    "PlanBackupPresentation.swift:200"
+    "PlanBackupPresentation.swift:204"
    ],
    "args": [],
    "targets": [
@@ -54405,7 +54405,7 @@
    "ko": "웹 요청을 할 수 있는 AI 비서는 복사하지 않아도 계획을 보낼 수 있어요. AI를 고르면 그 AI의 연결 키가 프롬프트에 들어가고, 없으면 PIN을 물어 만들어요. 계획은 서버에 최대 3일 머물고 앱이 받으면 바로 지워져요.",
    "en": "AI assistants that can make web requests can send the plan without copying. Pick an AI and its connection key goes into the prompt; if it has none, you're asked for your PIN to make one. Plans stay on the server for up to 3 days and are deleted as soon as the app receives them.",
    "files": [
-    "TripImportSheet.swift:636"
+    "TripImportSheet.swift:638"
    ],
    "args": [],
    "targets": [
@@ -54417,7 +54417,7 @@
    "ko": "웹 요청을 할 수 있는 AI의 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the chat of an AI that can make web requests, then send.",
    "files": [
-    "AssistantConnectView.swift:646"
+    "AssistantConnectView.swift:649"
    ],
    "args": [],
    "targets": [
@@ -54429,7 +54429,7 @@
    "ko": "위성",
    "en": "Satellite",
    "files": [
-    "AssistantDataActions.swift:373",
+    "AssistantDataActions.swift:375",
     "MapHomeView+Map.swift:941"
    ],
    "args": [],
@@ -54442,7 +54442,7 @@
    "ko": "위아래로 쓸어 넘기고, 두 번 눌러 크게 봅니다",
    "en": "Swipe up or down to change, double-tap to enlarge",
    "files": [
-    "MapHomePhotoLayer.swift:697"
+    "MapHomePhotoLayer.swift:720"
    ],
    "args": [],
    "targets": [
@@ -55001,7 +55001,7 @@
    "ko": "위치를 찾지 못해 지도에는 표시되지 않아요",
    "en": "Location not found; not shown on the map",
    "files": [
-    "TripImportSheet.swift:741"
+    "TripImportSheet.swift:743"
    ],
    "args": [],
    "targets": [
@@ -55204,7 +55204,7 @@
    "ko": "음악을 넣지 못해 음악 없이 저장했습니다.",
    "en": "Couldn't add music, so the video was saved without it.",
    "files": [
-    "MapHomeView+Playback.swift:217"
+    "MapHomeView+Playback.swift:228"
    ],
    "args": [],
    "targets": [
@@ -55422,7 +55422,7 @@
    "ko": "이 기기에만 남아요. 일행에게 보이지 않아요.",
    "en": "Stays on this device. The group can't see it.",
    "files": [
-    "TripShareExpenseScopePicker.swift:68"
+    "TripShareExpenseScopePicker.swift:70"
    ],
    "args": [],
    "targets": [
@@ -55844,7 +55844,7 @@
    "ko": "이 백업을 만들 때 쓴 비밀번호와 다릅니다. 비밀번호를 바꾸기 전에 만든 백업은 이전 비밀번호로 열립니다.",
    "en": "This is not the password used for this backup. Backups made before a password change open with the old password.",
    "files": [
-    "PlanBackupPresentation.swift:179"
+    "PlanBackupPresentation.swift:183"
    ],
    "args": [],
    "targets": [
@@ -56090,7 +56090,7 @@
    "en": "Delete this plan?",
    "files": [
     "TravelPlanTable.swift:488",
-    "TravelQuickEntrySheet.swift:225"
+    "TravelQuickEntrySheet.swift:260"
    ],
    "args": [],
    "targets": [
@@ -56325,7 +56325,7 @@
    "ko": "이동 시간이 빠듯해요(약 {0}분 필요)",
    "en": "Tight move (about {0} min needed)",
    "files": [
-    "TripImportSheet.swift:758"
+    "TripImportSheet.swift:760"
    ],
    "args": [
     "need"
@@ -56500,7 +56500,7 @@
    "ko": "이름 (예: 점심 12시 1시간)",
    "en": "Name (e.g. lunch 12:30 1h)",
    "files": [
-    "TravelQuickEntrySheet.swift:381"
+    "TravelQuickEntrySheet.swift:416"
    ],
    "args": [],
    "targets": [
@@ -56647,7 +56647,7 @@
    "ko": "이름을 비우면 기본 이름을 씁니다. 열을 지우면 그 종류는 옆 열로 옮겨집니다.",
    "en": "Leave a name empty to use the default. Deleting a column moves its kinds to the next one.",
    "files": [
-    "TravelNewTripSheet.swift:189"
+    "TravelNewTripSheet.swift:191"
    ],
    "args": [],
    "targets": [
@@ -57212,7 +57212,7 @@
    "ko": "일정 {0}개",
    "en": "{0} plans",
    "files": [
-    "TravelModeSupport.swift:853"
+    "TravelModeSupport.swift:858"
    ],
    "args": [
     "items.count"
@@ -57279,7 +57279,7 @@
    "files": [
     "TravelModeView.swift:815",
     "TravelPlanTable.swift:460",
-    "TravelQuickEntrySheet.swift:186"
+    "TravelQuickEntrySheet.swift:221"
    ],
    "args": [],
    "targets": [
@@ -57551,7 +57551,7 @@
    "ko": "일정이 비어 있어요.",
    "en": "The trip has no items.",
    "files": [
-    "TripImportSheet.swift:917"
+    "TripImportSheet.swift:922"
    ],
    "args": [],
    "targets": [
@@ -57575,7 +57575,7 @@
    "ko": "일행 모두에게 보이고 정산에 들어가요.",
    "en": "Everyone in the group sees it and it counts in settling up.",
    "files": [
-    "TripShareExpenseScopePicker.swift:66"
+    "TripShareExpenseScopePicker.swift:68"
    ],
    "args": [],
    "targets": [
@@ -57599,7 +57599,7 @@
    "ko": "일행에게 보이지만 정산에는 들어가지 않아요.",
    "en": "The group can see it, but it isn't part of settling up.",
    "files": [
-    "TripShareExpenseScopePicker.swift:67"
+    "TripShareExpenseScopePicker.swift:69"
    ],
    "args": [],
    "targets": [
@@ -58195,7 +58195,7 @@
    "ko": "작업이 취소되었습니다.",
    "en": "The operation was cancelled.",
    "files": [
-    "PlanBackupPresentation.swift:168"
+    "PlanBackupPresentation.swift:172"
    ],
    "args": [],
    "targets": [
@@ -58350,7 +58350,7 @@
    "ko": "장소 떼기",
    "en": "Remove place",
    "files": [
-    "TravelQuickEntrySheet.swift:153"
+    "TravelQuickEntrySheet.swift:188"
    ],
    "args": [],
    "targets": [
@@ -58374,7 +58374,7 @@
    "ko": "장소 붙이기",
    "en": "Add a place",
    "files": [
-    "TravelQuickEntrySheet.swift:141"
+    "TravelQuickEntrySheet.swift:176"
    ],
    "args": [],
    "targets": [
@@ -58785,7 +58785,7 @@
    "ko": "저장하지 못했어요. 잠시 뒤에 다시 해 주세요.",
    "en": "Couldn't save. Try again in a moment.",
    "files": [
-    "TripShareLedger.swift:402"
+    "TripShareLedger.swift:406"
    ],
    "args": [],
    "targets": [
@@ -58919,7 +58919,7 @@
    "ko": "전날로",
    "en": "Move to previous day",
    "files": [
-    "TravelQuickEntrySheet.swift:205"
+    "TravelQuickEntrySheet.swift:240"
    ],
    "args": [],
    "targets": [
@@ -59200,7 +59200,7 @@
    "ko": "정산을 마감해서 공동 지출은 넣거나 바꿀 수 없어요.",
    "en": "Settlement is closed, so shared expenses can't be added or changed.",
    "files": [
-    "TripShareExpenseScopePicker.swift:64"
+    "TripShareExpenseScopePicker.swift:66"
    ],
    "args": [],
    "targets": [
@@ -59212,7 +59212,7 @@
    "ko": "정산을 마감해서 공동 지출은 바꿀 수 없어요.",
    "en": "Settlement is closed, so shared expenses can't be changed.",
    "files": [
-    "TripShareLedger.swift:398"
+    "TripShareLedger.swift:402"
    ],
    "args": [],
    "targets": [
@@ -59286,7 +59286,7 @@
    "en": "Not set",
    "files": [
     "LedgerMessageRules.swift:602",
-    "AssistantDataActions.swift:612",
+    "AssistantDataActions.swift:614",
     "TravelNewTripSheet.swift:74"
    ],
    "args": [],
@@ -59381,7 +59381,7 @@
    "ko": "제안한 곳",
    "en": "Suggested place",
    "files": [
-    "AssistantDataActions.swift:577"
+    "AssistantDataActions.swift:579"
    ],
    "args": [],
    "targets": [
@@ -59459,7 +59459,7 @@
    "ko": "종료",
    "en": "End",
    "files": [
-    "TravelQuickEntrySheet.swift:298",
+    "TravelQuickEntrySheet.swift:333",
     "TaptionPlanLiveActivity.swift:150"
    ],
    "args": [],
@@ -59538,7 +59538,7 @@
    "ko": "종류를 놓을 열",
    "en": "Column for each kind",
    "files": [
-    "TravelNewTripSheet.swift:191"
+    "TravelNewTripSheet.swift:193"
    ],
    "args": [],
    "targets": [
@@ -60163,7 +60163,7 @@
    "ko": "지금은 반영하지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't add it right now. Try again in a moment.",
    "files": [
-    "TripImportSheet.swift:696"
+    "TripImportSheet.swift:698"
    ],
    "args": [],
    "targets": [
@@ -60494,7 +60494,7 @@
    "ko": "지도 핀이 없는 일정",
    "en": "Items without a map pin",
    "files": [
-    "TripItemStatus.swift:124"
+    "TripItemStatus.swift:126"
    ],
    "args": [],
    "targets": [
@@ -60629,7 +60629,7 @@
    "ko": "지도에 경로 선",
    "en": "Route lines on map",
    "files": [
-    "AssistantDataActions.swift:387"
+    "AssistantDataActions.swift:389"
    ],
    "args": [],
    "targets": [
@@ -60653,7 +60653,7 @@
    "ko": "지도에 발자국",
    "en": "Footprints on map",
    "files": [
-    "AssistantDataActions.swift:388"
+    "AssistantDataActions.swift:390"
    ],
    "args": [],
    "targets": [
@@ -60677,7 +60677,7 @@
    "ko": "지도에 사진",
    "en": "Photos on map",
    "files": [
-    "AssistantDataActions.swift:386"
+    "AssistantDataActions.swift:388"
    ],
    "args": [],
    "targets": [
@@ -62347,7 +62347,7 @@
    "ko": "층 없음",
    "en": "No floor",
    "files": [
-    "AssistantDataActions.swift:673"
+    "AssistantDataActions.swift:675"
    ],
    "args": [],
    "targets": [
@@ -62551,7 +62551,7 @@
    "ko": "카카오 지도",
    "en": "Kakao Map",
    "files": [
-    "AssistantDataActions.swift:380",
+    "AssistantDataActions.swift:382",
     "MapHomeView+Map.swift:949"
    ],
    "args": [],
@@ -62904,8 +62904,8 @@
    "en": "On",
    "files": [
     "LedgerMessageRules.swift:688",
-    "AssistantDataActions.swift:676",
-    "AssistantDataActions.swift:392"
+    "AssistantDataActions.swift:678",
+    "AssistantDataActions.swift:394"
    ],
    "args": [],
    "targets": [
@@ -63061,7 +63061,7 @@
    "ko": "클립보드는 10분 뒤 지워져요.",
    "en": "The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:657"
+    "AssistantConnectView.swift:660"
    ],
    "args": [],
    "targets": [
@@ -63170,7 +63170,7 @@
    "ko": "탈것 표시",
    "en": "Show vehicles",
    "files": [
-    "AssistantDataActions.swift:390",
+    "AssistantDataActions.swift:392",
     "MapHomeView+Menu2.swift:21"
    ],
    "args": [],
@@ -63435,7 +63435,7 @@
    "ko": "판타지",
    "en": "Fantasy",
    "files": [
-    "AssistantDataActions.swift:377",
+    "AssistantDataActions.swift:379",
     "MapHomeView+Map.swift:946"
    ],
    "args": [],
@@ -63682,7 +63682,7 @@
    "ko": "프롬프트를 복사했어요. {0}에 붙여 넣고 보내 주세요.",
    "en": "The prompt is copied. Paste it into {0} and send.",
    "files": [
-    "TripImportSheet.swift:619"
+    "TripImportSheet.swift:621"
    ],
    "args": [
     "name"
@@ -63696,7 +63696,7 @@
    "ko": "프롬프트를 복사했어요. 피클에 붙여 넣고 보내 주세요.",
    "en": "The prompt is copied. Paste it into Pickle and send.",
    "files": [
-    "TripImportSheet.swift:827"
+    "TripImportSheet.swift:829"
    ],
    "args": [],
    "targets": [
@@ -63708,7 +63708,7 @@
    "ko": "프롬프트를 복사했어요.",
    "en": "Prompt copied.",
    "files": [
-    "TripImportSheet.swift:625"
+    "TripImportSheet.swift:627"
    ],
    "args": [],
    "targets": [
@@ -63720,7 +63720,7 @@
    "ko": "프롬프트를 복사했어요",
    "en": "Prompt copied",
    "files": [
-    "TripImportSheet.swift:559"
+    "TripImportSheet.swift:561"
    ],
    "args": [],
    "targets": [
@@ -63732,7 +63732,7 @@
    "ko": "프롬프트만 복사",
    "en": "Copy prompt only",
    "files": [
-    "TripImportSheet.swift:621"
+    "TripImportSheet.swift:623"
    ],
    "args": [],
    "targets": [
@@ -63744,7 +63744,7 @@
    "ko": "프롬프트와 피클 연결 키를 복사했어요. 피클 채팅창에 붙여 넣으면 계획이 앱으로 바로 와요.",
    "en": "The prompt and Pickle's connection key are copied. Paste them into the Pickle chat and the plan comes straight to the app.",
    "files": [
-    "TripImportSheet.swift:826"
+    "TripImportSheet.swift:828"
    ],
    "args": [],
    "targets": [
@@ -63768,7 +63768,7 @@
    "ko": "피클 열기 / 받기",
    "en": "Open / Get Pickle",
    "files": [
-    "TripImportSheet.swift:642"
+    "TripImportSheet.swift:644"
    ],
    "args": [],
    "targets": [
@@ -63792,7 +63792,7 @@
    "ko": "피클에서 계획 세우기 (자동 연동)",
    "en": "Plan in Pickle (Auto Sync)",
    "files": [
-    "TripImportSheet.swift:613"
+    "TripImportSheet.swift:615"
    ],
    "args": [],
    "targets": [
@@ -63804,7 +63804,7 @@
    "ko": "피클이 없어서 App Store를 열었어요. 설치한 뒤 다시 눌러 주세요.",
    "en": "Pickle isn't installed, so the App Store opened. Install it and tap again.",
    "files": [
-    "TripImportSheet.swift:824"
+    "TripImportSheet.swift:826"
    ],
    "args": [],
    "targets": [
@@ -63951,7 +63951,7 @@
    "ko": "하루 재생 일시 정지",
    "en": "Pause day playback",
    "files": [
-    "MapHomeView+Playback.swift:135"
+    "MapHomeView+Playback.swift:146"
    ],
    "args": [],
    "targets": [
@@ -63963,7 +63963,7 @@
    "ko": "하루 재생",
    "en": "Play day",
    "files": [
-    "MapHomeView+Playback.swift:136"
+    "MapHomeView+Playback.swift:147"
    ],
    "args": [],
    "targets": [
@@ -65443,7 +65443,7 @@
    "en": "Check",
    "files": [
     "LedgerMemoPanel.swift:13",
-    "TripImportSheet.swift:660"
+    "TripImportSheet.swift:662"
    ],
    "args": [],
    "targets": [
@@ -65482,7 +65482,7 @@
    "ko": "확인하고 반영하기",
    "en": "Review and add",
    "files": [
-    "TripImportSheet.swift:669"
+    "TripImportSheet.swift:671"
    ],
    "args": [],
    "targets": [
@@ -65494,7 +65494,7 @@
    "ko": "확인하는 동안 새 데이터가 들어와 지우지 않았습니다.",
    "en": "New data arrived during verification, so nothing was removed.",
    "files": [
-    "PlanBackupPresentation.swift:157"
+    "PlanBackupPresentation.swift:158"
    ],
    "args": [],
    "targets": [

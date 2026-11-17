@@ -784,7 +784,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Playback.swift",
-   "line": 96,
+   "line": 107,
    "ko": "displayedLocationDate",
    "en": "currentDayDataSnapshot?.travel ?? []"
   },
@@ -850,7 +850,7 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeSupport.swift",
-   "line": 852,
+   "line": 857,
    "ko": "planned",
    "en": "language"
   },
