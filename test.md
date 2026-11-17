@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## REV1117A03 · 서울도 TAGO로 (2026-11-18, 시뮬레이터 `99AC6F35…`)
+
+- 대표 결정(2026-11-17): 정류장 찾기를 https인 `/tago/stops`로 먼저, TAGO가 응답했는데 가까운 정류장이 없을 때만 평문 `/seoul/stops`(좌표는 POST 본문). 동작 변경: TAGO가 응답하지 않으면 서울시로 넘어가지 않고 nil(다음 판정 때 다시).
+- 곁 세션 결과(브랜치 `claude/rev-data-b8acb4`, `2362dc65`): `StorageReviewFixTests` 17건 실패 0(순서 시험 추가), 구조 점검 둘 통과, diff 공개 정보 grep 걸린 것 없음. 로그 `build/validation/REV1117A03/seoul.log`.
+- 메인 합침(2026-11-18). 곁 세션이 대기열에 넣은 `TaptionPlanTests` 전체는 세션 보관으로 돌지 않음 — 남은 합침 뒤 main 전체 실행(FUL1118A01 앞)으로 대신함. 서버 POST 정류장(`5393714a`)은 2026-11-17 밤 배포(버전 `1153a89e`)에 포함. Cloudflare Workers Logs: 저장소 wrangler 설정에 `observability` 없음(기본 꺼짐), 대시보드는 확인 안 함.
+
 ## FRT1117A02 · 한 번도 돌지 않던 Watch 단계 시험 (2026-11-18, 시뮬레이터 `99AC6F35…`)
 
 - 원인: `testWatchStageFollowsAnswerAndRealInstallState`가 `FirstRunTutorialTests`가 아니라 `private final class InMemoryCredentialStore` 안에 있어 XCTest가 찾지 않음(FRT1117A01 보고).
