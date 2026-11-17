@@ -83,15 +83,16 @@ final class TravelTodayTests: XCTestCase {
         calendar.timeZone = .gmt
         let day = at(0), now = at(12)
         // 그날 일정 40개, 실제 기록 30일치 1,500건, 지출 600건.
-        let items = (0..<40).map { index in
-            TravelTripItem(tripID: "t1", itemID: "i\(index)", kind: index % 4 == 0 ? "transfer" : "sight", title: "곳 \(index)",
-                           start: day.addingTimeInterval(TimeInterval(index * 1_800)), end: day.addingTimeInterval(TimeInterval(index * 1_800 + 1_500)),
-                           startOffsetSeconds: 0, endOffsetSeconds: 0, planID: nil)
+        let items: [TravelTripItem] = (0..<40).map { (index: Int) -> TravelTripItem in
+            let start: Date = day.addingTimeInterval(TimeInterval(index * 1_800))
+            let kind = index % 4 == 0 ? "transfer" : "sight"
+            return TravelTripItem(tripID: "t1", itemID: "i\(index)", kind: kind, title: "곳 \(index)", start: start, end: start.addingTimeInterval(1_500),
+                                  startOffsetSeconds: 0, endOffsetSeconds: 0, planID: nil)
         }
-        let actuals = (0..<1_500).map { index in
-            ActualRecord(planID: nil, title: "기록", categoryID: index % 3 == 0 ? "movement" : "hobby",
-                         startedAt: day.addingTimeInterval(TimeInterval(-29 * 86_400 + index * 1_700)),
-                         endedAt: day.addingTimeInterval(TimeInterval(-29 * 86_400 + index * 1_700 + 1_500)), source: .motion)
+        let actuals: [ActualRecord] = (0..<1_500).map { (index: Int) -> ActualRecord in
+            let start: Date = day.addingTimeInterval(TimeInterval(index * 1_700 - 29 * 86_400))
+            let category = index % 3 == 0 ? "movement" : "hobby"
+            return ActualRecord(planID: nil, title: "기록", categoryID: category, startedAt: start, endedAt: start.addingTimeInterval(1_500), source: .motion)
         }
         let entries = (0..<600).map { LedgerEntry(occurredAt: day.addingTimeInterval(TimeInterval($0 * 130)), amount: 1_000, title: "지출", tripID: "t1") }
         func build() -> TravelPlanTableModel {
