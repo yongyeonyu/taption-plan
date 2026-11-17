@@ -36,6 +36,9 @@ struct TaptionPlanApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        #if DEBUG || BENCH
+        MapHomePerfBench.stage("app_init")
+        #endif
         // 설정 파일에 저장된 값을 화면이 읽기 전에 되돌린다(앱을 업데이트해도 설정이 유지된다).
         AppSettingsFile.restore()
         TaptionPlanSharedContainer.configure(
@@ -47,6 +50,9 @@ struct TaptionPlanApp: App {
         OfflineVectorMap.install()
         #if DEBUG || BENCH
         BenchSeed.runIfRequested()
+        #endif
+        #if DEBUG || BENCH
+        MapHomePerfBench.stage("app_init_end")
         #endif
     }
 

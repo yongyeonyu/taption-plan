@@ -307,6 +307,9 @@ extension AppModel {
                 isStartupSnapshotPartial = true
                 hasPreparedStartupSettings = true
                 TaptionPlanDiagnosticsLogger.shared.record("startup_settings_ready")
+                #if DEBUG || BENCH
+                MapHomePerfBench.stage("startup_settings_loaded")
+                #endif
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record("startup_settings_deferred",
                     fields: ["error": String(describing: type(of: error))])
@@ -336,6 +339,9 @@ extension AppModel {
             }
             do {
                 let source = try await repository.load()
+                #if DEBUG || BENCH
+                MapHomePerfBench.stage("repository_loaded")
+                #endif
                 try Task.checkCancellation()
                 guard generation == dataDeletionGeneration,
                       allowsRepositoryLoadAttempt() else { return }

@@ -27,7 +27,8 @@ struct AppShellView: View {
     @State private var mapShellGraceTask: Task<Void, Never>?
     @State private var hasRenderedInitialDestination = false
     @State private var isInitialLaunchOverlayVisible = true
-    @State private var initialLaunchProgressValue = 0.0
+    /// 시작 막대 값. 33ms마다 바뀌므로 셸 본문이 읽지 않고 막대만 읽는다(PRF1117A01).
+    @State private var launchProgress = AppShellLaunchProgress()
     @State private var initialLaunchProgressTarget = 0.0
     @State private var initialLaunchProgressTask: Task<Void, Never>?
     @State private var initialLaunchStartedAt: TimeInterval?
@@ -269,10 +270,6 @@ struct AppShellView: View {
         }
     }
 
-    private var initialLaunchProgress: Double {
-        initialLaunchProgressValue
-    }
-
     private func advanceInitialLaunchProgress(to target: Double) {
         let target = min(max(target, 0), 1)
         guard target > initialLaunchProgressTarget else { return }
@@ -288,20 +285,20 @@ struct AppShellView: View {
                 // 목표에 닿았는데 준비가 안 끝났으면 조금씩 계속 간다(예전에는 0.86에서 얼어붙었다).
                 // 천장은 적재 전 0.90, 적재 뒤 0.97 — 읽는 내내 97%에 있으면 멈춘 것처럼 보인다.
                 let goal = AppShellInitialLaunchProgressMath.goal(
-                    current: initialLaunchProgressValue,
+                    current: launchProgress.value,
                     target: initialLaunchProgressTarget,
                     bootstrapped: model.isBootstrapped
                 )
                 let next = AppShellInitialLaunchProgressMath.next(
-                    current: initialLaunchProgressValue,
+                    current: launchProgress.value,
                     target: goal
                 )
-                if next != initialLaunchProgressValue {
+                if next != launchProgress.value {
                     withAnimation(.linear(duration: 0.12)) {
-                        initialLaunchProgressValue = next
+                        launchProgress.value = next
                     }
                 }
-                if initialLaunchProgressValue >= 1 { break }
+                if launchProgress.value >= 1 { break }
                 try? await Task.sleep(for: .milliseconds(33))
             }
         }
@@ -326,9 +323,12 @@ struct AppShellView: View {
         scheduleMapShellGraceIfNeeded()
         guard isInitialLaunchOverlayVisible, initialLaunchReady else { return }
         initialLaunchProgressTask?.cancel()
+        #if DEBUG || BENCH
+        MapHomePerfBench.stage("overlay_dismissed")
+        #endif
         initialLaunchProgressTarget = 1
         withAnimation(.easeOut(duration: 0.18)) {
-            initialLaunchProgressValue = 1
+            launchProgress.value = 1
             isInitialLaunchOverlayVisible = false
         }
         // 권한 시트는 스플래시가 걷힌 뒤에 띄운다. 시작 화면 뒤에서 이벤트킷·건강
@@ -354,6 +354,10 @@ struct AppShellView: View {
 
     @ViewBuilder
     private var initialLaunchOverlay: some View {
+        #if DEBUG || BENCH
+        // 전후 비교용: `-benchShellReadsProgress`면 예전처럼 셸 본문이 막대 값을 읽어 틱마다 셸 전체를 다시 계산한다.
+        let _ = AppShellLaunchProgress.benchShellReadsProgress ? launchProgress.value : 0
+        #endif
         if isInitialLaunchOverlayVisible {
             // LaunchScreen.storyboard와 같게 고정(아이콘 190pt·중심 -70pt·제목 시스템 25pt)해 이어 그릴 때 커지지 않게 한다(UIX1101B03).
             GeometryReader { proxy in
@@ -365,21 +369,7 @@ struct AppShellView: View {
                         .foregroundStyle(.white)
                         .frame(height: 32)
                         .padding(.top, 10)
-                    ProgressView(value: initialLaunchProgress, total: 1)
-                        .progressViewStyle(.linear)
-                        .frame(width: 220)
-                        .tint(.white)
-                        .background(Capsule().fill(.white.opacity(0.22)))
-                        .accessibilityValue("\(Int((initialLaunchProgress * 100).rounded()))%")
-                        .accessibilityLabel(
-                            AppLanguagePreference.text(
-                                korean: "활동과 이동 경로 불러오는 중",
-                                english: "Loading activities and routes",
-                                rawPreference: languageRawValue
-                            )
-                        )
-                    Text("\(Int((initialLaunchProgress * 100).rounded()))%")
-                        .font(.taptionFixed(size: 12, weight: .semibold))
+                    AppShellLaunchProgressBar(progress: launchProgress, languageRawValue: languageRawValue)
                     Text(launchStatusText)
                         .font(.taptionFixed(size: 13, weight: .medium))
                         .foregroundStyle(.white.opacity(0.85))

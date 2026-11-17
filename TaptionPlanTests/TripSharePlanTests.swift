@@ -347,7 +347,11 @@ final class TripSharePlanTests: XCTestCase {
 
     func testConflictKeepsTheRoomVersionAndTellsTheUser() async throws {
         // 소켓이 안 되는 망: 이 앱은 방송을 못 받아 낡은 사본으로 고치게 된다. 다시 붙기는 시험 동안 멈춰 둔다.
+        // 끊긴 뒤 HTTP로 서버를 한 번 보는 일(잠금 표 받기)이 끝나야 다시 붙기 기다림에 들어간다.
+        // 그 전에 다른 참여자가 잠그면 이 앱이 그 잠금을 받아 둔 채 풀림을 못 들어 충돌 대신 「고치는 중」이 났다(PRF1117A01, 시험 순서·시점 경쟁).
+        let probed = ShareTestFlag()
         let frozen = ShareSessionEnvironment(sleep: { wait, seconds in
+            if wait == .reconnect { await probed.set() }
             try await Task.sleep(for: .seconds(wait == .reconnect ? 3_600 : seconds))
         })
         let shared = try await share(session: frozen)
@@ -358,7 +362,8 @@ final class TripSharePlanTests: XCTestCase {
         await eventually("소켓 없이도 고칠 수 있음") {
             let sockets = await shared.server.socketCount(roomID: shared.roomID)
             let theirs = await other.view().status
-            return sockets == 0 && self.store.canEdit(tripID) && theirs == .live
+            let settled = await probed.isSet
+            return sockets == 0 && settled && self.store.canEdit(tripID) && theirs == .live
         }
         await store.refresh(tripID: tripID)
 
@@ -489,4 +494,10 @@ final class TripSharePlanTests: XCTestCase {
         await eventually("지워진 일정이 로컬에서도") { self.item(model, market) == nil }
         XCTAssertEqual(model.snapshot.plans.count, 1)
     }
+}
+
+/// 비동기 시험에서 한 번 일어난 일을 표시한다.
+private actor ShareTestFlag {
+    private(set) var isSet = false
+    func set() { isSet = true }
 }

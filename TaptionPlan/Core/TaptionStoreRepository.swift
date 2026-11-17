@@ -111,6 +111,9 @@ actor TaptionStoreRepository: PlanDataRepository {
         // 항목마다 JSONDecoder를 새로 만들면 수만 건을 읽을 때 할당 비용이 그대로 쌓인다.
         let decoder = Self.decoder()
         let decodeStartedAt = Date()
+        #if DEBUG || BENCH
+        let groupMilliseconds = decodeStartedAt.timeIntervalSince(readStartedAt) * 1_000 - readMilliseconds
+        #endif
 
         guard let headerBody = state[Self.headerKind]?[Self.headerID]?.body else {
             // 헤더 없이 다른 행만 있으면 비정상이다. 빈 스냅샷으로 보고 위에 저장하면 그 행이 지워진다.
@@ -172,6 +175,15 @@ actor TaptionStoreRepository: PlanDataRepository {
         )
         knownHashes = hashes
         lastSynced = snapshot
+        #if DEBUG || BENCH
+        if ProcessInfo.processInfo.arguments.contains("-autoBenchPerf") {
+            print("PRFBENCH repository rows=\(rows.count) read_ms=\(Int(readMilliseconds)) group_ms=\(Int(groupMilliseconds)) decode_ms=\(Int(Date().timeIntervalSince(decodeStartedAt) * 1_000)) mb=\(rows.reduce(0) { $0 + $1.body.utf8.count } / 1_048_576)")
+            // 종류별 행 수·본문 크기(숫자만). 시작 읽기에서 무엇이 큰지 본다.
+            for (kind, items) in state.sorted(by: { $0.key < $1.key }) {
+                print("PRFBENCH repository_kind \(kind)_rows=\(items.count) \(kind)_kb=\(items.values.reduce(0) { $0 + $1.body.utf8.count } / 1_024)")
+            }
+        }
+        #endif
         Self.recordLoad(
             rowCount: rows.count,
             state: state,

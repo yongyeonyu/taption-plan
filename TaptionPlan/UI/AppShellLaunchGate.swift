@@ -1,4 +1,6 @@
 import Foundation
+import Observation
+import SwiftUI
 
 /// 시작 화면 진행선의 수학. 목표에 지수적으로 다가가되 최소 걸음은 보장한다.
 ///
@@ -88,6 +90,9 @@ struct AppLockBiometricAttemptGate {
 /// 무엇을 손댈지 바로 보이게 한다. 값은 단조 시계라 기록 순서와 무관하다.
 enum AppShellLaunchGateRecorder {
     static func record(_ gate: String, startedAt: TimeInterval?) {
+        #if DEBUG || BENCH
+        MapHomePerfBench.stage(gate)
+        #endif
         // 첫 화면이 그려진 시점(onAppear)은 시작 과제(.task)보다 빠를 수 있다.
         // 그때는 0으로 적어 "시작 전에 이미 끝난 단계"로 읽히게 한다.
         let elapsed = startedAt.map {
@@ -101,4 +106,41 @@ enum AppShellLaunchGateRecorder {
             ]
         )
     }
+}
+
+/// 시작 화면 막대 값(PRF1117A01). 셸의 `@State`로 두면 33ms마다 셸 본문과 홈 화면 값이 다시 만들어져
+/// 아이폰 11에서 시작이 약 0.3초 늦었다. 막대만 이 값을 읽게 한다.
+@MainActor @Observable
+final class AppShellLaunchProgress {
+    var value = 0.0
+
+    #if DEBUG || BENCH
+    static let benchShellReadsProgress = ProcessInfo.processInfo.arguments.contains("-benchShellReadsProgress")
+    #endif
+}
+
+/// 시작 화면의 막대와 백분율 글자. 부모 `VStack`에 두 줄로 그대로 놓인다.
+struct AppShellLaunchProgressBar: View {
+    let progress: AppShellLaunchProgress
+    let languageRawValue: String
+
+    var body: some View {
+        ProgressView(value: progress.value, total: 1)
+            .progressViewStyle(.linear)
+            .frame(width: 220)
+            .tint(.white)
+            .background(Capsule().fill(.white.opacity(0.22)))
+            .accessibilityValue("\(percent)%")
+            .accessibilityLabel(
+                AppLanguagePreference.text(
+                    korean: "활동과 이동 경로 불러오는 중",
+                    english: "Loading activities and routes",
+                    rawPreference: languageRawValue
+                )
+            )
+        Text("\(percent)%")
+            .font(.taptionFixed(size: 12, weight: .semibold))
+    }
+
+    private var percent: Int { Int((progress.value * 100).rounded()) }
 }

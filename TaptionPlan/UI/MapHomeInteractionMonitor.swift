@@ -269,9 +269,19 @@ enum MapHomePerfBench {
 
     static func run(_ actions: Actions) async {
         await waitUntil(timeout: 60, actions.isReady)
-        emit("launch", ["ready_ms": sinceProcessStartMs()])
+        // 열 상태(0 보통 · 1 약간 · 2 심함 · 3 위험)를 같이 남긴다. 앞 측정의 열기로 CPU가 느려진 회차를 가린다(PRF1117A01).
+        emit("launch", [
+            "ready_ms": sinceProcessStartMs(), "thermal": Double(ProcessInfo.processInfo.thermalState.rawValue),
+            "main_cpu_ms": mainCPUMs(), "all_cpu_ms": processCPUMs(),
+        ])
         await waitUntil(timeout: 30, actions.isDayLoaded)
         emit("launch", ["day_loaded_ms": sinceProcessStartMs(), "rows": Double(actions.dayRowCount())])
+        // `-benchLaunchOnly`: 콜드 실행만 잰다(PRF1117A01). 늦게 닫히는 시작 게이트까지 받으려고 잠깐 기다린다.
+        if ProcessInfo.processInfo.arguments.contains("-benchLaunchOnly") {
+            try? await Task.sleep(for: .seconds(3))
+            print("PRFBENCH done")
+            return
+        }
         try? await Task.sleep(for: .seconds(25))
         for round in 0..<3 {
             let main = mainCPUMs(), all = processCPUMs()
@@ -352,7 +362,13 @@ enum MapHomePerfBench {
 
     private static func processCPUMs() -> Double { Double(clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID)) / 1_000_000 }
 
-    private static func sinceProcessStartMs() -> Double {
+    /// 시작 단계별 시각(PRF1117A01). 프로세스 시작부터 잰 ms만 찍는다.
+    nonisolated static func stage(_ name: String) {
+        guard ProcessInfo.processInfo.arguments.contains("-autoBenchPerf") else { return }
+        print("PRFBENCH stage \(name)=\(Int(sinceProcessStartMs().rounded()))")
+    }
+
+    nonisolated static func sinceProcessStartMs() -> Double {
         var info = kinfo_proc()
         var size = MemoryLayout<kinfo_proc>.stride
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]

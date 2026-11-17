@@ -629,6 +629,9 @@ final class AppModel {
         dayDatabase: PlanDayDatabase? = nil,
         sensorAnalysisDebounceDelay: Duration = .seconds(120)
     ) {
+        #if DEBUG || BENCH
+        MapHomePerfBench.stage("app_model_init")
+        #endif
         isCommerceLocked = startsCommerceLocked
         self.sensorAnalysisDebounceDelay = sensorAnalysisDebounceDelay
         let repositorySource: String
@@ -747,6 +750,15 @@ final class AppModel {
                 }
             }
         }
+        #if DEBUG || BENCH
+        // 측정용: `-benchLaunchDaysAgo=1`이면 그날을 고른 채 시작한다(하루가 짧은 이른 아침에도 꽉 찬 날로 콜드 실행을 잰다, PRF1117A01).
+        if let value = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchLaunchDaysAgo=") })?
+            .dropFirst("-benchLaunchDaysAgo=".count), let days = Int(value),
+           let date = Calendar.autoupdatingCurrent.date(byAdding: .day, value: -days, to: .now) {
+            selectedDate = date
+        }
+        MapHomePerfBench.stage("app_model_init_end")
+        #endif
     }
 
     private func connectServiceCallbacks() {
