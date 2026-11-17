@@ -43,7 +43,19 @@ struct TripShareEnvironment: Sendable {
 /// 방의 비밀(뿌리 키·링크 비밀·참여 토큰·주인 키)을 키체인에 둔다: 방 하나에 항목 하나, 이 기기에서만.
 /// 비밀번호 자체는 어디에도 저장하지 않는다.
 struct TripShareKeychain: ShareSecretStore {
+    /// 키체인 고쳐 쓰기·더하기. 시험이 바꿔 넣어 순서를 본다.
+    struct Writes: Sendable {
+        var update: @Sendable (_ query: [String: Any], _ attributes: [String: Any]) -> OSStatus
+        var add: @Sendable (_ item: [String: Any]) -> OSStatus
+
+        static let system = Writes(
+            update: { SecItemUpdate($0 as CFDictionary, $1 as CFDictionary) },
+            add: { SecItemAdd($0 as CFDictionary, nil) }
+        )
+    }
+
     var service = "com.taption.plan.tripshare"
+    var writes = Writes.system
 
     private func query(_ roomID: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: roomID]
@@ -61,11 +73,15 @@ struct TripShareKeychain: ShareSecretStore {
 
     func save(_ secrets: ShareRoomSecrets, roomID: String) throws {
         guard ShareIdentifiers.isRoomID(roomID) else { throw ShareError.invalidResponse }
-        SecItemDelete(query(roomID) as CFDictionary)
-        var item = query(roomID)
-        item[kSecValueData as String] = try JSONEncoder().encode(secrets)
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else { throw ShareError.crypto }
+        // 고쳐 쓰기가 먼저다: 지우고 더하면 그 사이에 실패할 때 방의 키를 잃는다. 없을 때만 더한다.
+        let attributes: [String: Any] = [
+            kSecValueData as String: try JSONEncoder().encode(secrets),
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+        let status = writes.update(query(roomID), attributes)
+        if status == errSecSuccess { return }
+        guard status == errSecItemNotFound else { throw ShareError.crypto }
+        guard writes.add(query(roomID).merging(attributes) { _, new in new }) == errSecSuccess else { throw ShareError.crypto }
     }
 
     func remove(roomID: String) throws {

@@ -303,6 +303,50 @@ final class TripShareFoundationTests: XCTestCase {
         XCTAssertEqual(sidecar.link(roomID: link.roomID), link)
     }
 
+    /// 키체인 저장은 고쳐 쓰기가 먼저이고 지우지 않는다: 고쳐 쓰기가 실패해도 예전 키가 남는다(TSA1117A01).
+    func testKeychainSaveUpdatesInPlaceAndNeverDeletesFirst() throws {
+        final class Fake: @unchecked Sendable {
+            let lock = NSLock()
+            var stored: Data?
+            var calls: [String] = []
+            var failUpdate = false
+        }
+        let fake = Fake()
+        let writes = TripShareKeychain.Writes(
+            update: { _, attributes in
+                fake.lock.withLock {
+                    fake.calls.append("update")
+                    guard !fake.failUpdate else { return errSecInteractionNotAllowed }
+                    guard fake.stored != nil else { return errSecItemNotFound }
+                    fake.stored = attributes[kSecValueData as String] as? Data
+                    return errSecSuccess
+                }
+            },
+            add: { item in
+                fake.lock.withLock {
+                    fake.calls.append("add")
+                    XCTAssertEqual(item[kSecAttrService as String] as? String, "com.taption.plan.tripshare", "항목 이름은 그대로")
+                    fake.stored = item[kSecValueData as String] as? Data
+                    return errSecSuccess
+                }
+            }
+        )
+        let keychain = TripShareKeychain(writes: writes)
+        let roomID = ShareIdentifiers.roomID()
+        var secrets = ShareRoomSecrets(root: ShareBytes.random(32), linkSecret: ShareIdentifiers.linkSecret(), token: "token-1", ownerKey: nil, member: 2, epoch: 1)
+        try keychain.save(secrets, roomID: roomID)
+        XCTAssertEqual(fake.calls, ["update", "add"], "없으면 더한다")
+        secrets.epoch = 2
+        try keychain.save(secrets, roomID: roomID)
+        XCTAssertEqual(fake.calls, ["update", "add", "update"], "있으면 고쳐 쓴다")
+        let kept = fake.stored
+        fake.failUpdate = true
+        secrets.epoch = 3
+        XCTAssertThrowsError(try keychain.save(secrets, roomID: roomID))
+        XCTAssertEqual(fake.stored, kept, "고쳐 쓰기가 실패해도 예전 키는 남는다")
+        XCTAssertEqual(try JSONDecoder().decode(ShareRoomSecrets.self, from: XCTUnwrap(kept)).epoch, 2)
+    }
+
     func testSecretStoresRoundTrip() throws {
         let roomID = ShareIdentifiers.roomID()
         let secrets = ShareRoomSecrets(root: ShareBytes.random(32), linkSecret: ShareIdentifiers.linkSecret(), token: "token-1", ownerKey: "owner-1", member: 1, epoch: 3)
