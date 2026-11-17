@@ -362,7 +362,6 @@ final class TripShareLedgerTests: XCTestCase {
         XCTAssertEqual(store.link(tripID: tripID)?.phase, .sharing)
         let uploaded = shared(in: try XCTUnwrap(store.view(tripID: tripID)))
         XCTAssertEqual(uploaded.map(\.id), [TripShareMapping.roomItemID(entryID: before.id)], "직접 넣은 「다 같이」 지출만 공동 지출로 올라간다")
-        XCTAssertEqual(book.entries.first { $0.id == automatic.id }?.shareNames, TripShareMapping.privateShare, "자동 기록은 올리지 않는다")
         XCTAssertEqual(book.entries.first { $0.id == mine.id }?.shareNames, [LedgerTrip.me])
 
         // 동행이 들어오면 그 사람도 몫에 들어가고 정산에 바로 잡힌다.
@@ -374,6 +373,8 @@ final class TripShareLedgerTests: XCTestCase {
         let friendView = await friend.view()
         XCTAssertEqual(shared(in: friendView).first?.content.split, [.member(1), .member(2)])
         await waitUntil("가계부에도 둘로") { Set(self.book.entries.first { $0.id == before.id }?.shareNames ?? []) == [LedgerTrip.me, "봄"] }
+        // 자동 기록은 올리지 않고, 공유 중의 다음 맞춤에서 나만으로 고정된다(예전과 같다).
+        XCTAssertEqual(book.entries.first { $0.id == automatic.id }?.shareNames, TripShareMapping.privateShare, "자동 기록은 올리지 않는다")
 
         // 공유 뒤에 새로 넣은 「다 같이」는 그때의 사람들 그대로다(나중 사람에게 몫이 생기지 않는다).
         let later = expense("저녁", 20_000)
