@@ -87,7 +87,7 @@ enum PlanBackupPresenter {
                 detail: AppLanguagePreference.text("이 기기에 데이터가 없어 기존 백업을 건드리지 않았습니다.", "No data on this device; the existing backup was not touched.")
             )
         case .failed(let message):
-            return .init(name: name, kind: .rejected, detail: message)
+            return .init(name: name, kind: .rejected, detail: result.failure.map(Self.message(for:)) ?? message)
         }
     }
 

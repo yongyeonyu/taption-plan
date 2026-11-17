@@ -222,6 +222,11 @@ final class AppModelBackupConnectionTests: XCTestCase {
         XCTAssertEqual(model.lastBackupReport?.succeeded, true)
 
         try model.configureBackupPIN("739104")
+        await model.backUpNow(password: "739104", now: date(2026, 10, 20))
+        let refused = model.lastBackupReport?.items.first { $0.name == "2026-10" }
+        XCTAssertEqual(refused?.kind, .rejected)
+        // 엔진 오류 이름(`passwordDiffersFromExistingBackup(...)`)이 그대로 보이지 않고 사용자 문장이 보인다(REV1117A03).
+        XCTAssertEqual(refused?.detail, TaptionBackupError.passwordDiffersFromExistingBackup("2026-10.taptionbackup").userMessage)
         await model.restoreBackup(.month(TaptionBackupMonth(year: 2026, month: 10)), password: "739104")
         XCTAssertEqual(model.lastBackupReport?.succeeded, false, "바꾸기 전에 만든 백업은 새 비밀번호로 열리지 않는다")
         await model.restoreBackup(.month(TaptionBackupMonth(year: 2026, month: 10)), password: password)

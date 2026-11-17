@@ -68,6 +68,12 @@ actor TaptionBackupEngine {
         var outcome: Outcome
         var header: TaptionBackupHeader?
         var message: String
+        /// `.failed`일 때의 원래 오류. 화면은 연관값(진단용 원문) 대신 이것으로 문장을 만든다.
+        var failure: Error? = nil
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.scope == rhs.scope && lhs.outcome == rhs.outcome && lhs.header == rhs.header && lhs.message == rhs.message
+        }
     }
 
     struct RestoreSummary: Equatable, Sendable {
@@ -302,9 +308,13 @@ actor TaptionBackupEngine {
         do {
             return try await performBackup(scope: scope, password: password, now: now)
         } catch is CancellationError {
-            return result(scope, .failed("취소됨"), "\(scope.fileName): 백업이 취소됐다")
+            var value = result(scope, .failed("취소됨"), "\(scope.fileName): 백업이 취소됐다")
+            value.failure = CancellationError()
+            return value
         } catch {
-            return result(scope, .failed("\(error)"), "\(scope.fileName): 백업에 실패했다 - \(error)")
+            var value = result(scope, .failed("\(error)"), "\(scope.fileName): 백업에 실패했다 - \(error)")
+            value.failure = error
+            return value
         }
     }
 
