@@ -164,6 +164,13 @@ test("actions batch 2: plans and timed trip items", () => {
   refuses("updateTripItem", { tripId: "trip-1", itemId: "m-1a2b3c4d", start: "2026-12-01T19:00+09:00", end: "2026-12-01T18:00+09:00" });
   accepts("deleteTripItem", { tripId: "trip-1", itemId: "m-1a2b3c4d" });
   refuses("deleteTripItem", { tripId: "trip-1" });
+  // REV1117A02: 가져온 여행의 id는 AI가 정한 글(한글·공백)이고, 같은 id가 겹친 항목은 「i1#2」가 된다. 옛 명령(updateTrip 등)처럼 받는다.
+  accepts("updateTripItem", { tripId: "제주 여행", itemId: "i1#2", note: "moved" });
+  accepts("deleteTripItem", { tripId: "제주 여행", itemId: "i1#2" });
+  accepts("addTripItem", { ...item, tripId: "제주 여행" });
+  accepts("setTripItemPhoto", { itemId: "i1#2", remove: true });
+  refuses("deleteTripItem", { tripId: "", itemId: "i1" });
+  refuses("deleteTripItem", { tripId: "t", itemId: "x".repeat(101) });
   const photo = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Sample.jpg";
   accepts("setTripItemPhoto", { itemId: "m-1a2b3c4d", photoUrl: photo, credit: "Author, CC BY-SA 4.0" });
   accepts("setTripItemPhoto", { itemId: "m-1a2b3c4d", remove: true });
