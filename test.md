@@ -2,6 +2,20 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## HOF1118A01 · 영역 리뷰가 넘긴 결함 여섯 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 범위: REV1117A01·A02가 넘긴 항목. `moveTripItem` 부분 저장은 TVM1117A02 몫이라 하지 않음. `PRIVACY.md`·`LedgerEntry` 구조·위젯·Live Activity·여행 공유·AI 명령 실행기는 손대지 않음.
+- 고침(커밋 하나씩): (1) PIN 옮기기 — 승인 시트의 예전 칸 글자로 `AssistantPINDerivation.pin` 값을 먼저, 틀리면 예전 PIN 그대로 한 번 더(`AssistantPINSheet.align`). (2) 결제 문자 — `PaymentTextCapture.ruleVerdict`로 내 규칙(낱말·안내 글·내 이체·내 정규식) 다음 공통 규칙. (3) 제안 id는 좌표 해시(AI로 나가던 값과 같음), 이름 없는 등록은 종류 이름, `launchPromptsHandedToAI`의 옛 좌표 id는 읽을 때 안정 id로 바꿔 다시 적음, 같은 순위 제안은 자리로 정함. (4) `DailyCardBubblePrompt.run`이 넣었으면 `AITaskQueue.upload()`를 기다림(백그라운드 작업 안). (5) `AppModel.deleteMemo`·초안 버리기에서 다듬기 대기열·AI 표시 지움. (6) `LedgerEntry.newestFirst`(시각→만든 때→id) 정렬, `LedgerNumber.parse`는 유한한 값만.
+- 저장 호환: 바뀐 저장 값은 기기 UserDefaults의 「오늘 AI에게 넘긴 질문」 목록뿐이며 옛 좌표 id를 읽어 같은 질문으로 맞춤을 시험으로 확인. SQLite·백업 형식은 그대로, 이미 좌표 이름으로 등록된 장소 이름은 사용자 자료라 바꾸지 않음(AI로는 이미 가려 보냄). 6자리 PIN·키 유도·서버 계약 불변, 좌표 새 전송·새 권한·홈 배치 변경 없음.
+- 새 시험: `AssistantReviewFixTests.testOldPINFieldSendsTheValueDerivedFromThePreviousAppPassword`, `SharedRuleStoreTests.testMyPaymentRegexComesBeforeASharedTextIgnore`, `AssistantAppControlTests.testSuggestionIDAndUnnamedPlaceKeepNoCoordinatesAndOldIDsStillMatch`, `DailyCardBubblePromptTests.testRunWaitsForTheUploadAfterEnqueueing`, `AssistantPhase3Tests.testDeletingAMemoTakesItOutOfThePolishQueue`, `LedgerTests.testSameTimeEntriesKeepOneOrderAndAmountsAreFinite`. 새 시험은 고친 뒤의 시험 길(주입 인자·새 함수)을 써서 고치기 전 코드에서는 컴파일되지 않음 — 고치기 전 실패 실행은 따로 하지 않았다.
+- 관련 시험(`targeted.log`): 58개 중 1 실패 — 제안 id를 해시로 바꾸자 같은 순위 제안을 id로 고르던 `testUnregisteredPlaceSuggestionTieUsesStableIDRegardlessOfInputOrder`가 다른 자리를 골랐다. 자리(위도·경도)로 고르게 고침.
+- `-only-testing:TaptionPlanTests` 전체 1회(`full.log`, 고친 뒤): XCTest 3000개 실패 0·건너뜀 25(환경 변수로 켜는 재생·그림 시험), Swift Testing 52개 통과, `TEST SUCCEEDED`(Debug 빌드 포함). 그 뒤 새 결제 시험 견본의 가게 이름만 가짜 이름으로 바꿈(동작 무관).
+- 패키지: 바꾼 패키지 없음(앱 target만) — `swift test` 해당 없음.
+- 구조 점검: `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과.
+- 번역: 새 문구 넷(PIN 셋·「자주 가는 곳」) 12개 언어, `extract.py` 뒤 `check.py` 실패 0(긴 문구 3은 예전 그대로). `generate.py`는 메인 몫.
+- 로그 `build/validation/HOF1118A01/`. 실기기·UI 시험은 하지 않음.
+
+
 ## TSA1117A01 · 앱 여행 공유 결함 아홉 (2026-11-17~18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `460635a6` 위 브랜치 `worktree-agent-a7e31a9a986039563`, 도중에 main `b3c520ea`(TSR1117A01 합침)를 합침. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/TSA1117A01`(끝나고 지움). 로그 `build/validation/TSA1117A01/`.
