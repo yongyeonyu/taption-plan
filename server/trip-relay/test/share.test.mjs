@@ -976,6 +976,28 @@ test("share loc: stored positions never outlive the location window, even a help
   assert.deepEqual((await call(room.env, "GET", room.path + "/loc", { token: room.owner.token })).body.locs, []);
 });
 
+test("share loc: a stored position is erased by an alarm at its expiry even if nobody reads it (TSR1117A01)", async () => {
+  const room = await makeRoom();
+  const guest = await join(room);
+  const storage = room.instance.ctx.storage;
+  const windowEnd = room.clock.now + 2 * DAY;
+  await openWindow(room, room.clock.now - DAY, windowEnd);
+  const sentAt = room.clock.now;
+  assert.equal((await sendLoc(room, guest)).status, 200);
+  assert.equal(storage.alarm, sentAt + SHARE.locKeepMs, "알람은 저장한 위치의 기한에 맞춘다");
+  // 기한을 바꾸거나 창을 다시 올려도 위치 기한보다 늦추지 않는다.
+  assert.equal((await call(room.env, "POST", room.path + "/expiry", { token: room.owner.token, owner: room.ownerKey, body: { expiresAt: room.expiresAt + DAY } })).status, 200);
+  assert.equal(storage.alarm, sentAt + SHARE.locKeepMs);
+
+  room.clock.now = sentAt + SHARE.locKeepMs;
+  await room.instance.room.alarm();
+  assert.equal(storage.map.has("l:2"), false, "아무도 읽지 않아도 지운다");
+  assert.equal(storage.alarm, windowEnd, "다음은 위치 기간 끝(모이는 곳 거두기)");
+  // 도움 요청은 하루(창이 먼저 끝나면 창 끝)까지라 알람도 그때다.
+  assert.equal((await sendLoc(room, guest, { help: true })).status, 200);
+  assert.equal(storage.alarm, Math.min(room.clock.now + SHARE.locHelpKeepMs, windowEnd));
+});
+
 test("share write: a non-string item id or group is a 422, not a crash (REV1117A01)", async () => {
   const room = await makeRoom();
   const guest = await join(room);
