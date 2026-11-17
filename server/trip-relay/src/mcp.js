@@ -515,7 +515,7 @@ const RAW_VALUES = {
   paymentTriggerWords: oneOf("원", "승인", "출금", "취소", "입금", "결제", "일시불", "할부"),
 };
 const SERVER_ERRORS = new Set(["not_command", "not_trip_plan", "bad_date", "bad_range", "rate_limited", "daily_command_limit", "daily_bubble_limit",
-  "daily_request_limit", "daily_write_limit", "write_budget_exhausted", "id_conflict", "forbidden", "not_task_result", "no_task", "not_claimer", "queue_full"]);
+  "daily_request_limit", "daily_write_limit", "write_budget_exhausted", "id_conflict", "forbidden", "not_task_result", "no_task", "not_claimer", "already_finished", "queue_full"]);
 // 칸 이름: 짧은 영문 낱말(camelCase)만 그대로 둔다. 사용자 글이 이름으로 온 것(장소 이름을 키로 쓴 표 등)은 따로 담는다.
 const SAFE_KEY = /^[A-Za-z][A-Za-z0-9]{0,31}$/;
 

@@ -247,7 +247,7 @@ export async function finishTask(ctx, value) {
     ...(value.status === "done" && outcome?.askedQuestionId ? { askedId: outcome.askedQuestionId } : {}),
   });
   if (result.error === "no_task") return json({ error: "no_task" }, 404);
-  if (result.error === "not_claimer") return json({ error: "not_claimer" }, 409);
+  if (result.error === "not_claimer" || result.error === "already_finished") return json({ error: result.error }, 409);
   notify(ctx, pushForTask(outcome));
   return json({ ok: true, id: result.id, status: result.status });
 }
