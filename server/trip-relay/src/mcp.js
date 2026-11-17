@@ -145,7 +145,7 @@ const TOOLS = [
     + "items are still ahead and context.from the time it was sent. Read that day's schedule, work out new times for the remaining items only (shorten, move or drop), "
     + "show the proposal with ask_user before changing anything, then apply what they accept with update_schedule or update_trip_stop. Always finish each task with complete_ai_task.",
     object({ limit: integer("How many to take at most, 1-20 (default 20). Urgent kinds (payment and receipt texts) come first.", 1, 20) }),
-    (ctx, a) => claimTasks(ctx, a.limit, allows(ctx.auth.scope, "write")), { empty: "No AI tasks waiting." }),
+    (ctx, a) => claimTasks(ctx, a.limit, allows(ctx.auth.scope, "write")), { empty: "No AI tasks waiting.", changesWith: "write" }),
   // 끝내기는 쓰기 연결만 한다(AIP1114A05).
   writeRunTool("complete_ai_task", "Complete AI task", "Report one AI task as done (with a short result the user sees) or failed (with a reason). Needs a write connection.",
     object({ id: str("Task id from get_ai_tasks"), status: enumOf("done or failed", ["done", "failed"]), result: str("Up to 300 characters, what you did"),
@@ -369,7 +369,7 @@ const TOOLS = [
     + "Display-only: it does not create, change or delete any record, plan or memo. Text: up to 80 visible characters; up to 3 links, https only, "
     + "as a bare URL followed by a space or [label](https://...) with a label of up to 20 characters that is not itself an address; 300 characters "
     + "in total. Link hosts must be plain ASCII domains (no IP, punycode, user@ or parentheses; percent-encode other characters). No backslash, "
-    + "no [ ] < > outside a link, and no other scheme such as http:, tel: or mailto:. At most 48 bubbles per 24 hours, separate from the 30-edit limit.",
+    + "no [ ] < > outside a link, and no other scheme such as http:, tel: or mailto:. At most 48 bubbles per 24 hours, separate from the 100-edit limit.",
     { date: DATE, start: HHMM("Start (optional for kind event)"), end: HHMM("End, after start on the same day (optional for kind event)"), text: str("Bubble text"),
       kind: enumOf("routine (default): shown from start to end. event: a reminder for that whole day, shown before routine bubbles and deleted by the app after the day", ["routine", "event"]) },
     ["date", "text"]),
@@ -442,9 +442,13 @@ TOOLS.push(
 );
 const BY_NAME = new Map(TOOLS.map((tool) => [tool.name, tool]));
 
-const describe = (tool) => ({
+// changesWith: 그 범위 이상의 연결로 부르면 서버 상태를 바꾼다(get_ai_tasks는 쓰기 연결이면 일을 맡는다, AIF1118A01). 범위를 모르면 바꾸는 쪽으로 본다.
+const describe = (tool, scope = "master") => ({
   name: tool.name, title: tool.title, description: tool.description, inputSchema: tool.inputSchema,
-  annotations: { readOnlyHint: tool.scope === "read" && !tool.changes, destructiveHint: tool.destructive, idempotentHint: false, openWorldHint: false },
+  annotations: {
+    readOnlyHint: tool.scope === "read" && !tool.changes && !(tool.changesWith && allows(scope, tool.changesWith)),
+    destructiveHint: tool.destructive, idempotentHint: false, openWorldHint: false,
+  },
 });
 
 // MARK: 믿을 수 없는 글 감싸기 (finding 7)
@@ -583,7 +587,7 @@ async function dispatch(request, ctx, message) {
     case "ping":
       return rpcResult(id, {});
     case "tools/list":
-      return rpcResult(id, { tools: TOOLS.filter((tool) => allows(ctx.auth.scope, tool.scope)).map(describe) });
+      return rpcResult(id, { tools: TOOLS.filter((tool) => allows(ctx.auth.scope, tool.scope)).map((tool) => describe(tool, ctx.auth.scope)) });
     case "tools/call":
       return callTool(request, ctx, id, params);
     default:
@@ -606,4 +610,4 @@ export async function mcpRoute(request, ctx) {
 }
 
 export const toolNames = () => TOOLS.map((tool) => tool.name);
-export const toolList = () => TOOLS.map(describe);
+export const toolList = () => TOOLS.map((tool) => describe(tool));

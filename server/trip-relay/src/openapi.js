@@ -35,7 +35,7 @@ const command = {
     + "does not change records; event = a reminder for that whole day shown before routine bubbles and deleted by the app after the day; 80 visible "
     + "characters, up to 3 https links as bare URLs or [label](https://...) with labels up to 20 characters, 300 in total; link hosts are "
     + "plain ASCII domains; no backslash, no [ ] < > outside a link, no other scheme such as http:, tel:, mailto:; 48 per 24 hours, "
-    + "separate from the 30-edit limit). setLanguage: language. setTheme: theme. setMapStyle: mapStyle. "
+    + "separate from the 100-edit limit). setLanguage: language. setTheme: theme. setMapStyle: mapStyle. "
     + "setDisplayOption: option, enabled. "
     + "setBudget: amountKRW (0 removes; 0 to 1e12), month? (YYYY-MM, default this month). addOwnAccount / removeOwnAccount: name (2-30, an account "
     + "nickname from getAppState ledger.ownAccounts, never a number). deletePaymentRule: ruleId (getAppState rules). resolveReview: reviewId "
