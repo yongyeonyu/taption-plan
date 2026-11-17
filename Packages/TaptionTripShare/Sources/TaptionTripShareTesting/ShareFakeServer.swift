@@ -24,6 +24,7 @@ public actor ShareFakeServer {
     private var offline = false
     private var socketsRefused = false
     private var changesPage = 200
+    private var httpFailures: [(pathSuffix: String?, afterHandling: Bool)] = []
     private var rooms: [String: Room] = [:]
     private var tokenCount = 0
 
@@ -50,6 +51,12 @@ public actor ShareFakeServer {
     }
 
     public func setChangesPage(_ value: Int) { changesPage = value }
+
+    /// 다음 HTTP 요청 하나(경로가 `pathSuffix`로 끝나는 것, nil이면 아무것)를 망이 끊긴 것처럼 실패시킨다. 소켓은 그대로다.
+    /// `afterHandling`이면 서버는 처리하고(방송까지) 응답만 잃는다.
+    public func failNextHTTP(pathSuffix: String? = nil, afterHandling: Bool = false) {
+        httpFailures.append((pathSuffix, afterHandling))
+    }
 
     /// 모든 소켓을 이 코드로 닫는다(서버가 끊은 것처럼).
     public func dropSockets(code: Int) {
@@ -171,7 +178,10 @@ public actor ShareFakeServer {
     func handle(_ request: ShareHTTPRequest) throws -> ShareHTTPResponse {
         calls.append(Call(method: request.method, path: request.path, query: request.query, headers: request.headers, op: nil, body: request.body))
         guard !offline else { throw ShareError.offline }
+        let failure = httpFailures.firstIndex { rule in rule.pathSuffix.map { request.path.hasSuffix($0) } ?? true }.map { httpFailures.remove(at: $0) }
+        if let failure, !failure.afterHandling { throw ShareError.offline }
         let reply = route(request)
+        if failure != nil { throw ShareError.offline }
         let body = try reply.body.map { try JSONSerialization.data(withJSONObject: $0) } ?? Data()
         return ShareHTTPResponse(status: reply.status, headers: ["content-type": "application/json"], body: body)
     }

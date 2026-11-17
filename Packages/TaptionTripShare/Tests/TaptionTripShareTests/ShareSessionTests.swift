@@ -227,6 +227,58 @@ final class ShareSessionTests: XCTestCase {
         XCTAssertEqual(clock.pending(.lockRenewal), 0)
     }
 
+    /// HTTP 요청 하나가 망 끊김으로 실패해 상태가 잠깐 offline이 되어도, 소켓으로 소식이 오면 다시 live이고
+    /// 잡아 둔 잠금의 연장도 이어진다(TSR1117A01). 전에는 연장 차례가 그 사이에 오면 고리가 끝나 2분 뒤 잠금이 풀렸다.
+    func testLockRenewalSurvivesABriefOfflineBlip() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        let id = try await created(owner, "고치는 중인 일정")
+        try await owner.lock(items: [id])
+        try await eventually { clock.pending(.lockRenewal) == 1 }
+
+        await room.server.failNextHTTP()
+        await assertThrows(.offline) { try await owner.setSettlementClosed(true) }
+        let blipped = await owner.view().status
+        XCTAssertEqual(blipped, .offline)
+        clock.release(.lockRenewal)
+        try await eventually("상태가 흔들린 때 온 연장 차례에도 고리는 남는다") { clock.pending(.lockRenewal) == 1 }
+
+        try await eventually { clock.pending(.ping) == 1 }
+        clock.release(.ping)
+        try await eventually("소켓으로 pong이 오면 서버에 닿는 것이다") { await owner.view().status == .live }
+
+        await room.server.advance(milliseconds: 120_000)
+        clock.advance(milliseconds: 120_000)
+        await room.server.clearCalls()
+        clock.release(.lockRenewal)
+        try await eventually { await room.server.calls.filter { $0.op == "lock" }.count == 1 }
+        let now = await room.server.now
+        try await eventually { await owner.lockState(item: id) == .mine(until: now + 120_000) }
+    }
+
+    /// 소켓이 안 되는 망(HTTP만)에서 HTTP로 잡은 잠금은 다시 붙기를 시도할 때마다 지워지지 않는다(TSR1117A01).
+    /// 서버는 마지막 소켓이 닫힐 때만 잠금을 푼다. 소켓을 열지 못한 시도는 아무것도 닫지 않았다.
+    func testFailedSocketAttemptsKeepLocksTakenOverHTTP() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        await room.server.setSocketsRefused(true)
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        let id = try await created(owner, "소켓 없이 고치는 일정")
+        try await owner.lock(items: [id])
+        try await eventually { clock.pending(.reconnect) == 1 && clock.pending(.lockRenewal) == 1 }
+        clock.release(.reconnect)
+        try await eventually { clock.requested(.reconnect).count == 2 && clock.pending(.reconnect) == 1 }
+        let state = await owner.lockState(item: id)
+        guard case .mine = state else { return XCTFail("다시 붙기 시도 뒤에도 내 잠금이어야 한다: \(state)") }
+
+        await room.server.advance(milliseconds: 60_000)
+        clock.advance(milliseconds: 60_000)
+        await room.server.clearCalls()
+        clock.release(.lockRenewal)
+        try await eventually { await room.server.calls.filter { $0.path.hasSuffix("/locks") }.count == 1 }
+    }
+
     func testOfflineIsReadOnlyAndReconnectsWithBackoff() async throws {
         let room = try await TestRoom.make()
         let clock = TestClock()

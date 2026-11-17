@@ -178,7 +178,9 @@ public actor ShareRoomSession {
             if status != .live { setStatus(.connecting) }
             lastBye = nil
             var close: ShareSocketClose?
+            var opened = false
             if let stream = try? await client.connect() {
+                opened = true
                 startPing()
                 for await event in stream {
                     switch event {
@@ -191,7 +193,8 @@ public actor ShareRoomSession {
                 }
             }
             guard !Task.isCancelled, id == runID else { return }
-            socketDropped()
+            // 소켓을 열지 못한 시도는 아무것도 닫지 않았다. HTTP로 잡은 잠금은 서버에 그대로다.
+            if opened { socketDropped() }
             if endIfTold(close) { break }
             await probe()
             guard !Task.isCancelled, id == runID, shouldRun else { break }
@@ -236,6 +239,10 @@ public actor ShareRoomSession {
 
     private func handle(_ message: ShareSocketMessage) async {
         guard !status.isFinal else { return }
+        // HTTP 요청 하나가 끊겨 offline이 됐어도 소켓으로 소식이 오면 서버에 닿는 것이다.
+        if status == .offline {
+            if case .bye = message {} else { setStatus(.live) }
+        }
         switch message {
         case .hello(let state):
             absorb(state)
@@ -568,7 +575,8 @@ public actor ShareRoomSession {
 
     // MARK: 잠금 연장
 
-    /// 잡고 있는 잠금을 60초마다 다시 잡는다(임대는 2분).
+    /// 잡고 있는 잠금을 60초마다 다시 잡는다(임대는 2분). 잡은 것이 없어질 때만 멈춘다.
+    /// 차례가 왔을 때 `live`가 아니면(잠깐 끊김) 그 차례만 건너뛴다.
     func startRenewal() {
         guard renewTask == nil else { return }
         renewTask = Task { [weak self, environment] in
@@ -580,10 +588,11 @@ public actor ShareRoomSession {
     }
 
     private func renewLocks() async -> Bool {
-        guard !held.isEmpty, status == .live else {
+        guard !held.isEmpty, shouldRun else {
             renewTask = nil
             return false
         }
+        guard status == .live else { return true }
         do {
             try await acquire(held.sorted())
         } catch ShareError.server(let failure) where failure.code == .locked {
