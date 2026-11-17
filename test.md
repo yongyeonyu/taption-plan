@@ -2,6 +2,15 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## MRG1117A02 · 리뷰 4개·옛 화면 정리·성능 고침을 합친 main 전체 확인 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: `d72ac89e`(REV1117A01~04, LGC1117A01, PRF1117A02 합침 + 번역 재생성). Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data는 외장 볼륨. 로그 `build/validation/MRG1117A02/`.
+- 합치기 고침: 측정 표본기(`MapHomeBenchSampler.capture`)가 범용 시뮬레이터 빌드의 x86_64 조각에서 `arm_thread_state64_t`를 찾지 못해 위젯 빌드 실패 → arm64에서만 짜도록 가드. `FeatureEngineTests+Planning.swift` 충돌은 LGC1117A01이 지운 시험을 빼고 REV1117A03 새 시험 2개만 살림.
+- 단위 `-only-testing:TaptionPlanTests`: 2,971건 중 **실패 1**, 건너뜀 25(`unit-2.log`). 실패는 `SensorDayStoreTests.testSameVersionWatchRedeliveryCompletesUnappliedSnapshotBeforeAck`(1678·1683·1690행). 혼자 3회와 `SensorDayStoreTests` 52건은 모두 통과 → 전체 실행에서만 흔들림, REV1117A03에 원인 조사를 넘김. 전체 실패 0은 아직 아님.
+- 빌드: 위젯·Watch 성공. Watch 위젯 스킴은 iPhone 앱에 담겨 빌드되므로 `generic/platform=iOS Simulator`로 성공(watchOS 대상으로는 「대상 기기 없음」 70).
+- 서버 `npm test` 213/213 통과. 패키지 `swift test`: 시험이 있는 패키지 모두 통과(`TaptionLedgerCore`는 시험 대상 없음). 구조 지표 기준선 통과, 번역 check 실패 0.
+- UI 시험·실기기 확인은 이번 확인에 없음.
+
 ## PRF1117A02 · 남은 성능 네 항목: 대기 CPU·날짜 바꾸기·재생·가계부 (2026-11-17, 아이폰 11 Pro 실기기)
 
 - 판: `569048e4` + 측정 도구 + 고침 5~7, Release + BENCH, 개발 서명, `devicectl` 설치·실행, 기기 공유 잠금은 설치·측정 동안만. 로그 `build/validation/PRF1117A02/`(숫자와 시스템 기호 이름만, 회차별 `load.txt`에 맥 부하).
