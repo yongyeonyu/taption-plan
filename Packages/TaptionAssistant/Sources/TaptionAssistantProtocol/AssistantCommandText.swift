@@ -19,10 +19,22 @@ public enum AssistantCommandParser {
         return clock(time, on: day, calendar: calendar)
     }
 
+    /// `YYYY-MM-DD`는 늘 서기(그레고리력)다. 기기 달력이 불기·일본력이어도 그 시간대의 그날 0시로 읽고,
+    /// 없는 날(2월 31일)은 다음 달로 넘기지 않고 거절한다(REV1117A02).
     public static func day(_ text: String, calendar: Calendar) -> Date? {
         guard let parts = numbers(text, separator: "-", count: 3), parts[0] >= 2_000,
               (1...12).contains(parts[1]), (1...31).contains(parts[2]) else { return nil }
-        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+        let gregorian = gregorian(in: calendar)
+        guard let date = gregorian.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) else { return nil }
+        let read = gregorian.dateComponents([.year, .month, .day], from: date)
+        return read.year == parts[0] && read.month == parts[1] && read.day == parts[2] ? date : nil
+    }
+
+    /// 기기 달력의 시간대를 쓰는 그레고리력.
+    public static func gregorian(in calendar: Calendar) -> Calendar {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = calendar.timeZone
+        return gregorian
     }
 
     public static func clock(_ text: String, on day: Date, calendar: Calendar) -> Date? {

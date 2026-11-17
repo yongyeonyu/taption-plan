@@ -35,6 +35,16 @@ final class DailyCardBubblePromptTests: XCTestCase {
         XCTAssertNil(due(at(9, 0)))
     }
 
+    /// REV1117A02: 기기 달력이 불기여도 AI에게는 서기 날짜를 보낸다(불기 2569년이 아니라).
+    func testTheRequestUsesGregorianDatesOnABuddhistCalendar() {
+        var buddhist = Calendar(identifier: .buddhist)
+        buddhist.timeZone = calendar.timeZone
+        XCTAssertEqual(DailyCardBubblePrompt.dayKey(at(8), calendar: buddhist), "2026-11-16")
+        let request = DailyCardBubblePrompt.request(card: at(8), calendar: buddhist)
+        XCTAssertEqual(request.context["cardDate"], "2026-11-16")
+        XCTAssertEqual(request.context["readDate"], "2026-11-15")
+    }
+
     func testAlreadySentOrDisabledSkips() {
         XCTAssertNil(DailyCardBubblePrompt.due(now: at(7, 30), time: eight, enabled: true, lastSent: "2026-11-16", calendar: calendar))
         XCTAssertEqual(DailyCardBubblePrompt.due(now: at(7, 30), time: eight, enabled: true, lastSent: "2026-11-15", calendar: calendar), at(8))
