@@ -336,6 +336,57 @@ final class TripShareLedgerTests: XCTestCase {
         XCTAssertEqual(reopened.names(tripID: tripID)?.name(.member(2)), "봄")
     }
 
+    /// 대표 결정(2026-11-17): 공유를 시작할 때 있던 「다 같이」 지출은 나만으로 바꾸지 않고, 방에 들어온 동행 모두로 나눈다(TSA1117A01).
+    /// 자동으로 들어온 지출은 대표 결정대로 올리지 않는다.
+    func testAllTogetherExpensesFromBeforeSharingAreSplitWithEveryoneWhoJoins() async throws {
+        let trip = TravelTrip(id: tripID, title: "가을 여행", startDay: "2031-10-01", endDay: "2031-10-03")
+        _ = await model.saveTravelTrip(trip)
+        let before = expense("숙소", 90_000)
+        let mine = { var entry = self.expense("기념품", 10_000); entry.shareNames = [LedgerTrip.me]; return entry }()
+        let automatic = expense("문자 결제", 5_000, source: .message)
+        for entry in [before, mine, automatic] { await book.save(entry) }
+
+        let invite = ShareInvite.make()
+        roomID = invite.roomID
+        keys = try ShareKeys.derive(roomID: invite.roomID, linkSecret: invite.linkSecret, password: "가을여행-2031", iterations: 20)
+        let ownerKey = ShareIdentifiers.ownerKey()
+        let entry = try await ShareRoomClient.createRoom(
+            transport: server.transport, appKey: "test-app-key",
+            request: ShareCreateRequest(roomID: invite.roomID, proof: keys.proof, ownerKey: ownerKey, expiresAt: await server.now + 86_400_000)
+        )
+        try store.register(
+            TripShareLink(roomID: invite.roomID, tripID: tripID, role: .owner, phase: .uploading),
+            secrets: ShareRoomSecrets(root: keys.root, linkSecret: invite.linkSecret, token: entry.token, ownerKey: ownerKey, member: entry.member, epoch: entry.epoch)
+        )
+        try await TripShareCreation.upload(model: model, store: store, tripID: tripID)
+        XCTAssertEqual(store.link(tripID: tripID)?.phase, .sharing)
+        let uploaded = shared(in: try XCTUnwrap(store.view(tripID: tripID)))
+        XCTAssertEqual(uploaded.map(\.id), [TripShareMapping.roomItemID(entryID: before.id)], "직접 넣은 「다 같이」 지출만 공동 지출로 올라간다")
+        XCTAssertEqual(book.entries.first { $0.id == automatic.id }?.shareNames, TripShareMapping.privateShare, "자동 기록은 올리지 않는다")
+        XCTAssertEqual(book.entries.first { $0.id == mine.id }?.shareNames, [LedgerTrip.me])
+
+        // 동행이 들어오면 그 사람도 몫에 들어가고 정산에 바로 잡힌다.
+        let friend = try await join("봄")
+        await waitUntil("들어온 사람이 몫에 들어감") {
+            self.shared(in: self.store.view(tripID: self.tripID)!).first?.content.split == [.member(1), .member(2)]
+        }
+        try await friend.catchUp()
+        let friendView = await friend.view()
+        XCTAssertEqual(shared(in: friendView).first?.content.split, [.member(1), .member(2)])
+        await waitUntil("가계부에도 둘로") { Set(self.book.entries.first { $0.id == before.id }?.shareNames ?? []) == [LedgerTrip.me, "봄"] }
+
+        // 공유 뒤에 새로 넣은 「다 같이」는 그때의 사람들 그대로다(나중 사람에게 몫이 생기지 않는다).
+        let later = expense("저녁", 20_000)
+        let failure = await TripShareLedger.save(later, scope: .shared)
+        XCTAssertNil(failure)
+        let third = try await join("여름")
+        _ = third
+        try await Task.sleep(for: .milliseconds(300))
+        let byID = Dictionary(uniqueKeysWithValues: shared(in: try XCTUnwrap(store.view(tripID: tripID))).map { ($0.id, $0.content.split) })
+        XCTAssertEqual(byID[TripShareMapping.roomItemID(entryID: later.id)], [.member(1), .member(2)])
+        await waitUntil("공유 전 지출은 셋째도") { self.shared(in: self.store.view(tripID: self.tripID)!).first { $0.id == TripShareMapping.roomItemID(entryID: before.id) }?.content.split == [.member(1), .member(2), .member(3)] }
+    }
+
     func testOfflineSharedSaveIsRefusedAndNothingIsWritten() async throws {
         try await openRoom()
         await server.setOffline(true)

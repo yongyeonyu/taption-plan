@@ -35,6 +35,8 @@ struct TripShareSidecar: ShareSnapshotStore {
         var room: ShareRoomSnapshot?
         /// 방에서 본 사람들의 이름(참여자 번호 → 닉네임). 나간 사람의 카드는 서버가 지우므로 여기서 읽는다.
         var names: [Int: String]?
+        /// 공유를 시작할 때 「다 같이」였던 공동 지출의 방 항목 id. 주인 기기가 새로 들어온 동행을 몫에 더한다.
+        var allTogether: [String]?
 
         init() {}
 
@@ -44,6 +46,7 @@ struct TripShareSidecar: ShareSnapshotStore {
             link = try? container.decodeIfPresent(TripShareLink.self, forKey: .link)
             room = try? container.decodeIfPresent(ShareRoomSnapshot.self, forKey: .room)
             names = try? container.decodeIfPresent([Int: String].self, forKey: .names)
+            allTogether = try? container.decodeIfPresent([String].self, forKey: .allTogether)
         }
     }
 
@@ -106,12 +109,18 @@ struct TripShareSidecar: ShareSnapshotStore {
         try change(snapshot.roomID, linked: true) { $0.room = snapshot }
     }
 
-    // MARK: 지난 이름(TSA1117A01)
+    // MARK: 지난 이름·공유 전 「다 같이」 지출(TSA1117A01)
 
     func formerNames(roomID: String) -> [Int: String] { read(roomID)?.names ?? [:] }
 
     func saveFormerNames(_ names: [Int: String], roomID: String) throws {
         try change(roomID, linked: true) { $0.names = names.isEmpty ? nil : names }
+    }
+
+    func allTogether(roomID: String) -> Set<String> { Set(read(roomID)?.allTogether ?? []) }
+
+    func saveAllTogether(_ ids: Set<String>, roomID: String) throws {
+        try change(roomID, linked: true) { $0.allTogether = ids.isEmpty ? nil : ids.sorted() }
     }
 
     /// 연결과 사본을 함께 지운다. 로컬 여행(SQLite)은 건드리지 않는다.
