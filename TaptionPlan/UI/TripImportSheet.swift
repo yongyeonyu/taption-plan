@@ -348,6 +348,11 @@ enum TravelTripRail {
         .sorted { $0.startMinute < $1.startMinute }
     }
 
+    /// 그 일정이 `day` 전날 이전(그곳 벽시계)에 시작했는가.
+    static func startsBefore(_ item: TravelTripItem, day: Date, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        wallClock(item.start, offset: item.startOffsetSeconds).day < calendar.dateComponents([.year, .month, .day], from: day)
+    }
+
     private struct WallClock {
         let day: DateComponents
         let minute: Int

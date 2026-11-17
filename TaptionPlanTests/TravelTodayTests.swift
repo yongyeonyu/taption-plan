@@ -55,6 +55,26 @@ final class TravelTodayTests: XCTestCase {
         XCTAssertFalse(late.isEmpty)
     }
 
+    /// TVM1117A02: 어젯밤부터 이어진 숙소·잠은 오늘 0시부터 걸친 칸이라도 「지금」이 아니다. 오늘 밤에 시작한 잠과 밤샘 비행은 그대로 「지금」.
+    func testLodgingAndSleepCarriedFromYesterdayAreNotNow() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        func overnight(_ id: String, _ kind: String, from: Int, to: Int) -> TravelTripItem {
+            TravelTripItem(tripID: "t1", itemID: id, kind: kind, title: id, start: at(0).addingTimeInterval(TimeInterval(from * 60)),
+                           end: at(0).addingTimeInterval(TimeInterval(to * 60)), startOffsetSeconds: 0, endOffsetSeconds: 0, planID: nil)
+        }
+        let items = [
+            overnight("hotel", "lodging", from: -9 * 60, to: 11 * 60), overnight("night", "sleep", from: -60, to: 7 * 60),
+            overnight("red-eye", "flight", from: -2 * 60, to: 6 * 60), overnight("tonight", "sleep", from: 23 * 60, to: 31 * 60),
+        ]
+        let table = TravelPlanTableModel.make(items: items, tripID: "t1", day: at(0), actual: [], now: at(5), calendar: calendar)
+        XCTAssertEqual(Set(table.blocks.filter(\.carriesOver).map(\.id)), ["hotel", "night", "red-eye"], "0시 전에 시작한 칸")
+        XCTAssertEqual(TravelTodayBoard.make(blocks: table.blocks, nowMinute: 5 * 60).current?.id, "red-eye", "이어진 비행은 지금")
+        let morning = TravelTodayBoard.make(blocks: table.blocks, nowMinute: 9 * 60)
+        XCTAssertNil(morning.current, "어제 들어간 숙소는 지금이 아니다")
+        XCTAssertEqual(TravelTodayBoard.make(blocks: table.blocks, nowMinute: 23 * 60 + 30).current?.id, "tonight", "오늘 밤의 잠은 지금")
+    }
+
     func testDayWithoutPlansIsEmpty() {
         let board = TravelTodayBoard.make(blocks: [], nowMinute: 12 * 60)
         XCTAssertTrue(board.isEmpty)

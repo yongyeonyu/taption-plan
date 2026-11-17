@@ -45,6 +45,8 @@ struct TravelTodayBoard: Equatable {
         var title: String
         var startMinute: Int
         var endMinute: Int
+        /// 어젯밤부터 이어진 숙소·잠. 「지금」으로 띄우지 않는다(TVM1117A02).
+        var isOvernightStay = false
     }
 
     /// 끝났는데 아직 확정하지 않은 일정.
@@ -85,7 +87,7 @@ struct TravelTodayBoard: Equatable {
         board.isEmpty = stops.isEmpty
         // 확정한 일정은 지금·다음에서 빠진다(일찍 끝냈거나 건너뛴 것).
         let open = stops.filter { marks[$0.id] == nil }
-        if let current = open.last(where: { $0.startMinute <= nowMinute && nowMinute < $0.endMinute }) {
+        if let current = open.last(where: { !$0.isOvernightStay && $0.startMinute <= nowMinute && nowMinute < $0.endMinute }) {
             board.current = current
             board.remainingMinutes = current.endMinute - nowMinute
         }
@@ -104,7 +106,8 @@ struct TravelTodayBoard: Equatable {
         let ids = Set(blocks.map(\.id))
         return blocks.filter { block in block.endMinute > block.startMinute && !(block.parentID.map(ids.contains) ?? false) }
             .sorted { ($0.startMinute, $0.endMinute, $0.id) < ($1.startMinute, $1.endMinute, $1.id) }
-            .map { Stop(id: $0.id, title: $0.title, startMinute: $0.startMinute, endMinute: $0.endMinute) }
+            .map { Stop(id: $0.id, title: $0.title, startMinute: $0.startMinute, endMinute: $0.endMinute,
+                        isOvernightStay: $0.carriesOver && ["lodging", "sleep"].contains($0.kind)) }
     }
 
     /// 확정을 물을 수 있는 일정(끝났고 확정 안 된 것)의 번호. 자동 기록 맞춤은 이것만 본다.

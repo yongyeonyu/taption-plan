@@ -26,6 +26,8 @@ struct TravelPlanTableModel: Equatable {
         var kind = ""
         /// 딸린 코스 곳(세부 계획이면). 그 곳이 같은 날에 없으면 코스에서는 굵은 곳으로 본다.
         var parentID: String?
+        /// 그날 0시 전에 시작해 이어진 칸(어젯밤 들어간 숙소·잠 등, TVM1117A02).
+        var carriesOver = false
     }
 
     struct Actual: Identifiable, Equatable {
@@ -65,7 +67,8 @@ struct TravelPlanTableModel: Equatable {
             blocks.append(Block(
                 id: item.itemID, column: column, startMinute: segment.startMinute, endMinute: segment.endMinute, title: item.title,
                 tripStatus: segment.tripStatus, status: .pending, hasNote: !(item.note ?? "").isEmpty, spent: spent[item.itemID] ?? 0,
-                colorHex: item.colorHex, planned: item.plannedSpendKRW ?? 0, kind: item.kind, parentID: item.parentItemID
+                colorHex: item.colorHex, planned: item.plannedSpendKRW ?? 0, kind: item.kind, parentID: item.parentItemID,
+                carriesOver: TravelTripRail.startsBefore(item, day: day, calendar: calendar)
             ))
             spans.append(.init(id: item.itemID, start: segment.startMinute, end: segment.endMinute, isMove: item.kind == "transfer" || item.kind == "flight"))
         }
