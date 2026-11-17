@@ -369,3 +369,40 @@ extension StorageReviewFixTests {
         XCTAssertNotNil(old.url?.query)
     }
 }
+
+// MARK: 서울도 TAGO 먼저 (대표 결정 2026-11-17 「서울도 TAGO로」: 서울시 API는 평문 http라 TAGO가 비었을 때만)
+
+extension StorageReviewFixTests {
+    private static let tagoStop = Data(#"{"response":{"header":{"resultCode":"00"},"body":{"items":{"item":{"citycode":"11","nodeid":"SEB100000001","nodenm":"가짜 정류장","gpslati":37.5,"gpslong":127.0}}}}}"#.utf8)
+    private static let tagoEmpty = Data(#"{"response":{"header":{"resultCode":"00"},"body":{"items":""}}}"#.utf8)
+    private static let seoulStop = Data(#"{"msgHeader":{"headerCd":"0"},"msgBody":{"itemList":[{"arsId":"01234","stationNm":"가짜 서울 정류장","gpsX":"127.0","gpsY":"37.5"}]}}"#.utf8)
+
+    @MainActor
+    private func lookup(tago: Data?) async -> (stop: BusRouteCheck.Stop??, calls: [String]) {
+        let point = GeoPoint(latitude: 37.5, longitude: 127.0, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0)
+        var calls: [String] = []
+        let stop = await BusRouteLookupRunner.nearestStop(center: point, points: [point]) { path, _ in
+            calls.append(path)
+            return path == "/tago/stops" ? tago : Self.seoulStop
+        }
+        return (stop, calls)
+    }
+
+    @MainActor
+    func testSeoulStopLookupAsksTagoFirstAndSkipsThePlainSeoulAPIWhenTagoFindsAStop() async {
+        let result = await lookup(tago: Self.tagoStop)
+        XCTAssertEqual(result.calls, ["/tago/stops"], "TAGO가 찾으면 서울시 API를 부르지 않는다")
+        XCTAssertEqual(result.stop??.nodeID, "SEB100000001")
+    }
+
+    @MainActor
+    func testSeoulStopLookupFallsBackToSeoulAPIOnlyWhenTagoHasNoStop() async {
+        let empty = await lookup(tago: Self.tagoEmpty)
+        XCTAssertEqual(empty.calls, ["/tago/stops", "/seoul/stops"], "TAGO가 비었을 때만 서울시 API")
+        XCTAssertEqual(empty.stop??.cityCode, BusRouteCheck.seoulCity)
+
+        let failed = await lookup(tago: nil)
+        XCTAssertEqual(failed.calls, ["/tago/stops"], "TAGO가 응답하지 않으면 평문 API로 넘기지 않는다")
+        XCTAssertNil(failed.stop, "다음에 다시 본다")
+    }
+}
