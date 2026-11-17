@@ -69,6 +69,68 @@ final class TripLiveLocationTests: XCTestCase {
         XCTAssertFalse(TripLiveLocationService(defaults: suite).consent("trip-b").enabled)
     }
 
+    /// 서버 없이 연결만 있는 창구(REV1117A01). 끝나면 원래 창구·서비스로 되돌린다.
+    @MainActor
+    private func withSharedTrip(
+        _ tripID: String, _ body: (TripShareStore, TripLiveLocationService, String) async throws -> Void
+    ) async throws {
+        let originalStore = TripShareStore.shared, originalService = TripLiveLocationService.shared
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("TripLiveLocationTests-\(UUID().uuidString)", isDirectory: true)
+        let suiteName = "tripLive-\(UUID().uuidString)"
+        let suite = UserDefaults(suiteName: suiteName)!
+        defer {
+            TripShareStore.shared = originalStore
+            TripLiveLocationService.shared = originalService
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let store = TripShareStore(environment: TripShareEnvironment(
+            transport: nil, secrets: TripShareMemorySecrets(), sidecar: TripShareSidecar(directory: folder), appKey: { nil }
+        ))
+        let service = TripLiveLocationService(defaults: suite)
+        TripShareStore.shared = store
+        TripLiveLocationService.shared = service
+        let roomID = ShareIdentifiers.roomID()
+        try store.register(
+            TripShareLink(roomID: roomID, tripID: tripID, role: .owner, phase: .sharing),
+            secrets: ShareRoomSecrets(root: ShareBytes.random(32), linkSecret: ShareIdentifiers.linkSecret(), token: "token-1", ownerKey: "owner-1", member: 1, epoch: 1)
+        )
+        try await body(store, service, suiteName)
+    }
+
+    /// 방을 잊으면(나가기·방 지우기·끝난 방 치우기·같은 여행을 새 방으로 다시 공유) 그 여행의 「켬」도 지운다.
+    /// 남겨 두면 새 방의 다른 동행에게 본인이 켜지 않은 위치가 나간다(「본인이 여행마다 켜야」).
+    @MainActor
+    func testForgettingTheRoomClearsThatTripsLocationConsent() async throws {
+        try await withSharedTrip("trip-a") { store, service, suiteName in
+            await service.setEnabled(true, tripID: "trip-a")
+            XCTAssertTrue(service.consent("trip-a").enabled)
+            await store.forget(tripID: "trip-a")
+            XCTAssertFalse(service.consent("trip-a").enabled, "옛 방의 켬이 남으면 안 된다")
+            XCTAssertFalse(TripLiveLocationService(defaults: UserDefaults(suiteName: suiteName)!).consent("trip-a").enabled, "저장한 값도 지운다")
+            try store.register(
+                TripShareLink(roomID: ShareIdentifiers.roomID(), tripID: "trip-a", role: .owner, phase: .sharing),
+                secrets: ShareRoomSecrets(root: ShareBytes.random(32), linkSecret: ShareIdentifiers.linkSecret(), token: "token-2", ownerKey: "owner-2", member: 1, epoch: 1)
+            )
+            XCTAssertFalse(service.consent("trip-a").enabled, "새 방에서는 다시 켜야 한다")
+        }
+    }
+
+    /// 앱을 다시 켜면 저장된 「켬」으로 30초 점검(기간 끝 자동 끔·멈춤 중 5분 알림·「몇 분 전」)이 다시 돈다.
+    @MainActor
+    func testSavedConsentRestartsThePeriodicCheckWhenTheTripIsWatched() async throws {
+        try await withSharedTrip("trip-a") { _, service, suiteName in
+            await service.setEnabled(true, tripID: "trip-a")
+            let relaunched = TripLiveLocationService(defaults: UserDefaults(suiteName: suiteName)!)
+            TripLiveLocationService.shared = relaunched
+            XCTAssertTrue(relaunched.consent("trip-a").enabled)
+            XCTAssertFalse(relaunched.isTicking)
+            await relaunched.watch(tripID: "trip-a")
+            XCTAssertTrue(relaunched.isTicking, "저장된 켬이 있으면 점검을 다시 시작한다")
+            await relaunched.setEnabled(false, tripID: "trip-a")
+            await service.setEnabled(false, tripID: "trip-a")
+        }
+    }
+
     func testAgoTextAndFreshnessLevels() {
         XCTAssertEqual(Policy.agoText(minutes: 0, .korean), "방금")
         XCTAssertEqual(Policy.agoText(minutes: 3, .korean), "3분 전")
