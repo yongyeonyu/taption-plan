@@ -2,6 +2,13 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## REV1117A04 · 가계부·결제 문자·설정·목표·메모·일정·첫 실행·위젯·Watch 리뷰 (2026-11-17, 시뮬레이터)
+
+- 결과: 결함 8건 수정·커밋 6개(`docs/reviews/REV1117A04.md`). 실기기 안 씀.
+- 시험: `LedgerTests` 36건 실패 0(정산 공백·큰 금액 시험 2건 추가). 전체 `-only-testing:TaptionPlanTests` 3011건 중 건너뜀 25, 실패 1(`FeatureEngineTests.testImmediateSensorAnalysisKeepsEveryPendingDay`, 센서 영역·내가 안 고친 곳). 같은 시험 단독 재실행은 통과(5.6초) — 전체 실행 중에만 났으므로 부하 타이밍 의심, 원인은 미조사. 전체를 실패 0으로 다시 돌리지 않았음.
+- 빌드: 위젯·Watch·Watch 위젯 스킴 Debug 시뮬레이터 빌드 성공. `swift test` `TaptionWatchSync` 통과, `TaptionLedgerCore`는 시험 대상 없음(빌드만). `architecture-metrics --check`·`check-app-engine-import-boundary.sh` 통과.
+- 제한: UI 시험 안 돌림(첫 실행·위젯 미리보기 화면 수정), 첫 실행 비밀번호 수정·위젯 「종료」는 실기기·화면 확인 없음. 로그 `build/validation/REV1117A04/`.
+
 ## PRF1117A01 · 콜드 실행 단계별 측정과 시작 막대 고침 (2026-11-17 새벽, 아이폰 11 Pro 실기기 + 시뮬레이터)
 
 - 판: `4aa16489` + 측정 도구, Release + BENCH, 개발 서명, `devicectl` 설치·실행, 기기 공유 잠금은 설치·측정 동안만. 실제 기록 그대로(첫 읽기 44,263~44,288행·12MB). 로그 `build/validation/PRF1117A01/`(숫자만, 회차별 `load.txt`에 맥 부하).
