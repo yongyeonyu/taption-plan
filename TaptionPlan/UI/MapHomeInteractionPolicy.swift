@@ -6,11 +6,6 @@ import SwiftUI
 import UIKit
 import TaptionPlanCore
 
-enum RouteMapLineStyle {
-    static let lineWidth: CGFloat = 3
-    static let minimumOpacity: Double = 0.72
-}
-
 struct MapHomePawprintTapTarget {
     let id: Int
     let point: CGPoint

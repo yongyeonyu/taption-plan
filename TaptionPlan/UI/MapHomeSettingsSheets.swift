@@ -398,6 +398,7 @@ struct MapHomeSecuritySheet: View {
                 offloadCard
                 restoreCard
                 card(language.text("AI 서버 기록", "AI server records")) { AssistantServerEraseRow(model: model, language: language) }
+                card(language.text("내 데이터", "My data")) { MapHomeDataControlsRow(model: model, language: language) }
 
                 if let message {
                     Text(message)
@@ -847,6 +848,98 @@ extension MapHomeSecuritySheet {
         .buttonStyle(.bordered)
         .tint(Color.tpReferenceBlue)
     }
+}
+
+/// 전체 기록 내보내기와 모든 데이터 삭제. 옛 설정 화면에만 있던 것을 데이터 보호로 옮겼다(LGC1117A01).
+struct MapHomeDataControlsRow: View {
+    let model: AppModel
+    let language: MapHomeLanguage
+    @State private var exportURL: MapHomeExportFile?
+    @State private var isDeleteConfirmationPresented = false
+    @State private var isDeleteBackupsConfirmationPresented = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                do {
+                    exportURL = MapHomeExportFile(url: try model.exportSnapshotURL())
+                } catch {
+                    model.userFacingError = language.text("데이터 파일을 만들지 못했습니다.", "Couldn't create the data file.")
+                }
+            } label: {
+                Label(language.text("내 데이터 내보내기", "Export my data"), systemImage: "square.and.arrow.up")
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+            }
+            .buttonStyle(.bordered)
+            .tint(Color.tpReferenceBlue)
+            Text(language.text(
+                "계획·실제·메모·위치 등 전체 기록을 JSON 파일 하나로 공유합니다.",
+                "Shares every record, including plans, actual records, memos and locations, as one JSON file."
+            ))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+            .foregroundStyle(.secondary)
+            Button(language.text("모든 데이터 삭제", "Delete all data"), role: .destructive) {
+                isDeleteConfirmationPresented = true
+            }
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+        }
+        .sheet(item: $exportURL) { file in
+            MapHomeActivityShareSheet(items: [file.url])
+                .onDisappear { try? FileManager.default.removeItem(at: file.url) }
+        }
+        .confirmationDialog(
+            language.text("모든 BOKKI Plan 데이터를 삭제할까요?", "Delete all BOKKI Plan data?"),
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(language.text("모든 데이터 삭제", "Delete all data"), role: .destructive) {
+                Task { await model.deleteAllUserData() }
+            }
+            Button(language.text("iCloud 백업까지 모두 삭제", "Delete iCloud backups too"), role: .destructive) {
+                // 첫 확인창이 닫힌 뒤에 두 번째 확인창을 띄운다.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(400))
+                    isDeleteBackupsConfirmationPresented = true
+                }
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(language.text(
+                "계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 구매 내역과 체험 사용 여부는 유지되며, 이 작업은 되돌릴 수 없습니다.",
+                "Plans, actual records, memos and automatic movement records are deleted. Purchases and trial status are kept. This cannot be undone."
+            ))
+        }
+        .confirmationDialog(
+            language.text("iCloud 백업도 영구 삭제할까요?", "Permanently delete the iCloud backups too?"),
+            isPresented: $isDeleteBackupsConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(language.text("기기 데이터와 iCloud 백업 영구 삭제", "Permanently delete device data and backups"), role: .destructive) {
+                Task { await model.deleteAllUserData(includingBackups: true) }
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(language.text(
+                "이 기기의 모든 기록과 iCloud Drive의 BOKKI Plan 백업 파일이 모두 삭제됩니다. 백업을 지우면 복원할 방법이 없으며, 이 작업은 되돌릴 수 없습니다.",
+                "All records on this device and every BOKKI Plan backup file in iCloud Drive will be deleted. Once the backups are gone they cannot be restored, and this cannot be undone."
+            ))
+        }
+    }
+}
+
+private struct MapHomeExportFile: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+private struct MapHomeActivityShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 struct MapHomeLocationSheet: View {

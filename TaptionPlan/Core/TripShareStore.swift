@@ -145,7 +145,7 @@ final class TripShareStore {
         if let index = links.firstIndex(where: { $0.roomID == link.roomID }) { links[index] = link } else { links.append(link) }
     }
 
-    /// 이 기기에서 방을 잊는다: 세션을 닫고 비밀과 곁 파일을 지운다. **서버에는 알리지 않고, 로컬 여행은 남는다.**
+    /// 이 기기에서 방을 잊는다: 세션을 닫고 비밀과 곁 파일, 그 여행의 위치 공유 켬을 지운다. **서버에는 알리지 않고, 로컬 여행은 남는다.**
     func forget(tripID: String) async {
         guard let link = link(tripID: tripID) else { return }
         await close(tripID: tripID)
@@ -155,6 +155,7 @@ final class TripShareStore {
         links.removeAll { $0.roomID == link.roomID }
         storedMembers[link.roomID] = nil
         keys[link.roomID] = nil
+        TripLiveLocationService.shared.forget(tripID: tripID)
     }
 
     // MARK: 세션

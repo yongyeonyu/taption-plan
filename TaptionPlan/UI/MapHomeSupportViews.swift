@@ -105,6 +105,11 @@ struct MapHomeAttributionSheet: View {
     let language: MapHomeLanguage
 
     var body: some View {
+        ScrollView { attributionList }
+            .background(Color.tpBackground)
+    }
+
+    private var attributionList: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(language.text("지도 출처", "Map attribution"))
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
@@ -124,11 +129,18 @@ struct MapHomeAttributionSheet: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
             }
             .tint(Color.tpAccent)
-            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(language.text("날씨", "Weather"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                WeatherAttributionView(language: language)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .padding(20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.tpBackground)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private func attributionRow(_ title: String, _ text: String) -> some View {
@@ -143,6 +155,37 @@ struct MapHomeAttributionSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+/// Apple 날씨 출처 표기(결합 마크와 법적 고지 링크). 지도에 날씨를 보이므로 출처 시트에 둔다(LGC1117A01).
+struct WeatherAttributionView: View {
+    let language: MapHomeLanguage
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var attribution = WeatherAttributionInfo.fallback
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let url = attribution.markURL(isDark: colorScheme == .dark) {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFit()
+                } placeholder: {
+                    Text(attribution.serviceName)
+                }
+                .frame(height: 16)
+            } else {
+                Text(attribution.serviceName)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+            }
+            Link(
+                language.text("날씨 데이터 출처 및 법적 고지", "Weather data sources and legal notice"),
+                destination: attribution.legalPageURL
+            )
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+            .tint(Color.tpAccent)
+        }
+        .task { attribution = await WeatherAttributionStore.shared.current() }
     }
 }
 

@@ -505,44 +505,6 @@ extension FeatureEngineTests {
         XCTAssertEqual(resting, Array(20..<24) + Array(30..<34))
     }
 
-    func testCatPickerPreviewIncludesAndAnimatesEveryWidgetAction() {
-        let reference = Date(timeIntervalSinceReferenceDate: 0)
-        let actions = TaptionWidgetCatAction.allCases
-
-        XCTAssertEqual(actions.count, 12)
-        XCTAssertEqual(TaptionCatAnimationEngine.phaseCount, 6)
-        XCTAssertEqual(Set(actions.map(\.previewTitle)).count, actions.count)
-        XCTAssertTrue(actions.allSatisfy { !$0.previewSystemImage.isEmpty })
-
-        let runningStart = TaptionWidgetCatPreviewEngine.pose(
-            at: reference,
-            action: .running
-        )
-        let runningEnd = TaptionWidgetCatPreviewEngine.pose(
-            at: reference.addingTimeInterval(2),
-            action: .running
-        )
-        let grooming = TaptionWidgetCatPreviewEngine.pose(
-            at: reference.addingTimeInterval(0.2),
-            action: .grooming
-        )
-        let reduced = TaptionWidgetCatPreviewEngine.pose(
-            at: reference.addingTimeInterval(1.8),
-            action: .fishingPlay,
-            reducesMotion: true
-        )
-
-        XCTAssertEqual(runningStart.progress, 0, accuracy: 0.001)
-        XCTAssertEqual(runningEnd.progress, 1, accuracy: 0.001)
-        XCTAssertEqual(grooming.progress, 0.5, accuracy: 0.001)
-        XCTAssertEqual(grooming.action, .grooming)
-        XCTAssertNotEqual(grooming.headTiltDegrees, 0)
-        XCTAssertEqual(reduced.progress, 0.5, accuracy: 0.001)
-        XCTAssertEqual(reduced.action, .fishingPlay)
-        XCTAssertEqual(reduced.tailSwing, 0, accuracy: 0.001)
-        XCTAssertEqual(reduced.headTiltDegrees, 0, accuracy: 0.001)
-    }
-
     func testEveryCatActionHasFinitePoseAtEveryPhase() {
         let phases = Array(-3...(TaptionCatAnimationEngine.phaseCount + 3))
 

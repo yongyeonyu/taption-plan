@@ -102,7 +102,7 @@ struct TripShareSettlementSection: View {
                 TextField(language.text("비우면 없음", "Blank = none"), text: $budgetText).keyboardType(.numberPad)
                 Button(language.text("취소", "Cancel"), role: .cancel) {}
                 Button(language.text("저장", "Save")) {
-                    let budget = LedgerNumber.parse(budgetText).map { Int($0.rounded()) }
+                    let budget = LedgerNumber.parse(budgetText).map(TripShareMapping.clampedWhole)
                     Task { failure = await TripShareLedger.setSharedBudget(budget, tripID: tripID) }
                 }
             }

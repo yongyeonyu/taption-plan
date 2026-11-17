@@ -12,6 +12,8 @@ struct TravelQuickEntrySheet: View {
         var startMinute: Int
         var kind: TripImportItem.Kind
         var offsetSeconds: Int
+        /// 새 일정의 시차를 정할 여행(출국 비행 전은 출발지, 도착부터는 여행지: `TravelTimeZones`). 고칠 때는 nil.
+        var trip: TravelTrip?
         /// 고칠 일정. 없으면 새로 넣는다.
         var editing: TravelTripItem?
         /// 장소를 찾을 때 먼저 볼 여행지 가운데(경도, 위도)와, 고칠 일정에 이미 붙은 장소.
@@ -26,7 +28,7 @@ struct TravelQuickEntrySheet: View {
         static func new(trip: TravelTrip, dayKey: String, dayLabel: String, startMinute: Int, kind: TripImportItem.Kind) -> Target {
             let zone = trip.timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
             let noon = TravelQuickEntrySheet.date(dayKey: dayKey, minute: 720, offsetSeconds: zone.secondsFromGMT())
-            return Target(tripID: trip.id, dayKey: dayKey, dayLabel: dayLabel, startMinute: startMinute, kind: kind, offsetSeconds: zone.secondsFromGMT(for: noon))
+            return Target(tripID: trip.id, dayKey: dayKey, dayLabel: dayLabel, startMinute: startMinute, kind: kind, offsetSeconds: zone.secondsFromGMT(for: noon), trip: trip)
         }
 
         /// 있던 일정 고치기: 그 일정이 적힌 시차 그대로 본다.
@@ -94,18 +96,51 @@ struct TravelQuickEntrySheet: View {
 
     private var isEditing: Bool { target.editing != nil }
 
+    /// 새 일정의 시작·끝 시차: 그 날짜·시각이 비행 전이면 출발지, 도착 뒤면 여행지. 비행은 출발지에서 떠나 도착지에 닿는다.
+    private var newOffsets: (start: Int, end: Int) {
+        guard target.editing == nil, let trip = target.trip else { return (target.offsetSeconds, target.offsetSeconds) }
+        let items = model.settings.travelTripItems ?? []
+        if kind == .flight { return TravelTimeZones.flightOffsets(trip: trip, items: items, dayKey: target.dayKey, minute: startMinute) }
+        let offset = TravelTimeZones.offset(trip: trip, items: items, dayKey: target.dayKey, minute: startMinute)
+        return (offset, offset)
+    }
+
+    /// 미리보기의 시각 줄. 시차가 다른 비행은 도착 시각을 도착지 현지 시각으로 보이고 양쪽에 시차(GMT+N)를 붙인다.
+    private var timeLine: String {
+        let offsets = newOffsets
+        let shift = (offsets.end - offsets.start) / 60
+        let text = Self.clock(startMinute) + " – " + Self.clock(startMinute + duration + shift)
+        guard shift != 0 else { return text + " · " + Self.durationText(duration, language: language) }
+        return "\(Self.clock(startMinute)) (\(Self.gmt(offsets.start))) – \(Self.clock(startMinute + duration + shift)) (\(Self.gmt(offsets.end))) · "
+            + Self.durationText(duration, language: language)
+    }
+
+    static func gmt(_ seconds: Int) -> String {
+        let sign = seconds < 0 ? "-" : "+", total = abs(seconds) / 60
+        return total % 60 == 0 ? "GMT\(sign)\(total / 60)" : String(format: "GMT%@%d:%02d", sign, total / 60, total % 60)
+    }
     /// 슬라이더 단위(분). Trip 원본처럼 5분.
     static let sliderStep = 5
 
     /// 시작 슬라이더: 길이는 그대로 두고 옮기되, 끝이 24시를 넘으면 길이를 줄인다.
-    static func movingStart(to minute: Int, duration: Int) -> (start: Int, duration: Int) {
+    /// 이미 자정을 넘는 일정(밤 비행·잠)은 `previous`(옮기기 전 시작)로 알아보고 길이를 줄이지 않는다.
+    static func movingStart(to minute: Int, duration: Int, from previous: Int? = nil, maxEnd: Int = 1_440) -> (start: Int, duration: Int) {
         let start = min(max(minute / sliderStep * sliderStep, 0), 1_440 - sliderStep)
-        return (start, min(max(duration, sliderStep), 1_440 - start))
+        if let previous, previous + duration > 1_440 { return (start, duration) }
+        return (start, min(max(duration, sliderStep), maxEnd - start))
+    }
+
+    /// 종료 슬라이더의 끝(분). 자정을 넘기는 종류(비행·이동·숙소·잠)는 다음 날 24시까지, 나머지는 그날 24시까지.
+    static func maxEnd(for kind: TripImportItem.Kind) -> Int {
+        switch kind {
+        case .flight, .transfer, .lodging, .sleep: 2_880
+        default: 1_440
+        }
     }
 
     /// 종료 슬라이더: 시작보다 5분 이상 뒤, 24시까지. 돌려주는 값은 길이(분).
-    static func duration(endingAt minute: Int, start: Int) -> Int {
-        max(sliderStep, min(minute / sliderStep * sliderStep, 1_440) - start)
+    static func duration(endingAt minute: Int, start: Int, maxEnd: Int = 1_440) -> Int {
+        max(sliderStep, min(minute / sliderStep * sliderStep, maxEnd) - start)
     }
 
     var body: some View {
@@ -269,7 +304,7 @@ struct TravelQuickEntrySheet: View {
         let title = TravelQuickEntry.parse(text).title
         return VStack(alignment: .leading, spacing: 4) {
             Label(title.isEmpty ? kind.planName : title, systemImage: kind.symbol).font(.subheadline.weight(.medium)).lineLimit(2)
-            Text(Self.clock(startMinute) + " – " + Self.clock(startMinute + duration) + " · " + Self.durationText(duration, language: language))
+            Text(timeLine)
                 .font(.footnote.monospacedDigit()).opacity(0.8)
                 .accessibilityIdentifier("travelEntryTime")
             if let place { Label(place.name, systemImage: "mappin.circle.fill").font(.footnote).lineLimit(1).opacity(0.8) }
@@ -291,12 +326,12 @@ struct TravelQuickEntrySheet: View {
     private var timeSliders: some View {
         VStack(spacing: 6) {
             timeSlider(language.text("시작", "Start"), minute: startMinute, range: 0...Double(1_440 - Self.sliderStep), id: "Start") { value in
-                let next = Self.movingStart(to: value, duration: duration)
+                let next = Self.movingStart(to: value, duration: duration, from: startMinute, maxEnd: Self.maxEnd(for: kind))
                 if next.start != startMinute { startMinute = next.start }
                 if next.duration != duration { duration = next.duration }
             }
-            timeSlider(language.text("종료", "End"), minute: startMinute + duration, range: Double(Self.sliderStep)...1_440, id: "End") { value in
-                let next = Self.duration(endingAt: value, start: startMinute)
+            timeSlider(language.text("종료", "End"), minute: startMinute + duration, range: Double(Self.sliderStep)...Double(Self.maxEnd(for: kind)), id: "End") { value in
+                let next = Self.duration(endingAt: value, start: startMinute, maxEnd: Self.maxEnd(for: kind))
                 if next != duration {
                     duration = next
                     isDurationChosen = true
@@ -430,7 +465,9 @@ struct TravelQuickEntrySheet: View {
         isSaving = true
         defer { isSaving = false }
         let title = TravelQuickEntry.parse(text).title
-        let start = Self.date(dayKey: target.dayKey, minute: startMinute, offsetSeconds: target.offsetSeconds)
+        let offsets = newOffsets
+        let start = Self.date(dayKey: target.dayKey, minute: startMinute, offsetSeconds: offsets.start)
+        // 길이는 실제 비행·이동 시간이다. 끝은 시작에서 그만큼 뒤의 같은 순간이고, 비행이면 도착지 시차로 읽힌다.
         let end = start.addingTimeInterval(TimeInterval(duration * 60))
         if let item = target.editing {
             didFail = !(await TripSharePlanEditor.updateItem(
@@ -439,7 +476,7 @@ struct TravelQuickEntrySheet: View {
             ))
         } else {
             let itemID = await TripSharePlanEditor.addItem(
-                model: model, tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note,
+                model: model, tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: offsets.start, endOffsetSeconds: offsets.end, place: place, note: note,
                 colorHex: colorHex, plannedSpendKRW: Double(plannedSpend), parentItemID: target.parentItemID
             )
             didFail = itemID == nil

@@ -17,7 +17,7 @@ enum TravelPuzzle {
     /// 이 여행의 조각(미정 일정)을 시작 시각 순으로.
     static func pieces(items: [TravelTripItem], tripID: String) -> [TravelPuzzlePiece] {
         items
-            .filter { $0.tripID == tripID && TripItemStatus(raw: $0.status) == .tentative }
+            .filter { $0.tripID == tripID && TripItemStatus(raw: $0.status) == .tentative && TravelVisitMark(stored: $0.status) == nil } // 갔음·건너뜀을 확정한 미정은 조각이 아니다
             .sorted { ($0.start, $0.itemID) < ($1.start, $1.itemID) }
             .map { TravelPuzzlePiece(id: $0.itemID, title: $0.title, kind: $0.kind, start: $0.start, end: $0.end, utcOffsetSeconds: $0.startOffsetSeconds, plannedSpendKRW: $0.plannedSpendKRW) }
     }

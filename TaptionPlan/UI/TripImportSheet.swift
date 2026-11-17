@@ -36,7 +36,7 @@ extension AppModel {
                 start: item.start, end: item.end,
                 startOffsetSeconds: item.timeZone.secondsFromGMT(for: item.start),
                 endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: visitStatus(item, kept),
-                note: item.note.isEmpty ? nil : item.note,
+                note: Self.cleanTripNote(item.note), // 손으로 넣는 메모와 같은 500자 한도(공유 방이 받는 한도)
                 colorHex: kept[item.id]?.colorHex, plannedSpendKRW: kept[item.id]?.plannedSpendKRW, parentItemID: kept[item.id]?.parentItemID
             ))
             // 잠은 숙소 자리라 지도에 핀을 따로 찍지 않는다.
@@ -166,7 +166,7 @@ extension AppModel {
 
     /// 여행 일정 하나를 손으로 넣는다. 일상 쪽 계획 기록이 함께 생긴다. 넣은 일정 번호를 돌려준다.
     func addTripItem(
-        tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int,
+        tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int, endOffsetSeconds: Int? = nil,
         place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil,
         itemID restoredID: String? = nil, parentItemID: String? = nil
     ) async -> String? {
@@ -181,7 +181,7 @@ extension AppModel {
         let itemID = restoredID.flatMap { taken || $0.isEmpty ? nil : $0 } ?? "m-" + UUID().uuidString.prefix(8).lowercased()
         let items = (snapshot.settings.travelTripItems ?? []) + [TravelTripItem(
             tripID: tripID, itemID: itemID, kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
-            startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: planID,
+            startOffsetSeconds: offsetSeconds, endOffsetSeconds: endOffsetSeconds ?? offsetSeconds, planID: planID,
             note: Self.cleanTripNote(note),
             colorHex: TravelTripItem.cleanColorHex(colorHex), plannedSpendKRW: TravelTripItem.cleanPlannedSpend(plannedSpendKRW),
             parentItemID: parentItemID
@@ -519,6 +519,8 @@ struct MapHomeTripImportSheet: View {
     @State private var pasteGuide: TripPasteGuide?
     @State private var pendingPasteGuide: TripPasteGuide?
     @State private var isResolving = false
+    /// 붙여넣을 때마다 오르는 번호. 앞 붙여넣기의 좌표 찾기가 늦게 끝나 새 계획을 덮지 못하게 한다.
+    @State private var readGeneration = 0
     /// AI 좌표가 지도 검색과 멀리 다른 일정(TRP1110A01).
     @State private var mismatches: [String: TripImportCoordinateCheck.Mismatch] = [:]
     @State private var isApplying = false
@@ -858,9 +860,12 @@ struct MapHomeTripImportSheet: View {
             plan = parsed
             diff = model.tripImportDiff(for: parsed)
             mismatches = [:]
+            readGeneration += 1
+            isResolving = false
+            let generation = readGeneration
             Task { @MainActor in
-                await resolveMissingPlaces()
-                await checkAICoordinates()
+                await resolveMissingPlaces(generation)
+                await checkAICoordinates(generation)
             }
         case .failure(let error):
             plan = nil
@@ -869,9 +874,10 @@ struct MapHomeTripImportSheet: View {
     }
 
     /// AI가 좌표를 비운 곳은 이름·주소로 찾는다. 못 찾으면 시간 일정만 넣는다.
-    private func resolveMissingPlaces() async {
+    private func resolveMissingPlaces(_ generation: Int) async {
         guard var current = plan, current.items.contains(where: { $0.coordinate == nil }) else { return }
         isResolving = true
+        defer { if generation == readGeneration { isResolving = false } }
         let anchor = current.items.compactMap(\.coordinate).first
         for index in current.items.indices where current.items[index].coordinate == nil {
             let item = current.items[index]
@@ -880,13 +886,12 @@ struct MapHomeTripImportSheet: View {
             if let anchor { request.region = MKCoordinateRegion(center: anchor, latitudinalMeters: 200_000, longitudinalMeters: 200_000) }
             current.items[index].coordinate = try? await MKLocalSearch(request: request).start().mapItems.first?.placemark.coordinate
         }
-        if plan?.tripID == current.tripID { plan = current }
-        isResolving = false
+        if generation == readGeneration, plan?.tripID == current.tripID { plan = current }
     }
 
     /// AI가 준 좌표를 이름 검색과 견준다. 검색은 그 좌표 둘레 20km 안에서 한다.
-    private func checkAICoordinates() async {
-        guard let current = plan else { return }
+    private func checkAICoordinates(_ generation: Int) async {
+        guard generation == readGeneration, let current = plan else { return }
         var found: [String: TripImportCoordinateCheck.Mismatch] = [:]
         for item in current.items.filter(TripImportCoordinateCheck.shouldCheck).prefix(TripImportCoordinateCheck.checkLimit) {
             guard let ai = item.coordinate else { continue }
@@ -896,7 +901,7 @@ struct MapHomeTripImportSheet: View {
             let searched = try? await MKLocalSearch(request: request).start().mapItems.first?.placemark.coordinate
             if let mismatch = TripImportCoordinateCheck.mismatch(ai: ai, searched: searched) { found[item.id] = mismatch }
         }
-        if plan?.tripID == current.tripID { mismatches = found }
+        if generation == readGeneration, plan?.tripID == current.tripID { mismatches = found }
     }
 
     private func useSearchedCoordinate(_ itemID: String) {

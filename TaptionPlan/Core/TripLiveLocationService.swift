@@ -33,7 +33,8 @@ enum TripLiveLocationFeed {
 @MainActor
 @Observable
 final class TripLiveLocationService {
-    static let shared = TripLiveLocationService()
+    /// 앱 전체가 쓰는 서비스. 시험은 따로 만든 것으로 바꿔 넣고 끝나면 되돌린다.
+    static var shared = TripLiveLocationService()
     /// 법 검토(위치정보법)가 끝나기 전에 끄려면 false로 한다.
     static let isAvailable = true
 
@@ -211,9 +212,8 @@ final class TripLiveLocationService {
     }
 
     func clearMeet(tripID: String) async {
-        guard let session = store.session(tripID: tripID), var spot = meetPoint(tripID) else { return }
-        spot.on = false
-        _ = await writeMeet(session, spot)
+        guard let session = store.session(tripID: tripID), let spot = meetPoint(tripID) else { return }
+        _ = await writeMeet(session, spot.cleared)
     }
 
     private func writeMeet(_ session: ShareRoomSession, _ spot: ShareMeetContent) async -> Bool {
@@ -239,6 +239,8 @@ final class TripLiveLocationService {
 
     /// 이 여행의 방을 열고 동행 위치 변화를 듣는다. 주인이면 기간이 아직 없을 때 기본 기간(시작일 0시~종료일 24시)을 올린다.
     func watch(tripID: String) async {
+        // 앱을 다시 켜면 저장된 켬만 남고 점검은 멈춰 있다. 여행을 보거나 위치가 오면 다시 돌린다.
+        if consent(tripID).enabled { startLoop() }
         guard Self.isAvailable, store.isShared(tripID), let session = await store.open(tripID: tripID) else { return }
         if watchers[tripID] == nil {
             watchers[tripID] = Task { [weak self] in
@@ -279,8 +281,22 @@ final class TripLiveLocationService {
         let fix = TripLiveLocationPolicy.Fix(location)
         latest = fix
         for (tripID, value) in consents where value.isSending(at: .now) {
+            startLoop()
             Task { await send(tripID, fix: fix, force: false) }
         }
+    }
+
+    /// 이 기기에서 방을 잊을 때(`TripShareStore.forget`): 그 여행의 켬·받은 위치·듣기를 모두 지운다.
+    /// 같은 여행을 새 방으로 다시 공유하거나 다시 들어와도 본인이 다시 켜야 위치가 나간다.
+    func forget(tripID: String) {
+        watchers.removeValue(forKey: tripID)?.cancel()
+        views[tripID] = nil
+        capturedAt[tripID] = nil
+        lastSent[tripID] = nil
+        helpTrips.remove(tripID)
+        guard consents[tripID] != nil else { return }
+        consents[tripID] = nil
+        if let data = try? JSONEncoder().encode(consents) { defaults.set(data, forKey: Self.key) }
     }
 
     private func send(_ tripID: String, fix: TripLiveLocationPolicy.Fix, force: Bool) async {
@@ -303,6 +319,8 @@ final class TripLiveLocationService {
     // MARK: 주기 점검
 
     /// 30초마다: 멈춰 있어도 5분마다 한 번 알리고, 기간이 끝났으면 끈다, 「몇 분 전」을 새로 그린다.
+    var isTicking: Bool { loop != nil }
+
     private func startLoop() {
         guard loop == nil else { return }
         loop = Task { [weak self] in

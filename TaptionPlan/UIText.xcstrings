@@ -72920,83 +72920,6 @@
         }
       }
     },
-    "|All records on this device and every BOKKI Plan backup file in iCloud Drive will be deleted. Once the backups are gone they cannot be restored, and this cannot be undone." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このデバイス上のすべての記録と、iCloud Drive内のすべてのBOKKI Planバックアップファイルが削除されます。バックアップを削除すると復元できず、この操作は取り消せません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此设备上的所有记录以及 iCloud 云盘中的每个 BOKKI Plan 备份文件都将被删除。备份删除后无法恢复，且此操作无法撤销。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "這部裝置上的所有記錄和 iCloud 雲碟中的每個 BOKKI Plan 備份檔案都會被刪除。備份一旦刪除就無法還原，且此操作無法復原。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alle Einträge auf diesem Gerät und alle BOKKI-Plan-Backup-Dateien in iCloud Drive werden gelöscht. Gelöschte Backups lassen sich nicht wiederherstellen, und das kann nicht rückgängig gemacht werden."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tous les enregistrements de cet appareil et chaque fichier de sauvegarde BOKKI Plan dans iCloud Drive seront supprimés. Une fois les sauvegardes supprimées, elles ne peuvent plus être restaurées, et cette action est irréversible."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tutti i dati su questo dispositivo e ogni file di backup di BOKKI Plan in iCloud Drive verranno eliminati. Una volta eliminati i backup non si possono più ripristinare e l'operazione non si può annullare."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se eliminarán todos los registros de este dispositivo y todos los archivos de copia de BOKKI Plan de iCloud Drive. Una vez eliminadas las copias no se podrán restaurar, y esto no se puede deshacer."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todos os registros deste dispositivo e todos os arquivos de backup do BOKKI Plan no iCloud Drive serão excluídos. Depois que os backups forem apagados, não será possível restaurá-los, e isso não pode ser desfeito."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Toàn bộ bản ghi trên thiết bị này và mọi tệp sao lưu BOKKI Plan trong iCloud Drive sẽ bị xóa. Sau khi bản sao lưu bị xóa, bạn không thể khôi phục và không thể hoàn tác."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Semua catatan di perangkat ini dan setiap file cadangan BOKKI Plan di iCloud Drive akan dihapus. Setelah cadangan hilang, tidak dapat dipulihkan, dan tindakan ini tidak dapat dibatalkan."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "บันทึกทั้งหมดในเครื่องนี้และไฟล์สำรองข้อมูล BOKKI Plan ทุกไฟล์ใน iCloud Drive จะถูกลบ เมื่อลบข้อมูลสำรองแล้วจะกู้คืนไม่ได้ และไม่สามารถย้อนกลับได้"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "इस डिवाइस के सभी रिकॉर्ड और iCloud Drive की हर BOKKI Plan बैकअप फ़ाइल हटा दी जाएगी। बैकअप हटने के बाद उन्हें रिस्टोर नहीं किया जा सकता, और इसे पूर्ववत नहीं किया जा सकता।"
-          }
-        }
-      }
-    },
     "|Allow location access to record walking and running routes." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -91169,83 +91092,6 @@
         }
       }
     },
-    "|Cancel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キャンセル"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abbrechen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Annuler"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Annulla"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancelar"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancelar"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hủy"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Batal"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ยกเลิก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "रद्द करें"
-          }
-        }
-      }
-    },
     "|Cape Coast Castle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -101795,160 +101641,6 @@
         }
       }
     },
-    "|Couldn't create the data file." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "データファイルを作成できませんでした。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法创建数据文件。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法建立資料檔案。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Datendatei konnte nicht erstellt werden."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible de créer le fichier de données."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile creare il file di dati."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se pudo crear el archivo de datos."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível criar o arquivo de dados."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không thể tạo tệp dữ liệu."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak dapat membuat file data."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "สร้างไฟล์ข้อมูลไม่ได้"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "डेटा फ़ाइल नहीं बन सकी।"
-          }
-        }
-      }
-    },
-    "|Couldn't create today's raw data file." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今日の元データファイルを作成できませんでした。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法创建今天的原始数据文件。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法建立今天的原始資料檔案。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Rohdatendatei von heute konnte nicht erstellt werden."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible de créer le fichier de données brutes du jour."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile creare il file di dati grezzi di oggi."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se pudo crear el archivo de datos sin procesar de hoy."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível criar o arquivo de dados brutos de hoje."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không thể tạo tệp dữ liệu gốc của hôm nay."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak dapat membuat file data mentah hari ini."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "สร้างไฟล์ข้อมูลดิบของวันนี้ไม่ได้"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "आज की रॉ डेटा फ़ाइल नहीं बन सकी।"
-          }
-        }
-      }
-    },
     "|Couldn't save the change, so it was undone." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -105718,83 +105410,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "गहरी नींद"
-          }
-        }
-      }
-    },
-    "|Delete iCloud backups too" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloudバックアップも削除"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "同时删除 iCloud 备份"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一併刪除 iCloud 備份"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud-Backups auch löschen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Supprimer aussi les sauvegardes iCloud"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elimina anche i backup iCloud"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eliminar también las copias de iCloud"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Excluir também os backups do iCloud"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa cả bản sao lưu iCloud"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hapus juga cadangan iCloud"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ลบข้อมูลสำรองบน iCloud ด้วย"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud बैकअप भी हटाएँ"
           }
         }
       }
@@ -160623,160 +160238,6 @@
         }
       }
     },
-    "|Permanently delete device data and backups" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "デバイスのデータとバックアップを完全に削除"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "永久删除设备数据和备份"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "永久刪除裝置資料與備份"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gerätedaten und Backups endgültig löschen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Supprimer définitivement les données de l'appareil et les sauvegardes"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elimina definitivamente i dati del dispositivo e i backup"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eliminar de forma permanente los datos del dispositivo y las copias"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Excluir permanentemente dados do dispositivo e backups"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa vĩnh viễn dữ liệu thiết bị và bản sao lưu"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hapus permanen data perangkat dan cadangan"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ลบข้อมูลในเครื่องและข้อมูลสำรองอย่างถาวร"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "डिवाइस डेटा और बैकअप हमेशा के लिए हटाएँ"
-          }
-        }
-      }
-    },
-    "|Permanently delete the iCloud backups too?" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloudバックアップも完全に削除しますか?"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "要同时永久删除 iCloud 备份吗？"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "要一併永久刪除 iCloud 備份嗎？"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die iCloud-Backups auch endgültig löschen?"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Supprimer aussi définitivement les sauvegardes iCloud ?"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eliminare definitivamente anche i backup iCloud?"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¿Eliminar también las copias de iCloud de forma permanente?"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Excluir permanentemente também os backups do iCloud?"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa vĩnh viễn cả bản sao lưu iCloud?"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hapus permanen juga cadangan iCloud?"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ลบข้อมูลสำรองบน iCloud อย่างถาวรด้วยหรือไม่"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud बैकअप भी हमेशा के लिए हटाएँ?"
-          }
-        }
-      }
-    },
     "|Permission denied" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -196967,83 +196428,6 @@
         }
       }
     },
-    "|Use suggestion {0}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "候補{0}を使う"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用建议 {0}"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用建議 {0}"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vorschlag {0} verwenden"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utiliser la suggestion {0}"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usa il suggerimento {0}"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usar sugerencia {0}"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usar sugestão {0}"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dùng gợi ý {0}"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gunakan saran {0}"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ใช้คำแนะนำ {0}"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सुझाव {0} इस्तेमाल करें"
-          }
-        }
-      }
-    },
     "|User" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -197887,83 +197271,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "वियंतियान लाओस की राजधानी है, जो मेकांग नदी के किनारे है। था लुआंग स्तूप और पातुक्साई स्मारक इसके सबसे प्रसिद्ध प्रतीक हैं।"
-          }
-        }
-      }
-    },
-    "|View current weather and air quality details" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "現在の天気と大気質の詳細を表示"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看当前天气和空气质量详情"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看目前天氣與空氣品質詳情"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktuelles Wetter und Details zur Luftqualität ansehen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voir la météo actuelle et les détails de la qualité de l'air"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vedi il meteo attuale e i dettagli sulla qualità dell'aria"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ver el tiempo actual y los detalles de la calidad del aire"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ver clima atual e detalhes da qualidade do ar"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xem thời tiết hiện tại và chi tiết chất lượng không khí"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lihat detail cuaca dan kualitas udara saat ini"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ดูรายละเอียดสภาพอากาศและคุณภาพอากาศปัจจุบัน"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "मौजूदा मौसम और वायु गुणवत्ता का विवरण देखें"
           }
         }
       }
@@ -222685,6 +221992,83 @@
         }
       }
     },
+    "계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 구매 내역과 체험 사용 여부는 유지되며, 이 작업은 되돌릴 수 없습니다.|Plans, actual records, memos and automatic movement records are deleted. Purchases and trial status are kept. This cannot be undone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "計画、実績の記録、メモ、自動の移動記録が削除されます。購入履歴と体験版の利用状況は残ります。この操作は元に戻せません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将删除计划、实际记录、备忘和自动移动记录。购买记录和试用状态会保留。此操作无法撤销。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將刪除計畫、實際紀錄、備忘和自動移動紀錄。購買紀錄和試用狀態會保留。此操作無法復原。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pläne, tatsächliche Einträge, Notizen und automatische Bewegungseinträge werden gelöscht. Käufe und der Teststatus bleiben erhalten. Dies kann nicht rückgängig gemacht werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les plans, les enregistrements réels, les notes et les déplacements enregistrés automatiquement seront supprimés. Les achats et l’état de l’essai sont conservés. Cette action est irréversible."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verranno eliminati piani, registrazioni effettive, note e spostamenti registrati automaticamente. Acquisti e stato della prova restano. L’operazione non può essere annullata."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se eliminarán los planes, los registros reales, las notas y los desplazamientos registrados automáticamente. Las compras y el estado de la prueba se conservan. Esta acción no se puede deshacer."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planos, registros reais, notas e deslocamentos registrados automaticamente serão excluídos. As compras e o status do teste são mantidos. Esta ação não pode ser desfeita."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kế hoạch, bản ghi thực tế, ghi chú và bản ghi di chuyển tự động sẽ bị xóa. Lịch sử mua và trạng thái dùng thử được giữ lại. Không thể hoàn tác thao tác này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rencana, catatan aktual, memo, dan catatan perjalanan otomatis akan dihapus. Riwayat pembelian dan status uji coba tetap disimpan. Tindakan ini tidak dapat dibatalkan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แผน บันทึกจริง บันทึกย่อ และบันทึกการเดินทางอัตโนมัติจะถูกลบ ประวัติการซื้อและสถานะการทดลองใช้จะยังคงอยู่ การดำเนินการนี้ย้อนกลับไม่ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "योजनाएँ, वास्तविक रिकॉर्ड, नोट्स और स्वचालित यात्रा रिकॉर्ड हटा दिए जाएँगे। खरीदारी और ट्रायल की स्थिति बनी रहेगी। इसे पूर्ववत नहीं किया जा सकता।"
+          }
+        }
+      }
+    },
     "계획|Plan" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -222835,6 +222219,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "योजना में"
+          }
+        }
+      }
+    },
+    "계획·실제·메모·위치 등 전체 기록을 JSON 파일 하나로 공유합니다.|Shares every record, including plans, actual records, memos and locations, as one JSON file." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "計画・実績・メモ・位置などすべての記録を1つのJSONファイルで共有します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将计划、实际记录、备忘、位置等全部记录作为一个 JSON 文件分享。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將計畫、實際紀錄、備忘、位置等所有紀錄以一個 JSON 檔案分享。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teilt alle Einträge, darunter Pläne, tatsächliche Einträge, Notizen und Orte, als eine JSON-Datei."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partage tous les enregistrements, dont les plans, les enregistrements réels, les notes et les lieux, dans un seul fichier JSON."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condivide tutte le registrazioni, inclusi piani, registrazioni effettive, note e luoghi, in un unico file JSON."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comparte todos los registros, incluidos planes, registros reales, notas y ubicaciones, en un solo archivo JSON."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartilha todos os registros, incluindo planos, registros reais, notas e locais, em um único arquivo JSON."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chia sẻ toàn bộ bản ghi, gồm kế hoạch, bản ghi thực tế, ghi chú và vị trí, trong một tệp JSON."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membagikan semua catatan, termasuk rencana, catatan aktual, memo, dan lokasi, sebagai satu file JSON."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แชร์บันทึกทั้งหมด รวมถึงแผน บันทึกจริง บันทึกย่อ และตำแหน่ง เป็นไฟล์ JSON ไฟล์เดียว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "योजनाएँ, वास्तविक रिकॉर्ड, नोट्स और स्थान सहित सभी रिकॉर्ड एक JSON फ़ाइल के रूप में साझा करता है।"
           }
         }
       }
@@ -240934,6 +240395,83 @@
         }
       }
     },
+    "날씨 데이터 출처 및 법적 고지|Weather data sources and legal notice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "気象データの出典と法的通知"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "天气数据来源及法律声明"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "天氣資料來源及法律聲明"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quellen der Wetterdaten und rechtliche Hinweise"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sources des données météo et mentions légales"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fonti dei dati meteo e note legali"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fuentes de los datos meteorológicos y aviso legal"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fontes dos dados meteorológicos e aviso legal"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nguồn dữ liệu thời tiết và thông báo pháp lý"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sumber data cuaca dan pemberitahuan hukum"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แหล่งข้อมูลสภาพอากาศและประกาศทางกฎหมาย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मौसम डेटा के स्रोत और कानूनी सूचना"
+          }
+        }
+      }
+    },
     "날씨 사이드바|Weather sidebar" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -243702,6 +243240,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मेरा उपनाम"
+          }
+        }
+      }
+    },
+    "내 데이터 내보내기|Export my data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "データを書き出す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出我的数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯出我的資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Daten exportieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter mes données"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esporta i miei dati"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportar mis datos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportar meus dados"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xuất dữ liệu của tôi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekspor data saya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งออกข้อมูลของฉัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरा डेटा निर्यात करें"
+          }
+        }
+      }
+    },
+    "내 데이터|My data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイデータ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Daten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mes données"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I miei dati"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mis datos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meus dados"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dữ liệu của tôi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data saya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อมูลของฉัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरा डेटा"
           }
         }
       }
@@ -266190,6 +265882,83 @@
         }
       }
     },
+    "모든 BOKKI Plan 데이터를 삭제할까요?|Delete all BOKKI Plan data?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Planのデータをすべて削除しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要删除所有 BOKKI Plan 数据吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除所有 BOKKI Plan 資料嗎？"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle BOKKI Plan-Daten löschen?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer toutes les données BOKKI Plan ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminare tutti i dati di BOKKI Plan?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Eliminar todos los datos de BOKKI Plan?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluir todos os dados do BOKKI Plan?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa toàn bộ dữ liệu BOKKI Plan?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus semua data BOKKI Plan?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบข้อมูล BOKKI Plan ทั้งหมดไหม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Plan का सारा डेटा हटाएँ?"
+          }
+        }
+      }
+    },
     "모든 권한이 확인되면 GPS와 센서 기록이 5분 간격으로 자동 시작됩니다.|GPS and sensor recording starts automatically every 5 minutes after all permissions are verified." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -266340,6 +266109,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सारा डेटा मिटाने की स्क्रीन खोलें?"
+          }
+        }
+      }
+    },
+    "모든 데이터 삭제|Delete all data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべてのデータを削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除所有数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除所有資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Daten löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer toutes les données"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elimina tutti i dati"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar todos los datos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluir todos os dados"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa toàn bộ dữ liệu"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus semua data"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบข้อมูลทั้งหมด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सारा डेटा हटाएँ"
           }
         }
       }
@@ -328560,83 +328406,6 @@
         }
       }
     },
-    "오늘 원본 파일을 만들지 못했습니다.|Couldn't create today's raw data file." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今日の元データファイルを作成できませんでした。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法创建今天的原始数据文件。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法建立今天的原始資料檔案。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Rohdatendatei von heute konnte nicht erstellt werden."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible de créer le fichier de données brutes du jour."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile creare il file di dati grezzi di oggi."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se pudo crear el archivo de datos sin procesar de hoy."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível criar o arquivo de dados brutos de hoje."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không thể tạo tệp dữ liệu gốc của hôm nay."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak dapat membuat file data mentah hari ini."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "สร้างไฟล์ข้อมูลดิบของวันนี้ไม่ได้"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "आज की रॉ डेटा फ़ाइल नहीं बन सकी।"
-          }
-        }
-      }
-    },
     "오늘 이동한 경로에 찍힌 고양이 발자국입니다. 발자국을 따라가면 하루 동안 탐험한 길을 되짚어볼 수 있어요.|Cat pawprints stamped along today's route. Follow them to retrace the path you explored." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -344961,83 +344730,6 @@
         }
       }
     },
-    "이곳의 좌표를 Apple 지도에서 찾지 못했습니다. 다른 결과를 골라 주세요.|Couldn't find this place's coordinates in Apple Maps. Pick another result." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この場所の座標をAppleマップで見つけられませんでした。別の結果を選んでください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未能在 Apple 地图中找到此地点的坐标。请选择其他结果。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法在 Apple 地圖中找到此地點的座標。請選擇其他結果。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Koordinaten dieses Ortes wurden in Apple Karten nicht gefunden. Wähle ein anderes Ergebnis."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible de trouver les coordonnées de ce lieu dans Apple Plans. Choisissez un autre résultat."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile trovare le coordinate di questo luogo in Mappe di Apple. Scegli un altro risultato."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se encontraron las coordenadas de este lugar en Mapas de Apple. Elige otro resultado."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível encontrar as coordenadas deste local no Mapas da Apple. Escolha outro resultado."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không tìm thấy tọa độ của địa điểm này trong Apple Maps. Hãy chọn kết quả khác."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Koordinat tempat ini tidak ditemukan di Apple Maps. Pilih hasil lain."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ไม่พบพิกัดของสถานที่นี้ใน Apple Maps โปรดเลือกผลลัพธ์อื่น"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Maps में इस स्थान के निर्देशांक नहीं मिले। कोई दूसरा परिणाम चुनें।"
-          }
-        }
-      }
-    },
     "이날의 활동이 모두 확인되었습니다.|All activity for this day is confirmed." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -357743,83 +357435,6 @@
         }
       }
     },
-    "장소 고르기|Choose a place" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "場所を選ぶ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择地点"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇地點"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ort auswählen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisir un lieu"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli un luogo"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elegir un lugar"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escolher um local"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn địa điểm"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih tempat"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เลือกสถานที่"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "स्थान चुनें"
-          }
-        }
-      }
-    },
     "장소 기록|Places" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -358667,83 +358282,6 @@
         }
       }
     },
-    "장소 지우기|Remove place" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "場所を削除"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "移除地点"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "移除地點"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ort entfernen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retirer le lieu"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rimuovi luogo"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quitar lugar"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remover local"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa địa điểm"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hapus tempat"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ลบสถานที่"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "स्थान हटाएँ"
-          }
-        }
-      }
-    },
     "장소 찾기|Find a place" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -359202,83 +358740,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जगह छोड़ने के तीन मिनट बाद।"
-          }
-        }
-      }
-    },
-    "장소에 도착하면 메모와 예상 지출을 보여 주고, 「계획과 실제」에서 견줍니다.|Shows your note and planned spend on arrival, and compares them in Plan vs actual." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "場所に到着するとメモと予定の支出を表示し、「予定と実際」で比べます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "到达地点时显示备注和预计支出，并在“计划与实际”中进行对比。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "抵達地點時顯示備註和預計支出，並在「計畫與實際」中進行比較。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zeigt bei der Ankunft deine Notiz und die geplante Ausgabe und vergleicht sie in „Plan und Realität“."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Affiche votre note et la dépense prévue à l’arrivée, et les compare dans « Prévu et réel »."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All’arrivo mostra la nota e la spesa prevista, e le confronta in «Piano e realtà»."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Al llegar muestra tu nota y el gasto previsto, y los compara en «Plan y realidad»."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ao chegar, mostra sua nota e o gasto previsto, e os compara em “Plano e realidade”."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khi đến nơi sẽ hiện ghi chú và chi tiêu dự kiến, rồi so sánh trong “Kế hoạch và thực tế”."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Menampilkan catatan dan rencana pengeluaran saat tiba, lalu membandingkannya di “Rencana dan kenyataan”."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เมื่อถึงสถานที่จะแสดงโน้ตและค่าใช้จ่ายที่วางแผนไว้ และเปรียบเทียบใน “แผนกับความจริง”"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पहुँचने पर आपका नोट और अनुमानित खर्च दिखाता है, और “योजना बनाम वास्तविक” में उनकी तुलना करता है।"
           }
         }
       }
@@ -380689,83 +380150,6 @@
         }
       }
     },
-    "추천 입력 {0}|Use suggestion {0}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "候補{0}を使う"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用建议 {0}"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用建議 {0}"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vorschlag {0} verwenden"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utiliser la suggestion {0}"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usa il suggerimento {0}"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usar sugerencia {0}"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usar sugestão {0}"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dùng gợi ý {0}"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gunakan saran {0}"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ใช้คำแนะนำ {0}"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सुझाव {0} इस्तेमाल करें"
-          }
-        }
-      }
-    },
     "추천: {0}|Suggested: {0}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -398164,83 +397548,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अभी का मौसम {0}, {1}"
-          }
-        }
-      }
-    },
-    "현재 날씨와 미세먼지 상세 보기|View current weather and air quality details" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "現在の天気と大気質の詳細を表示"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看当前天气和空气质量详情"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看目前天氣與空氣品質詳情"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktuelles Wetter und Details zur Luftqualität ansehen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voir la météo actuelle et les détails de la qualité de l'air"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vedi il meteo attuale e i dettagli sulla qualità dell'aria"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ver el tiempo actual y los detalles de la calidad del aire"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ver clima atual e detalhes da qualidade do ar"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xem thời tiết hiện tại và chi tiết chất lượng không khí"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lihat detail cuaca dan kualitas udara saat ini"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ดูรายละเอียดสภาพอากาศและคุณภาพอากาศปัจจุบัน"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "मौजूदा मौसम और वायु गुणवत्ता का विवरण देखें"
           }
         }
       }

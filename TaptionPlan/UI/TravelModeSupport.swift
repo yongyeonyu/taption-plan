@@ -765,8 +765,13 @@ enum TravelCoursePlanner {
     /// 코스 끝에 붙일 새 곳의 시각: 그날 마지막 일정 끝(없으면 오늘은 지금, 아니면 09:00)에서 종류 기본 길이만큼. 하루를 넘으면 자정까지로 줄인다.
     /// 밤의 잠(수면)은 하루의 끝이라 건너뛰고 그 앞 일정 뒤에 잇는다.
     static func nextSlot(blocks: [TravelPlanTableModel.Block], kind: String, nowMinute: Int?) -> (start: Int, duration: Int) {
-        let start = TravelQuickEntry.nextStart(lastEndMinute: blocks.filter { $0.kind != "sleep" }.map(\.endMinute).max(), nowMinute: nowMinute)
+        let start = nextStart(blocks: blocks, nowMinute: nowMinute)
         return (start, max(TravelQuickEntry.step, min(TravelQuickEntry.defaultDuration(kind: kind), 1_440 - start)))
+    }
+
+    /// 새 일정의 시작: 잠·숙소는 밤새 하루 끝까지 걸치므로 끝을 세지 않는다(그러면 23:45에 붙는다).
+    static func nextStart(blocks: [TravelPlanTableModel.Block], nowMinute: Int?) -> Int {
+        TravelQuickEntry.nextStart(lastEndMinute: blocks.filter { $0.kind != "sleep" && $0.kind != "lodging" }.map(\.endMinute).max(), nowMinute: nowMinute)
     }
 
     /// 코스 순서 바꾸기(C3): `from`번째를 `to` 자리(옮기기 전 번호)로. 바뀐 구간 안에서만 시각을 다시 잡는다 —

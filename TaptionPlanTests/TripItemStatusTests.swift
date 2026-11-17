@@ -55,6 +55,35 @@ final class TripItemStatusTests: XCTestCase {
         XCTAssertEqual(segments.first?.tripStatus, .planned)
     }
 
+    /// AI 가져오기의 긴 메모도 500자로 줄어 저장된다: 공유 방이 4KB 항목 한도로 올리기를 거절하지 않게(REV1117A01).
+    @MainActor
+    func testImportedLongNoteIsCappedLikeATypedNote() async throws {
+        let model = AppModel(repository: InMemoryPlanRepository(), cloudSyncService: nil)
+        await model.bootstrapLocalSnapshot()
+        let note = String(repeating: "가", count: 2_000)
+        let text = #"{"format":"bokki-trip","version":1,"tripId":"t1","title":"t","items":[{"id":"a","type":"sight","title":"왓 아룬","start":"2026-12-02T09:00+07:00","note":"\#(note)","place":{"lat":13.74,"lng":100.49}}]}"#
+        await model.applyTripImport(try TripImportParser.parse(text).get())
+        XCTAssertEqual(model.settings.travelTripItems?.first?.note?.count, 500)
+    }
+
+    /// 상태를 바꿔도 「갔음·건너뜀」 확정은 남는다(REV1117A01).
+    @MainActor
+    func testChangingStatusKeepsTheVisitedOrSkippedConfirmation() async throws {
+        let model = AppModel(repository: InMemoryPlanRepository(), cloudSyncService: nil)
+        await model.bootstrapLocalSnapshot()
+        let text = #"{"format":"bokki-trip","version":1,"tripId":"t1","title":"t","items":[{"id":"a","type":"sight","title":"왓 아룬","start":"2026-12-02T09:00+07:00","status":"booked","place":{"lat":13.74,"lng":100.49}}]}"#
+        await model.applyTripImport(try TripImportParser.parse(text).get())
+        model.setTripItemStatus(.booked, tripID: "t1", itemID: "a")
+        model.snapshot.settings.travelTripItems?[0].status = "visited/booked"
+        model.snapshot.settings.travelPlanStops[0].status = "visited/booked"
+        model.setTripItemStatus(.tentative, tripID: "t1", itemID: "a")
+        XCTAssertEqual(model.settings.travelTripItems?.first?.status, "visited/tentative")
+        XCTAssertEqual(model.settings.travelPlanStops.first?.status, "visited/tentative")
+        model.setTripItemStatus(.planned, tripID: "t1", itemID: "a")
+        XCTAssertEqual(model.settings.travelTripItems?.first?.status, "visited")
+        XCTAssertEqual(model.settings.travelPlanStops.first?.status, "visited")
+    }
+
     // MARK: - REV1110A06
 
     private func stored(_ plan: TripImportPlan) -> [TravelTripItem] {
@@ -440,9 +469,16 @@ final class TravelTripUnitTests: XCTestCase {
         let late = TravelQuickEntrySheet.movingStart(to: 1_400, duration: 90)
         XCTAssertEqual([late.start, late.duration], [1_400, 40], "끝이 24시를 넘지 않게 길이를 줄인다")
         XCTAssertEqual(TravelQuickEntrySheet.movingStart(to: 2_000, duration: 30).start, 1_435)
+        let overnight = TravelQuickEntrySheet.movingStart(to: 1_430, duration: 425, from: 1_435)
+        XCTAssertEqual([overnight.start, overnight.duration], [1_430, 425], "자정을 넘는 일정은 시작을 옮겨도 길이를 자르지 않는다(REV1117A01)")
+        XCTAssertEqual(TravelQuickEntrySheet.movingStart(to: 1_400, duration: 90, from: 600).duration, 40, "넘지 않던 일정은 예전처럼 24시에서 줄인다")
         XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 722, start: 600), 120)
         XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 500, start: 600), 5, "종료는 시작보다 5분 이상 뒤")
         XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 1_440, start: 1_380), 60)
+        XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 1_440 + 210, start: 1_380, maxEnd: TravelQuickEntrySheet.maxEnd(for: .flight)), 270, "밤 비행은 다음 날 끝까지 잡을 수 있다(REV1117A01)")
+        XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 3_000, start: 1_380, maxEnd: TravelQuickEntrySheet.maxEnd(for: .flight)), 1_500, "다음 날 24시까지")
+        XCTAssertEqual(TravelQuickEntrySheet.maxEnd(for: .meal), 1_440)
+        XCTAssertEqual(TravelQuickEntrySheet.movingStart(to: 1_400, duration: 390, maxEnd: 2_880).duration, 390, "비행은 시작을 옮겨도 길이를 자르지 않는다")
     }
 
     /// 일상 → 여행 바로 전환: 보던 날을 품은 여행, 여행 중, 마지막으로 연 여행 순.
@@ -666,6 +702,9 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual([slot.start, slot.duration], [700, 45], "그날 마지막 일정 끝에서 잇는다")
         slot = TravelCoursePlanner.nextSlot(blocks: [block(1_200, 1_400)], kind: "lodging", nowMinute: nil)
         XCTAssertEqual([slot.start, slot.duration], [1_400, 40], "하루를 넘지 않게 줄인다")
+        slot = TravelCoursePlanner.nextSlot(blocks: [block(0, 1_440, kind: "lodging"), block(0, 420, kind: "sleep"), block(600, 700)], kind: "meal", nowMinute: nil)
+        XCTAssertEqual([slot.start, slot.duration], [700, 60], "하루 종일 걸친 숙소·잠은 끝으로 세지 않는다(REV1117A01)")
+        XCTAssertEqual(TravelCoursePlanner.nextStart(blocks: [block(0, 1_440, kind: "lodging")], nowMinute: nil), 540, "숙소뿐인 날은 09:00")
 
         XCTAssertEqual(TravelCoursePlanner.kind(forCategory: "MKPOICategoryRestaurant"), "meal")
         XCTAssertEqual(TravelCoursePlanner.kind(forCategory: "MKPOICategoryCafe"), "cafe")

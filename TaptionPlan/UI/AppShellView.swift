@@ -4,7 +4,6 @@ import SwiftUI
 import UIKit
 
 struct AppShellView: View {
-    private static let legacyUIEnabled = false
     private static let liveActivityTicker = Timer.publish(every: 30, on: .main, in: .common).autoconnect() // body마다 새로 만들지 않는다(PRF1101A01)
 
     @Environment(\.scenePhase) private var scenePhase
@@ -18,7 +17,6 @@ struct AppShellView: View {
     @State private var proAccess = TaptionProAccessController()
     private let sensorLiveActivityController =
         SensorCollectionLiveActivityController.shared
-    @State private var showsMapHome = true
     @State private var isSecurityStateReady = false
     @State private var hasCompletedInitialProRefresh = false
     @State private var hasCompletedInitialMapShellPreparation = false
@@ -59,15 +57,6 @@ struct AppShellView: View {
                 markInitialDestinationRendered()
             }
             .toolbar(.hidden, for: .navigationBar)
-        }
-        .sheet(isPresented: addPlanSheetBinding) {
-            AddPlanSheet(model: model)
-        }
-        .sheet(item: quickActionSheetBinding) { item in
-            QuickActionSheet(model: model, item: item)
-        }
-        .sheet(item: planEditorSheetBinding) { request in
-            PlanEditorSheet(model: model, planID: request.id)
         }
         .sheet(isPresented: $model.isPermissionOnboardingPresented) {
             PermissionOnboardingSheet(
@@ -227,27 +216,6 @@ struct AppShellView: View {
                     model.clearError()
                 }
             }
-        )
-    }
-
-    private var addPlanSheetBinding: Binding<Bool> {
-        Binding(
-            get: { Self.legacyUIEnabled && model.isAddPlanPresented },
-            set: { model.isAddPlanPresented = $0 }
-        )
-    }
-
-    private var quickActionSheetBinding: Binding<QuickActionItem?> {
-        Binding(
-            get: { Self.legacyUIEnabled ? model.selectedAction : nil },
-            set: { model.selectedAction = $0 }
-        )
-    }
-
-    private var planEditorSheetBinding: Binding<PlanEditorRequest?> {
-        Binding(
-            get: { Self.legacyUIEnabled ? model.planEditorRequest : nil },
-            set: { model.planEditorRequest = $0 }
         )
     }
 
@@ -688,87 +656,17 @@ struct AppShellView: View {
         handleOpenURL(url)
     }
 
-    @ViewBuilder
     private var content: some View {
-        if Self.legacyUIEnabled, let detail = model.detail {
-            switch detail {
-            case .group:
-                GroupGanttView(model: model)
-            case .goal:
-                GoalDetailView(model: model)
-            case .actual(let recordID):
-                ActualRecordDetailView(model: model, recordID: recordID)
-            case .actualEditor(let recordID):
-                ActualRecordDetailView(
-                    model: model,
-                    recordID: recordID,
-                    opensEditor: true
-                )
-            case .actualSegment(let recordID, let span):
-                ActualRecordDetailView(
-                    model: model,
-                    recordID: recordID,
-                    correctionSpan: span
-                )
-            case .actualSegmentEditor(let recordID, let span):
-                ActualRecordDetailView(
-                    model: model,
-                    recordID: recordID,
-                    correctionSpan: span,
-                    opensEditor: true
-                )
-            case .unconfirmedEditor(let span):
-                UnconfirmedRecordDetailView(model: model, span: span)
-            case .locationTimeline:
-                LocationTimelineView(model: model)
-            case .memo:
-                MemoDetailView(model: model)
-            case .inference:
-                InferenceDetailView(model: model)
-            case .catPicker:
-                CatPickerView(model: model)
-            case .categoryManager:
-                CategoryManagerView(model: model)
-            case .categorySetup:
-                CategorySetupView(model: model)
-            case .widgetPreview:
-                WidgetPreviewView(model: model)
+        MapHomeView(
+            model: model,
+            proAccess: proAccess,
+            onInitialDataReady: {
+                hasCompletedInitialMapShellPreparation = true
+                recordLaunchGate("map_shell")
+                advanceInitialLaunchProgress(to: 0.98)
+                dismissInitialLaunchOverlayIfReady()
             }
-        } else {
-            rootContent
-        }
-    }
-
-    @ViewBuilder
-    private var rootContent: some View {
-        if Self.legacyUIEnabled && !showsMapHome {
-            legacyRootContent
-        } else {
-            MapHomeView(
-                model: model,
-                proAccess: proAccess,
-                onInitialDataReady: {
-                    hasCompletedInitialMapShellPreparation = true
-                    recordLaunchGate("map_shell")
-                    advanceInitialLaunchProgress(to: 0.98)
-                    dismissInitialLaunchOverlayIfReady()
-                }
-            )
-        }
-    }
-
-    @ViewBuilder
-    private var legacyRootContent: some View {
-        switch model.selectedTab {
-        case .schedule:
-            ScheduleView(model: model)
-        case .goals:
-            GoalsView(model: model)
-        case .review:
-            ReviewView(model: model)
-        case .settings:
-            SettingsView(model: model)
-        }
+        )
     }
 }
 

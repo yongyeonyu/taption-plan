@@ -17,6 +17,11 @@ final class TravelPuzzleTests: XCTestCase {
         XCTAssertEqual(TravelPuzzle.pieces(items: items, tripID: "t1").map(\.id), ["early", "late"])
     }
 
+    func testConfirmedTentativeItemsAreNotPieces() {
+        let items = [item("done", hour: 1, status: "visited/tentative"), item("skip", hour: 2, status: "skipped/tentative"), item("open", hour: 3, status: "tentative")]
+        XCTAssertEqual(TravelPuzzle.pieces(items: items, tripID: "t1").map(\.id), ["open"])
+    }
+
     func testConflictsIgnoreOtherPiecesAndTouchingEdges() {
         let piece = TravelPuzzle.pieces(items: [item("p", hour: 3, hours: 1.5, status: "tentative")], tripID: "t1")[0]
         let items = [item("p", hour: 3, hours: 1.5, status: "tentative"), item("other piece", hour: 3, status: "tentative"),

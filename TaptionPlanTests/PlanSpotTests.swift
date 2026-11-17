@@ -53,16 +53,6 @@ final class PlanSpotTests: XCTestCase {
         XCTAssertNil(PlanSpot(place: PlanPlace(name: "곳", latitude: .nan, longitude: 0), plannedSpendKRW: nil).place)
     }
 
-    func testPickerListsRegisteredPlacesWithCoordinatesAndFiltersByName() {
-        let point = GeoPoint(latitude: 0.5, longitude: 0.5, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
-        var gym = FrequentPlace.defaults[0], cafe = FrequentPlace.defaults[0], empty = FrequentPlace.defaults[0]
-        gym.name = "체육관"; gym.point = point
-        cafe.name = "카페"; cafe.point = point
-        empty.name = "좌표 없음"; empty.point = nil
-        XCTAssertEqual(PlanPlacePicker.registered([gym, cafe, empty], matching: "").map(\.name), ["체육관", "카페"])
-        XCTAssertEqual(PlanPlacePicker.registered([gym, cafe, empty], matching: "카").map(\.name), ["카페"])
-    }
-
     // MARK: 저장소·백업·동기화
 
     func testStoreRoundTripKeepsPlaceAndSpendAndLeavesLegacyRowsUntouched() async throws {

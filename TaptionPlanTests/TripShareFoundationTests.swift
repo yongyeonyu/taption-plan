@@ -109,6 +109,17 @@ final class TripShareFoundationTests: XCTestCase {
         XCTAssertNil(TripShareMapping.entryID(roomItemID: "member-3"))
     }
 
+    /// 방이나 입력칸의 터무니없는 값이 앱을 멈추지 않는다(REV1117A01).
+    func testAbsurdValuesNeitherCrashNorOverflow() {
+        XCTAssertEqual(TripShareMapping.minorUnits(.infinity, currency: "KRW"), 0)
+        XCTAssertEqual(TripShareMapping.minorUnits(.nan, currency: "USD"), 0)
+        XCTAssertEqual(TripShareMapping.minorUnits(1e30, currency: "USD"), ShareSettlementCalculator.maxAmount)
+        XCTAssertEqual(TripShareMapping.minorUnits(12.34, currency: "USD"), 1_234)
+        XCTAssertEqual(TripShareMapping.clampedWhole(-1e30), -ShareSettlementCalculator.maxAmount)
+        let huge = SharePlanContent(day: "2031-10-02", start: Int.max, title: "x")
+        XCTAssertNil(TripShareMapping.draft(huge, roomItemID: "plan-00000001", tripID: "t1", existing: []))
+    }
+
     func testExpensesRoundTripWithNames() throws {
         let cards = [1: ShareMemberCard(name: "가을", color: "#111111"), 2: ShareMemberCard(name: "가을", color: "#222222"), 3: ShareMemberCard(name: "봄", color: "#333333")]
         let names = TripShareNames(me: 2, cards: cards, guests: [ShareGuest(id: 1, name: "봄")])

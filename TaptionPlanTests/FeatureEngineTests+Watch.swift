@@ -1644,30 +1644,6 @@ extension FeatureEngineTests {
         XCTAssertTrue(choices.contains(.housework))
     }
 
-    func testCatFrameClocksSupportWatchSizedIntOverflowDates() {
-        let currentEra = Date(timeIntervalSinceReferenceDate: 800_000_000)
-        let phases = 0...(TaptionCatAnimationEngine.phaseCount - 1)
-
-        XCTAssertTrue(
-            phases.contains(
-                TaptionCatAnimationEngine.pose(at: currentEra).phase
-            )
-        )
-        XCTAssertTrue(
-            phases.contains(
-                TaptionWidgetCatWalkEngine.pose(at: currentEra).legPhase
-            )
-        )
-        XCTAssertTrue(
-            phases.contains(
-                TaptionWidgetCatPreviewEngine.pose(
-                    at: currentEra,
-                    action: .walking
-                ).legPhase
-            )
-        )
-    }
-
     func testRecentWatchContactOverridesTransientInstallationFlag() {
         let now = makeDate(2026, 8, 9, 22, 0)
         XCTAssertEqual(

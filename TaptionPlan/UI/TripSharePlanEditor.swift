@@ -126,12 +126,12 @@ enum TripSharePlanEditor {
     // MARK: 화면이 부르는 편집(공유하지 않는 여행이면 앱 모델 그대로)
 
     static func addItem(
-        model: AppModel, tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int,
+        model: AppModel, tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int, endOffsetSeconds: Int? = nil,
         place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil, parentItemID: String? = nil
     ) async -> String? {
         guard model.isSharedTrip(tripID) else {
             return await model.addTripItem(
-                tripID: tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: offsetSeconds, place: place, note: note,
+                tripID: tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: offsetSeconds, endOffsetSeconds: endOffsetSeconds, place: place, note: note,
                 colorHex: colorHex, plannedSpendKRW: plannedSpendKRW, parentItemID: parentItemID
             )
         }
@@ -140,7 +140,7 @@ enum TripSharePlanEditor {
         // 방에서 처음 만드는 일정은 방 항목 id가 곧 로컬 번호다.
         let item = TravelTripItem(
             tripID: tripID, itemID: ShareIdentifiers.itemID(), kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
-            startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: nil, note: AppModel.cleanTripNote(note),
+            startOffsetSeconds: offsetSeconds, endOffsetSeconds: endOffsetSeconds ?? offsetSeconds, planID: nil, note: AppModel.cleanTripNote(note),
             colorHex: TravelTripItem.cleanColorHex(colorHex), plannedSpendKRW: TravelTripItem.cleanPlannedSpend(plannedSpendKRW), parentItemID: parentItemID
         )
         guard await commit(model: model, tripID: tripID, upserts: [item], places: [item.itemID: place?.name]) else { return nil }

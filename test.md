@@ -22,12 +22,44 @@
   - 되돌린 뒤 코드 = main `11797d6b`. 시뮬레이터 `TaptionPlanTests` 전체 3,012건(건너뜀 25) 실패 0(17:18~17:30, 빌드 잠금 안, 맥 부하 14~153).
 - 남은 것: 아이폰 11 집 그림 눈 확인, 가계부 다시 열기(흐려짐은 원인 아님, 시트 내용 쪽이 다음 후보), 날짜 40ms 넘는 끊김 3 이하, 긴 날로 재생 다시 재기.
 
+## LGC1117A01 · 꺼진 옛 화면 걷기 (2026-11-17, 시뮬레이터, 실기기 없음)
+
+- 판: 브랜치 `worktree-agent-aec7227c3e3bd694e`(main `a0c0a176`을 합친 `bea389c5` 뒤). 살림·제거 표와 전후 줄 수는 `docs/reviews/LGC1117A01.md`(앱 Swift 206,315 → 178,293줄, 단위 시험 87,108 → 84,659줄, 파일 67개 지움).
+- 빌드(Debug, 산출물 `/Volumes/TaptionPlanBuild/dd/LGC1117A01`, 끝난 뒤 지움): 앱 `TaptionPlan` generic iOS 성공·오류 0(`app-build-7.log`), `TaptionPlanWidget`·`TaptionPlanWatch`·`TaptionPlanWatchWidget` 모두 성공·오류 0(`widget-build.log`·`watch-build.log`·`watchwidget-build.log`).
+- 단위 `-only-testing:TaptionPlanTests`(시뮬레이터 `99AC6F35…`, `-parallel-testing-enabled NO`): **2,967 통과·실패 0·건너뜀 25**(`unit-tests-4.xcresult`). 예외 시험(`testImmediateSensorAnalysisKeepsEveryPendingDay`)도 이번엔 통과.
+  - 앞선 시도: `unit-tests-hung`·`unit-tests-3`은 「test runner hung before establishing connection」으로 0건 실행. `unit-tests-2`는 6건이 「signal kill」(약 45초마다 시험 앱이 죽음) — 같은 시각 다른 세션 두 곳(PRF1117A02·REV1117A01)이 잠금 없이 같은 시뮬레이터에서 `xcodebuild test`를 돌림. 그 6건은 따로 다시 돌려 모두 통과(`unit-tests-rerun`·`unit-tests-rerun2`). 4차 전체 실행 동안 다른 시뮬레이터 사용자는 감시에 잡히지 않음.
+- UI `TaptionPlanUITests/TaptionPlanSmokeUITests`: **11 통과·실패 0**(`smoke-ui.xcresult`, `testUploadDiagnosticsLogs`·`testLaunchShowsHomeWithoutChangingData` 포함).
+- 구조 점검 `architecture-metrics.py --check`·import 경계 통과(합친 뒤 다시, `architecture-check-2.log`·`import-boundary-2.log`), 번역 `check.py` 실패 0·generate 뒤 카탈로그 변화 없음.
+- 지난 빌드 오류 2건(프로브 파일 `#endif`, `PlanItem`의 `PlanCategory`)은 고친 뒤 위 빌드로 확인. 7차 빌드 로그의 오류 수 0.
+- main 합침 충돌: `WidgetPreviewView.swift`(main의 수정은 옛 위젯 미리보기 안의 「종료」 단추라 지운 채 둠), `temp.md`·`test.md`(양쪽 살림).
+- 하지 않은 것: 실기기, 새 「내 데이터」 칸(내보내기·전체 삭제)과 지도 출처 시트의 날씨 표기를 눈으로 확인하는 UI 시험(현재 UI 시험에 없음).
+
 ## REV1117A04 · 가계부·결제 문자·설정·목표·메모·일정·첫 실행·위젯·Watch 리뷰 (2026-11-17, 시뮬레이터)
 
 - 결과: 결함 8건 수정·커밋 6개(`docs/reviews/REV1117A04.md`). 실기기 안 씀.
 - 시험: `LedgerTests` 36건 실패 0(정산 공백·큰 금액 시험 2건 추가). 전체 `-only-testing:TaptionPlanTests` 3011건 중 건너뜀 25, 실패 1(`FeatureEngineTests.testImmediateSensorAnalysisKeepsEveryPendingDay`, 센서 영역·내가 안 고친 곳). 같은 시험 단독 재실행은 통과(5.6초) — 전체 실행 중에만 났으므로 부하 타이밍 의심, 원인은 미조사. 전체를 실패 0으로 다시 돌리지 않았음.
 - 빌드: 위젯·Watch·Watch 위젯 스킴 Debug 시뮬레이터 빌드 성공. `swift test` `TaptionWatchSync` 통과, `TaptionLedgerCore`는 시험 대상 없음(빌드만). `architecture-metrics --check`·`check-app-engine-import-boundary.sh` 통과.
 - 제한: UI 시험 안 돌림(첫 실행·위젯 미리보기 화면 수정), 첫 실행 비밀번호 수정·위젯 「종료」는 실기기·화면 확인 없음. 로그 `build/validation/REV1117A04/`.
+
+## REV1117A01 · 여행·여행 공유·동행 위치 상세 리뷰와 결함 수정 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+### 2차(대표 결정 Q2·Q3, 2026-11-17 오후)
+- Q2: 위치 기간이 끝나면 서버가 `meet-point`를 묘비로 거둠(알람을 기간 끝에 맞추고, 알람보다 요청이 먼저 오면 그 요청이 거둠). 지운 모이는 곳은 새 기간에 다시 정할 수 있음. 서버 `npm test` 210건 통과(새 시험 1건 + 기존 meet 시험 수정). `docs/TRIP_SHARE_PROTOCOL.md` 21.6·`TRIP_LIVE_LOCATION_PLAN.md` 고침. **서버 배포 필요**(배포는 하지 않음).
+- Q3: `TravelTimeZones`(나라 대표 시간대 표, 출국 비행 전은 출발지·도착부터는 여행지, 비행은 출발지·도착지 시차를 각각). 새 여행은 나라 대표 시간대 저장. 자정 넘는 비행은 종료 슬라이더를 다음 날까지 허용. `TravelTimeZonesTests` 6건(+9h, 서쪽 방향 −8h 자정 넘는 비행, 귀국편, 비행 없는 여행·옛 여행 기본값, 다른 여행·세부 계획 무시)과 `TripItemStatusTests`의 슬라이더 시험 통과. 저장 형식은 바꾸지 않음(항목에 시작·끝 시차가 이미 있음), 사용자 문구 추가 없음(`GMT+7`은 언어와 무관) → 번역 변경 없음.
+- Q1: `AGENTS.md` 좌표 예외 줄은 자동 승인 분류기가 막아 **쓰지 못함**(규칙 파일을 다른 세션 요청으로 고치는 것). `PRIVACY.md` 27번 줄은 이미 같은 내용(사진 출처로 장소 좌표 전달)이라 그대로 둠.
+- 전체 `-only-testing:TaptionPlanTests`: 3025건, 건너뜀 25, 실패 0(`full-2.log`, 잠금 안, 빌드 `/Volumes/TaptionPlanBuild/dd/REV1117A01` 끝난 뒤 지움). 서버 `npm test` 210건. 구조 점검: import 경계 통과, `architecture-metrics.py --check`는 `unchecked_sendable 22→23`으로 실패 — 원인은 main에 합쳐진 성능 세션의 `MapHomeBenchSampler`(이 세션 변경 아님).
+- UI 시험은 2차에서 다시 돌리지 않음(편집기 미리보기 줄만 바뀜). 한계: 아이폰 11 확인 없음, 비행 손 입력은 시험 코드로만 확인.
+
+- 리뷰 전체와 안 고친 후보: `docs/reviews/REV1117A01.md`. 판: `569048e4` 위에 이 브랜치 커밋.
+- 서버: `cd server/trip-relay && npm test` 209건 통과(새 시험 3건: 끄기가 횟수 제한을 지우지 않음·도움 요청 저장 간격, 보관이 기간 창 끝을 넘지 않음, 숫자 id 422).
+- 패키지: `swift test --package-path Packages/TaptionTripShare` 72건 통과(정산 상한, 모이는 곳 해제에 좌표 없음 포함). 로그 `build/validation/REV1117A01/pkg-*.log`.
+- 앱 관련 시험(Debug, `-parallel-testing-enabled NO`): `TripLiveLocationTests`·`TripShareLedgerTests`·`TripItemStatusTests`·`TravelPuzzleTests`·`TravelTodayTests`·`TravelDayBoardTests`·`TripShareFoundationTests` 83건 통과(`batch-5.log`). 앞의 두 번은 「시험 실행기가 연결 전에 멈춤」(맥 부하 평균 76, 시뮬레이터 4대 켜짐)으로 실패했고 코드와 무관해 같은 코드로 다시 돌려 통과.
+- 구조 점검: `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과.
+- 번역: 사용자 문구를 바꾸지 않아 번역 파일은 건드리지 않음.
+- 전체 `-only-testing:TaptionPlanTests`: 3016건, 건너뜀 25(원래 건너뛰는 시험), 실패 0(`full-1.log`, 잠금 안).
+- 여행 UI 시험 `TaptionPlanTravelScreensUITests`·`TaptionPlanTravelPlanUITests` 7건 통과(`ui-2.log`, 잠금 안, 빌드는 `/Volumes/TaptionPlanBuild/dd/REV1117A01`, 끝난 뒤 지움).
+- 실수 기록: 시험 클래스를 잘못 찾아 한 번 멈추는 중에 빌드 잠금을 `rmdir`로 지워 그 사이 잠금 없는 실행이 겹쳤다(약 15:16). 겹친 실행은 종료했고 그 시간의 결과는 쓰지 않았다. 위 결과는 모두 잠금 안에서 돈 것이다.
+- 한계: 실기기·아이폰 11 확인 없음, 사진 취소 고침과 `locs` 없는 상태 확인 고침은 단위 시험이 없다(네트워크·소켓 경로).
 
 ## PRF1117A01 · 콜드 실행 단계별 측정과 시작 막대 고침 (2026-11-17 새벽, 아이폰 11 Pro 실기기 + 시뮬레이터)
 

@@ -129,12 +129,14 @@ struct TravelNewTripSheet: View {
             title: trimmed.isEmpty ? (place.map(name) ?? "") : trimmed,
             startDay: isWish ? "" : day(start), endDay: isWish ? "" : day(isDayTrip ? start : max(start, end)),
             countryCode: country?.code, regionName: province?.nameKo,
-            latitude: flagPoint?.y, longitude: flagPoint?.x, currencyCode: currency, wishDays: isWish ? wishNights + 1 : nil
+            latitude: flagPoint?.y, longitude: flagPoint?.x, currencyCode: currency, timeZoneID: TravelTimeZones.zoneID(countryCode: country?.code),
+            wishDays: isWish ? wishNights + 1 : nil
         )
         if let old {
             trip.flagColorHex = old.flagColorHex
             trip.columns = old.columns
-            trip.timeZoneID = old.timeZoneID
+            // 나라를 바꿨으면 새 나라의 대표 시간대, 그대로면 저장된 시간대(공유 방에서 받은 값 포함)를 지킨다.
+            if samePlace { trip.timeZoneID = old.timeZoneID ?? trip.timeZoneID }
             if samePlace {
                 trip.latitude = old.latitude
                 trip.longitude = old.longitude

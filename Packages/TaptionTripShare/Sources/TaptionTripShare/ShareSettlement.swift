@@ -42,7 +42,7 @@ public struct ShareSettlement: Sendable, Equatable {
 /// 정산 계산. 순수 함수이고 같은 입력이면 어느 기기에서나 같은 결과다(12절).
 ///
 /// 규칙
-/// - 공유 지출만 넣는다. 금액이 0 이하인 지출은 세지 않는다.
+/// - 공유 지출만 넣는다. 금액이 0 이하이거나 `maxAmount`를 넘는 지출은 세지 않는다(모든 기기가 같게 걸러야 하고, 합이 넘치지 않게).
 /// - 금액은 `amountKRW`(넣을 때의 원화 환산)가 있으면 그것을 쓰고 통화는 `KRW`로 본다. 없으면 원래 금액·통화.
 ///   통화가 다른 지출은 섞지 않는다.
 /// - 지출은 항목 id 순으로 본다. 나눌 사람(`split`)은 겹친 것을 걷어 낸 뒤 사람 순(참여자 번호 → 앱 없는 일행 id)으로 본다.
@@ -53,6 +53,8 @@ public struct ShareSettlement: Sendable, Equatable {
 ///   송금 수는 많아야 (차액이 있는 사람 수 − 1)이다.
 public enum ShareSettlementCalculator {
     public static let baseCurrency = "KRW"
+    /// 지출 한 건의 상한(가장 작은 단위). 방의 한 사람이 터무니없는 값을 써서 모든 기기의 합계가 넘치는 것을 막는다.
+    public static let maxAmount = 10_000_000_000_000
 
     public static func settle(_ entries: [ShareSettlementEntry], parties: [ShareParty]) -> [ShareSettlement] {
         let everyone = Array(Set(parties)).sorted()
@@ -60,7 +62,7 @@ public enum ShareSettlementCalculator {
         for entry in entries.sorted(by: { $0.id < $1.id }) {
             let expense = entry.expense
             let amount = expense.amountKRW ?? expense.amount
-            guard amount > 0 else { continue }
+            guard amount > 0, amount <= maxAmount else { continue }
             let currency = expense.amountKRW == nil ? expense.currency : baseCurrency
             var ledger = ledgers[currency] ?? [:]
             for party in everyone where ledger[party] == nil { ledger[party] = ShareBalance(party: party, paid: 0, owed: 0) }
