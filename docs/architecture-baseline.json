@@ -9,7 +9,7 @@
     "5000+": 0
   },
   "risk": {
-    "unchecked_sendable": 22,
+    "unchecked_sendable": 23,
     "nonisolated_unsafe": 11,
     "detached_tasks": 34,
     "force_try": 0,
