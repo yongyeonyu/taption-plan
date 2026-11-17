@@ -252,10 +252,10 @@ export async function finishTask(ctx, value) {
   return json({ ok: true, id: result.id, status: result.status });
 }
 
-// 앱이 끝난 항목(완료·실패·만료)을 지운다.
-export async function deleteFinishedTasks(ctx) {
+// 앱이 끝난 항목(완료·실패·만료)을 지운다. `all`이면 열린 일도 지운다(공유를 끄거나 잠갔을 때, REV1117A02).
+export async function deleteFinishedTasks(ctx, all = false) {
   await ensureTasks(ctx);
-  await ctx.state.call("taskRemoveFinished", {});
+  await ctx.state.call("taskRemoveFinished", all ? { all: true } : {});
   return json(null, 204);
 }
 

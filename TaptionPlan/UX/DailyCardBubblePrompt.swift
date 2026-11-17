@@ -32,8 +32,9 @@ enum DailyCardBubblePrompt {
         return calendar.nextDate(after: now, matching: match, matchingPolicy: .nextTime)
     }
 
+    /// AI가 읽는 날짜(`YYYY-MM-DD`)라 기기 달력이 불기여도 서기로 쓴다(REV1117A02).
     static func dayKey(_ date: Date, calendar: Calendar) -> String {
-        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        let parts = AssistantCommandParser.gregorian(in: calendar).dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 

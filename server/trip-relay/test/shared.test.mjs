@@ -107,7 +107,7 @@ test("candidates: filtered again on the server, counted once per device, shown o
   assert.equal((await (await send(env, "/shared/candidates", "POST", { rules: [fixtures.accept[2].in] }, second)).json()).accepted, 1);
   listed = await (await send(env, "/shared/admin/candidates", "GET", undefined, ADMIN)).json();
   assert.deepEqual(listed.candidates.map((c) => [c.type, c.match, c.result, c.count]), [["merchant_category", { contains: ["스타벅스"] }, { category: "cafe" }, 2]]);
-  assert.equal((await (await send(env, "/shared/admin/candidates?min=1", "GET", undefined, ADMIN)).json()).candidates.length, 2);
+  assert.equal((await send(env, "/shared/admin/candidates?min=1", "GET", undefined, ADMIN)).status, 422, "one device is never listed (REV1117A02)");
   const stored = JSON.stringify([...env.USER_STATE.instances.get("shared:rules").storage.map.entries()]);
   for (const secret of [master, second, "동네가게", "내 카드", "커피"]) assert.equal(stored.includes(secret), false, `the candidate store has no ${secret}`);
   assert.equal(listed.candidates[0].firstAt % 86_400_000, 0, "only the day is kept");
@@ -125,5 +125,5 @@ test("candidates: a daily cap per device and old candidates expire", async () =>
   }
   assert.equal((await send(env, "/shared/candidates", "POST", { rules: [word(999)] }, master)).status, 429);
   clock.now += (SHARED_LIMITS.candidateDays + 1) * 86_400_000;
-  assert.equal((await (await send(env, "/shared/admin/candidates?min=1", "GET", undefined, ADMIN)).json()).total, 0);
+  assert.equal((await (await send(env, "/shared/admin/candidates", "GET", undefined, ADMIN)).json()).total, 0);
 });

@@ -157,6 +157,8 @@ extension AppModel {
             result.ledgerBefore = before
             if change.delete {
                 await preferences.ledger.delete(entryID)
+                // REV1117A02: 끝난 여행의 기록을 지우면 정산 짝 기록도 다시 맞춘다(고칠 때·되돌릴 때와 같이).
+                if let tripID = before.tripID { await preferences.ledger.syncTrip(tripID) }
                 result.after = language.text("지움", "Deleted")
                 return result
             }
@@ -332,7 +334,7 @@ enum AssistantTripEdit {
             if let from = dayStops.firstIndex(where: { $0.id == stopID }) {
                 let moving = dayStops.remove(at: from)
                 dayStops.insert(moving, at: min(order, dayStops.count))
-                let positions = Dictionary(uniqueKeysWithValues: dayStops.enumerated().map { ($1.id, $0) })
+                let positions = Dictionary(dayStops.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
                 for position in stops.indices { if let value = positions[stops[position].id] { stops[position].order = value } }
             }
         }

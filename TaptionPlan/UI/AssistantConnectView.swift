@@ -500,7 +500,8 @@ struct AssistantProviderView: View {
 
     /// PIN을 받은 뒤 연결 키를 만든다.
     private func afterPIN(_ pin: String) async -> String? {
-        let old = provider == .cue ? existing?.key : nil
+        // 다시 만들면 예전 키는 끊는다. 앱은 AI마다 마지막 키만 기억해 남은 키를 화면에서 다룰 수 없다(REV1117A02).
+        let old = existing?.key
         let made = provider == .cue
             ? await store.create(for: provider, pin: pin, language: language, scope: cueAllowsEdits ? .write : .read, period: cuePeriod)
             : await store.create(for: provider, pin: pin, language: language)
@@ -509,10 +510,12 @@ struct AssistantProviderView: View {
         case let .key(key, token):
             existing = (key, token)
             advanceGuide(from: "key")
-            if provider == .cue {
-                // 새 키를 만들었으면 예전 Cue 키는 끊는다. 주소와 키는 화면에서 따로 복사한다.
-                if let old, old.id != key.id { _ = await TripRelay.revokeScopedKey(old.id) }
+            if let old, old.id != key.id {
+                _ = await TripRelay.revokeScopedKey(old.id)
                 await store.reload()
+            }
+            if provider == .cue {
+                // 주소와 키는 화면에서 따로 복사한다.
                 let full = TripRelay.cueSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)
                 copy(await TripRelay.setupLinkText(for: full) ?? full)
                 message = language.text("연결 안내를 복사했어요. Cue 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.", "Setup copied. Paste it into the Cue chat, or enter the MCP URL and key separately.")

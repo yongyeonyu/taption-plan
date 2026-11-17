@@ -221,7 +221,8 @@ enum AssistantActivityBuilder {
                 AssistantActivityDay.Memo(
                     id: memo.id.uuidString,
                     time: memo.isTimeless == true ? nil : stamp.clock(memo.occurredAt),
-                    text: String(memo.text.prefix(1_000))
+                    // REV1117A02(대표 결정): 보내는 사본만 번호를 가린다. 원문은 그대로 둔다.
+                    text: String(AssistantRedaction.mask(memo.text).prefix(1_000))
                 )
             }
     }
@@ -291,7 +292,7 @@ enum AssistantActivityBuilder {
 
     /// 등록 장소 이름, 없으면 주소처럼 보이지 않는 장소 이름, 그것도 없으면 「머문 곳」.
     static func placeName(_ stay: PlaceStay, registered: [String: String], language: MapHomeLanguage) -> String {
-        if let name = registered[stay.placeKey] { return name }
+        if let name = registered[stay.placeKey], !hasCoordinates(name) { return name }
         for candidate in [stay.displayName, stay.buildingName ?? ""] {
             let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty, !isAddressLike(trimmed) { return trimmed }
@@ -306,6 +307,11 @@ enum AssistantActivityBuilder {
     }
 
     /// 도로명·지번·좌표·구·丁目처럼 보이면 보내지 않는다(SEC1110A02에서 구·군·区·丁目·길 이름·거리 접미어를 더함).
+    /// REV1117A02: 이름 없이 등록한 장소는 「12.34560, 65.43210」을 이름으로 갖는다. 좌표는 AI로 보내지 않는다.
+    static func hasCoordinates(_ text: String) -> Bool {
+        text.range(of: #"-?\d{1,3}\.\d{3,}\s*,\s*-?\d{1,3}\.\d{3,}"#, options: .regularExpression) != nil
+    }
+
     static func isAddressLike(_ text: String) -> Bool {
         let patterns = [
             #"(로|길|번길|동|가|리|읍|면)\s*\d"#,

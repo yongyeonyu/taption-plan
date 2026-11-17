@@ -1,6 +1,6 @@
 // Body contracts the app reads (TRP1110A04, TRP1110A07, CLN1110A01).
 
-import { registry } from "./actions.js";
+import { realDay, registry } from "./actions.js";
 export const QUEUE_LIMIT = 50;
 const RETENTION_DAYS = new Set([1, 7, 30]);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -18,7 +18,7 @@ const optional = (value, check) => !given(value) || check(value);
 const targetID = (v) => nonEmpty(v, 100);
 const title = (max) => (v) => nonEmpty(v, max);
 const note = (v) => typeof v === "string" && v.length <= 1000;
-export const isDate = (v) => typeof v === "string" && DATE.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z"));
+export const isDate = (v) => typeof v === "string" && DATE.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z")) && realDay(v);
 export const isTime = (v) => typeof v === "string" && TIME.test(v);
 const isInstant = (v) => typeof v === "string" && DATETIME.test(v) && !Number.isNaN(Date.parse(v));
 // 일정 수정은 ISO 시각(오프셋 포함) 또는 그날의 HH:mm을 받는다(CLN1110A01).

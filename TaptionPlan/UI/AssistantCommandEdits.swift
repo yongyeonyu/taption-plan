@@ -252,7 +252,8 @@ extension AppModel {
             return AssistantEditResult(before: AssistantEditText.plan(plan), after: language.text("지움", "Deleted"))
         case let .updateMemo(memoID, newText, when):
             guard let memo = assistantMemo(memoID) else { return .rejected("no_memo") }
-            let text = newText ?? memo.text
+            // REV1117A02: AI는 번호를 가린 사본을 본다. 가린 번호를 그대로 돌려보내도 원문 번호를 지우지 않는다.
+            let text = newText.map { AssistantRedaction.restore($0, original: memo.text) } ?? memo.text
             guard text.count <= TaptionPlanMemoRecord.maximumTextLength else { return .rejected("memo_too_long") }
             guard !when.isEmpty else {
                 updateMemo(memo.id, text: text, kind: memo.kind)

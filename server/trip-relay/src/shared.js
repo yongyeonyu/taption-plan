@@ -142,7 +142,8 @@ export async function adminRoute(request, env, url, now) {
     }
     case "GET /shared/admin/candidates": {
       const min = Number(url.searchParams.get("min") ?? SHARED_LIMITS.minDevices);
-      if (!Number.isInteger(min) || min < 1) return json({ error: "bad_min" }, 422);
+      // 동네 가게 이름이 보이지 않게 서로 다른 기기 2대 아래로는 내리지 않는다(대표 결정, REV1117A02).
+      if (!Number.isInteger(min) || min < SHARED_LIMITS.minDevices) return json({ error: "bad_min", minDevices: SHARED_LIMITS.minDevices }, 422);
       const listed = await state.call("sharedCandidateList", { min, now, maxAgeMs: SHARED_LIMITS.candidateDays * DAY_MS });
       return json({ min, total: listed.total, candidates: listed.items }, 200);
     }

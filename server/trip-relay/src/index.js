@@ -339,7 +339,7 @@ const ROUTES = {
   "/tasks": {
     GET: ["read", (request, ctx) => store.readTasks(ctx, request)],
     POST: ["master", withBody(store.saveTasks)],
-    DELETE: ["master", (request, ctx) => store.deleteFinishedTasks(ctx)],
+    DELETE: ["master", (request, ctx) => store.deleteFinishedTasks(ctx, query(request, "all") === "1")],
   },
   // 규칙 저장소(AIX1114A01 P3). AI는 읽고 더하고 자기 것을 지운다. 사용자가 고친 것은 앱이 주인 키로 올린다.
   "/rules": {

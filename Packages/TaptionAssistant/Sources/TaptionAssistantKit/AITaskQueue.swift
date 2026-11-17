@@ -149,7 +149,7 @@ public enum AITaskQueue {
     /// 못 올린 항목을 `POST /tasks`로 올린다. 실패하면 다음에 다시.
     public static func upload(env: AssistantRegistration.Environment) async {
         let list = unsent(env.defaults)
-        guard !list.isEmpty, let master = env.secrets.read(.master) else { return }
+        guard !list.isEmpty, isSharing(env.client()), let master = env.secrets.read(.master) else { return }
         let tasks: [[String: Any]] = list.map { item in
             var task: [String: Any] = ["id": item.id, "kind": item.kind.rawValue, "text": item.text]
             if let date = item.date { task["date"] = date }
@@ -205,6 +205,9 @@ public enum AITaskQueue {
         if let data = try? encoder.encode(open) { env.defaults.set(data, forKey: cacheKey) }
         return true
     }
+
+    /// REV1117A02(대표 결정): 공유 수준 「끔」이거나 사생활 잠금 중이면 AI 쪽으로 올리지 않는다. 못 올린 것은 기기에 남아 다시 켜면 올라간다.
+    public static func isSharing(_ client: AssistantClientState) -> Bool { client.level != .off && !client.locked }
 
     // MARK: 가리기
 

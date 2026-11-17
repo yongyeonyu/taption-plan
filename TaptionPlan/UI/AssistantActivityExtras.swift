@@ -421,6 +421,11 @@ enum AssistantAppStateSync {
         var mapColors: [AssistantAppState.MapColor] = []
     }
 
+    /// REV1117A02: 제안 id는 「suggested-위도,경도」라 그대로 내보내지 않는다. resolvePlaceSuggestion은 id를 받지 않는다.
+    static func suggestionID(_ id: String) -> String {
+        "suggested-" + SHA256.hash(data: Data(id.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
+
     static func make(_ input: Input) -> AssistantAppState {
         let stamp = AssistantActivityBuilder.Stamp(calendar: input.calendar)
         let mask = { (text: String, limit: Int) in String(AITaskQueue.mask(text).prefix(limit)) }
@@ -483,7 +488,7 @@ enum AssistantAppStateSync {
             },
             places: input.shareLevel == .visits && !input.places.isEmpty ? input.places.prefix(AssistantCatalogLimits.places).map {
                 .init(
-                    id: $0.id.uuidString, name: mask($0.displayName, AssistantCatalogLimits.placeName), kind: $0.kind.rawValue,
+                    id: $0.id.uuidString, name: AssistantActivityBuilder.hasCoordinates($0.displayName) ? "" : mask($0.displayName, AssistantCatalogLimits.placeName), kind: $0.kind.rawValue,
                     radius: Int($0.radiusMeters.rounded()), autoRecord: $0.isAutomaticRecordingEnabled, located: $0.point != nil, floor: $0.floor
                 )
             } : nil,
@@ -499,7 +504,7 @@ enum AssistantAppStateSync {
             },
             placeSuggestion: input.shareLevel == .visits ? input.placeSuggestion.map {
                 .init(
-                    id: $0.id, name: $0.suggestedName.flatMap { AssistantActivityBuilder.isAddressLike($0) ? nil : mask($0, AssistantCatalogLimits.placeName) },
+                    id: Self.suggestionID($0.id), name: $0.suggestedName.flatMap { AssistantActivityBuilder.isAddressLike($0) ? nil : mask($0, AssistantCatalogLimits.placeName) },
                     visits: $0.visitCount
                 )
             } : nil,
@@ -576,11 +581,33 @@ enum AssistantAppStateSync {
         )
     }
 
+    static let aiCopiesClearedKey = "assistantAICopiesCleared"
+
+    /// REV1117A02(대표 결정): 공유를 끄거나 사생활을 잠그면 AI 일 목록·메모 다듬기 서버 사본을 한 번 지운다.
+    /// 기기의 다듬기 목록과 못 올린 일은 남겨, 다시 켜면 올린다.
+    static func syncAICopies(sharing: Bool, master: String, defaults: UserDefaults, env: AssistantRegistration.Environment) async {
+        guard !sharing else {
+            guard defaults.bool(forKey: aiCopiesClearedKey) else { return }
+            defaults.removeObject(forKey: aiCopiesClearedKey)
+            await MemoPolishQueue.upload(env: env)
+            await AITaskQueue.upload(env: env)
+            return
+        }
+        guard !defaults.bool(forKey: aiCopiesClearedKey) else { return }
+        let tasks = await TripRelay.send(TripRelay.relayRequest("/tasks", method: "DELETE", query: [URLQueryItem(name: "all", value: "1")], token: master, host: env.host, client: env.client()), session: env.session)
+        let polish = await TripRelay.send(TripRelay.relayRequest("/polish", method: "DELETE", token: master, host: env.host, client: env.client()), session: env.session)
+        guard let tasks, let polish, (200..<300).contains(tasks.status), (200..<300).contains(polish.status) else { return }
+        defaults.set(true, forKey: aiCopiesClearedKey)
+        if !MemoPolishQueue.items(defaults).isEmpty { defaults.set(true, forKey: MemoPolishQueue.needsUploadKey) }
+    }
+
     /// 공유를 껐으면 서버 사본을 한 번 지운다. 사생활 잠금 중에는 올리지 않는다.
     static func run(
         model: AppModel, defaults: UserDefaults = .standard, env: AssistantRegistration.Environment = .live, now: Date = .now
     ) async {
         guard let master = env.secrets.read(.master) else { return }
+        let sharing = AITaskQueue.isSharing(.init(level: AssistantShareLevel.current(defaults), debug: false, locked: TaptionExternalPrivacyStore.isLocked))
+        await syncAICopies(sharing: sharing, master: master, defaults: defaults, env: env)
         guard AssistantShareLevel.current(defaults) != .off else {
             guard defaults.string(forKey: hashKey) != nil else { return }
             let reply = await TripRelay.send(TripRelay.relayRequest("/app", method: "DELETE", token: master, host: env.host, client: env.client()), session: env.session)

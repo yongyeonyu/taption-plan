@@ -248,6 +248,20 @@ final class AssistantPhase3Tests: XCTestCase {
         }
     }
 
+    /// REV1117A02(대표 결정): 하루 기록으로 보내는 메모 사본은 전화·카드 번호를 가린다.
+    func testActivityMemosAreSentWithNumbersMasked() throws {
+        let memo = ActionMemo(occurredAt: at(12), kind: .idea, text: "택배 기사 010-1234-5678, 카드 1234 5678 9012 3456")
+        let input = AssistantActivityInput(
+            day: at(0), calendar: calendar, language: .korean, categories: [], steps: nil, plansScheduled: 0, plansCompleted: 0,
+            actuals: [], categoryTitles: [:], memos: [memo], stays: [], travel: [], registeredNames: [:], now: at(23)
+        )
+        let day = try XCTUnwrap(AssistantActivityBuilder.make(input, level: .summary))
+        let text = try XCTUnwrap(day.memos.first?.text)
+        XCTAssertFalse(text.contains("1234-5678"), text)
+        XCTAssertFalse(text.contains("9012"), text)
+        XCTAssertTrue(text.contains("5678") && text.contains("3456"), "끝 4자리는 남긴다")
+    }
+
     func testSummaryRecordTitlesKeepStoreNamesAndHideAddresses() throws {
         let store = ActualRecord(planID: nil, title: "스타벅스 강남역점", categoryID: "eating", startedAt: at(9), endedAt: at(10), source: .location)
         let address = ActualRecord(planID: nil, title: "강남구 테헤란로", categoryID: "activity", startedAt: at(11), endedAt: at(12), source: .location)
@@ -340,6 +354,8 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertEqual(AssistantOAuthCode.parse(Data(#"{"code":"AB12CD34","expiresIn":600}"#.utf8), now: now),
                        AssistantOAuthCode(code: "AB12CD34", expiresAt: now.addingTimeInterval(600)))
         XCTAssertEqual(AssistantOAuthCode.parse(Data(#"{"code":"AB12CD34","expiresIn":9999}"#.utf8), now: now)?.expiresAt, now.addingTimeInterval(600))
+        let skewed = #"{"code":"AB12CD34","expiresAt":"2000-01-01T00:10:00Z","expiresIn":540}"#
+        XCTAssertEqual(AssistantOAuthCode.parse(Data(skewed.utf8), now: now)?.expiresAt, now.addingTimeInterval(540), "기기 시계가 서버와 달라도 남은 초를 쓴다")
         XCTAssertNil(AssistantOAuthCode.parse(Data(#"{"nope":1}"#.utf8), now: now))
         XCTAssertFalse(TripRelay.claudeCodeCommand(host: host).contains("Bearer"), "the Claude Code command carries no key")
     }
@@ -731,6 +747,28 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertEqual(Phase3RelayStub.requests.last?.summary, "DELETE /polish", "an empty list deletes the server copy")
     }
 
+    /// REV1117A02(대표 결정): 공유 「끔」·사생활 잠금 중에는 AI 일과 메모 다듬기를 올리지 않고, 기기에 남겨 둔다.
+    func testTasksAndPolishWaitOnTheDeviceWhileSharingIsOffOrLocked() async throws {
+        let store = defaults()
+        store.set(["k1": "피클"], forKey: AssistantKeyLabels.labelsKey)
+        XCTAssertTrue(MemoPolishQueue.enqueue(UUID(), text: "회의 잘끝남", day: nil, defaults: store))
+        XCTAssertTrue(AITaskQueue.enqueue(.other, text: "넘긴 일", defaults: store))
+        for client in [AssistantClientState(level: .off, debug: false, locked: false), AssistantClientState(level: .summary, debug: false, locked: true)] {
+            Phase3RelayStub.reset { _ in 201 }
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.protocolClasses = [Phase3RelayStub.self]
+            let env = AssistantRegistration.Environment(
+                secrets: AssistantMemorySecrets([.master: oldMaster]), defaults: store, session: URLSession(configuration: configuration),
+                host: host, clearConnections: {}, client: { client }
+            )
+            await MemoPolishQueue.upload(env: env)
+            await AITaskQueue.upload(env: env)
+            XCTAssertTrue(Phase3RelayStub.requests.isEmpty, "\(client)")
+        }
+        XCTAssertTrue(store.bool(forKey: MemoPolishQueue.needsUploadKey))
+        XCTAssertEqual(AITaskQueue.pendingUploads(store).count, 1)
+    }
+
     /// 웹 요청 AI에는 키가 든 안내 대신 1회용 주소만 복사한다(SET1110A01).
     func testSetupLinkReplacesTheKeyInTheClipboardText() async throws {
         let store = defaults()
@@ -908,6 +946,7 @@ final class Phase3RelayStub: URLProtocol, @unchecked Sendable {
         var path: String
         var token: String?
         var body: Data
+        var query: String?
 
         var summary: String { "\(method) \(path)" }
     }
@@ -952,7 +991,7 @@ final class Phase3RelayStub: URLProtocol, @unchecked Sendable {
         }
         let token = request.value(forHTTPHeaderField: "Authorization").map { String($0.dropFirst("Bearer ".count)) }
         let (code, reply, retry): (Int, String, String?) = Self.lock.withLock {
-            Self.seen.append(Seen(method: request.httpMethod ?? "GET", path: request.url?.path ?? "", token: token, body: body))
+            Self.seen.append(Seen(method: request.httpMethod ?? "GET", path: request.url?.path ?? "", token: token, body: body, query: request.url?.query))
             return (Self.status(request), Self.body, Self.retryAfter)
         }
         var headers = ["Content-Type": "application/json"]
@@ -1560,7 +1599,7 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertEqual(detailed.places?.map(\.located), [true, false])
         XCTAssertEqual(detailed.places?.first?.kind, "company")
         let json = String(decoding: try XCTUnwrap(AssistantAppStateSync.body(detailed)), as: UTF8.self)
-        XCTAssertFalse(json.contains("37.56") || json.contains("126.83") || json.contains("latitude"), "좌표는 내보내지 않는다")
+        XCTAssertFalse(json.contains("12.345") || json.contains("126.83") || json.contains("latitude"), "좌표는 내보내지 않는다")
     }
 
     /// ACB1112A01: 여행·설정 명령을 서버와 같은 규칙으로 읽는다.
@@ -1847,7 +1886,7 @@ final class AssistantAppControlTests: XCTestCase {
         value.placeSuggestion = model.frequentPlaceSuggestion
         value.pendingCarAudio = ["Audi"]
         let state = AssistantAppStateSync.make(value)
-        XCTAssertEqual(state.placeSuggestion, .init(id: "s1", name: nil, visits: 4), "주소처럼 보이는 이름과 좌표는 올리지 않는다")
+        XCTAssertEqual(state.placeSuggestion, .init(id: AssistantAppStateSync.suggestionID("s1"), name: nil, visits: 4), "주소처럼 보이는 이름과 좌표는 올리지 않는다")
         XCTAssertEqual(state.carAudio, .init(registered: [], pending: ["Audi"]))
         value.shareLevel = .summary
         XCTAssertNil(AssistantAppStateSync.make(value).placeSuggestion)
@@ -2091,9 +2130,37 @@ final class AssistantAppControlTests: XCTestCase {
 
         store.set(AssistantShareLevel.off.rawValue, forKey: AssistantShareLevel.defaultsKey)
         await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 10))
-        XCTAssertEqual(Phase3RelayStub.requests.last?.summary, "DELETE /app")
+        // REV1117A02(대표 결정): 끄면 AI 일 목록(열린 일까지)·메모 다듬기 서버 사본도 지운다.
+        XCTAssertEqual(Phase3RelayStub.requests.suffix(3).map(\.summary), ["DELETE /tasks", "DELETE /polish", "DELETE /app"])
+        XCTAssertEqual(Phase3RelayStub.requests.suffix(3).first?.query, "all=1")
         await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 11))
-        XCTAssertEqual(Phase3RelayStub.requests.count, 4, "지운 뒤에는 아무것도 보내지 않는다")
+        XCTAssertEqual(Phase3RelayStub.requests.count, 6, "지운 뒤에는 아무것도 보내지 않는다")
+        store.set(AssistantShareLevel.summary.rawValue, forKey: AssistantShareLevel.defaultsKey)
+        await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 12))
+        XCTAssertFalse(store.bool(forKey: AssistantAppStateSync.aiCopiesClearedKey), "다시 켜면 다음에 끌 때 또 지운다")
+        XCTAssertEqual(Phase3RelayStub.requests.last?.summary, "POST /app")
+    }
+
+    /// REV1117A02: 제안 id(「suggested-위도,경도」)와 이름 없이 등록한 장소의 좌표 이름은 AI로 나가지 않는다.
+    func testCoordinatesInSuggestionIDsAndPlaceNamesStayOnTheDevice() throws {
+        let point = GeoPoint(latitude: 12.3456, longitude: 65.4321, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 5)
+        var value = try input()
+        value.shareLevel = .visits
+        value.placeSuggestion = FrequentPlaceSuggestion(
+            id: "suggested-12.3456,65.4321", point: point, suggestedName: nil, visitCount: 3,
+            firstVisitedAt: at(11, 5, 9), lastVisitedAt: at(11, 12, 9), reason: .weekly
+        )
+        value.places = [FrequentPlace(kind: .custom, name: "12.34560, 65.43210"), FrequentPlace(kind: .custom, name: "단골 카페")]
+        let body = try XCTUnwrap(AssistantAppStateSync.body(AssistantAppStateSync.make(value)))
+        let text = try XCTUnwrap(String(data: body, encoding: .utf8))
+        XCTAssertFalse(text.contains("12.345"), "좌표가 그대로 나갔다: \(text)")
+        XCTAssertFalse(text.contains("65.432"))
+        XCTAssertTrue(text.contains("단골 카페"))
+
+        let start = at(11, 16, 9)
+        let stay = PlaceStay(placeKey: "frequent-x", displayName: "12.34560, 65.43210", span: TimeSpan(start: start, end: start.addingTimeInterval(3_600)), confidence: .high)
+        XCTAssertEqual(AssistantActivityBuilder.placeName(stay, registered: ["frequent-x": "12.34560, 65.43210"], language: .korean), "머문 곳")
+        XCTAssertEqual(AssistantActivityBuilder.placeName(stay, registered: ["frequent-x": "회사"], language: .korean), "회사")
     }
 }
 
@@ -2515,6 +2582,80 @@ extension AssistantPhase3Tests {
         let third = try await sync(fresh, RuleSet(version: 3, rules: [old, learned, mine]))
         XCTAssertTrue(third)
         XCTAssertEqual(AssistantActionLog.load(from: file).count, 1, "이미 있던 규칙은 다시 적지 않는다")
+        AssistantRuleSnapshot.set([])
+    }
+
+    /// REV1117A02: 키를 바꿔 서버 자리가 새로 생기면(버전 0) 빈 목록으로 기기 규칙·결제 문자 정규식을 지우지 않고 다시 올린다.
+    func testANewServerAfterAKeyChangeKeepsTheDevicesRulesAndUploadsThemAgain() async throws {
+        let store = defaults()
+        store.set(1, forKey: AssistantKeyLabels.serverCountKey)
+        store.set(true, forKey: AssistantRuleStore.migratedKey)
+        let secrets = AssistantMemorySecrets([.master: oldMaster])
+        let payment = Rule(id: UUID().uuidString, type: "payment_text",
+                           match: ["pattern": .text("(?<merchant>.+) (?<amount>[\\d,]+)원 승인"), "sample": .text("가게 12,000원 승인")],
+                           result: ["kind": .text("expense")], source: .init(by: "ai"))
+        let word = Rule(id: "skip-ad", type: "skip_word", match: ["word": .text("광고")], source: .init(by: "user"))
+        store.set(try JSONEncoder().encode(RuleSet(version: 12, rules: [payment, word])), forKey: AssistantRuleStore.setKey)
+        store.set(12_000, forKey: AssistantRuleStore.ackedKey)
+        AssistantRuleStore.refreshSnapshot(store)
+        XCTAssertEqual(LedgerMessageRules.rules(store).count, 1)
+
+        let env = environment(secrets, store, status: { _ in 200 })
+        Phase3RelayStub.body = String(decoding: try JSONEncoder().encode(RuleSet(version: 0, rules: [])), as: UTF8.self)
+        let first = await AssistantRuleStore.sync(env: env)
+        XCTAssertTrue(first)
+        XCTAssertEqual(LedgerMessageRules.rules(store).count, 1, "결제 문자 정규식이 남는다")
+        XCTAssertEqual(Set(AssistantRuleStore.effective(store).rules.map(\.id)), [payment.id, word.id])
+        XCTAssertEqual(AssistantRuleStore.outbox(store).map(\.op), ["put", "put"], "새 서버에 다시 올릴 것으로 둔다")
+
+        Phase3RelayStub.body = String(decoding: try JSONEncoder().encode(RuleSet(version: 1, rules: [payment, word])), as: UTF8.self)
+        let second = await AssistantRuleStore.sync(env: env)
+        XCTAssertTrue(second)
+        XCTAssertEqual(Phase3RelayStub.requests.filter { $0.summary == "POST /rules/ops" }.count, 1)
+        XCTAssertTrue(AssistantRuleStore.outbox(store).isEmpty)
+        XCTAssertEqual(AssistantRuleStore.stored(store).version, 1)
+        XCTAssertEqual(LedgerMessageRules.rules(store).count, 1)
+        AssistantRuleSnapshot.set([])
+    }
+
+    /// REV1117A02: 서버는 한 번에 50개까지만 받으므로 보낼 것이 많으면 나눠 올린다(전에는 422로 계속 막혔다).
+    func testRuleOutboxIsSentInChunksTheServerAccepts() async throws {
+        let store = defaults()
+        store.set(1, forKey: AssistantKeyLabels.serverCountKey)
+        store.set(true, forKey: AssistantRuleStore.migratedKey)
+        let ops = (0..<60).map { AssistantRuleStore.Op(op: "delete", id: "r\($0)") }
+        store.set(try JSONEncoder().encode(ops), forKey: AssistantRuleStore.outboxKey)
+        let env = environment(AssistantMemorySecrets([.master: oldMaster]), store, status: { _ in 200 })
+        Phase3RelayStub.body = String(decoding: try JSONEncoder().encode(RuleSet(version: 2, rules: [])), as: UTF8.self)
+        let ok = await AssistantRuleStore.sync(env: env)
+        XCTAssertTrue(ok)
+        let sizes = try Phase3RelayStub.requests.filter { $0.summary == "POST /rules/ops" }.map { request -> Int in
+            let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.body) as? [String: Any])
+            return (body["ops"] as? [Any])?.count ?? 0
+        }
+        XCTAssertEqual(sizes, [50, 10])
+        XCTAssertTrue(AssistantRuleStore.outbox(store).isEmpty)
+        AssistantRuleSnapshot.set([])
+    }
+
+    /// REV1117A02: 사용자가 지웠지만 아직 서버에 못 올린 AI 규칙은 공통 규칙 후보로 올리지 않는다.
+    func testCandidateUploadLeavesOutAnAIRuleTheUserJustDeleted() async throws {
+        let store = defaults()
+        store.set(1, forKey: AssistantKeyLabels.serverCountKey)
+        SharedRuleStore.setContributing(true, defaults: store)
+        let keep = Rule(id: "a", type: "merchant_category", match: ["contains": .list(["빵집"])], result: ["category": .text("cafe")], source: .init(by: "ai"))
+        let gone = Rule(id: "b", type: "merchant_category", match: ["contains": .list(["꽃가게"])], result: ["category": .text("shopping")], source: .init(by: "ai"))
+        store.set(try JSONEncoder().encode(RuleSet(version: 3, rules: [keep, gone])), forKey: AssistantRuleStore.setKey)
+        AssistantRuleStore.delete("b", defaults: store)
+        let env = environment(AssistantMemorySecrets([.master: oldMaster]), store, status: { _ in 200 })
+        Phase3RelayStub.body = #"{"ok":true,"accepted":1,"refused":0}"#
+        let sent = await SharedRuleStore.uploadCandidates(env: env)
+        XCTAssertEqual(sent, 1)
+        let body = try XCTUnwrap(Phase3RelayStub.requests.last { $0.path == "/shared/candidates" }?.body)
+        let text = String(decoding: body, as: UTF8.self)
+        XCTAssertTrue(text.contains("빵집"))
+        XCTAssertFalse(text.contains("꽃가게"))
+        XCTAssertEqual(store.stringArray(forKey: SharedRuleStore.sentKey)?.count, 1)
         AssistantRuleSnapshot.set([])
     }
 }

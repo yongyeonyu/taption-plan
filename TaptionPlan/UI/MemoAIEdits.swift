@@ -104,7 +104,7 @@ enum MemoPolishQueue {
 
     /// 목록이 있으면 `POST /polish`, 비었으면 `DELETE /polish`. 실패하면 다음에 다시 올린다.
     static func upload(env: AssistantRegistration.Environment = .live) async {
-        guard env.defaults.bool(forKey: needsUploadKey), let master = env.secrets.read(.master) else { return }
+        guard env.defaults.bool(forKey: needsUploadKey), AITaskQueue.isSharing(env.client()), let master = env.secrets.read(.master) else { return }
         let list = items(env.defaults)
         let request: URLRequest?
         if list.isEmpty {
