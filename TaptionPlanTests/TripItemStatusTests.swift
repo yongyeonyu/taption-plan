@@ -875,6 +875,41 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual([slot.start, slot.duration], [600, 10], "짧은 곳은 그 길이만큼")
     }
 
+    /// TVM1117A02: 곳과 세부(그 아래 세부까지)는 한 번에 옮겨 저장한다. 세부 하나라도 캘린더 고정이면 아무것도 바뀌지 않는다.
+    @MainActor
+    func testMovingAStopWithDetailsIsAllOrNothing() async throws {
+        let model = try await importedModel()
+        let stop = try XCTUnwrap(model.settings.travelTripItems?.first { $0.tripID == "t1" })
+        func add(_ title: String, after minutes: Double, parent: String) async throws -> String {
+            let start = stop.start.addingTimeInterval(minutes * 60)
+            let id = await model.addTripItem(tripID: "t1", kind: .other, title: title, start: start, end: start.addingTimeInterval(600),
+                                             offsetSeconds: stop.startOffsetSeconds, parentItemID: parent)
+            return try XCTUnwrap(id)
+        }
+        let detail = try await add("표 사기", after: 10, parent: stop.itemID)
+        let inner = try await add("줄 서기", after: 12, parent: detail)
+        let before = try XCTUnwrap(model.settings.travelTripItems)
+
+        let moved = await model.moveTripItem(tripID: "t1", itemID: stop.itemID, by: 1_800)
+        XCTAssertTrue(moved)
+        for id in [stop.itemID, detail, inner] {
+            let old = try XCTUnwrap(before.first { $0.itemID == id }), new = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == id })
+            XCTAssertEqual(new.start, old.start.addingTimeInterval(1_800), "\(id)도 같은 만큼")
+            let plan = try XCTUnwrap(model.snapshot.plans.first { $0.id == new.planID })
+            XCTAssertEqual(plan.span.start, new.start, "일상 계획 기록도 따라온다")
+        }
+
+        // 안쪽 세부를 캘린더 고정으로 바꾸면 곳을 옮겨도 아무것도 바뀌지 않는다(예전에는 곳만 옮겨지고 성공을 돌려줬다).
+        let innerPlan = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == inner }?.planID)
+        let planIndex = try XCTUnwrap(model.snapshot.plans.firstIndex { $0.id == innerPlan })
+        model.snapshot.plans[planIndex].isFixed = true
+        let items = model.settings.travelTripItems, plans = model.snapshot.plans
+        let refused = await model.moveTripItem(tripID: "t1", itemID: stop.itemID, by: 1_800)
+        XCTAssertFalse(refused)
+        XCTAssertEqual(model.settings.travelTripItems, items, "곳·세부 모두 그대로")
+        XCTAssertEqual(model.snapshot.plans, plans)
+    }
+
     /// TVV1113A01 C4: 코스 곳을 옮기면 세부도 같은 만큼 옮겨지고, 지우면 함께 지워지며 한 번에 되돌아온다.
     @MainActor
     func testDetailsFollowTheirStopWhenMovedAndDeleted() async throws {
