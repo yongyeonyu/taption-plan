@@ -1677,6 +1677,36 @@ extension FeatureEngineTests {
         XCTAssertEqual(visible.first?.title, "점심 식사")
     }
 
+    /// 숨긴 식당 식사는 다음 갱신에 되살아나지 않고, 사용자가 고친 식사는 다시 만들어 덮지 않는다(REV1117A03).
+    @MainActor
+    func testRestaurantMealPassHonorsHiddenAndUserOwnedRecords() {
+        let base = makeDate(2026, 7, 30, 12)
+        let point = GeoPoint(latitude: 37.5, longitude: 127, altitude: 30, horizontalAccuracy: 10, verticalAccuracy: 5)
+        let readings = [0.0, 15, 30, 45].map { SensorReading(timestamp: base.addingTimeInterval($0 * 60), point: point) }
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(45 * 60))
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        model.snapshot.settings.frequentPlaces = [
+            FrequentPlace(kind: .restaurant, name: "식당", point: point, radiusMeters: 120),
+        ]
+        func refresh() {
+            model.applyRestaurantMealRecords(readings: readings, watchSummaries: [], watchAccelerationSamples: [], inside: span)
+        }
+
+        refresh()
+        guard let meal = model.snapshot.actuals.first else { return XCTFail("식사 기록이 생긴다") }
+        var edited = meal
+        edited.title = "사용자가 고친 점심"
+        edited.manuallyCorrected = true
+        model.snapshot.actuals = [edited]
+        refresh()
+        XCTAssertEqual(model.snapshot.actuals.map(\.title), ["사용자가 고친 점심"], "고친 식사를 지우거나 겹쳐 만들지 않는다")
+
+        model.snapshot.actuals = []
+        model.snapshot.settings.suppressedActualIDs.insert(meal.id)
+        refresh()
+        XCTAssertFalse(model.snapshot.actuals.contains { $0.id == meal.id }, "숨긴 식사는 되살아나지 않는다")
+    }
+
     func testRestaurantMealEngineCreatesOneEatingRecordPerRestaurantStay() {
         let base = makeDate(2026, 7, 30, 12)
         let firstPoint = GeoPoint(
