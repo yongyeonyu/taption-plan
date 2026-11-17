@@ -32,42 +32,11 @@ struct TaptionWidgetActionIntent: AppIntent {
             return .result()
         }
 
-        var command = TaptionWidgetCommand(planID: id, kind: action)
-        var refreshedPayload: TaptionWidgetPayload?
-        do {
-            let repository = try TaptionStoreRepository.appGroup()
-            let source = try await repository.load()
-            let updated = try TaptionWidgetCommandEngine.apply(
-                command,
-                to: source
-            )
-            try await repository.save(updated)
-            refreshedPayload = TaptionWidgetPayloadFactory.make(
-                from: updated,
-                hidesSensitiveContent: TaptionExternalPrivacyStore.isLocked
-            )
-            command.appliedToSharedRepository = true
-        } catch {
-            command.appliedToSharedRepository = false
-        }
-
-        if let refreshedPayload {
-            try? TaptionWidgetSharedStore.writePayload(refreshedPayload)
-        }
-        try TaptionWidgetSharedStore.appendCommand(command)
-        // 종료·완료는 시스템이 허락하면 여기서 바로 Live Activity를 끝내고, 앱도 명령을 받을 때 다시 끝낸다(REV1110A04).
-        if action == .complete || action == .stopCurrentActivity {
-            for activity in Activity<TaptionActivityAttributes>.activities where activity.attributes.planID == id {
-                var state = activity.content.state
-                state.isRunning = false
-                state.endsAt = max(state.startedAt, min(.now, state.endsAt))
-                await activity.end(ActivityContent(state: state, staleDate: nil), dismissalPolicy: .default)
-            }
-        }
-        WidgetCenter.shared.reloadAllTimelines()
+        try await TaptionWidgetCommandRunner.run(
+            TaptionWidgetCommand(planID: id, kind: action)
+        )
         return .result()
     }
-
 }
 
 struct TaptionWidgetLocationTrackingIntent: AppIntent {

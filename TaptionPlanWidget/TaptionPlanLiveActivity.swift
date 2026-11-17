@@ -47,9 +47,8 @@ struct TaptionPlanLiveActivity: Widget {
                         )
                         .tint(Color(red: 0.48, green: 0.37, blue: 0.65))
                         Button(
-                            intent: TaptionWidgetActionIntent(
-                                planID: context.attributes.planID.uuidString,
-                                action: .stopCurrentActivity
+                            intent: TaptionLiveActivityStopIntent(
+                                planID: context.attributes.planID.uuidString
                             )
                         ) {
                             Text(AppLanguagePreference.text("종료", "Stop"))
@@ -142,9 +141,8 @@ private struct TaptionLiveActivityLockScreenView: View {
                     .monospacedDigit()
                 Spacer()
                 Button(
-                    intent: TaptionWidgetActionIntent(
-                        planID: context.attributes.planID.uuidString,
-                        action: .stopCurrentActivity
+                    intent: TaptionLiveActivityStopIntent(
+                        planID: context.attributes.planID.uuidString
                     )
                 ) {
                     Text(AppLanguagePreference.text("종료", "End"))

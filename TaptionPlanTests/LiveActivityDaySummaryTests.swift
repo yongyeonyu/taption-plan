@@ -1,3 +1,4 @@
+import AppIntents
 import XCTest
 @testable import TaptionPlan
 
@@ -139,4 +140,43 @@ final class LiveActivityDaySummaryTests: XCTestCase {
         XCTAssertEqual(SensorExternalHeartPolicy.text(isExternalSample: true, heartRate: 70.4), "♥︎ 70")
         XCTAssertEqual(SensorExternalHeartPolicy.text(isExternalSample: true, heartRate: nil), "♥︎")
     }
+}
+
+/// 계획 Live Activity의 「종료」와 계획 고침 반영(WLA1117A01).
+@MainActor
+final class LiveActivityPlanTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_794_365_000)
+
+    private func runningPlan(title: String = "독서") -> PlanRecord {
+        PlanRecord(
+            title: title,
+            span: TimeSpan(start: now.addingTimeInterval(-600), end: now.addingTimeInterval(1_800)),
+            categoryID: "hobby",
+            status: .running
+        )
+    }
+
+    /// 「종료」는 앱을 열지 않는 `LiveActivityIntent`다. 예전에는 일반 `AppIntent`라 앱이 열려야 끝났다.
+    func testStopButtonIsLiveActivityIntentThatDoesNotOpenTheApp() {
+        XCTAssertTrue((TaptionLiveActivityStopIntent.self as Any) is any LiveActivityIntent.Type)
+        XCTAssertFalse(TaptionLiveActivityStopIntent.openAppWhenRun)
+    }
+
+    /// 앱 프로세스에서 돌면 떠 있는 모델의 계획을 바로 끝낸다.
+    func testStopIntentCompletesRunningPlanInLiveModel() async throws {
+        let plan = runningPlan()
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.plans = [plan]
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: snapshot), cloudSyncService: nil)
+        await model.bootstrap()
+        let previous = AppModel.live
+        AppModel.live = model
+        defer { AppModel.live = previous }
+
+        _ = try await TaptionLiveActivityStopIntent(planID: plan.id.uuidString).perform()
+
+        let stopped = try XCTUnwrap(model.snapshot.plans.first { $0.id == plan.id })
+        XCTAssertNotEqual(stopped.status, .running)
+    }
+
 }
