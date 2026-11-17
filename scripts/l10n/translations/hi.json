@@ -6080,9 +6080,10 @@
 "내 데이터|My data": "मेरा डेटा",
 "모든 BOKKI Plan 데이터를 삭제할까요?|Delete all BOKKI Plan data?": "BOKKI Plan का सारा डेटा हटाएँ?",
 "모든 데이터 삭제|Delete all data": "सारा डेटा हटाएँ",
-"AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호(또는 예전 AI PIN)를 한 번만 넣어 주세요.|The AI server still has an old value. Enter your previous app password (or old AI PIN) once.": "AI सर्वर पर अभी भी पुराना मान है। बदलने से पहले का ऐप पासवर्ड (या पुराना AI PIN) एक बार डालें।",
-"바꾸기 전 앱 비밀번호 또는 예전 AI PIN 6자리|Previous app password or old AI PIN (6 digits)": "बदलने से पहले का ऐप पासवर्ड या पुराना AI PIN (6 अंक)",
-"바꾸기 전 앱 비밀번호(또는 예전에 따로 정한 AI PIN)를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.|Enter your previous app password (or the AI PIN you set before) once, and it switches to your current app password.": "बदलने से पहले का ऐप पासवर्ड (या पहले सेट किया AI PIN) एक बार डालें, फिर यह आपके मौजूदा ऐप पासवर्ड पर आ जाएगा।",
-"자주 가는 곳|Frequent place": "अक्सर जाने की जगह"
+"자주 가는 곳|Frequent place": "अक्सर जाने की जगह",
+"AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호를 한 번만 넣어 주세요.|The AI server still has an old value. Enter your previous app password once.": "AI सर्वर पर अभी भी पुराना मान है। बदलने से पहले का ऐप पासवर्ड एक बार डालें।",
+"바꾸기 전 앱 비밀번호 6자리|Previous app password (6 digits)": "बदलने से पहले का ऐप पासवर्ड (6 अंक)",
+"바꾸기 전 앱 비밀번호를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.|Enter your previous app password once, and it switches to your current app password.": "बदलने से पहले का ऐप पासवर्ड एक बार डालें, फिर यह आपके मौजूदा ऐप पासवर्ड पर आ जाएगा।",
+"바꾸기 전 비밀번호를 잊었어요|I forgot the previous password": "मैं पहले वाला पासवर्ड भूल गया"
 }
 }

@@ -393,8 +393,7 @@ final class AssistantReviewFixTests: XCTestCase {
         XCTAssertEqual(AssistantPINDerivation.pin(appPassword: "246801", store: store), first.map { AssistantPINDerivation.pin(appPassword: "246801", salt: $0) })
     }
 
-    /// HOF1118A01: 앱 비밀번호를 바꿀 때 서버 PIN이 따라가지 못하면, 「예전」 칸에 넣은 바꾸기 전 비밀번호에서 만든 값을 보낸다.
-    /// 그 값이 틀리면 예전에 따로 정한 PIN으로 한 번 더 본다.
+    /// HOF1118A01: 앱 비밀번호를 바꿀 때 서버 PIN이 따라가지 못하면, 「예전」 칸에 넣은 바꾸기 전 비밀번호에서 만든 값을 한 번만 보낸다.
     func testOldPINFieldSendsTheValueDerivedFromThePreviousAppPassword() async throws {
         let derive: (String) -> String? = { AssistantPINDerivation.pin(appPassword: $0, salt: Data(repeating: 7, count: 32)) }
         let next = try XCTUnwrap(derive("246801")), previous = try XCTUnwrap(derive("135790"))
@@ -416,16 +415,11 @@ final class AssistantReviewFixTests: XCTestCase {
         XCTAssertNil(followed)
         XCTAssertEqual(try posts(), [["pin": next, "currentPin": previous]], "the old field is an app password, so its derived value is sent, never the digits")
 
-        // 예전에 따로 정한 PIN이면 두 번째에 맞는다.
-        let legacy = await run([403, 200])
-        XCTAssertNil(legacy)
-        XCTAssertEqual(try posts(), [["pin": next, "currentPin": previous], ["pin": next, "currentPin": "135790"]])
-
-        // 둘 다 틀리면 틀렸다고 알린다(더 보내지 않는다).
-        let wrong = await run([403, 403])
+        // 틀리면 한 번만 보내고 틀렸다고 알린다. 입력한 숫자를 그대로 다시 보내지 않아 잠금 횟수가 1번만 오른다(대표 결정 2026-11-18).
+        let wrong = await run([403, 200])
         guard case let .refused(refusal) = wrong else { return XCTFail("\(String(describing: wrong))") }
         XCTAssertEqual(refusal.kind, .wrongPIN)
-        XCTAssertEqual(try posts().count, 2)
+        XCTAssertEqual(try posts(), [["pin": next, "currentPin": previous]], "one try, never the typed digits")
     }
 
     private final class AnswerQueue: @unchecked Sendable {
