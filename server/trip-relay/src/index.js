@@ -204,14 +204,43 @@ const TAGO_BASE = "https://apis.data.go.kr/1613000/BusSttnInfoInqireService/";
 const CITY_CODE = /^\d{1,6}$/;
 const NODE_ID = /^[A-Z]{3}\d{1,12}$/;
 
+// 정류장 조회 좌표(대표 결정 2026-11-17, REV1117A03)는 저장·기록하지 않는다. 주소가 요청 로그에 남지 않게 POST 본문으로도 받고
+// (예전 앱의 GET 쿼리도 받는다), 상류 실패·예외 원문은 좌표·서버 키가 섞일 수 있어 돌려주거나 던지지 않는다.
+const STOP_PATHS = new Set(["/tago/stops", "/seoul/stops"]);
+
+async function stopPoint(request, incoming) {
+  let lat = incoming.get("lat"), lng = incoming.get("lng");
+  if (request.method === "POST") {
+    const body = await readBody(request);
+    if (body.error) return { error: body.error };
+    ({ lat, lng } = body.value ?? {});
+  }
+  lat = Number(lat ?? NaN); lng = Number(lng ?? NaN);
+  if (!(Math.abs(lat) <= 90) || !(Math.abs(lng) <= 180)) return { error: json({ error: "bad_query" }, 400) };
+  return { lat, lng };
+}
+
+async function relayBus(target, fetcher) {
+  let upstream;
+  try { upstream = await fetcher(target); } catch { return json({ error: "upstream_failed" }, 502); }
+  if (!upstream.ok) return json({ error: "upstream_failed" }, 502);
+  return new Response(await upstream.text(), {
+    status: upstream.status,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+
+const busMethodAllowed = (request, url) => request.method === "GET" || (request.method === "POST" && STOP_PATHS.has(url.pathname));
+
 export async function tagoProxy(request, env, fetcher = fetch) {
-  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
-  if (!env.TAGO_SERVICE_KEY) return json({ error: "unavailable" }, 503);
   const url = new URL(request.url), incoming = url.searchParams;
+  if (!busMethodAllowed(request, url)) return json({ error: "method_not_allowed" }, 405);
+  if (!env.TAGO_SERVICE_KEY) return json({ error: "unavailable" }, 503);
   let target;
   if (url.pathname === "/tago/stops") {
-    const lat = Number(incoming.get("lat") ?? NaN), lng = Number(incoming.get("lng") ?? NaN);
-    if (!(Math.abs(lat) <= 90) || !(Math.abs(lng) <= 180)) return json({ error: "bad_query" }, 400);
+    const point = await stopPoint(request, incoming);
+    if (point.error) return point.error;
+    const { lat, lng } = point;
     target = new URL(TAGO_BASE + "getCrdntPrxmtSttnList");
     target.searchParams.set("gpsLati", String(lat));
     target.searchParams.set("gpsLong", String(lng));
@@ -227,11 +256,7 @@ export async function tagoProxy(request, env, fetcher = fetch) {
   target.searchParams.set("pageNo", "1");
   target.searchParams.set("_type", "json");
   target.searchParams.set("serviceKey", env.TAGO_SERVICE_KEY);
-  const upstream = await fetcher(target);
-  return new Response(await upstream.text(), {
-    status: upstream.status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
-  });
+  return relayBus(target, fetcher);
 }
 
 // 서울 시내버스(BRT1113B01): TAGO에서 빠지는 서울은 서울특별시_정류소정보조회로 찾는다. 공공데이터포털 공통 키라 같은 비밀값을 쓴다.
@@ -240,13 +265,14 @@ const SEOUL_BASE = "http://ws.bus.go.kr/api/rest/stationinfo/";
 const ARS_ID = /^\d{5}$/;
 
 export async function seoulBusProxy(request, env, fetcher = fetch) {
-  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
-  if (!env.TAGO_SERVICE_KEY) return json({ error: "unavailable" }, 503);
   const url = new URL(request.url), incoming = url.searchParams;
+  if (!busMethodAllowed(request, url)) return json({ error: "method_not_allowed" }, 405);
+  if (!env.TAGO_SERVICE_KEY) return json({ error: "unavailable" }, 503);
   let target;
   if (url.pathname === "/seoul/stops") {
-    const lat = Number(incoming.get("lat") ?? NaN), lng = Number(incoming.get("lng") ?? NaN);
-    if (!(Math.abs(lat) <= 90) || !(Math.abs(lng) <= 180)) return json({ error: "bad_query" }, 400);
+    const point = await stopPoint(request, incoming);
+    if (point.error) return point.error;
+    const { lat, lng } = point;
     target = new URL(SEOUL_BASE + "getStationByPos");
     target.searchParams.set("tmX", String(lng));
     target.searchParams.set("tmY", String(lat));
@@ -259,15 +285,11 @@ export async function seoulBusProxy(request, env, fetcher = fetch) {
   }
   target.searchParams.set("resultType", "json");
   target.searchParams.set("serviceKey", env.TAGO_SERVICE_KEY);
-  const upstream = await fetcher(target);
-  return new Response(await upstream.text(), {
-    status: upstream.status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
-  });
+  return relayBus(target, fetcher);
 }
 
 async function tagoRoute(request, ctx) {
-  if (request.method === "GET" && ctx.env.TAGO_SERVICE_KEY) {
+  if (busMethodAllowed(request, new URL(request.url)) && ctx.env.TAGO_SERVICE_KEY) {
     const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
     if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
   }
@@ -411,12 +433,14 @@ const ROUTES = {
   },
   "/tago/stops": {
     GET: ["search", tagoRoute],
+    POST: ["search", tagoRoute],
   },
   "/tago/routes": {
     GET: ["search", tagoRoute],
   },
   "/seoul/stops": {
     GET: ["search", tagoRoute],
+    POST: ["search", tagoRoute],
   },
   "/seoul/routes": {
     GET: ["search", tagoRoute],
