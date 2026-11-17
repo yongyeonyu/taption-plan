@@ -2,6 +2,18 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## REV1117A02 · AI 연결·명령 실행·AI 일 목록·중계 서버·공통 규칙 리뷰와 고침 (2026-11-17, 시뮬레이터, 실기기 없음)
+
+- 판: 브랜치 `claude/rev-ai-server-ff40bb` `8a1ccc66`(바탕 `569048e4`). 고친 것 19건·못 고친 것·다른 영역에 넘길 것·대표 결정 4건은 `docs/reviews/REV1117A02.md`. 로그 `build/validation/REV1117A02/`.
+- 대표 결정(객관식, 2026-11-17): ① `/activity` 메모 사본만 전화·카드 번호를 가림(원문 그대로, AI가 가린 번호로 고쳐 보내도 원문 번호 유지) ② 공유 「끔」·개인정보 잠금 때 AI 일·메모 다듬기를 멈추고 서버 사본을 한 번 지움(새 `DELETE /tasks?all=1`, 옛 `DELETE /tasks`는 그대로) ③ 공통 규칙 화면·`PRIVACY.md`에 서버가 내 자리에 남기는 지문을 밝힘 ④ `set_rule_enabled`는 그대로.
+- 시험에서 새로 드러난 앱 충돌: 공통 규칙 후보를 올리는 데 성공하면 보낸 지문 목록을 `ArraySlice`로 UserDefaults에 넣어 앱이 죽음(SRL1116A01부터, `SharedRuleStore.swift:169`). 새 시험 `testCandidateUploadLeavesOutAnAIRuleTheUserJustDeleted`가 처음 이 길을 지나 시험 실행기가 죽었고(`related-tests-3`·`full-tests`), `Array(...)`로 감싸 고침. 같은 꼴의 다른 저장은 모두 `Array(...)`로 감싸져 있음(grep).
+- 앱(시뮬레이터 `99AC6F35…`, Debug, `-parallel-testing-enabled NO`, 공유 빌드 잠금, 파생 자료 `/Volumes/TaptionPlanBuild/dd/REV1117A02`): 시험 빌드 성공(`build-for-testing-4`, 앱 Debug 빌드 겸함). 관련 8묶음(`AssistantPhase3Tests`·`AssistantAppControlTests`·`AssistantPaymentRuleTests`·`AssistantCommandEditTests`·`SharedRuleStoreTests`·`DailyCardBubblePromptTests`·`AssistantReviewFixTests`·`AssistantRelayTests`) 실패 0(`related-tests-4`). 전체 `-only-testing:TaptionPlanTests` **3,019건, 실패 0, 건너뜀 25**(`full-tests-2`) — 건너뜀은 원본 재생(`TAPTION_RAW_REPLAY`·`TAPTION_REPLAY_PLACES`·원본 폴더) 없음, HealthKit 권한 없는 환경, 측정·기기 확인 전용 등 기존과 같은 환경 조건.
+- 서버 `server/trip-relay` `npm test` 3회 모두 209/209(`npm-test-last-1~3`), `npm run actions` 뒤 `test/fixtures/actions.json` 변화 없음.
+- 패키지 `Packages/TaptionAssistant` `swift test`: 31건 실패 0(`spm-last`, 새 `AssistantRedactionRestoreTests` 2건 포함).
+- 구조: `architecture-metrics.py --check docs/architecture-baseline.json` 통과, `check-app-engine-import-boundary.sh` 통과. 번역: 새 문구 1개를 12개 언어에 넣고 `extract.py`·`check.py` 실패 0(긴 문구 알림 3건은 장소 이름, 기존).
+- 서버 배포 필요(대표 지시 때만): `shared.js`·`actions.js`·`validate.js`·`state.js`·`store.js`·`index.js`. 옛 서버에서는 앱의 `DELETE /tasks?all=1`이 끝난 일만 지움.
+- 확인 안 한 것: 실기기, 공통 규칙 화면 새 문구의 눈 확인.
+
 ## PRF1117A01 · 콜드 실행 단계별 측정과 시작 막대 고침 (2026-11-17 새벽, 아이폰 11 Pro 실기기 + 시뮬레이터)
 
 - 판: `4aa16489` + 측정 도구, Release + BENCH, 개발 서명, `devicectl` 설치·실행, 기기 공유 잠금은 설치·측정 동안만. 실제 기록 그대로(첫 읽기 44,263~44,288행·12MB). 로그 `build/validation/PRF1117A01/`(숫자만, 회차별 `load.txt`에 맥 부하).
