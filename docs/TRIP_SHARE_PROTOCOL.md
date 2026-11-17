@@ -260,7 +260,7 @@ AAD    = UTF8("taption-share-v1|" + roomId + "|" + 항목 id + "|" + kind + "|" 
 | `POST <방>/kick` | `{ "member": 3 }` | 200 `{ "ok": true, "member": 3, "rekeyRecommended": true }` · 404 `no_member` |
 | `POST <방>/close` | `{ "closed": true }` (정산 마감) 또는 `false`(다시 열기) | 200 `{ "closed" }` |
 | `POST <방>/expiry` | `{ "expiresAt": … }` | 200 `{ "expiresAt" }` · 422 `bad_expiry`(지금 + 1시간 ~ 만든 때 + 400일) |
-| `POST <방>/rotate` | `{ "rev", "proof", "items": [ { "id", "cipher" } ] }` (15절) | 200 `{ "epoch", "rev" }` |
+| `POST <방>/rotate` | `{ "rev", "proof", "items": [ { "id", "cipher", "group"? } ] }` (15절) | 200 `{ "epoch", "rev" }` |
 | `DELETE <방>` | 없음 | 204. 방의 모든 것이 지워짐 |
 
 내보낸 사람은 그때까지의 내용을 이미 가지고 있고 링크와 비밀번호를 압니다. 다시 들어오지 못하게 하려면 **내보낸 뒤 비밀번호를 바꿔야 합니다**(`rekeyRecommended`). 앱은 내보내기 뒤에 비밀번호 바꾸기를 권하는 화면을 냅니다.
@@ -420,8 +420,8 @@ A가 잡음 ──B가 잡기──▶ 423 locked (변화 없음)
 
 1. 따라잡기를 끝까지 해서 모든 살아 있는 항목을 가지고, 방의 `rev`를 적어 둡니다.
 2. 새 비밀번호(원하면 새 `linkSecret`도)로 3절대로 새 `encKey`·`proof`를 만듭니다.
-3. 살아 있는 **모든** 항목을 새 키와 새 세대(`epoch + 1`)의 AAD로 다시 잠급니다.
-4. `POST <방>/rotate` `{ "rev": <1의 rev>, "proof": <새 증명>, "items": [ { "id", "cipher" } … ] }`.
+3. 살아 있는 **모든** 항목을 새 키와 새 세대(`epoch + 1`)의 AAD로 다시 잠급니다. 날 묶음 이름(8절, 키로 만든 HMAC)을 쓰는 항목은 새 키로 이름을 다시 만들어 `group`에 넣습니다(TSR1117A01).
+4. `POST <방>/rotate` `{ "rev": <1의 rev>, "proof": <새 증명>, "items": [ { "id", "cipher", "group"? } … ] }`. `group`(선택, 8절의 모양)이 있으면 서버가 그 항목의 묶음 이름을 바꾸고, 없으면 그대로 둡니다(이 칸을 모르는 서버는 무시하므로 이름이 옛 키에 남습니다).
    - 409 `conflict`(`rev`): 그 사이 누가 썼음 → 1부터 다시.
    - 422 `incomplete`(`missing`, `extra`): 살아 있는 항목과 목록이 맞지 않음. 422 `same_proof`: 비밀번호가 그대로임.
 5. 200 `{ "epoch", "rev" }`. 서버가 한 번에 바꿉니다: 모든 항목의 암호문·세대, 입장 검증값, 세대 +1, 모든 잠금 해제, 입장 실패 수 초기화. 항목마다 `rev`·`seq`가 새로 매겨지고 만든 사람·확인 기록은 그대로입니다.

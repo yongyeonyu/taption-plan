@@ -265,13 +265,20 @@ extension ShareRoomSession {
             let plain = Data(item.json.utf8)
             let padded = ShareCipher.padded(plain)
             let body = ShareCipher.sealedBytes(plaintextBytes: padded.count) <= limits.itemBytes ? padded : plain
-            return ShareRotateItem(id: item.id, cipher: try ShareCipher.seal(body, key: newKeys.encKey, context: context(item.id, item.kind, epoch: epoch + 1)))
+            let cipher = try ShareCipher.seal(body, key: newKeys.encKey, context: context(item.id, item.kind, epoch: epoch + 1))
+            return ShareRotateItem(id: item.id, cipher: cipher, group: movedGroup(item, to: newKeys))
         }
         for bad in unreadable.values.sorted(by: { $0.id < $1.id }) {
             guard let cipher = bad.cipher else { throw ShareError.unreadableItems([bad.id]) }
             entries.append(ShareRotateItem(id: bad.id, cipher: cipher))
         }
         return entries
+    }
+
+    /// 날 묶음 이름은 키로 만든 HMAC이라 키가 바뀌면 바뀐다. 지금 키의 `groupName(day:)`와 같은 일정만 새 키의 이름으로 옮긴다.
+    private func movedGroup(_ item: ShareLocalItem, to newKeys: ShareKeys) -> String? {
+        guard let name = item.group, case .plan(let plan) = item.content, keys.groupName(day: plan.day) == name else { return nil }
+        return newKeys.groupName(day: plan.day)
     }
 
     /// 내보내기. 내보낸 사람은 링크와 비밀번호를 알므로, `rekeyRecommended`면 비밀번호 바꾸기를 권한다.

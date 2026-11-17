@@ -614,12 +614,15 @@ export class ShareRoom {
     if (body.rev !== room.rev) return fail(409, "conflict", { rev: room.rev });
     const join = await digest("join", room.id, body.proof);
     if (sameText(join, room.join)) return fail(422, "same_proof");
-    const fresh = new Map();
+    const fresh = new Map(), regrouped = new Map();
     let bytes = 0;
     for (const [index, entry] of list.entries()) {
-      const bad = !ITEM_ID.test(entry?.id ?? "") || fresh.has(entry.id) ? [422, "bad_request"] : cipherError(entry.cipher);
+      const badGroup = entry?.group !== undefined && (typeof entry.group !== "string" || !GROUP.test(entry.group));
+      const bad = typeof entry?.id !== "string" || !ITEM_ID.test(entry.id) || fresh.has(entry.id) || badGroup ? [422, "bad_request"] : cipherError(entry.cipher);
       if (bad) return fail(bad[0], bad[1], { index });
       fresh.set(entry.id, entry.cipher);
+      // 묶음 이름은 기기가 키로 만든 HMAC이라 키가 바뀌면 바뀐다. 새 이름이 오면 바꾸고, 없으면 그대로 둔다(TSR1117A01).
+      if (entry.group !== undefined) regrouped.set(entry.id, entry.group);
       bytes += cipherBytes(entry.cipher);
     }
     const live = [...(await this.storage.list({ prefix: "i:" })).values()].filter((i) => !i.del).sort((a, b) => a.seq - b.seq);
@@ -632,7 +635,7 @@ export class ShareRoom {
     for (const item of live) {
       batch.delete("r:" + pad(item.seq));
       const rev = ++room.rev;
-      batch.put("i:" + item.id, { ...item, cipher: fresh.get(item.id), epoch: room.epoch, rev, seq: rev });
+      batch.put("i:" + item.id, { ...item, cipher: fresh.get(item.id), epoch: room.epoch, rev, seq: rev, ...(regrouped.has(item.id) ? { group: regrouped.get(item.id) } : {}) });
       batch.put("r:" + pad(rev), item.id);
     }
     Object.assign(room, { join, bytes, locks: {}, fails: {} });

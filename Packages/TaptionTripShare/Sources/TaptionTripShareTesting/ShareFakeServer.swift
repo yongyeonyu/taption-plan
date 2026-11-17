@@ -549,8 +549,13 @@ public actor ShareFakeServer {
         guard rev == room.rev else { return fail(409, "conflict", ["rev": room.rev]) }
         guard proof != room.proof else { return fail(422, "same_proof") }
         var fresh: [String: String] = [:]
+        var regrouped: [String: String] = [:]
         for entry in list {
             guard let id = entry["id"] as? String, let cipher = entry["cipher"] as? String, fresh[id] == nil else { return fail(422, "bad_request") }
+            if let group = entry["group"] {
+                guard let name = group as? String, ShareIdentifiers.isGroupName(name) else { return fail(422, "bad_request") }
+                regrouped[id] = name
+            }
             fresh[id] = cipher
         }
         let live = room.items.values.filter { !$0.deleted }.sorted { $0.seq < $1.seq }
@@ -562,6 +567,7 @@ public actor ShareFakeServer {
         for var item in live {
             room.rev += 1
             item.cipher = fresh[item.id]
+            if let group = regrouped[item.id] { item.group = group }
             item.epoch = room.epoch
             item.rev = room.rev
             item.seq = room.rev

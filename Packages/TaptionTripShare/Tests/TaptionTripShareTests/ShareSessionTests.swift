@@ -524,6 +524,30 @@ final class ShareSessionTests: XCTestCase {
         try await eventually { await owner.view().members.map(\.no) == [1, 2] }
     }
 
+    /// 날 묶음 이름은 암호화 키로 만든 HMAC이라 키가 바뀌면 이름도 바뀐다. 키 교체가 암호문만 바꾸면 서버의 항목은
+    /// 옛 이름에 남아, 새 키로 만든 날 묶음 잠금이 그날 항목을 덮지 못했다(TSR1117A01). 교체 때 이름도 새 키로 옮긴다.
+    func testRotationMovesDayGroupsToTheNewKey() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        let oldGroup = room.keys.groupName(day: "2031-05-06")
+        let first = try await created(owner, "하나", group: oldGroup)
+        let second = try await created(owner, "둘", group: oldGroup)
+        let loose = try await created(owner, "묶음 밖")
+        let custom = try await created(owner, "다른 규칙", group: "custom-group")
+
+        let newKeys = try TestRoom.derive(room.invite, "새 비밀번호 2031")
+        _ = try await owner.rotate(to: newKeys)
+        let newGroup = newKeys.groupName(day: "2031-05-06")
+        let groups = [await owner.item(first)?.group, await owner.item(second)?.group, await owner.item(loose)?.group, await owner.item(custom)?.group]
+        XCTAssertEqual(groups, [newGroup, newGroup, nil, "custom-group"], "알아보는 이름만 옮기고 나머지는 그대로 둔다")
+
+        // 새 키로 만든 날 묶음 잠금 하나로 그날 항목을 함께 고친다.
+        try await owner.lock(groups: [newGroup])
+        let outcome = try await owner.write([.update(id: first, content: plan("하나'")), .update(id: second, content: plan("둘'"))])
+        XCTAssertEqual(outcome, .done)
+    }
+
     func testRekeyRequiredOverHTTPAlsoPausesTheSession() async throws {
         let room = try await TestRoom.make()
         let clock = TestClock()

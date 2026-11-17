@@ -840,6 +840,22 @@ test("share privacy: the room code writes no logs and room paths carry no secret
   assert.equal((await call(room.env, "GET", `${room.path}?token=${room.owner.token}`)).status, 401);
 });
 
+test("share rotate: an entry may carry the day group re-derived under the new key; without it the group stays (TSR1117A01)", async () => {
+  const room = await makeRoom();
+  const moved = await add(room, room.owner, "plan", { group: "oldDayName" });
+  const kept = await add(room, room.owner, "plan", { group: "otherRule" });
+  const rotate = (items) => call(room.env, "POST", room.path + "/rotate", { token: room.owner.token, owner: room.ownerKey, body: { rev: 2, proof: secret(), items } });
+  assert.equal((await rotate([{ id: moved.id, cipher: cipher(), group: "bad name!" }, { id: kept.id, cipher: cipher() }])).body.error, "bad_request");
+  assert.equal((await rotate([{ id: moved.id, cipher: cipher(), group: 12 }, { id: kept.id, cipher: cipher() }])).status, 422);
+  assert.equal((await rotate([{ id: moved.id, cipher: cipher(), group: "newDayName" }, { id: kept.id, cipher: cipher() }])).status, 200);
+  const items = (await changes(room, room.owner)).body.items;
+  assert.deepEqual(items.map((i) => [i.id, i.group]).sort(), [[moved.id, "newDayName"], [kept.id, "otherRule"]].sort());
+  // 새 이름의 묶음 잠금이 그 항목을 덮는다.
+  assert.equal((await lock(room, room.owner, ["g:newDayName"])).status, 200);
+  const guestless = await write(room, room.owner, { id: moved.id, kind: "plan", baseRev: items.find((i) => i.id === moved.id).rev, cipher: cipher() }, 2);
+  assert.equal(guestless.status, 200, JSON.stringify(guestless.body));
+});
+
 // MARK: 동행 위치 (LOC1116S01)
 
 const openWindow = (room, from = room.clock.now - DAY, until = room.clock.now + 2 * DAY) =>
