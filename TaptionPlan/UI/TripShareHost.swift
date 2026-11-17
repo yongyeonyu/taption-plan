@@ -147,10 +147,14 @@ enum TripShareRoomWork {
         return ShareMemberCard(name: nickname, color: old?.color ?? colors[(max(member, 1) - 1) % colors.count], sent: old?.sent)
     }
 
-    /// 내 카드가 방에 없으면 올린다(입장 직후 끊겼을 때를 잇는다).
+    /// 내 카드가 방에 없으면 올린다(입장 직후 끊겼을 때를 잇는다). 방을 연 직후는 아직 연결 중이라
+    /// 창구 값으로는 쓸 수 없다: 연결을 기다리고 방을 다 받은 뒤 세션 값으로 본다(TSA1117A01).
     static func ensureCard(store: TripShareStore, tripID: String) async {
-        guard let view = store.view(tripID: tripID), view.canWrite, view.cards[view.me] == nil,
-              let session = store.session(tripID: tripID) else { return }
+        guard store.link(tripID: tripID)?.phase == .sharing,
+              let session = try? await liveSession(store: store, tripID: tripID) else { return }
+        try? await session.catchUp()
+        let view = await session.view()
+        guard view.canWrite, view.cards[view.me] == nil else { return }
         _ = try? await session.publish(card: card(nickname: savedNickname, member: view.me))
         await store.refresh(tripID: tripID)
     }
