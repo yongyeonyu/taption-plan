@@ -340,6 +340,8 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertEqual(AssistantOAuthCode.parse(Data(#"{"code":"AB12CD34","expiresIn":600}"#.utf8), now: now),
                        AssistantOAuthCode(code: "AB12CD34", expiresAt: now.addingTimeInterval(600)))
         XCTAssertEqual(AssistantOAuthCode.parse(Data(#"{"code":"AB12CD34","expiresIn":9999}"#.utf8), now: now)?.expiresAt, now.addingTimeInterval(600))
+        let skewed = #"{"code":"AB12CD34","expiresAt":"2000-01-01T00:10:00Z","expiresIn":540}"#
+        XCTAssertEqual(AssistantOAuthCode.parse(Data(skewed.utf8), now: now)?.expiresAt, now.addingTimeInterval(540), "기기 시계가 서버와 달라도 남은 초를 쓴다")
         XCTAssertNil(AssistantOAuthCode.parse(Data(#"{"nope":1}"#.utf8), now: now))
         XCTAssertFalse(TripRelay.claudeCodeCommand(host: host).contains("Bearer"), "the Claude Code command carries no key")
     }

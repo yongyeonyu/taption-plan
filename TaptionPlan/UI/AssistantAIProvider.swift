@@ -152,10 +152,11 @@ struct AssistantOAuthCode: Equatable, Sendable {
               let code = (object["code"] as? String)?.trimmingCharacters(in: .whitespaces), (4...16).contains(code.count) else { return nil }
         let latest = now.addingTimeInterval(lifetime)
         var expiresAt = latest
-        if let text = object["expiresAt"] as? String, let date = TripRelay.isoDate(text) {
+        // REV1117A02: 남은 초를 먼저 본다. 서버 시각(expiresAt)을 기기 시계와 견주면 시계가 틀린 기기에서 남은 시간이 틀린다.
+        if let seconds = object["expiresIn"] as? Int {
+            expiresAt = min(now.addingTimeInterval(TimeInterval(max(0, seconds))), latest)
+        } else if let text = object["expiresAt"] as? String, let date = TripRelay.isoDate(text) {
             expiresAt = min(date, latest)
-        } else if let seconds = object["expiresIn"] as? Int {
-            expiresAt = min(now.addingTimeInterval(TimeInterval(seconds)), latest)
         }
         return Self(code: code, expiresAt: expiresAt)
     }
