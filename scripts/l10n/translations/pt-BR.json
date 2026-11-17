@@ -6071,6 +6071,13 @@
 "화면 오른쪽 끝 끌기|Drag the right edge": "Arrastar a borda direita",
 "누르면 하루 요약을 엽니다|Opens the day summary": "Abre o resumo do dia",
 "머문 곳 {0}|{0} places": "{0} lugares",
-"하루 요약 띠 (시험)|Day summary bar (trial)": "Barra do dia (teste)"
+"하루 요약 띠 (시험)|Day summary bar (trial)": "Barra do dia (teste)",
+"계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 구매 내역과 체험 사용 여부는 유지되며, 이 작업은 되돌릴 수 없습니다.|Plans, actual records, memos and automatic movement records are deleted. Purchases and trial status are kept. This cannot be undone.": "Planos, registros reais, notas e deslocamentos registrados automaticamente serão excluídos. As compras e o status do teste são mantidos. Esta ação não pode ser desfeita.",
+"계획·실제·메모·위치 등 전체 기록을 JSON 파일 하나로 공유합니다.|Shares every record, including plans, actual records, memos and locations, as one JSON file.": "Compartilha todos os registros, incluindo planos, registros reais, notas e locais, em um único arquivo JSON.",
+"날씨 데이터 출처 및 법적 고지|Weather data sources and legal notice": "Fontes dos dados meteorológicos e aviso legal",
+"내 데이터 내보내기|Export my data": "Exportar meus dados",
+"내 데이터|My data": "Meus dados",
+"모든 BOKKI Plan 데이터를 삭제할까요?|Delete all BOKKI Plan data?": "Excluir todos os dados do BOKKI Plan?",
+"모든 데이터 삭제|Delete all data": "Excluir todos os dados"
 }
 }

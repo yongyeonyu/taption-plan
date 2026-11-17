@@ -20,6 +20,18 @@
   - 시뮬레이터(`99AC6F35…`, Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안): 관련 시험(FeatureEngine·HomeSky·Stickman·LiveMap·PlaybackStaticLayers·Ledger) 939건 실패 0, **`TaptionPlanTests` 전체 3,012건(건너뜀 25) 실패 0**(15:21~15:29, 부하 3~4). 15:11에 시작한 첫 전체 시험은 다른 작업과 겹쳐 멈추고 다시 돌림.
 - 남은 것: 아이폰 11 집 그림 눈 확인, 가계부 다시 열기(대표 결정), 날짜 40ms 넘는 끊김 3 이하, 긴 날로 재생 다시 재기.
 
+## LGC1117A01 · 꺼진 옛 화면 걷기 (2026-11-17, 시뮬레이터, 실기기 없음)
+
+- 판: 브랜치 `worktree-agent-aec7227c3e3bd694e`(main `a0c0a176`을 합친 `bea389c5` 뒤). 살림·제거 표와 전후 줄 수는 `docs/reviews/LGC1117A01.md`(앱 Swift 206,315 → 178,293줄, 단위 시험 87,108 → 84,659줄, 파일 67개 지움).
+- 빌드(Debug, 산출물 `/Volumes/TaptionPlanBuild/dd/LGC1117A01`, 끝난 뒤 지움): 앱 `TaptionPlan` generic iOS 성공·오류 0(`app-build-7.log`), `TaptionPlanWidget`·`TaptionPlanWatch`·`TaptionPlanWatchWidget` 모두 성공·오류 0(`widget-build.log`·`watch-build.log`·`watchwidget-build.log`).
+- 단위 `-only-testing:TaptionPlanTests`(시뮬레이터 `99AC6F35…`, `-parallel-testing-enabled NO`): **2,967 통과·실패 0·건너뜀 25**(`unit-tests-4.xcresult`). 예외 시험(`testImmediateSensorAnalysisKeepsEveryPendingDay`)도 이번엔 통과.
+  - 앞선 시도: `unit-tests-hung`·`unit-tests-3`은 「test runner hung before establishing connection」으로 0건 실행. `unit-tests-2`는 6건이 「signal kill」(약 45초마다 시험 앱이 죽음) — 같은 시각 다른 세션 두 곳(PRF1117A02·REV1117A01)이 잠금 없이 같은 시뮬레이터에서 `xcodebuild test`를 돌림. 그 6건은 따로 다시 돌려 모두 통과(`unit-tests-rerun`·`unit-tests-rerun2`). 4차 전체 실행 동안 다른 시뮬레이터 사용자는 감시에 잡히지 않음.
+- UI `TaptionPlanUITests/TaptionPlanSmokeUITests`: **11 통과·실패 0**(`smoke-ui.xcresult`, `testUploadDiagnosticsLogs`·`testLaunchShowsHomeWithoutChangingData` 포함).
+- 구조 점검 `architecture-metrics.py --check`·import 경계 통과(합친 뒤 다시, `architecture-check-2.log`·`import-boundary-2.log`), 번역 `check.py` 실패 0·generate 뒤 카탈로그 변화 없음.
+- 지난 빌드 오류 2건(프로브 파일 `#endif`, `PlanItem`의 `PlanCategory`)은 고친 뒤 위 빌드로 확인. 7차 빌드 로그의 오류 수 0.
+- main 합침 충돌: `WidgetPreviewView.swift`(main의 수정은 옛 위젯 미리보기 안의 「종료」 단추라 지운 채 둠), `temp.md`·`test.md`(양쪽 살림).
+- 하지 않은 것: 실기기, 새 「내 데이터」 칸(내보내기·전체 삭제)과 지도 출처 시트의 날씨 표기를 눈으로 확인하는 UI 시험(현재 UI 시험에 없음).
+
 ## REV1117A04 · 가계부·결제 문자·설정·목표·메모·일정·첫 실행·위젯·Watch 리뷰 (2026-11-17, 시뮬레이터)
 
 - 결과: 결함 8건 수정·커밋 6개(`docs/reviews/REV1117A04.md`). 실기기 안 씀.

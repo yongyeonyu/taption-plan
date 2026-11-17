@@ -6071,6 +6071,13 @@
 "화면 오른쪽 끝 끌기|Drag the right edge": "拖曳螢幕右邊緣",
 "누르면 하루 요약을 엽니다|Opens the day summary": "打開當天總結",
 "머문 곳 {0}|{0} places": "停留 {0} 處",
-"하루 요약 띠 (시험)|Day summary bar (trial)": "當天總結列（試用）"
+"하루 요약 띠 (시험)|Day summary bar (trial)": "當天總結列（試用）",
+"계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 구매 내역과 체험 사용 여부는 유지되며, 이 작업은 되돌릴 수 없습니다.|Plans, actual records, memos and automatic movement records are deleted. Purchases and trial status are kept. This cannot be undone.": "將刪除計畫、實際紀錄、備忘和自動移動紀錄。購買紀錄和試用狀態會保留。此操作無法復原。",
+"계획·실제·메모·위치 등 전체 기록을 JSON 파일 하나로 공유합니다.|Shares every record, including plans, actual records, memos and locations, as one JSON file.": "將計畫、實際紀錄、備忘、位置等所有紀錄以一個 JSON 檔案分享。",
+"날씨 데이터 출처 및 법적 고지|Weather data sources and legal notice": "天氣資料來源及法律聲明",
+"내 데이터 내보내기|Export my data": "匯出我的資料",
+"내 데이터|My data": "我的資料",
+"모든 BOKKI Plan 데이터를 삭제할까요?|Delete all BOKKI Plan data?": "要刪除所有 BOKKI Plan 資料嗎？",
+"모든 데이터 삭제|Delete all data": "刪除所有資料"
 }
 }

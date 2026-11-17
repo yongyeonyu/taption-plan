@@ -719,32 +719,6 @@ extension FeatureEngineTests {
         XCTAssertEqual(visible[0].endedAt, now)
     }
 
-    func testGanttViewportStopsAtOneMinuteForEveryTimelineDuration() {
-        let durations: [TimeInterval] = [
-            24 * 60 * 60,
-            7 * 24 * 60 * 60,
-            31 * 24 * 60 * 60,
-            366 * 24 * 60 * 60,
-        ]
-
-        for duration in durations {
-            let minimumLength = GanttViewport.oneMinuteMinimumLength(
-                for: duration
-            )
-            let zoomed = GanttViewport.full.magnifying(
-                by: 1_000_000,
-                anchor: 0.5,
-                minimumLength: minimumLength
-            )
-
-            XCTAssertEqual(
-                duration * zoomed.length,
-                60,
-                accuracy: 0.001
-            )
-        }
-    }
-
     func testScheduleDragSnapsToFifteenMinutes() throws {
         let base = makeDate(2026, 7, 30, 9, 0)
         let plan = PlanRecord(
@@ -937,75 +911,6 @@ extension FeatureEngineTests {
         )
         XCTAssertFalse(custom.isBuiltIn)
         XCTAssertEqual(custom.lightHex, "#AABBCC")
-    }
-
-    func testEveryBuiltInCategoryProvidesMiddleCategorySuggestions() {
-        XCTAssertEqual(
-            Set(CategoryHierarchyCatalog.middleSuggestionsByCategoryID.keys),
-            Set(CategoryCatalog.builtIn.map(\.id))
-        )
-
-        for category in CategoryCatalog.builtIn {
-            let suggestions = CategoryHierarchyCatalog.middleSuggestions(
-                for: category.id
-            )
-            XCTAssertGreaterThanOrEqual(
-                suggestions.count,
-                4,
-                "\(category.name) 중분류 추천이 부족합니다."
-            )
-            XCTAssertEqual(Set(suggestions).count, suggestions.count)
-            XCTAssertTrue(suggestions.allSatisfy {
-                !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            })
-        }
-
-        XCTAssertEqual(
-            CategoryHierarchyCatalog.middleSuggestions(
-                for: "custom.volunteer"
-            ),
-            CategoryHierarchyCatalog.defaultMiddleSuggestions
-        )
-    }
-
-    func testQuickPlanDraftUsesHalfHourDefaultsAndTitleFallback() {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let input = calendar.date(
-            from: DateComponents(
-                year: 2026,
-                month: 8,
-                day: 1,
-                hour: 12,
-                minute: 57
-            )
-        )!
-        let rounded = QuickPlanDraftEngine.roundedUpToHalfHour(input)
-
-        XCTAssertEqual(calendar.component(.hour, from: rounded), 13)
-        XCTAssertEqual(calendar.component(.minute, from: rounded), 0)
-        XCTAssertEqual(QuickPlanDraftEngine.defaultDuration, 30 * 60)
-        XCTAssertEqual(QuickPlanDraftEngine.adjustmentStep, 5 * 60)
-        XCTAssertEqual(
-            QuickPlanDraftEngine.resolvedTitle(
-                subcategory: "청계천 산책",
-                middleCategory: "산책"
-            ),
-            "청계천 산책"
-        )
-        XCTAssertEqual(
-            QuickPlanDraftEngine.resolvedTitle(
-                subcategory: "   ",
-                middleCategory: "산책"
-            ),
-            "산책"
-        )
-        XCTAssertNil(
-            QuickPlanDraftEngine.resolvedTitle(
-                subcategory: "",
-                middleCategory: ""
-            )
-        )
     }
 
     func testDeletingCustomCategoryReassignsRecords() throws {
@@ -1901,74 +1806,6 @@ extension FeatureEngineTests {
         XCTAssertEqual(detached?.text, memo.text)
     }
 
-    func testGoalDetailBranchesAndDeduplicatesOverlappingTime() {
-        let start = makeDate(2026, 8, 1, 9)
-        let repeatGoal = PlanRecord(
-            title: "수면",
-            span: TimeSpan(start: start, end: start.addingTimeInterval(30 * 86_400)),
-            categoryID: "sleep",
-            repeatRules: [
-                GoalRepeatRule(
-                    weekdays: [2, 3, 4, 5, 6],
-                    startMinuteOfDay: 23 * 60,
-                    endMinuteOfDay: 6 * 60 + 30
-                ),
-            ]
-        )
-        XCTAssertEqual(
-            GoalDetailEngine.make(
-                goal: repeatGoal,
-                plans: [repeatGoal],
-                actuals: [],
-                referenceDate: start,
-                calendar: utcCalendar
-            ).mode,
-            .habit
-        )
-
-        let projectGoal = PlanRecord(
-            title: "자격증",
-            span: TimeSpan(start: start, end: start.addingTimeInterval(10 * 86_400)),
-            categoryID: "study"
-        )
-        let child = PlanRecord(
-            title: "강의 듣기",
-            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
-            categoryID: "study",
-            parentID: projectGoal.id
-        )
-        XCTAssertEqual(
-            GoalDetailEngine.make(
-                goal: projectGoal,
-                plans: [projectGoal, child],
-                actuals: [],
-                referenceDate: start,
-                calendar: utcCalendar
-            ).mode,
-            .project
-        )
-        XCTAssertEqual(
-            GoalDetailEngine.make(
-                goal: projectGoal,
-                plans: [projectGoal],
-                actuals: [],
-                referenceDate: start,
-                calendar: utcCalendar
-            ).mode,
-            .empty
-        )
-        XCTAssertEqual(
-            TimeSpan.unionDuration([
-                TimeSpan(start: start, end: start.addingTimeInterval(hour)),
-                TimeSpan(
-                    start: start.addingTimeInterval(30 * 60),
-                    end: start.addingTimeInterval(2 * hour)
-                ),
-            ]),
-            2 * hour
-        )
-    }
-
     func testRelationshipGraphOmitsRepeatSegmentsAndKeepsFocusedRoutineChain() {
         let start = makeDate(2026, 8, 2, 22)
         let routine = PlanRecord(
@@ -2120,40 +1957,6 @@ extension FeatureEngineTests {
         XCTAssertFalse(GoalRecordPolicy.isGoal(childPlan))
     }
 
-    func testScheduleHeaderUsesKoreanCalendarTitles() {
-        let date = makeDate(2026, 7, 31)
-        let formatter = ScheduleHeaderFormatter(calendar: utcCalendar)
-
-        XCTAssertEqual(
-            formatter.title(for: date, scale: .day),
-            "7월 31일 (금)"
-        )
-        XCTAssertEqual(
-            formatter.title(for: date, scale: .week),
-            "7월 27일 – 8월 2일"
-        )
-        XCTAssertEqual(
-            formatter.title(for: date, scale: .month),
-            "2026년 7월"
-        )
-        XCTAssertEqual(
-            formatter.title(for: date, scale: .year),
-            "2026년"
-        )
-        XCTAssertEqual(
-            formatter.playheadTitle(for: date, scale: .week),
-            "7월 31일 (금)"
-        )
-        XCTAssertEqual(
-            formatter.playheadTitle(for: date, scale: .month),
-            "7월 31일 (금)"
-        )
-        XCTAssertEqual(
-            formatter.playheadTitle(for: date, scale: .year),
-            "7월 31일 (금)"
-        )
-    }
-
     func testScreenTimeUsageExplainsCategoryAndUnknownFallbacks() {
         let start = makeDate(2026, 8, 3, 14)
         let span = TimeSpan(start: start, end: start.addingTimeInterval(hour))
@@ -2243,37 +2046,6 @@ extension FeatureEngineTests {
         XCTAssertEqual(groups[0].children[0].occurrenceCount, 3)
         XCTAssertEqual(groups[0].children[0].duration, 75 * 60)
         XCTAssertEqual(groups[0].duration, 75 * 60)
-    }
-
-    func testClockLegendKeepsOnlyTheChosenCategory() {
-        let day = makeDate(2026, 8, 4)
-        let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
-        let rings = RecordChartEngine.clockRings(
-            actuals: [
-                makeActual("수면", "sleep", start: day, minutes: 6 * 60),
-                makeActual(
-                    "걷기",
-                    "movement",
-                    start: day.addingTimeInterval(12 * hour),
-                    minutes: 60
-                ),
-            ],
-            in: span,
-            asOf: day.addingTimeInterval(24 * hour)
-        )
-
-        XCTAssertEqual(
-            RecordClockEngine.rings(rings, isolating: nil).count,
-            2
-        )
-        XCTAssertEqual(
-            RecordClockEngine.rings(rings, isolating: "movement")
-                .map(\.categoryID),
-            ["movement"]
-        )
-        XCTAssertTrue(
-            RecordClockEngine.rings(rings, isolating: "sleepless").isEmpty
-        )
     }
 
     func testMemoShellMigrationLiftsMemoAndRemovesShellPlan() {

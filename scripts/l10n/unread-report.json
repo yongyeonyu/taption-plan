@@ -1,5 +1,5 @@
 {
- "ui": 5314,
+ "ui": 5305,
  "catalog": 504,
  "unread": [
   {
@@ -226,7 +226,7 @@
   },
   {
    "file": "TaptionPlan/UI/FirstRunTutorialView.swift",
-   "line": 493,
+   "line": 497,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
@@ -688,19 +688,19 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 876,
+   "line": 969,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 884,
+   "line": 977,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 933,
+   "line": 1026,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
   },

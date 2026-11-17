@@ -3,16 +3,6 @@ import TaptionPlanCore
 
 // `PlanStatus`·`PlanOrigin`·`PlanRecord`·`GoalRepeatRule`은 `TaptionPlanCore/Domain/PlanRecord.swift`에 있다.
 
-enum GoalCategoryPolicy {
-    static let systemSelectableCategoryIDs: Set<String> = [
-        "movement",
-        "location",
-        "sleep",
-        "activity",
-        "appUsage",
-    ]
-}
-
 extension PlanRecord {
     /// Plans use the same semantic vocabulary as automatic records.  The
     /// routine/action distinction remains an origin relationship in the graph.

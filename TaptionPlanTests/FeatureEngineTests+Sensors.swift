@@ -371,36 +371,6 @@ extension FeatureEngineTests {
         await model.sceneEnteredBackground()
     }
 
-    func testOneMinuteGanttPrioritizesTimeActualAndSensorConfidence() {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let start = makeDate(2026, 7, 31, 9, 4)
-        let end = makeDate(2026, 7, 31, 9, 36)
-
-        XCTAssertEqual(
-            GanttPrecisionPresentation.label(
-                title: "자가용",
-                startsAt: start,
-                endsAt: end,
-                detailText: "센서 추정 · 높은 신뢰",
-                visibleDuration: 60,
-                calendar: calendar
-            ),
-            "09:04–09:36 · 센서 추정 · 높은 신뢰"
-        )
-        XCTAssertEqual(
-            GanttPrecisionPresentation.label(
-                title: "러닝",
-                startsAt: start,
-                endsAt: end,
-                detailText: "실제 · Apple 건강 · 높은 신뢰",
-                visibleDuration: 15 * 60,
-                calendar: calendar
-            ),
-            "러닝"
-        )
-    }
-
     func testPoorAccuracyGPSSpikeDoesNotBecomeAirplane() {
         let base = makeDate(2026, 8, 1, 8, 0)
         let speeds: [(Double, Double)] = [

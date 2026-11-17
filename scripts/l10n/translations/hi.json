@@ -6071,6 +6071,13 @@
 "화면 오른쪽 끝 끌기|Drag the right edge": "दायाँ किनारा खींचें",
 "누르면 하루 요약을 엽니다|Opens the day summary": "दिन का सारांश खोलता है",
 "머문 곳 {0}|{0} places": "{0} जगहें",
-"하루 요약 띠 (시험)|Day summary bar (trial)": "दिन सारांश पट्टी (परीक्षण)"
+"하루 요약 띠 (시험)|Day summary bar (trial)": "दिन सारांश पट्टी (परीक्षण)",
+"계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 구매 내역과 체험 사용 여부는 유지되며, 이 작업은 되돌릴 수 없습니다.|Plans, actual records, memos and automatic movement records are deleted. Purchases and trial status are kept. This cannot be undone.": "योजनाएँ, वास्तविक रिकॉर्ड, नोट्स और स्वचालित यात्रा रिकॉर्ड हटा दिए जाएँगे। खरीदारी और ट्रायल की स्थिति बनी रहेगी। इसे पूर्ववत नहीं किया जा सकता।",
+"계획·실제·메모·위치 등 전체 기록을 JSON 파일 하나로 공유합니다.|Shares every record, including plans, actual records, memos and locations, as one JSON file.": "योजनाएँ, वास्तविक रिकॉर्ड, नोट्स और स्थान सहित सभी रिकॉर्ड एक JSON फ़ाइल के रूप में साझा करता है।",
+"날씨 데이터 출처 및 법적 고지|Weather data sources and legal notice": "मौसम डेटा के स्रोत और कानूनी सूचना",
+"내 데이터 내보내기|Export my data": "मेरा डेटा निर्यात करें",
+"내 데이터|My data": "मेरा डेटा",
+"모든 BOKKI Plan 데이터를 삭제할까요?|Delete all BOKKI Plan data?": "BOKKI Plan का सारा डेटा हटाएँ?",
+"모든 데이터 삭제|Delete all data": "सारा डेटा हटाएँ"
 }
 }
