@@ -26,6 +26,9 @@ struct LedgerSheet: View {
     @State private var isAddingTrip = false
     /// 이 달 숫자. 장부·달·여행이 바뀔 때만 다시 센다. 화면을 그릴 때마다 장부 전체를 열 번 넘게 거르면 스크롤이 끊겼다(LGP1113A01).
     @State private var summary = LedgerMonthSummary()
+    /// 첫 화면 아래(영수증·문자 넣기, 날짜별 목록)는 시트가 올라오기 시작한 다음 프레임에 붙인다.
+    /// 시트를 여는 첫 프레임이 약 140ms였다(PRF1117A02). `-benchBefore=ldefer`면 예전처럼 한 번에 만든다.
+    @State private var showsLowerSections = PerfBenchBefore.has("ldefer")
     private var book: LedgerBook { .shared }
 
     var body: some View {
@@ -35,8 +38,8 @@ struct LedgerSheet: View {
                 Group {
                 summarySection
                 tripsSection
-                captureSection
-                ForEach(groups) { group in
+                if showsLowerSections { captureSection }
+                ForEach(showsLowerSections ? groups : []) { group in
                     Section(group.day.formatted(date: .abbreviated, time: .omitted)) {
                         ForEach(group.entries) { entry in
                             // 짝 기록도 여기서 고치고 지운다(LED1111A09). 그 여행 장부는 밀어서 연다.
@@ -51,7 +54,7 @@ struct LedgerSheet: View {
                         }
                     }
                 }
-                if groups.isEmpty {
+                if showsLowerSections, groups.isEmpty {
                     Text(language.text("이 달에는 기록이 없어요. + 로 더해 보세요.", "No entries this month. Tap + to add one."))
                         .foregroundStyle(Color.tpSecondary)
                 }
@@ -97,6 +100,11 @@ struct LedgerSheet: View {
                 summary = LedgerMonthSummary(book: book, month: month)
             }
             .task {
+                if !showsLowerSections {
+                    // 첫 프레임이 화면에 나간 뒤에 붙인다(시트가 아래에서 올라오는 중이라 이 칸들은 아직 화면 밖이다).
+                    try? await Task.sleep(for: .milliseconds(20))
+                    showsLowerSections = true
+                }
                 if LedgerPresenter.shared.startsAdding {
                     LedgerPresenter.shared.startsAdding = false
                     isAdding = true
