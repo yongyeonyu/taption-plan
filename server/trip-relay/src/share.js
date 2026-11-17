@@ -644,7 +644,7 @@ export class ShareRoom {
     for (const key of (await this.storage.list({ prefix: "l:" })).keys()) batch.delete(key); // 옛 키로 잠근 위치는 버린다.
     await batch.commit();
     for (const ws of this.ctx.getWebSockets()) {
-      if (ws.deserializeAttachment()?.no === 1) this.send(ws, { t: "room", closed: room.closed, expiresAt: room.expiresAt, epoch: room.epoch, rekeyed: true, now });
+      if (ws.deserializeAttachment()?.no === 1) this.send(ws, { t: "room", closed: room.closed, expiresAt: room.expiresAt, epoch: room.epoch, rekeyed: true, locWindow: room.locWindow ?? null, now });
       else this.bye(ws, "rekey", CLOSE.rekey);
     }
     return reply(200, { epoch: room.epoch, rev: room.rev });

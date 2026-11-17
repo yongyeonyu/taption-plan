@@ -578,7 +578,7 @@ public actor ShareFakeServer {
         me.epoch = room.epoch
         for socket in room.sockets {
             if socket.member == 1 {
-                send(socket, ["t": "room", "closed": room.closed, "expiresAt": room.expiresAt, "epoch": room.epoch, "rekeyed": true, "now": now])
+                send(socket, ["t": "room", "closed": room.closed, "expiresAt": room.expiresAt, "epoch": room.epoch, "rekeyed": true, "locWindow": windowJSON(room), "now": now])
             } else {
                 bye(room, socket, reason: "rekey", code: 4001)
             }

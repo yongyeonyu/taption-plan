@@ -146,6 +146,30 @@ final class ShareLocationTests: XCTestCase {
         XCTAssertEqual(kept, [])
     }
 
+    /// 키 교체 직후 서버가 주인에게 보내는 `room`에도 기간 창이 실린다(TSR1117A01). 전에는 빠져 있어 주인 기기에서 창이 지워져 보였다.
+    func testRotationKeepsTheLocationWindowOnTheOwner() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        let now = await room.server.now
+        let window = ShareLocWindow(from: now - 1000, until: now + 86_400_000)
+        try await owner.setLocationWindow(window)
+        _ = try await owner.rotate(to: try TestRoom.derive(room.invite, "새 비밀번호 2031"))
+        // 소켓으로 쓴 것의 응답은 앞서 온 `room`보다 뒤에 읽힌다.
+        _ = try await owner.write([.create(plan("교체 뒤 일정"))])
+        let seen = await owner.locationView().window
+        XCTAssertEqual(seen, window)
+
+        // 창을 싣지 않던 예전 서버의 교체 알림도 창을 지우지 않는다. 보통 `room`의 null은 닫힘이다.
+        let epoch = await owner.view().epoch
+        await owner.receiveLocationWindow(ShareRoomEvent(closed: false, expiresAt: 0, epoch: epoch, now: now, rekeyed: true, locWindow: nil))
+        let kept = await owner.locationView().window
+        XCTAssertEqual(kept, window)
+        await owner.receiveLocationWindow(ShareRoomEvent(closed: false, expiresAt: 0, epoch: epoch, now: now, rekeyed: nil, locWindow: nil))
+        let closed = await owner.locationView().window
+        XCTAssertNil(closed)
+    }
+
     func testForeignOrBrokenCiphertextIsDropped() async throws {
         let room = try await TestRoom.make()
         let clock = TestClock()

@@ -578,7 +578,7 @@ test("share rotate: the owner re-seals every live item under a new proof; others
   assert.deepEqual(done.body, { epoch: 2, rev: 9 });
   assert.deepEqual(guestSocket.closed, { code: CLOSE.rekey, reason: "rekey" });
   assert.equal(ownerSocket.closed, null);
-  assert.deepEqual(ownerSocket.take("room")[0], { t: "room", closed: false, expiresAt: room.expiresAt, epoch: 2, rekeyed: true, now: room.clock.now });
+  assert.deepEqual(ownerSocket.take("room")[0], { t: "room", closed: false, expiresAt: room.expiresAt, epoch: 2, rekeyed: true, locWindow: null, now: room.clock.now });
 
   // 주인은 바로 계속 쓴다. 새 암호문·세대, 확인 기록과 만든 사람은 그대로, 잠금은 모두 풀렸다.
   const snapshot = (await changes(room, room.owner)).body;
@@ -861,6 +861,17 @@ test("share rotate: an entry may carry the day group re-derived under the new ke
 const openWindow = (room, from = room.clock.now - DAY, until = room.clock.now + 2 * DAY) =>
   call(room.env, "POST", room.path + "/locwindow", { token: room.owner.token, owner: room.ownerKey, body: { from, until } });
 const sendLoc = (room, member, extra = {}) => call(room.env, "PUT", room.path + "/loc", { token: member.token, body: { epoch: 1, cipher: cipher(80), ...extra } });
+
+test("share rotate: the owner's room message after a key change carries the location window like every room message (TSR1117A01)", async () => {
+  const room = await makeRoom();
+  const from = room.clock.now - DAY, until = room.clock.now + DAY;
+  assert.equal((await openWindow(room, from, until)).status, 200);
+  const ownerSocket = await connect(room, room.owner);
+  ownerSocket.take();
+  const done = await call(room.env, "POST", room.path + "/rotate", { token: room.owner.token, owner: room.ownerKey, body: { rev: 0, proof: secret(), items: [] } });
+  assert.equal(done.status, 200);
+  assert.deepEqual(ownerSocket.take("room")[0].locWindow, { from, until });
+});
 
 test("share loc: nothing is accepted before the owner opens a window, and only the owner can open it", async () => {
   const room = await makeRoom();
