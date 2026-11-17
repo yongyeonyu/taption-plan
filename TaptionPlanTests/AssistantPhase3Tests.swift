@@ -99,6 +99,7 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertTrue(ready)
         XCTAssertEqual(Phase3RelayStub.requests.map(\.summary), [
             "POST /register", "POST /register", "POST /register", "DELETE /keys", "DELETE /activity", "DELETE /command", "DELETE /plan",
+            "DELETE /app", "DELETE /polish", "DELETE /answers", "DELETE /tasks", "DELETE /push/token",
         ])
         // 두 번 다시 해도 429면 멈추고, 만들어 둔 새 키로 다음에 이어 간다.
         let busy = AssistantMemorySecrets([.master: oldMaster])
@@ -159,6 +160,7 @@ final class AssistantPhase3Tests: XCTestCase {
         let store = defaults()
         AssistantKeyLabels.save("ab12cd34", label: "피클", period: .quarter, defaults: store)
         AssistantActivityUploadGate.markSent([], defaults: store)
+        store.set("sandbox:abcd", forKey: AssistantRegistration.pushUploadedKey)
         let secrets = AssistantMemorySecrets([.master: oldMaster])
         let env = environment(secrets, store)
         let ready = await AssistantRegistration.prepare(env)
@@ -166,18 +168,22 @@ final class AssistantPhase3Tests: XCTestCase {
         let fresh = try XCTUnwrap(secrets.read(.master))
         XCTAssertNotEqual(fresh, oldMaster)
         let requests = Phase3RelayStub.requests
+        // AIF1118A01: 예전 자리에 남던 앱 상태·다듬기·답·AI 일·푸시 토큰도 지운다.
         XCTAssertEqual(requests.map(\.summary), [
             "POST /register", "POST /register", "DELETE /keys", "DELETE /activity", "DELETE /command", "DELETE /plan",
+            "DELETE /app", "DELETE /polish", "DELETE /answers", "DELETE /tasks", "DELETE /push/token",
         ])
-        XCTAssertEqual(requests.map(\.token), [fresh, oldMaster, oldMaster, oldMaster, oldMaster, oldMaster],
+        XCTAssertEqual(requests.map(\.token), [fresh] + Array(repeating: oldMaster, count: 10),
                        "register the new master, register the old one so it can delete, then delete with the old one")
+        XCTAssertEqual(requests.first { $0.summary == "DELETE /tasks" }?.query, "all=1", "open tasks go too")
+        XCTAssertNil(store.string(forKey: AssistantRegistration.pushUploadedKey), "the new master uploads the push token again")
         XCTAssertEqual(store.string(forKey: AssistantRegistration.rotationKey), AssistantRegistration.rotationTag)
         XCTAssertTrue(store.bool(forKey: AssistantRegistration.reconnectKey), "existing connections must be re-created")
         XCTAssertNil(AssistantKeyLabels.label("ab12cd34", defaults: store))
 
         let again = await AssistantRegistration.prepare(env)
         XCTAssertTrue(again)
-        XCTAssertEqual(Phase3RelayStub.requests.count, 6, "the rollout rotation runs only once")
+        XCTAssertEqual(Phase3RelayStub.requests.count, 11, "the rollout rotation runs only once")
     }
 
     func testRotationKeepsTheOldMasterWhenTheNewOneIsNotRegistered() async {

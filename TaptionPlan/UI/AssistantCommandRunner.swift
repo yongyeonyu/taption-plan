@@ -274,7 +274,7 @@ enum AssistantCommandRefresh {
 enum AssistantPush {
     enum Kind: String { case cmd, q, task, rules }
 
-    nonisolated static let uploadedKey = "assistantPushUploaded"
+    nonisolated static let uploadedKey = AssistantRegistration.pushUploadedKey
     nonisolated static let uploadedAtKey = "assistantPushUploadedAt"
     /// 서버가 토큰을 지웠을 수 있어(만료·모두 끊기) 이만큼 지나면 다시 올린다.
     nonisolated static let reuploadAfter: TimeInterval = 7 * 86_400
