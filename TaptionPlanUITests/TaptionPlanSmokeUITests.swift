@@ -66,7 +66,7 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     }
 
     /// 가계부 「…」 메뉴(PRF1117A02 고침 9): 단추 이름, 메뉴 여섯 항목, 「이 달 표로 내보내기」 공유 창. 데이터는 바꾸지 않는다.
-    /// `LEDGER_MENU_ARGS`로 실행 인자(전후 비교 `-benchBefore=lmenu`)를, `LEDGER_MENU_SHOTS`·`LEDGER_MENU_TAG`로 사진 폴더·이름을 준다.
+    /// `LEDGER_MENU_ARGS`로 실행 인자(어두운 테마 등)를, `LEDGER_MENU_SHOTS`·`LEDGER_MENU_TAG`로 사진 폴더·이름을 준다.
     func testLedgerMoreMenuKeepsItemsAndShares() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         let env = ProcessInfo.processInfo.environment

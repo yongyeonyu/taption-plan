@@ -185,6 +185,7 @@
   - UI 시험 흔들림: 실행 직후 막 연 가계부 시트가 닫히는 때가 전후 판 모두 있어(r12) 세 번까지 다시 열게 함.
   - 단위: `LedgerMoreMenuTests`(새 3건)·`LedgerTests` 39건 실패 0. **`TaptionPlanTests` 전체 2,984건(건너뜀 25) 실패 0**(04:39~04:46, 맥 부하 3). 구조 점검 `architecture-metrics.py --check docs/architecture-baseline.json`·import 경계 통과. 번역 `check.py` 실패 0(문구는 그대로 옮김, 새 문구 없음). 시뮬레이터 Debug 빌드 성공.
   - 하지 않은 것: 아이폰 11에서 메뉴·공유를 눈으로 확인(측정만), iPad 공유 창 위치.
+  - 비교 코드 걷기(대표 결정 2026-11-18, main `50eb1889` 위): `-benchBefore=lmenu`·`swiftUIMoreMenu` 지움. Debug 빌드 성공, `LedgerMoreMenuTests`+`LedgerTests` 41건 실패 0, 가계부 메뉴 UI 시험 1건 통과(`menu/rm1*`, 08:22~08:29, 맥 부하 28~78), 구조 점검 둘 통과. 위 측정 숫자는 걷기 전 판의 것.
 - 남은 것: 아이폰 11 집 그림 눈 확인, 가계부 다시 열기 약 112ms(합격선 50ms, 남은 몫은 내비게이션·목록 틀·요약 머리), 날짜 40ms 넘는 끊김 3 이하, 긴 날로 재생 다시 재기.
 
 ## LGC1117A01 · 꺼진 옛 화면 걷기 (2026-11-17, 시뮬레이터, 실기기 없음)
