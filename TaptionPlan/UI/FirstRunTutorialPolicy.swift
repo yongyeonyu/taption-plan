@@ -230,3 +230,26 @@ enum FirstRunWatchStage: Equatable {
         return wantsInstall ? .installing : .explain
     }
 }
+
+/// 첫 실행 장소 고르기의 차례(FRT1117A01). 늦게 끝난 옛 검색이 그 뒤에 고른 위치를 덮지 않게 한다.
+@MainActor
+final class FirstRunPlaceSelection {
+    private var turn = 0
+
+    /// 바로 정해지는 위치(지도 핀·다녀온 곳·현재 위치). 기다리던 검색은 버린다.
+    func choose(_ save: () -> Void) {
+        turn += 1
+        save()
+    }
+
+    /// 찾아서 정하는 위치. 찾는 사이 다른 위치를 고르면 결과(실패 포함)를 버린다. 저장했으면 true.
+    @discardableResult
+    func search<Found>(_ find: () async -> Found?, save: (Found?) -> Void) async -> Bool {
+        turn += 1
+        let mine = turn
+        let found = await find()
+        guard mine == turn else { return false }
+        save(found)
+        return true
+    }
+}
