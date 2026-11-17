@@ -656,6 +656,33 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelPlanTable.title(TravelTripColumn(name: "", kinds: []), index: 5, language: .korean), "열 6")
     }
 
+    /// TVM1117A02: 열 편집의 줄은 자리가 아니라 번호로 열을 가리킨다 — 옮긴 뒤 이름은 그 열에, 지운 줄의 이름 칸은 아무것도 바꾸지 않는다.
+    func testColumnEditorRowsFollowTheirColumnAfterMoveAndDelete() {
+        var rows = TravelColumnRows(TravelPlanColumns.defaults)
+        let ids = rows.rows.map(\.id)
+        rows.move(fromOffsets: IndexSet(integer: 0), toOffset: 4) // 이동 열을 맨 끝으로
+        rows.rename(ids[0], to: "탈것")
+        XCTAssertEqual(rows.columns.map(\.name), ["", "", "", "탈것"], "옮긴 열에 이름이 들어간다")
+        XCTAssertEqual(rows.columns[3].kinds, ["transfer", "flight"])
+
+        rows.remove(atOffsets: IndexSet(integer: 3)) // 이름 붙인 열을 지운다: 종류는 왼쪽 열로
+        XCTAssertEqual(rows.columns.count, 3)
+        XCTAssertEqual(rows.columns[2].kinds, ["lodging", "sleep", "rest", "transfer", "flight"])
+        rows.rename(ids[0], to: "남은 칸") // 지운 줄의 칸에 늦게 들어온 입력
+        XCTAssertEqual(rows.columns.map(\.name), ["", "", ""], "지운 줄은 다른 열을 바꾸지 않는다")
+        XCTAssertEqual(rows.name(ids[0]), "")
+
+        rows.remove(atOffsets: IndexSet([0, 1, 2]))
+        XCTAssertEqual(rows.columns.count, TravelPlanColumns.countRange.lowerBound, "2열 밑으로는 지우지 않는다")
+        rows.append()
+        rows.rename(rows.rows[2].id, to: "새 열")
+        XCTAssertEqual(rows.columns.map(\.name), ["", "", "새 열"])
+        XCTAssertEqual(Set(rows.rows.map(\.id)).count, 3, "새 줄은 새 번호")
+        rows.replace(with: TravelPlanColumns.defaults)
+        XCTAssertEqual(rows.columns, TravelPlanColumns.defaults)
+        XCTAssertEqual(Set(rows.rows.map(\.id)).count, 4)
+    }
+
     /// TVV1113A01: 코스 보기 — 시간 순서, 재생 헤드 기준 지금 일정, 진행률, 이전·다음.
     func testCourseOrderCurrentAndProgress() {
         func block(_ id: String, _ start: Int, _ end: Int) -> TravelPlanTableModel.Block {
