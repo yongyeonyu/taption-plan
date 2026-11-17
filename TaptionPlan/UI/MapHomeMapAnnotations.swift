@@ -293,8 +293,9 @@ struct MapHomePlacePin: View {
         }
     }
 
+    @ViewBuilder
     private func homeMarkerArtwork(level: Int) -> some View {
-        ZStack {
+        let art = ZStack {
             homeSkyArt
             Image(MapHomeGrowthPolicy.artworkName(level: level))
                 .resizable()
@@ -305,23 +306,90 @@ struct MapHomePlacePin: View {
                 )
             homeWeatherArt
         }
+        if !PerfBenchBefore.has("art") {
+            // 하늘·날씨는 24Hz로 움직인다. 따로 그려 홈 화면 전체가 그때마다 다시 그려지지 않게 한다(PRF1117A02).
+            MapHomeIsolatedArt(side: MapHomePlacePinLayout.avatarSize) {
+                art.frame(width: MapHomePlacePinLayout.avatarSize, height: MapHomePlacePinLayout.avatarSize).clipShape(Circle())
+            }
+        } else {
+            art
+        }
     }
 
     /// 집에 있는 화랑이. 원에 잘리지 않게 아바타 위에 얹는다(대표 요청).
     private var homeCat: some View {
         let scale = MapHomeCatTapRouting.homeArtScale
-        return MapHomeStickmanGlyph(
-            action: catAction,
-            size: MapHomeStickmanMarker.size.width,
-            equippedAccessoryID: equippedAccessoryID,
-            rendersAsynchronously: true
-        )
+        return homeCatGlyph
         .catSpeechBubble(action: catAction)
         .offset(
             x: MapHomeCatTapRouting.catOffsetInHomeImage.x * scale,
             y: MapHomeCatTapRouting.catOffsetInHomeImage.y * scale
         )
         .allowsHitTesting(false)
+    }
+}
+
+extension MapHomePlacePin {
+    @ViewBuilder
+    fileprivate var homeCatGlyph: some View {
+        let size = MapHomeStickmanMarker.size.width
+        let glyph = MapHomeStickmanGlyph(
+            action: catAction,
+            size: size,
+            equippedAccessoryID: equippedAccessoryID,
+            rendersAsynchronously: true
+        )
+        if !PerfBenchBefore.has("art") {
+            // 그림이 칸 밖(가로 1.6배·모자 자리)으로 나가므로 넉넉한 판에 그리고 가운데를 맞춘다(PRF1117A02).
+            MapHomeIsolatedArt(side: size * 3) { glyph }
+                .frame(width: size, height: size)
+        } else {
+            glyph
+        }
+    }
+}
+
+/// 계속 움직이는 작은 그림(집 하늘·날씨·집 화랑이)을 홈 화면과 다른 SwiftUI 그래프에 둔다(PRF1117A02).
+/// 같은 그래프에 있으면 24Hz 시계가 넘어갈 때마다 홈 화면 전체가 다시 그려져, 손대지 않아도 메인 스레드를 10초에 약 2.6초 썼다.
+/// 모양은 같고(같은 뷰를 그대로 담음) 누르기·접근성은 바깥 뷰가 맡는다. `-benchBefore=art`면 예전처럼 같은 그래프에 둔다.
+struct MapHomeIsolatedArt<Content: View>: UIViewRepresentable {
+    let side: CGFloat
+    @ViewBuilder let content: () -> Content
+
+    func makeUIView(context: Context) -> MapHomeIsolatedArtView<Content> {
+        MapHomeIsolatedArtView(rootView: content())
+    }
+
+    func updateUIView(_ view: MapHomeIsolatedArtView<Content>, context: Context) {
+        view.host.rootView = content()
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: MapHomeIsolatedArtView<Content>, context: Context) -> CGSize? {
+        CGSize(width: side, height: side)
+    }
+}
+
+final class MapHomeIsolatedArtView<Content: View>: UIView {
+    let host: UIHostingController<Content>
+
+    init(rootView: Content) {
+        host = UIHostingController(rootView: rootView)
+        host.safeAreaRegions = []
+        host.view.backgroundColor = .clear
+        host.view.isUserInteractionEnabled = false
+        super.init(frame: .zero)
+        isUserInteractionEnabled = false
+        backgroundColor = .clear
+        accessibilityElementsHidden = true
+        addSubview(host.view)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { nil }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        host.view.frame = bounds
     }
 }
 
