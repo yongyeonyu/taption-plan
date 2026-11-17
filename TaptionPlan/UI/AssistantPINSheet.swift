@@ -152,7 +152,9 @@ struct AssistantPINSheet: View {
     /// 서버 PIN을 앱 비밀번호에서 만든 값으로 맞춘다. 없으면 만들고, 있으면 같은 값을 다시 넣어 맞는지 본다.
     /// 다르면(예전에 따로 정한 PIN) 예전 PIN을 받아 바꾼다.
     static func align(_ derived: String, old: String?, language: MapHomeLanguage, env: AssistantRegistration.Environment = .live) async -> AlignFailure? {
-        guard await AssistantRegistration.prepare(env), let status = await AssistantPINStore.status(env: env) else { return .failed }
+        // 실제 저장소면 다른 곳과 같은 준비 작업을 기다린다(겹쳐 돌면 바꾸기가 두 번 시작돼 실패하던 것, AIF1118A01).
+        let ready = env.defaults === UserDefaults.standard ? await AssistantRegistration.ensureReady() : await AssistantRegistration.prepare(env)
+        guard ready, let status = await AssistantPINStore.status(env: env) else { return .failed }
         let current: String? = status.isSet ? (old ?? derived) : nil
         switch await AssistantPINStore.set(pin: derived, current: current, env: env) {
         case .saved: return nil
