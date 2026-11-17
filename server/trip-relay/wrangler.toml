@@ -7,6 +7,10 @@ routes = [{ pattern = "trip.bokkiyaw.com", custom_domain = true }]
 workers_dev = true
 preview_urls = false
 
+# 요청 기록에 정류장 좌표·주소가 남지 않게 Workers Logs를 끈다(대표 결정 2026-11-18). 디버깅이 급할 때만 잠깐 켰다가 끈다.
+[observability]
+enabled = false
+
 # KV는 대표님 계정에서 만든 뒤 id를 넣는다: `npx wrangler kv namespace create PLANS`
 [[kv_namespaces]]
 binding = "PLANS"
