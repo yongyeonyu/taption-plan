@@ -360,9 +360,15 @@ enum TripSharePlanEditor {
             case .free: locks.append(id)
             }
         }
-        let groups = lockDays.compactMap { store.groupName(tripID: tripID, day: $0) }
-        // 한 사람 잠금 한도를 넘으면 날 묶음 잠금에 맡긴다.
-        if !groups.isEmpty, locks.count + groups.count > view.limits.locksPerMember { locks = [] }
+        var groups = lockDays.compactMap { store.groupName(tripID: tripID, day: $0) }
+        // 한 사람 잠금 한도를 넘으면 그 일정들의 날 묶음 잠금으로 바꾼다(세부 계획이 20개 넘는 곳, TSA1117A01).
+        if locks.count + groups.count > view.limits.locksPerMember {
+            guard let fallback = Self.dayLocks(items: locks, groups: groups, view: view) else {
+                store.notice = TripSharePlanText.tooBig(.current)
+                return false
+            }
+            (locks, groups) = fallback
+        }
         var done = false
         do {
             if !locks.isEmpty || !groups.isEmpty { try await session.lock(items: locks, groups: groups) }
@@ -384,6 +390,17 @@ enum TripSharePlanEditor {
         if !locks.isEmpty || !groups.isEmpty { try? await session.unlock(items: locks, groups: groups) }
         await store.refresh(tripID: tripID)
         return done
+    }
+
+    /// 항목 잠금을 그 항목의 날 묶음 잠금으로 바꾼다. 묶음이 없는 항목만 항목 잠금으로 남는다. 그래도 한도를 넘으면 nil.
+    static func dayLocks(items: [String], groups: [String], view: ShareRoomView) -> (items: [String], groups: [String])? {
+        let groupOf = Dictionary(view.items.map { ($0.id, $0.group) }, uniquingKeysWith: { first, _ in first })
+        var days = Set(groups), single: [String] = []
+        for id in items {
+            if let group = groupOf[id] ?? nil { days.insert(group) } else { single.append(id) }
+        }
+        guard single.count + days.count <= view.limits.locksPerMember else { return nil }
+        return (single, days.sorted())
     }
 
     /// 거절한 까닭을 사람 말로.

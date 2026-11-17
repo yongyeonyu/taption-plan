@@ -207,6 +207,32 @@ final class TripSharePlanTests: XCTestCase {
         XCTAssertEqual(model.snapshot.plans.count, 0, "딸린 일상 계획도 지운다")
     }
 
+    /// 세부 계획이 20개를 넘는 코스 곳도 옮기고 지울 수 있다: 한 사람 잠금 한도(20)를 넘으면 날 묶음 잠금으로 바꾼다(TSA1117A01).
+    func testMovingAndDeletingAPlaceWithManyDetailsStaysWithinTheLockLimit() async throws {
+        let shared = try await share()
+        let model = shared.model, other = shared.other
+        let parentID = try await add(shared, "성", "2031-10-01T00:00:00Z", "2031-10-01T08:00:00Z")
+        var details: [String] = []
+        for index in 0..<22 {
+            let start = stamp("2031-10-01T00:00:00Z").addingTimeInterval(Double(index) * 600)
+            let formatter = ISO8601DateFormatter()
+            details.append(try await add(shared, "세부 \(index)", formatter.string(from: start), formatter.string(from: start.addingTimeInterval(300)), parent: parentID))
+        }
+
+        let moved = await TripSharePlanEditor.moveItem(model: model, tripID: shared.tripID, itemID: parentID, by: 1_800)
+        XCTAssertTrue(moved, "23건을 한 번에 옮긴다")
+        XCTAssertNil(store.notice)
+        XCTAssertEqual(item(model, details[21])?.start, stamp("2031-10-01T04:00:00Z"))
+        await eventually("옮긴 것이 다른 참여자에게") { await self.plan(other, details[21])?.start == 780 }
+
+        let step = await TripSharePlanEditor.deleteItem(model: model, tripID: shared.tripID, itemID: parentID)
+        XCTAssertEqual(step?.group.count, 23, "23건을 한 번에 지운다")
+        XCTAssertNil(store.notice)
+        await eventually("지운 것이 다른 참여자에게") { await other.view().items(of: .plan).isEmpty }
+        let locks = await other.view().locks
+        XCTAssertTrue(locks.isEmpty, "다 쓰고 잠금을 푼다")
+    }
+
     func testManyRemoteChangesAreSavedOnce() async throws {
         let repository = PermissionCountingPlanRepository()
         let shared = try await share(repository: repository)
