@@ -210,6 +210,11 @@ struct TripShareHost: ViewModifier {
                 inbox.pending = nil
                 route = .join(invite)
             }
+            .onChange(of: route) { old, new in
+                // 지구본에서 연 판이 닫히면 판이 연 방도 닫는다.
+                guard let tripID = Self.roomToClose(from: old, to: new, opened: openedID) else { return }
+                Task { await leave(tripID) }
+            }
             .task(id: openedID) { await enter(openedID) }
             .onChange(of: openedID) { old, new in
                 guard let old, old != new else { return }
@@ -230,6 +235,12 @@ struct TripShareHost: ViewModifier {
             .alert(store.notice ?? "", isPresented: Binding(get: { store.notice != nil }, set: { if !$0 { store.notice = nil } })) {
                 Button(language.text("확인", "OK")) { store.notice = nil }
             }
+    }
+
+    /// 공유 판이 닫히거나 다른 판으로 바뀌면 닫을 방. 판이 연 방이라도 보고 있는 여행의 방이면 그대로 둔다(TSA1117A01).
+    static func roomToClose(from old: TripShareRoute?, to new: TripShareRoute?, opened: String?) -> String? {
+        guard case .panel(let tripID)? = old, new != old, tripID != opened else { return nil }
+        return tripID
     }
 
     private func enter(_ tripID: String?) async {

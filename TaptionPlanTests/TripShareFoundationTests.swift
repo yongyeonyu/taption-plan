@@ -462,6 +462,17 @@ final class TripShareFoundationTests: XCTestCase {
         XCTAssertNil(try store.environment.secrets.secrets(roomID: invite.roomID))
     }
 
+    /// 지구본에서 연 공유 판이 닫히면 그 방도 닫는다. 보고 있는 여행의 방은 그대로 둔다(TSA1117A01).
+    func testClosingThePanelClosesARoomThatIsNotOnScreen() {
+        XCTAssertEqual(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: nil, opened: nil), "t1")
+        XCTAssertEqual(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: nil, opened: "t2"), "t1")
+        XCTAssertNil(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: nil, opened: "t1"), "보고 있는 여행은 닫지 않는다")
+        XCTAssertNil(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: .panel(tripID: "t1"), opened: nil))
+        XCTAssertEqual(TripShareHost.roomToClose(from: .panel(tripID: "t1"), to: .panel(tripID: "t2"), opened: nil), "t1")
+        XCTAssertNil(TripShareHost.roomToClose(from: .join(nil), to: nil, opened: nil))
+        XCTAssertNil(TripShareHost.roomToClose(from: nil, to: .panel(tripID: "t1"), opened: nil))
+    }
+
     // MARK: 투영·가드
 
     func testProjectionWritesManyChangesWithOneSave() async throws {
