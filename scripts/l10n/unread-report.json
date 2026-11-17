@@ -304,67 +304,67 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 142,
+   "line": 150,
    "ko": "summary.tripCosts[trip.id] ?? 0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 239,
+   "line": 247,
    "ko": "monthCarryOver",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 240,
+   "line": 248,
    "ko": "earned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 241,
+   "line": 249,
    "ko": "spent",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 242,
+   "line": 250,
    "ko": "monthCarryOver + earned - spent",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 246,
+   "line": 254,
    "ko": "left",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 251,
+   "line": 259,
    "ko": "net",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 291,
+   "line": 299,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 296,
+   "line": 304,
    "ko": "krw",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 568,
+   "line": 576,
    "ko": "transfer.amountKRW",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 572,
+   "line": 580,
    "ko": "LedgerBook.total(entries, .expense)",
    "en": "language"
   },
@@ -850,37 +850,37 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeSupport.swift",
-   "line": 857,
+   "line": 862,
    "ko": "planned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 651,
+   "line": 652,
    "ko": "money.amount",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelPlanSpend.swift",
-   "line": 36,
+   "line": 45,
    "ko": "$0.0",
    "en": "$0.1"
   },
   {
    "file": "TaptionPlan/UI/TravelPlanSpend.swift",
-   "line": 52,
+   "line": 61,
    "ko": "sheet.myCost",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelPlanSpend.swift",
-   "line": 55,
+   "line": 64,
    "ko": "sheet.leftover",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelPlanTable.swift",
-   "line": 575,
+   "line": 617,
    "ko": "money.amount",
    "en": "language"
   },
