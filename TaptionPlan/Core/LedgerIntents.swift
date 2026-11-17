@@ -313,7 +313,7 @@ extension PaymentInbox {
     static func reprocess(now: Date = .now) async -> Int {
         var added = 0
         for var item in readable(now: now) {
-            let (message, outcome) = await PaymentTextCapture.process(item.text, requiresTime: false, now: item.receivedAt)
+            let (message, outcome) = await PaymentTextCapture.process(item.text, requiresTime: false, source: item.source, now: item.receivedAt)
             item.outcome = outcome
             item.message = message
             update(item)

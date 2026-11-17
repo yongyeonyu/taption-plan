@@ -113,7 +113,7 @@ enum LedgerTable {
     }
 
     static func plain(_ value: Double) -> String {
-        value.rounded() == value ? String(Int(value)) : String(format: "%.2f", value)
+        value.rounded() == value && abs(value) < 1e15 ? String(Int(value)) : String(format: "%.2f", value)
     }
 }
 

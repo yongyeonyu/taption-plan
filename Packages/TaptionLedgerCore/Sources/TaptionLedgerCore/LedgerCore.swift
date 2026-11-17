@@ -176,7 +176,8 @@ public enum LedgerSettlement {
         var balance = Dictionary(uniqueKeysWithValues: members.map { ($0, 0) })
         for entry in entries where entry.kind == .expense {
             let won = LedgerSplit.won(entry.countedKRW)
-            let payer = entry.payer.flatMap { members.contains($0) ? $0 : nil } ?? me
+            // 목록을 만들 때처럼 다듬어 찾는다(「민수 」처럼 끝에 빈칸이 붙은 낸 사람이 「나」로 세이던 것, REV1117A04).
+            let payer = entry.payer.map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { members.contains($0) ? $0 : nil } ?? me
             balance[payer, default: 0] += won
             for (member, share) in zip(members, LedgerSplit.even(won, among: members, payer: payer)) { balance[member, default: 0] -= share }
         }
