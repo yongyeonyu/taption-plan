@@ -421,6 +421,11 @@ enum AssistantAppStateSync {
         var mapColors: [AssistantAppState.MapColor] = []
     }
 
+    /// REV1117A02: 제안 id는 「suggested-위도,경도」라 그대로 내보내지 않는다. resolvePlaceSuggestion은 id를 받지 않는다.
+    static func suggestionID(_ id: String) -> String {
+        "suggested-" + SHA256.hash(data: Data(id.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
+
     static func make(_ input: Input) -> AssistantAppState {
         let stamp = AssistantActivityBuilder.Stamp(calendar: input.calendar)
         let mask = { (text: String, limit: Int) in String(AITaskQueue.mask(text).prefix(limit)) }
@@ -483,7 +488,7 @@ enum AssistantAppStateSync {
             },
             places: input.shareLevel == .visits && !input.places.isEmpty ? input.places.prefix(AssistantCatalogLimits.places).map {
                 .init(
-                    id: $0.id.uuidString, name: mask($0.displayName, AssistantCatalogLimits.placeName), kind: $0.kind.rawValue,
+                    id: $0.id.uuidString, name: AssistantActivityBuilder.hasCoordinates($0.displayName) ? "" : mask($0.displayName, AssistantCatalogLimits.placeName), kind: $0.kind.rawValue,
                     radius: Int($0.radiusMeters.rounded()), autoRecord: $0.isAutomaticRecordingEnabled, located: $0.point != nil, floor: $0.floor
                 )
             } : nil,
@@ -499,7 +504,7 @@ enum AssistantAppStateSync {
             },
             placeSuggestion: input.shareLevel == .visits ? input.placeSuggestion.map {
                 .init(
-                    id: $0.id, name: $0.suggestedName.flatMap { AssistantActivityBuilder.isAddressLike($0) ? nil : mask($0, AssistantCatalogLimits.placeName) },
+                    id: Self.suggestionID($0.id), name: $0.suggestedName.flatMap { AssistantActivityBuilder.isAddressLike($0) ? nil : mask($0, AssistantCatalogLimits.placeName) },
                     visits: $0.visitCount
                 )
             } : nil,
