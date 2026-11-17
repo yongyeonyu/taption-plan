@@ -48,36 +48,7 @@
 		A1FA11D67A6BAA407D371199 /* MapHomeSalaryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */; };
 		A1FA119C943D414BBBC9CDA9 /* MapHomeStride.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11501F768BFA9562791B /* MapHomeStride.swift */; };
 		A1FA114B649575874095E7E4 /* MapHomeCalendarPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1117C18536CF5C5AE2C0 /* MapHomeCalendarPolicies.swift */; };
-		A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */; };
-		A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */; };
-		A1FA11B6B565DF24CA6FBDD1 /* ReviewView+Charts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */; };
-		A1FA11960E1E776FA2AFA426 /* ReviewView+Clock.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1101B4DB128D658751C3 /* ReviewView+Clock.swift */; };
-		B10808030000000000000101 /* ReviewView+ClockCircular.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808030000000000000001 /* ReviewView+ClockCircular.swift */; };
-		B10808030000000000000102 /* ReviewView+ClockLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808030000000000000002 /* ReviewView+ClockLabels.swift */; };
-		B10808030000000000000103 /* ReviewView+ClockLinear.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808030000000000000003 /* ReviewView+ClockLinear.swift */; };
-		B10808030000000000000104 /* ReviewView+ClockPlayhead.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808030000000000000004 /* ReviewView+ClockPlayhead.swift */; };
-		B10808030000000000000105 /* ReviewView+ClockDrawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808030000000000000005 /* ReviewView+ClockDrawing.swift */; };
-		B10808030000000000000106 /* ReviewClockGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808030000000000000006 /* ReviewClockGeometry.swift */; };
-		A1FA11E4C6FF2DAB60DE4004 /* ActivityCorrectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA117EA23DE1FEEF9455F6 /* ActivityCorrectionViews.swift */; };
-		A1FA113BFE3B1AB153E86D43 /* SubwayRouteTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11DEB6F30038E0A3D825 /* SubwayRouteTimelineView.swift */; };
-		A1FA11046C5838880ADF9D7F /* RecordDetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */; };
-		A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */; };
-		A1FA11B788DDFF62F309512F /* TimelineRowModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */; };
-		A1FA11356EDD0F1965709226 /* TimelineRowViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */; };
-		A1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift */; };
-		A1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift */; };
-		A1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift */; };
-		A1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift */; };
-		A1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift */; };
-		A1FA11A3B8DAE991AEA02AAF /* TimelineBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */; };
-		A1FA113C605017A9D1288BA2 /* GroupGanttView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */; };
-		A1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift */; };
-		A1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift */; };
-		A1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift */; };
-		A1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift */; };
-		A1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift */; };
 		A1FA113C5869FE29648957F6 /* TimelineDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */; };
-		A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */; };
 		A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11013C73958F69782D38 /* TimelineSelection.swift */; };
 		B10802000000000000000012 /* OfflineVectorTileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000002 /* OfflineVectorTileCache.swift */; };
 		B10802000000000000000011 /* OfflineVectorTiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000001 /* OfflineVectorTiles.swift */; };
@@ -154,22 +125,6 @@
 		A10000000000000000000003 /* PlanItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* PlanItem.swift */; };
 		A10000000000000000000004 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000004 /* Theme.swift */; };
 		A10000000000000000000005 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* AppShellView.swift */; };
-		A10000000000000000000006 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000006 /* ScheduleView.swift */; };
-		A10000000000000000000007 /* GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000007 /* GoalsView.swift */; };
-		A555E510ADEA5505DC2F5A79 /* GoalDetailParts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */; };
-		8588E42DD2C1DE6268A73D68 /* GoalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */; };
-		B519210965A8995AF81BD1F8 /* RoutineTimeRangeSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */; };
-		01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */; };
-		A10000000000000000000008 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* ReviewView.swift */; };
-		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
-		AA6377B2DB6190855BE310B6 /* SettingsView+Connections.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDDF9E63D00A2D25D95FE8E /* SettingsView+Connections.swift */; };
-		4765C0DD433E1DC7D1C756D4 /* SettingsView+FrequentPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EBD28CC58EC3980EB620ED /* SettingsView+FrequentPlaces.swift */; };
-		AC65BCB818D84ADC745630DD /* SettingsFrequentPlaceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C367F28ED1FD42AF95FAA8A /* SettingsFrequentPlaceDetailView.swift */; };
-		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
-		5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */; };
-		F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */; };
-		27AB5D5D8EA08049CE1DEDAC /* MiniTimeSliceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */; };
-		C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */; };
 		5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F1 /* PlanTextSuggestion.swift */; };
 		A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F1 /* MemoTextPolish.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
@@ -193,17 +148,8 @@
 		A90000000000000000000005 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000091 /* Products.storekit */; };
 		A1000000000000000000000C /* TimeScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000C /* TimeScaleTests.swift */; };
 		B10809000000000000000A11 /* InkWashThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F11 /* InkWashThemeTests.swift */; };
-		B10808030000000000000107 /* ReviewClockGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808030000000000000007 /* ReviewClockGeometryTests.swift */; };
 		A1000000000000000000000D /* DraftComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* DraftComponents.swift */; };
 		A1000000000000000000000E /* DetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* DetailViews.swift */; };
-		B10808020000000000000B01 /* QuickActionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A01 /* QuickActionSheet.swift */; };
-		B10808020000000000000B02 /* MemoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A02 /* MemoDetailView.swift */; };
-		B10808020000000000000B03 /* CatPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A03 /* CatPickerView.swift */; };
-		B10808020000000000000B04 /* InferenceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A04 /* InferenceDetailView.swift */; };
-		B10808020000000000000B05 /* LocationTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A05 /* LocationTimelineView.swift */; };
-		B10808020000000000000B06 /* WidgetPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A06 /* WidgetPreviewView.swift */; };
-		B10808020000000000000B07 /* CategorySetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A07 /* CategorySetupView.swift */; };
-		B10808020000000000000B08 /* AppUsageNameLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A08 /* AppUsageNameLabel.swift */; };
 		A1000000000000000000000F /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
 		A10000000000000000000010 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
 		A1000000000000000B1105C8 /* WidgetSharedEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C8 /* WidgetSharedEngines.swift */; };
@@ -305,7 +251,6 @@
 		A5B1102A0200000000000020 /* FeatureEngineTests+Widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */; };
 		A10000000000000000000018 /* NavigationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000018 /* NavigationModels.swift */; };
 		A10000000000000000000019 /* CatPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000019 /* CatPresentation.swift */; };
-		A1000000000000000000001A /* TimelineInteractionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001A /* TimelineInteractionEngine.swift */; };
 		A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001C /* SleepAnalysisEngine.swift */; };
 		A1000000000000000000001D /* SensorDataServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* SensorDataServices.swift */; };
 		A1000000000000000000001E /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
@@ -336,9 +281,6 @@
 		1C9707B82F997A6CF1DFCDD0 /* PlanGoalEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033D5BEA860CEE5485C1CD47 /* PlanGoalEngines.swift */; };
 		A10000000000000000000025 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
 		A10000000000000000000026 /* StoreKitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000023 /* StoreKitSupport.swift */; };
-		A10000000000000000000027 /* CategoryManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000024 /* CategoryManagerView.swift */; };
-		A10000000000000000000028 /* PlanEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000025 /* PlanEditorSheet.swift */; };
-		A10000000000000000000029 /* PhotoClusterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000026 /* PhotoClusterSheet.swift */; };
 		A1000000000000000000002A /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
 		A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
@@ -373,8 +315,6 @@
 		A10000000000000000000036 /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
 		A10000000000000000000037 /* TaptionPlanWatchWidget.appex in Embed Watch Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000005 /* TaptionPlanWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000038 /* WatchWidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000035 /* WatchWidgetShared.swift */; };
-		A10000000000000000000039 /* TimelineBoardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000039 /* TimelineBoardModels.swift */; };
-		A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003A /* TimelineBlockStyleViews.swift */; };
 		A1000000000000000000003B /* WidgetPayloadFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003B /* WidgetPayloadFactory.swift */; };
 		C1110A040000000000000002 /* WidgetCommandStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1110A040000000000000001 /* WidgetCommandStore.swift */; };
 		C1110A040000000000000003 /* WidgetCommandStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1110A040000000000000001 /* WidgetCommandStore.swift */; };
@@ -406,8 +346,6 @@
 		A1L1111A0500000000000001 /* LedgerTrips.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0500000000000001 /* LedgerTrips.swift */; };
 		A1L1111A0500000000000003 /* LedgerXLSX.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0500000000000003 /* LedgerXLSX.swift */; };
 		B1080801000000000000A004 /* ActivitySectionOverrideEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */; };
-		B1080801000000000000A005 /* ReviewSelectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F005 /* ReviewSelectionEngine.swift */; };
-		B1080801000000000000A006 /* RecordChartEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F006 /* RecordChartEngine.swift */; };
 		B1080801000000000000A007 /* MemoTimelineEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F007 /* MemoTimelineEngine.swift */; };
 		B1080801000000000000A008 /* DayPhaseEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F008 /* DayPhaseEngine.swift */; };
 		B1080801000000000000A009 /* RecordClockEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F009 /* RecordClockEngine.swift */; };
@@ -540,7 +478,6 @@
 		A1E4059E918F755B11D98A00 /* MapHomeView+Photos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E4059E918F755B11D98A00 /* MapHomeView+Photos.swift */; };
 		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
 		A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */; };
-		A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A01 /* AirQualityDetailSheet.swift */; };
 		A100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift */; };
 		A100000000000000C1102A03 /* MapHomeAppleMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A03 /* MapHomeAppleMap.swift */; };
 		A100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift */; };
@@ -578,10 +515,6 @@
 		A100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift */; };
 		A100000000000000C1102A19 /* MapHomeTransitSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A19 /* MapHomeTransitSheets.swift */; };
 		A100000000000000C1102A1A /* MapHomeWeatherTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1A /* MapHomeWeatherTimeline.swift */; };
-		A100000000000000C1102A1B /* ScheduleLinkSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1B /* ScheduleLinkSheets.swift */; };
-		A100000000000000C1102A1C /* ScheduleTimelineCaches.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1C /* ScheduleTimelineCaches.swift */; };
-		A100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift */; };
-		A100000000000000C1102A1E /* TwoFingerGestureAttachments.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */; };
 		A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000001 /* MapHomeVectorMap.swift */; };
 		A5000000000000000000A002 /* MapHomeVectorLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000002 /* MapHomeVectorLabels.swift */; };
 		B10809000000000000000A01 /* MapHomeVectorStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F01 /* MapHomeVectorStyle.swift */; };
@@ -970,36 +903,7 @@
 		F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSalaryPolicy.swift; sourceTree = "<group>"; };
 		F1FA11501F768BFA9562791B /* MapHomeStride.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStride.swift; sourceTree = "<group>"; };
 		F1FA1117C18536CF5C5AE2C0 /* MapHomeCalendarPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarPolicies.swift; sourceTree = "<group>"; };
-		F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Data.swift"; sourceTree = "<group>"; };
-		F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Records.swift"; sourceTree = "<group>"; };
-		F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Charts.swift"; sourceTree = "<group>"; };
-		F1FA1101B4DB128D658751C3 /* ReviewView+Clock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Clock.swift"; sourceTree = "<group>"; };
-		B10808030000000000000001 /* ReviewView+ClockCircular.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+ClockCircular.swift"; sourceTree = "<group>"; };
-		B10808030000000000000002 /* ReviewView+ClockLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+ClockLabels.swift"; sourceTree = "<group>"; };
-		B10808030000000000000003 /* ReviewView+ClockLinear.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+ClockLinear.swift"; sourceTree = "<group>"; };
-		B10808030000000000000004 /* ReviewView+ClockPlayhead.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+ClockPlayhead.swift"; sourceTree = "<group>"; };
-		B10808030000000000000005 /* ReviewView+ClockDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+ClockDrawing.swift"; sourceTree = "<group>"; };
-		B10808030000000000000006 /* ReviewClockGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewClockGeometry.swift; sourceTree = "<group>"; };
-		F1FA117EA23DE1FEEF9455F6 /* ActivityCorrectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCorrectionViews.swift; sourceTree = "<group>"; };
-		F1FA11DEB6F30038E0A3D825 /* SubwayRouteTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayRouteTimelineView.swift; sourceTree = "<group>"; };
-		F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordDetailViews.swift; sourceTree = "<group>"; };
-		F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSupportTypes.swift; sourceTree = "<group>"; };
-		F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowModels.swift; sourceTree = "<group>"; };
-		F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowViews.swift; sourceTree = "<group>"; };
-		F1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Layout.swift"; sourceTree = "<group>"; };
-		F1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Support.swift"; sourceTree = "<group>"; };
-		F1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Support2.swift"; sourceTree = "<group>"; };
-		F1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Rows.swift"; sourceTree = "<group>"; };
-		F1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Gesture.swift"; sourceTree = "<group>"; };
-		F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBoard.swift; sourceTree = "<group>"; };
-		F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupGanttView.swift; sourceTree = "<group>"; };
-		F1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Support.swift"; sourceTree = "<group>"; };
-		F1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Support2.swift"; sourceTree = "<group>"; };
-		F1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Support3.swift"; sourceTree = "<group>"; };
-		F1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Sections.swift"; sourceTree = "<group>"; };
-		F1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Editing.swift"; sourceTree = "<group>"; };
 		F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineDetailPanel.swift; sourceTree = "<group>"; };
-		F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapViewport.swift; sourceTree = "<group>"; };
 		F1FA11013C73958F69782D38 /* TimelineSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineSelection.swift; sourceTree = "<group>"; };
 		B10802000000000000000002 /* OfflineVectorTileCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineVectorTileCache.swift; sourceTree = "<group>"; };
 		B10802000000000000000001 /* OfflineVectorTiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineVectorTiles.swift; sourceTree = "<group>"; };
@@ -1079,38 +983,13 @@
 		F10000000000000000000003 /* PlanItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanItem.swift; sourceTree = "<group>"; };
 		F10000000000000000000004 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F10000000000000000000005 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
-		F10000000000000000000006 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
-		F10000000000000000000007 /* GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsView.swift; sourceTree = "<group>"; };
-		2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailParts.swift; sourceTree = "<group>"; };
-		0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailView.swift; sourceTree = "<group>"; };
-		BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineTimeRangeSlider.swift; sourceTree = "<group>"; };
-		2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailEngine.swift; sourceTree = "<group>"; };
-		F10000000000000000000008 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
-		F10000000000000000000009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		CCDDF9E63D00A2D25D95FE8E /* SettingsView+Connections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+Connections.swift"; sourceTree = "<group>"; };
-		60EBD28CC58EC3980EB620ED /* SettingsView+FrequentPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+FrequentPlaces.swift"; sourceTree = "<group>"; };
-		8C367F28ED1FD42AF95FAA8A /* SettingsFrequentPlaceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsFrequentPlaceDetailView.swift; sourceTree = "<group>"; };
-		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
-		3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSliderScreen.swift; sourceTree = "<group>"; };
-		71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AddPlanSheet+CategoryPickers.swift"; sourceTree = "<group>"; };
-		C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniTimeSliceEditor.swift; sourceTree = "<group>"; };
-		3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalRepeatRulesEditor.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F1 /* PlanTextSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTextSuggestion.swift; sourceTree = "<group>"; };
 		F1A11102A0100000000000F1 /* MemoTextPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolish.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F1000000000000000000000C /* TimeScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeScaleTests.swift; sourceTree = "<group>"; };
 		B10809000000000000000F11 /* InkWashThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkWashThemeTests.swift; sourceTree = "<group>"; };
-		B10808030000000000000007 /* ReviewClockGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewClockGeometryTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000000D /* DraftComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftComponents.swift; sourceTree = "<group>"; };
 		F1000000000000000000000E /* DetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViews.swift; sourceTree = "<group>"; };
-		B10808020000000000000A01 /* QuickActionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionSheet.swift; sourceTree = "<group>"; };
-		B10808020000000000000A02 /* MemoDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoDetailView.swift; sourceTree = "<group>"; };
-		B10808020000000000000A03 /* CatPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatPickerView.swift; sourceTree = "<group>"; };
-		B10808020000000000000A04 /* InferenceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferenceDetailView.swift; sourceTree = "<group>"; };
-		B10808020000000000000A05 /* LocationTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTimelineView.swift; sourceTree = "<group>"; };
-		B10808020000000000000A06 /* WidgetPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPreviewView.swift; sourceTree = "<group>"; };
-		B10808020000000000000A07 /* CategorySetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySetupView.swift; sourceTree = "<group>"; };
-		B10808020000000000000A08 /* AppUsageNameLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUsageNameLabel.swift; sourceTree = "<group>"; };
 		F1000000000000000000000F /* FeatureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureModels.swift; sourceTree = "<group>"; };
 		F10000000000000000000010 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C8 /* WidgetSharedEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedEngines.swift; sourceTree = "<group>"; };
@@ -1212,7 +1091,6 @@
 		F10000000000000000000017 /* TaptionPlan.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlan.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000018 /* NavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationModels.swift; sourceTree = "<group>"; };
 		F10000000000000000000019 /* CatPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatPresentation.swift; sourceTree = "<group>"; };
-		F1000000000000000000001A /* TimelineInteractionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineInteractionEngine.swift; sourceTree = "<group>"; };
 		F1000000000000000000001C /* SleepAnalysisEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAnalysisEngine.swift; sourceTree = "<group>"; };
 		F1000000000000000000001D /* SensorDataServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataServices.swift; sourceTree = "<group>"; };
 		F1000000000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1232,9 +1110,6 @@
 		F10000000000000000000021 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10000000000000000000022 /* TaptionPlanWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWidget.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000023 /* StoreKitSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitSupport.swift; sourceTree = "<group>"; };
-		F10000000000000000000024 /* CategoryManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryManagerView.swift; sourceTree = "<group>"; };
-		F10000000000000000000025 /* PlanEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorSheet.swift; sourceTree = "<group>"; };
-		F10000000000000000000026 /* PhotoClusterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoClusterSheet.swift; sourceTree = "<group>"; };
 		F10000000000000000000027 /* TaptionPlanDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanDebug.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000028 /* TaptionPlanWidgetDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWidgetDebug.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000029 /* WatchSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncModels.swift; sourceTree = "<group>"; };
@@ -1270,8 +1145,6 @@
 		F10000000000000000000036 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10000000000000000000037 /* TaptionPlanWatchWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWatchWidget.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000038 /* TaptionPlanWatchWidgetDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWatchWidgetDebug.entitlements; sourceTree = "<group>"; };
-		F10000000000000000000039 /* TimelineBoardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBoardModels.swift; sourceTree = "<group>"; };
-		F1000000000000000000003A /* TimelineBlockStyleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBlockStyleViews.swift; sourceTree = "<group>"; };
 		F1000000000000000000003B /* WidgetPayloadFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPayloadFactory.swift; sourceTree = "<group>"; };
 		C1110A040000000000000001 /* WidgetCommandStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCommandStore.swift; sourceTree = "<group>"; };
 		F10000000000000000000061 /* RecordSummaryEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordSummaryEngine.swift; sourceTree = "<group>"; };
@@ -1302,8 +1175,6 @@
 		F1L1111A0500000000000001 /* LedgerTrips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTrips.swift; sourceTree = "<group>"; };
 		F1L1111A0500000000000003 /* LedgerXLSX.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerXLSX.swift; sourceTree = "<group>"; };
 		B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySectionOverrideEngine.swift; sourceTree = "<group>"; };
-		B1080801000000000000F005 /* ReviewSelectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSelectionEngine.swift; sourceTree = "<group>"; };
-		B1080801000000000000F006 /* RecordChartEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordChartEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F007 /* MemoTimelineEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTimelineEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F008 /* DayPhaseEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayPhaseEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F009 /* RecordClockEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordClockEngine.swift; sourceTree = "<group>"; };
@@ -1426,7 +1297,6 @@
 		F1E4059E918F755B11D98A00 /* MapHomeView+Photos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Photos.swift"; sourceTree = "<group>"; };
 		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleMapAnnotations.swift; sourceTree = "<group>"; };
-		F100000000000000C1102A01 /* AirQualityDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirQualityDetailSheet.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAnnotationPolicies.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A03 /* MapHomeAppleMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleMap.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeApplePlaybackMath.swift; sourceTree = "<group>"; };
@@ -1464,10 +1334,6 @@
 		F100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTransitRefreshPolicy.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A19 /* MapHomeTransitSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTransitSheets.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A1A /* MapHomeWeatherTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWeatherTimeline.swift; sourceTree = "<group>"; };
-		F100000000000000C1102A1B /* ScheduleLinkSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleLinkSheets.swift; sourceTree = "<group>"; };
-		F100000000000000C1102A1C /* ScheduleTimelineCaches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleTimelineCaches.swift; sourceTree = "<group>"; };
-		F100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineFrameBudgetProbe.swift; sourceTree = "<group>"; };
-		F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoFingerGestureAttachments.swift; sourceTree = "<group>"; };
 		F50000000000000000000001 /* MapHomeVectorMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorMap.swift; sourceTree = "<group>"; };
 		F50000000000000000000002 /* MapHomeVectorLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorLabels.swift; sourceTree = "<group>"; };
 		B10809000000000000000F01 /* MapHomeVectorStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorStyle.swift; sourceTree = "<group>"; };
@@ -1885,7 +1751,6 @@
 			children = (
 				F1000000000000000000000C /* TimeScaleTests.swift */,
 				B10809000000000000000F11 /* InkWashThemeTests.swift */,
-				B10808030000000000000007 /* ReviewClockGeometryTests.swift */,
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
 				F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */,
 				769EE77192CF9EC73E324782 /* MovementNameTests.swift */,
@@ -2048,7 +1913,6 @@
 				F1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift */,
 				B10801000C1505A100000001 /* MapHomePlaceWalkRadiusSplit.swift */,
 				F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */,
-				F100000000000000C1102A01 /* AirQualityDetailSheet.swift */,
 				F100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift */,
 				F100000000000000C1102A03 /* MapHomeAppleMap.swift */,
 				F100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift */,
@@ -2086,10 +1950,6 @@
 				F100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift */,
 				F100000000000000C1102A19 /* MapHomeTransitSheets.swift */,
 				F100000000000000C1102A1A /* MapHomeWeatherTimeline.swift */,
-				F100000000000000C1102A1B /* ScheduleLinkSheets.swift */,
-				F100000000000000C1102A1C /* ScheduleTimelineCaches.swift */,
-				F100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift */,
-				F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */,
 				F51002000000000000000002 /* MapHomeInteractionPolicy.swift */,
 				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
 				EE8B98F2F35737F3F3C9AEFE /* MapHomeRouteSpeedGradient.swift */,
@@ -2303,70 +2163,13 @@
 				8F3816672287B4F48039597A /* MapHomeStickmanActionResolver.swift */,
 				2513A32EA4ABA9F5A424BC91 /* MapHomeStickmanMarker.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
-				F10000000000000000000006 /* ScheduleView.swift */,
-				F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */,
-				F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */,
-				F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */,
-				F1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift */,
-				F1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift */,
-				F1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift */,
-				F1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift */,
-				F1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift */,
-				F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */,
 				F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */,
-				F1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift */,
-				F1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift */,
-				F1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift */,
-				F1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift */,
-				F1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift */,
-				F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */,
 				F1FA11013C73958F69782D38 /* TimelineSelection.swift */,
-				F10000000000000000000007 /* GoalsView.swift */,
-				2222BD9A2D2293C288958A96 /* GoalDetailParts.swift */,
-				0C588EF64D5C5A03C4223E3E /* GoalDetailView.swift */,
-				BBECF62368A30DE0071628FA /* RoutineTimeRangeSlider.swift */,
-				2FB9516D630BEEDE2BA32788 /* GoalDetailEngine.swift */,
-				F10000000000000000000008 /* ReviewView.swift */,
-				F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */,
-				F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */,
-				F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */,
-				F1FA1101B4DB128D658751C3 /* ReviewView+Clock.swift */,
-				B10808030000000000000001 /* ReviewView+ClockCircular.swift */,
-				B10808030000000000000002 /* ReviewView+ClockLabels.swift */,
-				B10808030000000000000003 /* ReviewView+ClockLinear.swift */,
-				B10808030000000000000004 /* ReviewView+ClockPlayhead.swift */,
-				B10808030000000000000005 /* ReviewView+ClockDrawing.swift */,
-				B10808030000000000000006 /* ReviewClockGeometry.swift */,
-				F1FA117EA23DE1FEEF9455F6 /* ActivityCorrectionViews.swift */,
-				F1FA11DEB6F30038E0A3D825 /* SubwayRouteTimelineView.swift */,
-				F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */,
-				F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */,
-				F10000000000000000000009 /* SettingsView.swift */,
-				CCDDF9E63D00A2D25D95FE8E /* SettingsView+Connections.swift */,
-				60EBD28CC58EC3980EB620ED /* SettingsView+FrequentPlaces.swift */,
-				8C367F28ED1FD42AF95FAA8A /* SettingsFrequentPlaceDetailView.swift */,
-				F1000000000000000000000A /* AddPlanSheet.swift */,
-				3985B881ED10863463FF7EAA /* TimeSliderScreen.swift */,
-				71B97C923C6C13A347CB9473 /* AddPlanSheet+CategoryPickers.swift */,
-				C9F5B2A86AF8B01487A3C579 /* MiniTimeSliceEditor.swift */,
-				3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */,
 				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
 				F1A11102A0100000000000F1 /* MemoTextPolish.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
 				F1000000000000000000000E /* DetailViews.swift */,
-				B10808020000000000000A01 /* QuickActionSheet.swift */,
-				B10808020000000000000A02 /* MemoDetailView.swift */,
-				B10808020000000000000A03 /* CatPickerView.swift */,
-				B10808020000000000000A04 /* InferenceDetailView.swift */,
-				B10808020000000000000A05 /* LocationTimelineView.swift */,
-				B10808020000000000000A06 /* WidgetPreviewView.swift */,
-				B10808020000000000000A07 /* CategorySetupView.swift */,
-				B10808020000000000000A08 /* AppUsageNameLabel.swift */,
 				F10000000000000000000004 /* Theme.swift */,
-				F10000000000000000000024 /* CategoryManagerView.swift */,
-				F10000000000000000000025 /* PlanEditorSheet.swift */,
-				F10000000000000000000026 /* PhotoClusterSheet.swift */,
-				F1000000000000000000003A /* TimelineBlockStyleViews.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -2424,8 +2227,6 @@
 				F5B1102A0200000000000002 /* AppModel+WidgetLiveActivity.swift */,
 				F10000000000000000000018 /* NavigationModels.swift */,
 				F10000000000000000000019 /* CatPresentation.swift */,
-				F1000000000000000000001A /* TimelineInteractionEngine.swift */,
-				F10000000000000000000039 /* TimelineBoardModels.swift */,
 			);
 			path = UX;
 			sourceTree = "<group>";
@@ -2559,8 +2360,6 @@
 				T5H1114A26000000000F0019 /* TripShareMapping.swift */,
 				F1L1111A0500000000000003 /* LedgerXLSX.swift */,
 				B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */,
-				B1080801000000000000F005 /* ReviewSelectionEngine.swift */,
-				B1080801000000000000F006 /* RecordChartEngine.swift */,
 				B1080801000000000000F007 /* MemoTimelineEngine.swift */,
 				B1080801000000000000F008 /* DayPhaseEngine.swift */,
 				B1080801000000000000F009 /* RecordClockEngine.swift */,
@@ -3109,23 +2908,7 @@
 				A10000000000000000000003 /* PlanItem.swift in Sources */,
 				A10000000000000000000004 /* Theme.swift in Sources */,
 				A10000000000000000000005 /* AppShellView.swift in Sources */,
-				A10000000000000000000006 /* ScheduleView.swift in Sources */,
-				A1FA11B788DDFF62F309512F /* TimelineRowModels.swift in Sources */,
-				A1FA11356EDD0F1965709226 /* TimelineRowViews.swift in Sources */,
-				A1FA11A3B8DAE991AEA02AAF /* TimelineBoard.swift in Sources */,
-				A1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift in Sources */,
-				A1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift in Sources */,
-				A1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift in Sources */,
-				A1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift in Sources */,
-				A1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift in Sources */,
-				A1FA113C605017A9D1288BA2 /* GroupGanttView.swift in Sources */,
 				A1FA113C5869FE29648957F6 /* TimelineDetailPanel.swift in Sources */,
-				A1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift in Sources */,
-				A1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift in Sources */,
-				A1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift in Sources */,
-				A1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift in Sources */,
-				A1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift in Sources */,
-				A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */,
 				A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */,
 				A1000000000000000000007D /* MapHomeView.swift in Sources */,
 				A1E4059E918F755B11D98A00 /* MapHomeView+Photos.swift in Sources */,
@@ -3159,7 +2942,6 @@
 				A1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift in Sources */,
 				B10801000C1505A100000002 /* MapHomePlaceWalkRadiusSplit.swift in Sources */,
 				A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */,
-				A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */,
 				A100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift in Sources */,
 				A100000000000000C1102A03 /* MapHomeAppleMap.swift in Sources */,
 				A100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift in Sources */,
@@ -3197,10 +2979,6 @@
 				A100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift in Sources */,
 				A100000000000000C1102A19 /* MapHomeTransitSheets.swift in Sources */,
 				A100000000000000C1102A1A /* MapHomeWeatherTimeline.swift in Sources */,
-				A100000000000000C1102A1B /* ScheduleLinkSheets.swift in Sources */,
-				A100000000000000C1102A1C /* ScheduleTimelineCaches.swift in Sources */,
-				A100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift in Sources */,
-				A100000000000000C1102A1E /* TwoFingerGestureAttachments.swift in Sources */,
 				A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */,
 				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
 				733D3E485C90FB5E2205FD08 /* MapHomeRouteSpeedGradient.swift in Sources */,
@@ -3417,47 +3195,10 @@
 				C1CA1111A010000000000004 /* MapHomeLaunchPrompts.swift in Sources */,
 				CA1A1111A010000000000004 /* AITaskPanel.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
-				A10000000000000000000007 /* GoalsView.swift in Sources */,
-				A555E510ADEA5505DC2F5A79 /* GoalDetailParts.swift in Sources */,
-				8588E42DD2C1DE6268A73D68 /* GoalDetailView.swift in Sources */,
-				B519210965A8995AF81BD1F8 /* RoutineTimeRangeSlider.swift in Sources */,
-				01DF471D7D8D19BE88E5A1B4 /* GoalDetailEngine.swift in Sources */,
-				A10000000000000000000008 /* ReviewView.swift in Sources */,
-				A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */,
-				A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */,
-				A1FA11B6B565DF24CA6FBDD1 /* ReviewView+Charts.swift in Sources */,
-				A1FA11960E1E776FA2AFA426 /* ReviewView+Clock.swift in Sources */,
-				B10808030000000000000101 /* ReviewView+ClockCircular.swift in Sources */,
-				B10808030000000000000102 /* ReviewView+ClockLabels.swift in Sources */,
-				B10808030000000000000103 /* ReviewView+ClockLinear.swift in Sources */,
-				B10808030000000000000104 /* ReviewView+ClockPlayhead.swift in Sources */,
-				B10808030000000000000105 /* ReviewView+ClockDrawing.swift in Sources */,
-				B10808030000000000000106 /* ReviewClockGeometry.swift in Sources */,
-				A1FA11E4C6FF2DAB60DE4004 /* ActivityCorrectionViews.swift in Sources */,
-				A1FA113BFE3B1AB153E86D43 /* SubwayRouteTimelineView.swift in Sources */,
-				A1FA11046C5838880ADF9D7F /* RecordDetailViews.swift in Sources */,
-				A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */,
-				A10000000000000000000009 /* SettingsView.swift in Sources */,
-				AA6377B2DB6190855BE310B6 /* SettingsView+Connections.swift in Sources */,
-				4765C0DD433E1DC7D1C756D4 /* SettingsView+FrequentPlaces.swift in Sources */,
-				AC65BCB818D84ADC745630DD /* SettingsFrequentPlaceDetailView.swift in Sources */,
-				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
-				5B818300C0D2774682B32C07 /* TimeSliderScreen.swift in Sources */,
-				F9D1A50BB9FCEF0B785E43E6 /* AddPlanSheet+CategoryPickers.swift in Sources */,
-				27AB5D5D8EA08049CE1DEDAC /* MiniTimeSliceEditor.swift in Sources */,
-				C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
 				A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
-				B10808020000000000000B01 /* QuickActionSheet.swift in Sources */,
-				B10808020000000000000B02 /* MemoDetailView.swift in Sources */,
-				B10808020000000000000B03 /* CatPickerView.swift in Sources */,
-				B10808020000000000000B04 /* InferenceDetailView.swift in Sources */,
-				B10808020000000000000B05 /* LocationTimelineView.swift in Sources */,
-				B10808020000000000000B06 /* WidgetPreviewView.swift in Sources */,
-				B10808020000000000000B07 /* CategorySetupView.swift in Sources */,
-				B10808020000000000000B08 /* AppUsageNameLabel.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,
 				B10802000000000000000012 /* OfflineVectorTileCache.swift in Sources */,
 				B10802000000000000000011 /* OfflineVectorTiles.swift in Sources */,
@@ -3531,7 +3272,6 @@
 				A10000000000000000000015 /* LiveActivitySupport.swift in Sources */,
 				A10000000000000000000018 /* NavigationModels.swift in Sources */,
 				A10000000000000000000019 /* CatPresentation.swift in Sources */,
-				A1000000000000000000001A /* TimelineInteractionEngine.swift in Sources */,
 				A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */,
 				A1000000000000000000001D /* SensorDataServices.swift in Sources */,
 				A10000000000000000000040 /* CatAnimationShared.swift in Sources */,
@@ -3547,17 +3287,12 @@
 				B10816000000000000000002 /* LiveActivityDaySummaryState.swift in Sources */,
 				A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */,
 				A10000000000000000000026 /* StoreKitSupport.swift in Sources */,
-				A10000000000000000000027 /* CategoryManagerView.swift in Sources */,
-				A10000000000000000000028 /* PlanEditorSheet.swift in Sources */,
-				A10000000000000000000029 /* PhotoClusterSheet.swift in Sources */,
 				A1000000000000000000002A /* WatchSyncModels.swift in Sources */,
 				A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
 				817838D7A6AD39CBCE82FCAF /* AppleWatchConnectionModels.swift in Sources */,
 				A1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift in Sources */,
 				C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */,
-				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
-				A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */,
 				A1000000000000000000003B /* WidgetPayloadFactory.swift in Sources */,
 				C1110A040000000000000002 /* WidgetCommandStore.swift in Sources */,
 				A10000000000000000000061 /* RecordSummaryEngine.swift in Sources */,
@@ -3588,8 +3323,6 @@
 				A1L1111A0500000000000001 /* LedgerTrips.swift in Sources */,
 				A1L1111A0500000000000003 /* LedgerXLSX.swift in Sources */,
 				B1080801000000000000A004 /* ActivitySectionOverrideEngine.swift in Sources */,
-				B1080801000000000000A005 /* ReviewSelectionEngine.swift in Sources */,
-				B1080801000000000000A006 /* RecordChartEngine.swift in Sources */,
 				B1080801000000000000A007 /* MemoTimelineEngine.swift in Sources */,
 				B1080801000000000000A008 /* DayPhaseEngine.swift in Sources */,
 				B1080801000000000000A009 /* RecordClockEngine.swift in Sources */,
@@ -3644,7 +3377,6 @@
 				A10000000000000006FC0004 /* BackgroundSignalPolicyTests.swift in Sources */,
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
 				B10809000000000000000A11 /* InkWashThemeTests.swift in Sources */,
-				B10808030000000000000107 /* ReviewClockGeometryTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
 				A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */,
 				5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */,

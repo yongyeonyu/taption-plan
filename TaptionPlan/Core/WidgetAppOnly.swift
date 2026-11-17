@@ -33,67 +33,6 @@ enum TaptionLiveActivityStickmanAnimation {
     }
 }
 
-enum TaptionWidgetCatPreviewEngine {
-    static let stepDuration: TimeInterval = 0.1
-    static let movementStepCount = 40
-
-    static func pose(
-        at date: Date,
-        action: TaptionWidgetCatAction,
-        reducesMotion: Bool = false
-    ) -> TaptionWidgetCatWalkPose {
-        let rawStep = Int64(
-            floor(date.timeIntervalSinceReferenceDate / stepDuration)
-        )
-        let count = Int64(movementStepCount)
-        let step = Int(((rawStep % count) + count) % count)
-        let phase = reducesMotion
-            ? 0
-            : step % TaptionCatAnimationEngine.phaseCount
-        let motion = TaptionWidgetCatWalkEngine.motionDetails(
-            for: action,
-            phase: phase
-        )
-        let idle = TaptionCatIdleBeat.beat(
-            at: date,
-            reducesMotion: reducesMotion
-        )
-
-        guard action.movesAcrossTrack, !reducesMotion else {
-            return TaptionWidgetCatWalkPose(
-                progress: 0.5,
-                facesLeft: false,
-                legPhase: phase,
-                isAtEndpoint: true,
-                action: action,
-                tailSwing: reducesMotion ? 0 : motion.tailSwing,
-                headTiltDegrees: reducesMotion
-                    ? 0
-                    : motion.headTiltDegrees,
-                legSwing: reducesMotion ? 0 : motion.legSwing,
-                idle: idle
-            )
-        }
-
-        let outward = step <= movementStepCount / 2
-        let distance = outward
-            ? Double(step) / Double(movementStepCount / 2)
-            : Double(movementStepCount - step)
-                / Double(movementStepCount / 2)
-        return TaptionWidgetCatWalkPose(
-            progress: min(1, max(0, distance)),
-            facesLeft: !outward,
-            legPhase: phase,
-            isAtEndpoint: step == 0 || step == movementStepCount / 2,
-            action: action,
-            tailSwing: motion.tailSwing,
-            headTiltDegrees: motion.headTiltDegrees,
-            legSwing: motion.legSwing,
-            idle: idle
-        )
-    }
-}
-
 enum TaptionWidgetSyncStatus: Equatable, Sendable {
     case synchronized(Date?)
     case pending

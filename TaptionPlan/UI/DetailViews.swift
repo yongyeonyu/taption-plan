@@ -3,29 +3,6 @@ import SwiftUI
 // 상세 화면(메모·고양이·추정·위치 타임라인·위젯 미리보기)이 함께 쓰는 조각.
 // 화면 본체는 화면별 파일(MemoDetailView.swift 등)에 있다.
 
-struct DetailHeader: View {
-    let title: String
-    let trailing: String
-    var trailingColor: Color = .tpSecondary
-    let action: () -> Void
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.taption(size: 19, weight: .bold))
-                .foregroundStyle(Color.tpInk)
-            Spacer()
-            Button(trailing, action: action)
-                .font(.taption(size: 12, weight: .bold))
-                .foregroundStyle(trailingColor)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 12)
-        .background(Color.tpCard)
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.tpLine).frame(height: 0.5) }
-    }
-}
-
 extension TravelMode {
     /// 추정 상세 지도와 위치 타임라인 경로 띠가 같이 쓰는 이동 색.
     var routeColor: Color {

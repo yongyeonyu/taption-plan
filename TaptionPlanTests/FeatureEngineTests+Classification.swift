@@ -1188,41 +1188,6 @@ extension FeatureEngineTests {
         XCTAssertEqual(groups[1].children.map(\.duration), [38 * 60, 22 * 60])
     }
 
-    func testDayPhaseBucketsCompleteEachPastDayTo24Hours() {
-        let day = dayPhaseDay()
-        let period = TimeSpan(
-            start: day.start,
-            end: day.end.addingTimeInterval(24 * hour)
-        )
-        let buckets = RecordChartEngine.phaseBuckets(
-            actuals: [
-                sleepActual(0, 7, on: day),
-                stationaryContext(.work, 9, 17, on: day),
-            ],
-            travel: [],
-            stays: [],
-            placeKinds: [:],
-            in: period,
-            unit: .day,
-            calendar: utcCalendar,
-            asOf: period.end
-        )
-
-        XCTAssertEqual(buckets.count, 2)
-        XCTAssertEqual(buckets[0].total, 24 * hour)
-        XCTAssertEqual(
-            buckets[0].slices.first {
-                $0.categoryID == DayPhase.unconfirmed.rawValue
-            }?.duration,
-            9 * hour
-        )
-        XCTAssertEqual(buckets[1].total, 24 * hour)
-        XCTAssertEqual(
-            buckets[1].slices.map(\.categoryID),
-            [DayPhase.unconfirmed.rawValue]
-        )
-    }
-
     func testAutomaticRowVocabularyIsSharedByEverySurface() {
         XCTAssertEqual(TimelineRowKind.appUsage.title, "어플")
         XCTAssertEqual(ScreenTimeUsageRecordEngine.laneTitle, "어플")
@@ -1859,78 +1824,6 @@ extension FeatureEngineTests {
         // 등록은 했지만 종류에 이름이 없는 곳도 같은 자리로 떨어진다.
         let custom = roundTripPhases(to: .custom, staying: .cafe)
         XCTAssertEqual(custom.map(\.phase.title), ["수면", "이동", "활동", "이동"])
-    }
-
-    /// 읽음창은 짚은 조각의 진짜 시작·끝 시각을 적는다. 각도로 접었다 펴도
-    /// 8시 12분이 8시 11분으로 새지 않아야 한다.
-    func testPhaseReadoutReportsTheTrueStartAndEnd() throws {
-        let day = dayPhaseDay()
-        func at(_ hours: Int, _ minutes: Int) -> Date {
-            day.start.addingTimeInterval(
-                TimeInterval(hours * 3_600 + minutes * 60)
-            )
-        }
-        let leaving = TimeSpan(start: at(8, 12), end: at(8, 47))
-        let ring = try XCTUnwrap(
-            RecordClockDetailEngine.phaseRing(
-                actuals: [
-                    sleepActual(0, 7, on: day),
-                    ActualRecord(
-                        planID: nil,
-                        title: StationaryContextKind.work.title,
-                        categoryID: StationaryContextKind.work.categoryID,
-                        startedAt: leaving.end,
-                        endedAt: at(18, 0),
-                        source: .location,
-                        confidence: .medium,
-                        behavior: StationaryContextKind.work.rawValue,
-                        modelVersion: StationaryContextClassifier.modelVersion
-                    ),
-                ],
-                travel: [
-                    TravelSegment(
-                        mode: .subway,
-                        span: leaving,
-                        distanceMeters: 4_000,
-                        confidence: .medium,
-                        evidence: ["GPS"]
-                    ),
-                ],
-                stays: [
-                    PlaceStay(
-                        placeKey: "frequent-home",
-                        displayName: "집",
-                        span: TimeSpan(start: day.start, end: leaving.start),
-                        confidence: .high,
-                        isConfirmed: true
-                    ),
-                ],
-                placeKinds: ["frequent-home": .home],
-                in: day,
-                asOf: day.end
-            )
-        )
-
-        let arc = try XCTUnwrap(
-            ring.arcs.first { $0.token == DayPhase.movement.rawValue }
-        )
-        // 재생머리가 그 조각 위를 지날 때 읽는 조각도 같은 조각이다.
-        XCTAssertEqual(
-            RecordClockEngine.arc(
-                in: ring,
-                at: (arc.startFraction + arc.endFraction) / 2
-            ),
-            arc
-        )
-        let span = RecordClockEngine.span(of: arc, in: day)
-        XCTAssertEqual(span.start, leaving.start)
-        XCTAssertEqual(span.end, leaving.end)
-        XCTAssertEqual(
-            RecordClockEngine.timeRangeText(span),
-            "\(leaving.start.formatted(date: .omitted, time: .shortened))"
-                + "–"
-                + "\(leaving.end.formatted(date: .omitted, time: .shortened))"
-        )
     }
 
     /// 스크린 타임은 화면에 뜨지 않는 iOS 서비스 프로세스까지 앱으로 올려
