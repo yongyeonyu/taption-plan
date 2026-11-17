@@ -2983,7 +2983,7 @@ extension FeatureEngineTests {
             now: now
         )
 
-        XCTAssertEqual(forward?.id, "suggested-37.5000,127.0000")
+        XCTAssertEqual(forward?.id, FrequentPlaceSuggestion.stableID(migrating: "suggested-37.5000,127.0000"))
         XCTAssertEqual(reversed?.id, forward?.id)
         XCTAssertEqual(forward?.visitCount, 3)
     }
@@ -3028,7 +3028,7 @@ extension FeatureEngineTests {
             now: now
         )
 
-        XCTAssertEqual(forward?.id, "suggested-37.5002,127.0000")
+        XCTAssertEqual(forward?.id, FrequentPlaceSuggestion.stableID(migrating: "suggested-37.5002,127.0000"))
         XCTAssertEqual(reversed?.id, forward?.id)
         XCTAssertEqual(forward?.visitCount, 3)
     }

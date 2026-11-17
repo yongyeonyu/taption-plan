@@ -606,10 +606,11 @@ enum LedgerNumber {
         let formatter = NumberFormatter()
         formatter.locale = locale
         formatter.numberStyle = .decimal
-        if let value = formatter.number(from: trimmed)?.doubleValue { return value }
+        // 「inf」·「nan」처럼 유한하지 않은 값은 숫자로 받지 않는다(HOF1118A01).
+        if let value = formatter.number(from: trimmed)?.doubleValue { return value.isFinite ? value : nil }
         let grouping = locale.groupingSeparator ?? ","
         let decimal = locale.decimalSeparator ?? "."
-        return Double(trimmed.replacingOccurrences(of: grouping, with: "").replacingOccurrences(of: decimal, with: "."))
+        return Double(trimmed.replacingOccurrences(of: grouping, with: "").replacingOccurrences(of: decimal, with: ".")).flatMap { $0.isFinite ? $0 : nil }
     }
 }
 

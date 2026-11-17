@@ -71,10 +71,16 @@ enum MapHomeLaunchPromptHandoff {
         CalendarTitleClassification.selectableCategories.flatMap(\.details).map { "\($0.id)=\($0.title)" }.joined(separator: ", ")
     }
 
-    /// 오늘 넘긴 질문 id.
+    /// 오늘 넘긴 질문 id. 예전 빌드가 남긴 좌표 꼴 장소 id는 안정 id로 바꿔 다시 적는다(HOF1118A01).
     static func handed(now: Date = .now, defaults: UserDefaults = .standard) -> Set<String> {
         let stored = defaults.dictionary(forKey: key) as? [String: [String]] ?? [:]
-        return Set(stored[MapHomeLaunchPromptDeferral.dayKey(now)] ?? [])
+        let day = MapHomeLaunchPromptDeferral.dayKey(now)
+        let ids = stored[day] ?? []
+        let migrated = ids.map { id in
+            id.hasPrefix("place:") ? "place:" + FrequentPlaceSuggestion.stableID(migrating: String(id.dropFirst("place:".count))) : id
+        }
+        if migrated != ids || stored.keys.contains(where: { $0 != day }) { defaults.set([day: Array(Set(migrated)).sorted()], forKey: key) }
+        return Set(migrated)
     }
 
     static func markHanded(_ id: String, now: Date = .now, defaults: UserDefaults = .standard) {

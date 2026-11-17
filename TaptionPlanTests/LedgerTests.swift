@@ -396,6 +396,30 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(late.occurredAt.map { calendar.component(.year, from: $0) }, 2026)
     }
 
+    /// HOF1118A01: 같은 시각의 기록은 나중에 만든 것이 위로, 넣은 차례와 상관없이 늘 같은 순서다.
+    /// 금액 칸은 「inf」·「nan」을 숫자로 받지 않는다.
+    func testSameTimeEntriesKeepOneOrderAndAmountsAreFinite() async {
+        let older = LedgerEntry(occurredAt: at(9), amount: 1_000, title: "먼저", createdAt: at(10))
+        let newer = LedgerEntry(occurredAt: at(9), amount: 2_000, title: "나중", createdAt: at(11))
+        for order in [[older, newer], [newer, older]] {
+            let book = LedgerBook(store: { nil })
+            for entry in order { await book.save(entry) }
+            XCTAssertEqual(book.entries.map(\.title), ["나중", "먼저"])
+            var edited = order[0]
+            edited.amount += 1
+            await book.save(edited)
+            XCTAssertEqual(book.entries.map(\.title), ["나중", "먼저"], "an edit does not move a same-time entry")
+        }
+        let twin = LedgerEntry(occurredAt: at(9), amount: 1, title: "쌍", createdAt: at(10))
+        XCTAssertNotEqual(LedgerEntry.newestFirst(older, twin), LedgerEntry.newestFirst(twin, older), "even full ties have one order")
+
+        for text in ["inf", "-inf", "nan", "infinity", "1e400"] {
+            XCTAssertNil(LedgerNumber.parse(text, locale: Locale(identifier: "en_US")), text)
+            XCTAssertNil(LedgerNumber.parse(text, locale: Locale(identifier: "ko_KR")), text)
+        }
+        XCTAssertEqual(LedgerNumber.parse("12.5", locale: Locale(identifier: "en_US")), 12.5)
+    }
+
     /// 리뷰 지적: 청구 예정·한도·광고 문자는 기록 후보가 아니고, 쉼표 소수점 지역에서 금액이 100배가 되지 않는다.
     func testReviewFixes() async {
         let now = at(20)

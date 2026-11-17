@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import TaptionPlanEngine
 
@@ -45,7 +46,8 @@ struct UnregisteredPlaceSuggestionEngine: Sendable {
             if $0.lastVisitedAt != $1.lastVisitedAt {
                 return $0.lastVisitedAt < $1.lastVisitedAt
             }
-            return $0.id > $1.id
+            // id가 좌표 해시라(HOF1118A01) 같을 때는 자리로 정한다. 남쪽·서쪽이 먼저다.
+            return ($0.point.latitude, $0.point.longitude) > ($1.point.latitude, $1.point.longitude)
         }
     }
 
@@ -177,11 +179,7 @@ struct UnregisteredPlaceSuggestionEngine: Sendable {
             return nil
         }
         return FrequentPlaceSuggestion(
-            id: String(
-                format: "suggested-%.4f,%.4f",
-                cluster.center.latitude,
-                cluster.center.longitude
-            ),
+            id: FrequentPlaceSuggestion.stableID(cluster.center),
             point: cluster.center,
             suggestedName: suggestedName(in: cluster.stays),
             visitCount: visits.count,
@@ -246,5 +244,21 @@ struct UnregisteredPlaceSuggestionEngine: Sendable {
             || trimmed == "자동 감지 장소"
             || trimmed == "확인된 위치"
             || trimmed.hasPrefix("장소 · ")
+    }
+}
+
+extension FrequentPlaceSuggestion {
+    /// 좌표를 담지 않는 안정 id(HOF1118A01). 같은 자리(소수 4자리)면 늘 같고, AI로 나가던 id와 같은 값이다.
+    static func stableID(_ center: GeoPoint) -> String {
+        hashed(String(format: "suggested-%.4f,%.4f", center.latitude, center.longitude))
+    }
+
+    /// 예전 빌드가 남긴 「suggested-위도,경도」 id는 같은 안정 id로 바꾸고, 그 밖의 id는 그대로 둔다.
+    static func stableID(migrating id: String) -> String {
+        id.wholeMatch(of: /suggested-(-?\d+\.\d{4}),(-?\d+\.\d{4})/) == nil ? id : hashed(id)
+    }
+
+    private static func hashed(_ legacy: String) -> String {
+        "suggested-" + SHA256.hash(data: Data(legacy.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
     }
 }

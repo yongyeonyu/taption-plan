@@ -829,8 +829,6 @@ struct MapHomeStickerEditorSheet: View {
         case .sticker(let id): model.deleteMapSticker(id)
         case .memo(let id):
             model.deleteMemo(id)
-            MemoPolishQueue.resolve(id)
-            MemoAIEditMarks.clear(id)
         case .newMemo(let id): model.discardMapMemoDraft(id)
         }
         dismiss()

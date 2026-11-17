@@ -421,10 +421,8 @@ enum AssistantAppStateSync {
         var mapColors: [AssistantAppState.MapColor] = []
     }
 
-    /// REV1117A02: 제안 id는 「suggested-위도,경도」라 그대로 내보내지 않는다. resolvePlaceSuggestion은 id를 받지 않는다.
-    static func suggestionID(_ id: String) -> String {
-        "suggested-" + SHA256.hash(data: Data(id.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
-    }
+    /// REV1117A02: 제안 id에 좌표를 담아 내보내지 않는다. 지금 id는 좌표 해시이고(HOF1118A01), 옛 꼴이면 같은 해시로 바꾼다.
+    static func suggestionID(_ id: String) -> String { FrequentPlaceSuggestion.stableID(migrating: id) }
 
     static func make(_ input: Input) -> AssistantAppState {
         let stamp = AssistantActivityBuilder.Stamp(calendar: input.calendar)

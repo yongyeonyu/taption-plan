@@ -736,12 +736,12 @@ extension AppModel {
             index = empty
         } else {
             // 이름을 지어내지 않는다. 역지오코딩이 붙여 준 이름이 없으면
-            // 좌표를 그대로 넣고 사용자가 고치게 둔다.
+            // 종류 이름을 넣고 사용자가 고치게 둔다. 좌표는 이름에 넣지 않는다(HOF1118A01).
             snapshot.settings.frequentPlaces.append(
                 FrequentPlace(
                     kind: kind,
                     name: suggestion.suggestedName
-                        ?? Self.coordinateLabel(suggestion.point)
+                        ?? Self.unnamedPlaceName(kind)
                 )
             )
             index = snapshot.settings.frequentPlaces.count - 1
@@ -778,12 +778,8 @@ extension AppModel {
         Task { await persist() }
     }
 
-    static func coordinateLabel(_ point: GeoPoint) -> String {
-        String(
-            format: "%.5f, %.5f",
-            point.latitude,
-            point.longitude
-        )
+    static func unnamedPlaceName(_ kind: FrequentPlaceKind, language: MapHomeLanguage = .current) -> String {
+        kind == .custom ? language.text("자주 가는 곳", "Frequent place") : kind.defaultName
     }
 
     /// 자주가는 곳에서 지운 자리도 같은 목록에 넣는다. 지우자마자 "등록할
