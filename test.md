@@ -5,6 +5,7 @@
 ## TSR1117A01 · 여행 공유 패키지·서버 방 결함 아홉 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `460635a6` 위 브랜치 `worktree-agent-a15e6707b6aa4c993`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/TSR1117A01`. 로그 `build/validation/TSR1117A01/`. 설계는 `docs/reviews/REV1117A01.md` 「TSR1117A01 설계」.
+- 메인 합침(`413a3a0d`, 2026-11-17 밤): 합친 main에서 서버 `npm test` 218건 통과·실패 0, `TaptionTripShare` `swift test` 82건 실패 0. 대표 결정(TSR까지 합친 뒤 한 번에)대로 서버 배포 — `wrangler deploy` 종료 0, 버전 ID `1153a89e`. REV1117A02·REV1117A03(정류장 본문·502)·REV1117A01 2차 Q2(모이는 곳 묘비)·TSR(묶음 이름·`locWindow`·위치 알람)이 함께 나감. 운영에서 알람 발화·실제 방 확인은 아직.
 - 고친 것(결함마다 시험 먼저·커밋 하나):
   1. 키 교체 직후 따라잡기가 끊기면 `rotate`·`confirmRotation`이 오류를 던져 앱이 새 뿌리 키·세대를 적지 못함 → 서버가 받아 준 것을 성공으로 보고 따라잡기는 연결 고리에 맡김(`58cdf2cd`). 키체인·스냅샷 형식과 적는 값은 그대로.
   2. `confirmRotation`이 `needsRekey`로 멈춘 연결 고리를 다시 시작하지 않음 → 다시 붙임(`17480dc6`).
