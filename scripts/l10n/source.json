@@ -242,7 +242,7 @@
    "ko": "12,300원",
    "en": "₩12,300",
    "files": [
-    "FirstRunTutorialView.swift:861"
+    "FirstRunTutorialView.swift:865"
    ],
    "args": [],
    "targets": [
@@ -278,7 +278,7 @@
    "ko": "14일 무료 체험 · {0}일 남음",
    "en": "14-day free trial · {0} days left",
    "files": [
-    "AppShellView.swift:1124",
+    "AppShellView.swift:1114",
     "MapHomeView+Menu2.swift:250"
    ],
    "args": [
@@ -293,7 +293,7 @@
    "ko": "14일 무료 체험 시작",
    "en": "Start 14-day free trial",
    "files": [
-    "AppShellView.swift:1176"
+    "AppShellView.swift:1166"
    ],
    "args": [],
    "targets": [
@@ -305,7 +305,7 @@
    "ko": "14일 무료 체험",
    "en": "14-day free trial",
    "files": [
-    "AppShellView.swift:1122"
+    "AppShellView.swift:1112"
    ],
    "args": [],
    "targets": [
@@ -317,7 +317,7 @@
    "ko": "14일 무료 체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다.",
    "en": "The trial does not renew automatically. A single purchase unlocks Pro permanently.",
    "files": [
-    "AppShellView.swift:1148"
+    "AppShellView.swift:1138"
    ],
    "args": [],
    "targets": [
@@ -329,7 +329,7 @@
    "ko": "14일 무료 체험이 시작되었습니다.",
    "en": "Your 14-day free trial has started.",
    "files": [
-    "AppShellView.swift:1259"
+    "AppShellView.swift:1249"
    ],
    "args": [],
    "targets": [
@@ -341,7 +341,7 @@
    "ko": "14일 무료 체험이 종료되었습니다",
    "en": "Your 14-day free trial has ended",
    "files": [
-    "AppShellView.swift:1131"
+    "AppShellView.swift:1121"
    ],
    "args": [],
    "targets": [
@@ -404,7 +404,7 @@
    "ko": "1시간 5분",
    "en": "1h 5m",
    "files": [
-    "FirstRunTutorialView.swift:859"
+    "FirstRunTutorialView.swift:863"
    ],
    "args": [],
    "targets": [
@@ -525,7 +525,7 @@
    "ko": "25분",
    "en": "25m",
    "files": [
-    "FirstRunTutorialView.swift:860"
+    "FirstRunTutorialView.swift:864"
    ],
    "args": [],
    "targets": [
@@ -574,7 +574,7 @@
    "ko": "3시간 12분",
    "en": "3h 12m",
    "files": [
-    "FirstRunTutorialView.swift:857"
+    "FirstRunTutorialView.swift:861"
    ],
    "args": [],
    "targets": [
@@ -586,7 +586,7 @@
    "ko": "42분",
    "en": "42m",
    "files": [
-    "FirstRunTutorialView.swift:858"
+    "FirstRunTutorialView.swift:862"
    ],
    "args": [],
    "targets": [
@@ -635,7 +635,7 @@
    "ko": "6자리 숫자를 두 칸에 모두 입력해 주세요.",
    "en": "Enter 6 digits in both fields.",
    "files": [
-    "FirstRunTutorialView.swift:384"
+    "FirstRunTutorialView.swift:388"
    ],
    "args": [],
    "targets": [
@@ -1470,7 +1470,7 @@
    "ko": "App Store에서 구매 항목을 아직 불러오지 못했습니다.",
    "en": "The purchase is not available from the App Store yet.",
    "files": [
-    "AppShellView.swift:1277"
+    "AppShellView.swift:1267"
    ],
    "args": [],
    "targets": [
@@ -1707,7 +1707,7 @@
    "ko": "BOKKI Plan 불러오는 중",
    "en": "Loading BOKKI Plan",
    "files": [
-    "AppShellView.swift:395"
+    "AppShellView.swift:385"
    ],
    "args": [],
    "targets": [
@@ -2560,7 +2560,7 @@
    "ko": "Pro 상태 확인 중",
    "en": "Checking Pro status",
    "files": [
-    "AppShellView.swift:1087"
+    "AppShellView.swift:1077"
    ],
    "args": [],
    "targets": [
@@ -2572,7 +2572,7 @@
    "ko": "Pro 영구 구매",
    "en": "Buy Pro permanently",
    "files": [
-    "AppShellView.swift:1252"
+    "AppShellView.swift:1242"
    ],
    "args": [],
    "targets": [
@@ -2584,7 +2584,7 @@
    "ko": "Pro 영구 구매가 완료되었습니다.",
    "en": "Your permanent Pro purchase is complete.",
    "files": [
-    "AppShellView.swift:1273"
+    "AppShellView.swift:1263"
    ],
    "args": [],
    "targets": [
@@ -2596,7 +2596,7 @@
    "ko": "Pro를 영구 이용 중입니다",
    "en": "You own Pro permanently",
    "files": [
-    "AppShellView.swift:1129"
+    "AppShellView.swift:1119"
    ],
    "args": [],
    "targets": [
@@ -2986,7 +2986,7 @@
    "ko": "iCloud 백업과 기기 연동",
    "en": "iCloud backup and device sync",
    "files": [
-    "AppShellView.swift:1073"
+    "AppShellView.swift:1063"
    ],
    "args": [],
    "targets": [
@@ -4490,7 +4490,7 @@
    "ko": "{0}로 Pro 영구 구매",
    "en": "Buy Pro permanently for {0}",
    "files": [
-    "AppShellView.swift:1247"
+    "AppShellView.swift:1237"
    ],
    "args": [
     "displayPrice"
@@ -5153,7 +5153,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit PIN",
    "files": [
-    "AppShellView.swift:795"
+    "AppShellView.swift:785"
    ],
    "args": [
     "pinDigits"
@@ -13191,7 +13191,7 @@
    "ko": "앱 잠금 해제 필요",
    "en": "App unlock required",
    "files": [
-    "AppShellView.swift:704"
+    "AppShellView.swift:694"
    ],
    "args": [],
    "targets": [
@@ -23197,7 +23197,7 @@
    "ko": "BOKKI Plan 불러오는 중",
    "en": "Loading BOKKI Plan",
    "files": [
-    "AppShellView.swift:396"
+    "AppShellView.swift:386"
    ],
    "args": [],
    "targets": [
@@ -23209,7 +23209,7 @@
    "ko": "활동과 이동 경로 불러오는 중",
    "en": "Loading activities and routes",
    "files": [
-    "AppShellView.swift:376"
+    "AppShellLaunchGate.swift:136"
    ],
    "args": [],
    "targets": [
@@ -24359,7 +24359,7 @@
    "files": [
     "WidgetShared.swift:74",
     "AppModel+WidgetLiveActivity.swift:106",
-    "TaptionPlanWatchWidget.swift:719"
+    "TaptionPlanWatchWidget.swift:720"
    ],
    "args": [],
    "targets": [
@@ -25001,7 +25001,7 @@
    "ko": "신제품 기획",
    "en": "New product planning",
    "files": [
-    "TaptionPlanWatchWidget.swift:687"
+    "TaptionPlanWatchWidget.swift:688"
    ],
    "args": [],
    "targets": [
@@ -26264,7 +26264,7 @@
    "ko": "프로젝트",
    "en": "Project",
    "files": [
-    "TaptionPlanWatchWidget.swift:696"
+    "TaptionPlanWatchWidget.swift:697"
    ],
    "args": [],
    "targets": [
@@ -32407,7 +32407,7 @@
    "files": [
     "AppModel+WidgetLiveActivity.swift:102",
     "WatchTodayCards.swift:240",
-    "TaptionPlanWatchWidget.swift:713"
+    "TaptionPlanWatchWidget.swift:714"
    ],
    "args": [],
    "targets": [
@@ -33562,7 +33562,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit PIN",
    "files": [
-    "AppShellView.swift:796"
+    "AppShellView.swift:786"
    ],
    "args": [
     "pinDigits"
@@ -34573,7 +34573,7 @@
    "ko": "개발자 체험 14일 초기화",
    "en": "Reset developer trial for 14 days",
    "files": [
-    "AppShellView.swift:1190"
+    "AppShellView.swift:1180"
    ],
    "args": [],
    "targets": [
@@ -34585,7 +34585,7 @@
    "ko": "개발자 체험 기록을 초기화하지 못했습니다.",
    "en": "The developer trial record could not be reset.",
    "files": [
-    "AppShellView.swift:1267"
+    "AppShellView.swift:1257"
    ],
    "args": [],
    "targets": [
@@ -34770,7 +34770,7 @@
    "ko": "건강 데이터",
    "en": "Health Data",
    "files": [
-    "AppShellView.swift:985"
+    "AppShellView.swift:975"
    ],
    "args": [],
    "targets": [
@@ -35708,7 +35708,7 @@
    "ko": "계속 사용",
    "en": "Continue",
    "files": [
-    "AppShellView.swift:1231"
+    "AppShellView.swift:1221"
    ],
    "args": [],
    "targets": [
@@ -35720,7 +35720,7 @@
    "ko": "계속 사용하려면 Pro를 한 번 구매하거나 기존 구매 내역을 복원해 주세요.",
    "en": "Purchase Pro once or restore an existing purchase to continue.",
    "files": [
-    "AppShellView.swift:1158"
+    "AppShellView.swift:1148"
    ],
    "args": [],
    "targets": [
@@ -36980,7 +36980,7 @@
    "ko": "구매 내역을 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
    "en": "Your purchase could not be restored. Please try again later.",
    "files": [
-    "AppShellView.swift:1293"
+    "AppShellView.swift:1283"
    ],
    "args": [],
    "targets": [
@@ -36992,7 +36992,7 @@
    "ko": "구매 내역을 복원했습니다.",
    "en": "Your purchase was restored.",
    "files": [
-    "AppShellView.swift:1289"
+    "AppShellView.swift:1279"
    ],
    "args": [],
    "targets": [
@@ -37004,7 +37004,7 @@
    "ko": "구매 및 체험 상태를 확인하고 있습니다.",
    "en": "Checking your purchase and trial status.",
    "files": [
-    "AppShellView.swift:1138"
+    "AppShellView.swift:1128"
    ],
    "args": [],
    "targets": [
@@ -37016,7 +37016,7 @@
    "ko": "구매 복원",
    "en": "Restore purchase",
    "files": [
-    "AppShellView.swift:1224"
+    "AppShellView.swift:1214"
    ],
    "args": [],
    "targets": [
@@ -37028,7 +37028,7 @@
    "ko": "구매 승인을 기다리고 있습니다.",
    "en": "Waiting for purchase approval.",
    "files": [
-    "AppShellView.swift:1275"
+    "AppShellView.swift:1265"
    ],
    "args": [],
    "targets": [
@@ -37040,7 +37040,7 @@
    "ko": "구매 영수증을 확인하지 못했습니다.",
    "en": "The purchase receipt could not be verified.",
    "files": [
-    "AppShellView.swift:1282"
+    "AppShellView.swift:1272"
    ],
    "args": [],
    "targets": [
@@ -37052,7 +37052,7 @@
    "ko": "구매를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",
    "en": "The purchase could not be completed. Please try again later.",
    "files": [
-    "AppShellView.swift:1284"
+    "AppShellView.swift:1274"
    ],
    "args": [],
    "targets": [
@@ -38524,7 +38524,7 @@
    "ko": "끄면 비밀번호는 백업에만 쓰입니다.",
    "en": "When off, the password is used only for backups.",
    "files": [
-    "FirstRunTutorialView.swift:704"
+    "FirstRunTutorialView.swift:708"
    ],
    "args": [],
    "targets": [
@@ -40602,7 +40602,7 @@
    "en": "Close",
    "files": [
     "AIConnectNudge.swift:40",
-    "AppShellView.swift:1029",
+    "AppShellView.swift:1019",
     "ArrivalCardView.swift:67"
    ],
    "args": [],
@@ -41501,7 +41501,7 @@
    "ko": "동작 및 피트니스",
    "en": "Motion & Fitness",
    "files": [
-    "AppShellView.swift:983",
+    "AppShellView.swift:973",
     "MapHomeView+Support2.swift:895"
    ],
    "args": [],
@@ -41780,7 +41780,7 @@
    "ko": "등록된 비밀번호가 있습니다",
    "en": "A password is already set",
    "files": [
-    "FirstRunTutorialView.swift:667"
+    "FirstRunTutorialView.swift:671"
    ],
    "args": [],
    "targets": [
@@ -43150,7 +43150,7 @@
    "ko": "모든 권한이 확인되면 GPS와 센서 기록이 5분 간격으로 자동 시작됩니다.",
    "en": "GPS and sensor recording starts automatically every 5 minutes after all permissions are verified.",
    "files": [
-    "AppShellView.swift:857"
+    "AppShellView.swift:847"
    ],
    "args": [],
    "targets": [
@@ -43640,7 +43640,7 @@
    "ko": "바꾸지 않으면 그대로 씁니다.",
    "en": "It stays as is unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:669"
+    "FirstRunTutorialView.swift:673"
    ],
    "args": [],
    "targets": [
@@ -43652,7 +43652,7 @@
    "ko": "바꾸지 않으면 이 번호로 시작합니다.",
    "en": "This is used unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:681"
+    "FirstRunTutorialView.swift:685"
    ],
    "args": [],
    "targets": [
@@ -43748,7 +43748,7 @@
    "ko": "반경",
    "en": "Radius",
    "files": [
-    "FirstRunTutorialView.swift:605",
+    "FirstRunTutorialView.swift:609",
     "MapHomeInfoSheets.swift:99"
    ],
    "args": [],
@@ -44740,7 +44740,7 @@
    "ko": "버튼을 누르면 14일 무료 체험이 시작됩니다. 자동 결제는 없습니다.",
    "en": "Tap the button to start a 14-day free trial. You will not be charged automatically.",
    "files": [
-    "AppShellView.swift:1143"
+    "AppShellView.swift:1133"
    ],
    "args": [],
    "targets": [
@@ -45301,7 +45301,7 @@
    "ko": "복원할 Pro 구매 내역이 없습니다.",
    "en": "No Pro purchase was found to restore.",
    "files": [
-    "AppShellView.swift:1291"
+    "AppShellView.swift:1281"
    ],
    "args": [],
    "targets": [
@@ -45612,7 +45612,7 @@
    "ko": "비밀번호 확인",
    "en": "Confirm password",
    "files": [
-    "FirstRunTutorialView.swift:689",
+    "FirstRunTutorialView.swift:693",
     "MapHomeSettingsSheets.swift:347"
    ],
    "args": [],
@@ -45625,7 +45625,7 @@
    "ko": "비밀번호 확인이 일치하지 않습니다.",
    "en": "Passwords do not match.",
    "files": [
-    "FirstRunTutorialView.swift:387",
+    "FirstRunTutorialView.swift:391",
     "MapHomeSettingsSheets.swift:691"
    ],
    "args": [],
@@ -45824,7 +45824,7 @@
    "ko": "비밀번호를 잊으면 백업을 복구할 수 없습니다. 예전 iCloud 백업은 그때 쓴 비밀번호로 열립니다.",
    "en": "Without the password, backups can't be restored. Older iCloud backups open with the password used then.",
    "files": [
-    "FirstRunTutorialView.swift:707"
+    "FirstRunTutorialView.swift:711"
    ],
    "args": [],
    "targets": [
@@ -46755,7 +46755,7 @@
    "ko": "새 비밀번호(6자리)",
    "en": "New password (6 digits)",
    "files": [
-    "FirstRunTutorialView.swift:686"
+    "FirstRunTutorialView.swift:690"
    ],
    "args": [],
    "targets": [
@@ -46767,7 +46767,7 @@
    "ko": "새 비밀번호",
    "en": "New password",
    "files": [
-    "FirstRunTutorialView.swift:688",
+    "FirstRunTutorialView.swift:692",
     "TripShareHost.swift:337",
     "TripShareHost.swift:354"
    ],
@@ -47393,7 +47393,7 @@
    "ko": "설정 열기",
    "en": "Open Settings",
    "files": [
-    "AppShellView.swift:968",
+    "AppShellView.swift:958",
     "MapHomeScreenRecording.swift:669",
     "MapHomeStickerEditor.swift:266"
    ],
@@ -47421,7 +47421,7 @@
    "ko": "설정 필요",
    "en": "Required",
    "files": [
-    "AppShellView.swift:921"
+    "AppShellView.swift:911"
    ],
    "args": [],
    "targets": [
@@ -48709,7 +48709,7 @@
    "ko": "시간대별 날씨 기록",
    "en": "Hourly weather records",
    "files": [
-    "AppShellView.swift:1061"
+    "AppShellView.swift:1051"
    ],
    "args": [],
    "targets": [
@@ -49075,7 +49075,7 @@
    "ko": "신제품 기획",
    "en": "New product planning",
    "files": [
-    "TaptionPlanWatchWidget.swift:686"
+    "TaptionPlanWatchWidget.swift:687"
    ],
    "args": [],
    "targets": [
@@ -49087,7 +49087,7 @@
    "ko": "실시간 GPS와 이동 경로",
    "en": "Live GPS and travel routes",
    "files": [
-    "AppShellView.swift:1065"
+    "AppShellView.swift:1055"
    ],
    "args": [],
    "targets": [
@@ -49099,7 +49099,7 @@
    "ko": "실시간 현황",
    "en": "Live Activities",
    "files": [
-    "AppShellView.swift:991"
+    "AppShellView.swift:981"
    ],
    "args": [],
    "targets": [
@@ -49391,7 +49391,7 @@
    "ko": "아래에 적고 다음을 누르면 저장됩니다.",
    "en": "Enter one below and tap Next to save it.",
    "files": [
-    "FirstRunTutorialView.swift:673"
+    "FirstRunTutorialView.swift:677"
    ],
    "args": [],
    "targets": [
@@ -49563,7 +49563,7 @@
    "ko": "아직 비밀번호가 없습니다",
    "en": "No password yet",
    "files": [
-    "FirstRunTutorialView.swift:671"
+    "FirstRunTutorialView.swift:675"
    ],
    "args": [],
    "targets": [
@@ -49871,7 +49871,7 @@
    "ko": "알림",
    "en": "Notifications",
    "files": [
-    "AppShellView.swift:989",
+    "AppShellView.swift:979",
     "AssistantDataCommands.swift:698",
     "PermissionOnboardingSheet.swift:80"
    ],
@@ -50316,7 +50316,7 @@
    "ko": "앱 잠금 해제 필요",
    "en": "App unlock required",
    "files": [
-    "AppShellView.swift:703"
+    "AppShellView.swift:693"
    ],
    "args": [],
    "targets": [
@@ -50450,7 +50450,7 @@
    "ko": "앱을 열 때마다 잠금",
    "en": "Lock whenever the app opens",
    "files": [
-    "FirstRunTutorialView.swift:699",
+    "FirstRunTutorialView.swift:703",
     "MapHomeSettingsSheets.swift:374"
    ],
    "args": [],
@@ -52627,7 +52627,7 @@
    "ko": "연봉 카운터",
    "en": "Salary counter",
    "files": [
-    "FirstRunTutorialView.swift:814",
+    "FirstRunTutorialView.swift:818",
     "MapHomeAlarm.swift:25",
     "MapHomeSalarySettingsSheet.swift:124"
    ],
@@ -52691,7 +52691,7 @@
    "ko": "연봉을 적으면 나타납니다",
    "en": "Appears once you enter a salary",
    "files": [
-    "FirstRunTutorialView.swift:816"
+    "FirstRunTutorialView.swift:820"
    ],
    "args": [],
    "targets": [
@@ -53226,7 +53226,7 @@
    "ko": "예시",
    "en": "Example",
    "files": [
-    "FirstRunTutorialView.swift:796"
+    "FirstRunTutorialView.swift:800"
    ],
    "args": [],
    "targets": [
@@ -53326,7 +53326,7 @@
    "en": "Today {0}",
    "files": [
     "TaptionPlanWatchWidget.swift:380",
-    "TaptionPlanWatchWidget.swift:670",
+    "TaptionPlanWatchWidget.swift:671",
     "TaptionPlanWatchWidget.swift:234"
    ],
    "args": [
@@ -53399,7 +53399,7 @@
    "en": "No record today",
    "files": [
     "WatchTodayCards.swift:102",
-    "TaptionPlanWatchWidget.swift:619"
+    "TaptionPlanWatchWidget.swift:620"
    ],
    "args": [],
    "targets": [
@@ -54900,7 +54900,7 @@
    "ko": "위치 항상 허용",
    "en": "Always Location",
    "files": [
-    "AppShellView.swift:979",
+    "AppShellView.swift:969",
     "MapHomeView+Support2.swift:891"
    ],
    "args": [],
@@ -55013,7 +55013,7 @@
    "ko": "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.",
    "en": "Couldn't find it. Try another name.",
    "files": [
-    "FirstRunTutorialView.swift:578"
+    "FirstRunTutorialView.swift:582"
    ],
    "args": [],
    "targets": [
@@ -55025,7 +55025,7 @@
    "ko": "위치를 허용하면 현재 위치로도 저장할 수 있습니다.",
    "en": "Allow location to use your current position.",
    "files": [
-    "FirstRunTutorialView.swift:600"
+    "FirstRunTutorialView.swift:604"
    ],
    "args": [],
    "targets": [
@@ -55360,7 +55360,7 @@
    "ko": "이 기기 또는 iCloud에 저장된 기록에서 14일 무료 체험을 이미 사용했습니다.",
    "en": "The 14-day free trial has already been used on this device or in its synced iCloud record.",
    "files": [
-    "AppShellView.swift:1261"
+    "AppShellView.swift:1251"
    ],
    "args": [],
    "targets": [
@@ -55930,7 +55930,7 @@
    "ko": "이 안에 있으면 이 장소로 봐요. 나중에 장소 정보에서 바꿀 수 있어요.",
    "en": "Inside this range counts as this place. You can change it later in the place details.",
    "files": [
-    "FirstRunTutorialView.swift:607"
+    "FirstRunTutorialView.swift:611"
    ],
    "args": [],
    "targets": [
@@ -57821,7 +57821,7 @@
    "ko": "자동 기록에 필요한 권한입니다. 빠진 권한이 있으면 기록 화면을 사용할 수 없습니다.",
    "en": "These permissions are required for automatic recording. The timeline remains locked until all are enabled.",
    "files": [
-    "AppShellView.swift:884"
+    "AppShellView.swift:874"
    ],
    "args": [],
    "targets": [
@@ -58699,8 +58699,8 @@
    "en": "Saved",
    "files": [
     "FirstRunTutorialGuides.swift:670",
-    "FirstRunTutorialView.swift:497",
-    "FirstRunTutorialView.swift:507"
+    "FirstRunTutorialView.swift:501",
+    "FirstRunTutorialView.swift:511"
    ],
    "args": [],
    "targets": [
@@ -59328,7 +59328,7 @@
    "ko": "정확한 위치",
    "en": "Precise Location",
    "files": [
-    "AppShellView.swift:981",
+    "AppShellView.swift:971",
     "MapHomeView+Support2.swift:893"
    ],
    "args": [],
@@ -59696,7 +59696,7 @@
    "ko": "주소나 장소 이름 검색",
    "en": "Search address or place",
    "files": [
-    "FirstRunTutorialView.swift:527"
+    "FirstRunTutorialView.swift:531"
    ],
    "args": [],
    "targets": [
@@ -59890,7 +59890,7 @@
    "ko": "지금 {0}",
    "en": "Now {0}",
    "files": [
-    "TaptionPlanWatchWidget.swift:523"
+    "TaptionPlanWatchWidget.swift:524"
    ],
    "args": [
     "running.title"
@@ -60702,7 +60702,7 @@
    "ko": "지도에서 저장됨",
    "en": "Saved from the map",
    "files": [
-    "FirstRunTutorialView.swift:519"
+    "FirstRunTutorialView.swift:523"
    ],
    "args": [],
    "targets": [
@@ -61047,7 +61047,7 @@
    "ko": "지하철·버스 자동 판정",
    "en": "Automatic subway and bus detection",
    "files": [
-    "AppShellView.swift:1069"
+    "AppShellView.swift:1059"
    ],
    "args": [],
    "targets": [
@@ -61711,7 +61711,7 @@
    "ko": "초기 비밀번호",
    "en": "Default password",
    "files": [
-    "FirstRunTutorialView.swift:675"
+    "FirstRunTutorialView.swift:679"
    ],
    "args": [],
    "targets": [
@@ -61977,7 +61977,7 @@
    "ko": "추가 결제나 자동 갱신 없이 모든 기능을 계속 사용할 수 있습니다.",
    "en": "Keep using every feature with no additional payment or renewal.",
    "files": [
-    "AppShellView.swift:1153"
+    "AppShellView.swift:1143"
    ],
    "args": [],
    "targets": [
@@ -62699,7 +62699,7 @@
    "ko": "캘린더 전체 접근",
    "en": "Full Calendar Access",
    "files": [
-    "AppShellView.swift:987"
+    "AppShellView.swift:977"
    ],
    "args": [],
    "targets": [
@@ -63670,7 +63670,7 @@
    "ko": "프로젝트",
    "en": "Project",
    "files": [
-    "TaptionPlanWatchWidget.swift:695"
+    "TaptionPlanWatchWidget.swift:696"
    ],
    "args": [],
    "targets": [
@@ -63828,7 +63828,7 @@
    "ko": "필수 권한 설정",
    "en": "Required permissions",
    "files": [
-    "AppShellView.swift:880"
+    "AppShellView.swift:870"
    ],
    "args": [],
    "targets": [
@@ -64312,7 +64312,7 @@
    "ko": "한 번 결제 · 자동 갱신 없음",
    "en": "One-time purchase · No auto-renewal",
    "files": [
-    "AppShellView.swift:1212"
+    "AppShellView.swift:1202"
    ],
    "args": [],
    "targets": [
@@ -64858,7 +64858,7 @@
    "ko": "허용됨",
    "en": "Allowed",
    "files": [
-    "AppShellView.swift:922",
+    "AppShellView.swift:912",
     "FirstRunTutorialPolicy.swift:198"
    ],
    "args": [],
@@ -64871,7 +64871,7 @@
    "ko": "허용됨",
    "en": "Granted",
    "files": [
-    "AppShellView.swift:947"
+    "AppShellView.swift:937"
    ],
    "args": [],
    "targets": [
@@ -64883,7 +64883,7 @@
    "ko": "허용하기",
    "en": "Allow",
    "files": [
-    "AppShellView.swift:970",
+    "AppShellView.swift:960",
     "FirstRunTutorialGuides.swift:548",
     "MapHomeView+Support2.swift:906"
    ],
@@ -65027,7 +65027,7 @@
    "ko": "현재 위치로 저장",
    "en": "Use current location",
    "files": [
-    "FirstRunTutorialView.swift:589"
+    "FirstRunTutorialView.swift:593"
    ],
    "args": [],
    "targets": [
@@ -65039,7 +65039,7 @@
    "ko": "현재 위치로 저장됨",
    "en": "Saved from current location",
    "files": [
-    "FirstRunTutorialView.swift:586"
+    "FirstRunTutorialView.swift:590"
    ],
    "args": [],
    "targets": [
@@ -65063,7 +65063,7 @@
    "ko": "현재 위치를 받는 중입니다. 검색으로도 저장할 수 있습니다.",
    "en": "Waiting for your location. You can also search.",
    "files": [
-    "FirstRunTutorialView.swift:599"
+    "FirstRunTutorialView.swift:603"
    ],
    "args": [],
    "targets": [
@@ -65467,7 +65467,7 @@
    "ko": "확인",
    "en": "OK",
    "files": [
-    "AppShellView.swift:1111",
+    "AppShellView.swift:1101",
     "AssistantConnectView.swift:213",
     "AssistantPINSheet.swift:60"
    ],
@@ -65671,7 +65671,7 @@
    "ko": "활동과 이동 경로 불러오는 중",
    "en": "Loading activities and routes",
    "files": [
-    "AppShellView.swift:375"
+    "AppShellLaunchGate.swift:135"
    ],
    "args": [],
    "targets": [
