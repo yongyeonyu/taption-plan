@@ -4,9 +4,9 @@
 set -uo pipefail
 UDID="${1:?UDID}"; OUT="${2:?결과 파일}"; shift 2
 mkdir -p "$(dirname "$OUT")"
-# 콘솔 전체는 남기지 않고 PRFBENCH 줄만 적는다. `done`이 보이거나 12분이 지나면 끝낸다.
+# 콘솔 전체는 남기지 않고 PRFBENCH·PRFSAMPLE(표본, 숫자와 시스템 기호 이름) 줄만 적는다. `done`이 보이거나 12분이 지나면 끝낸다.
 ( xcrun devicectl device process launch --device "$UDID" --console --terminate-existing com.taption.plan -- \
-    -autoBenchPerf -autoBenchMapPan "$@" 2>&1 | grep --line-buffered '^PRFBENCH' > "$OUT" ) &
+    -autoBenchPerf -autoBenchMapPan "$@" 2>&1 | grep --line-buffered -E '^PRF(BENCH|SAMPLE)' > "$OUT" ) &
 for _ in $(seq 1 144); do
   sleep 5
   grep -q '^PRFBENCH done' "$OUT" 2>/dev/null && break
