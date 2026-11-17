@@ -68,6 +68,28 @@ test("AIF1118A01: get_ai_tasks is read-only only for a read connection, since a 
   assert.equal(await hint(ai), false);
 });
 
+test("AIF1118A01: the OpenAPI Command schema accepts every value a registry action accepts for a shared field", async () => {
+  const { openapi } = await import("../src/openapi.js");
+  const { registry } = await import("../src/actions.js");
+  const fields = openapi(ORIGIN).components.schemas.Command.properties;
+  const problems = [];
+  for (const tool of registry.tools()) {
+    for (const [name, schema] of Object.entries(tool.properties)) {
+      const merged = fields[name];
+      const where = `${tool.action}.${name}`;
+      if (merged.type && schema.type && merged.type !== schema.type) problems.push(`${where} type ${merged.type} vs ${schema.type}`);
+      if (merged.enum && !(schema.enum ?? [null]).every((v) => merged.enum.includes(v))) problems.push(`${where} enum`);
+      if (merged.maxLength !== undefined && !(schema.maxLength <= merged.maxLength)) problems.push(`${where} maxLength`);
+      if (merged.maxItems !== undefined && !(schema.maxItems <= merged.maxItems)) problems.push(`${where} maxItems`);
+      if (merged.minItems !== undefined && !(schema.minItems >= merged.minItems)) problems.push(`${where} minItems`);
+      if (merged.maximum !== undefined && !(schema.maximum <= merged.maximum)) problems.push(`${where} maximum`);
+      if (merged.minimum !== undefined && !(schema.minimum >= merged.minimum)) problems.push(`${where} minimum`);
+      if (merged.pattern !== undefined && schema.pattern !== merged.pattern) problems.push(`${where} pattern`);
+    }
+  }
+  assert.deepEqual(problems, []);
+});
+
 test("AIF1118A01: tool descriptions state the real daily edit limit", async () => {
   const { toolList } = await import("../src/mcp.js");
   const { LIMITS } = await import("../src/state.js");

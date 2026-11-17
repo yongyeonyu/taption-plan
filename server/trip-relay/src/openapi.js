@@ -126,14 +126,27 @@ const command = {
     shareNames: { type: "array", items: { type: "string", maxLength: 30 }, maxItems: 20, description: "addExpense, updateExpense: who shares a trip expense (\"@me\" is the user; [] or left out: everyone)" },
   },
 };
-// 등록부(actions.js)의 동작이 받는 칸을 더한다. 이미 있는 이름은 그대로 둔다(AIX1114A01).
+// 같은 이름을 여러 동작이 쓰면 어느 동작의 값도 받도록 넓힌다(ACT1114A07). 값의 형이 다르면 형을 적지 않고,
+// 고를 값·글 길이·개수·범위·모양은 한쪽에만 있으면 빼고 둘 다 있으면 넓은 쪽으로(AIF1118A01). 칸마다 정확한 검사는 서버가 동작별로 한다.
+function widen(known, schema, action) {
+  if (known.type !== schema.type) {
+    for (const key of ["type", "enum", "items", "maxLength", "minLength", "maxItems", "minItems", "maximum", "minimum", "exclusiveMinimum", "pattern"]) delete known[key];
+    known.description = `${known.description ?? ""} ${action}: ${schema.description ?? ""}`.trim();
+    return;
+  }
+  known.enum = known.enum && schema.enum ? [...new Set([...known.enum, ...schema.enum])] : undefined;
+  if (known.pattern !== schema.pattern) known.pattern = undefined;
+  for (const key of ["maxLength", "maxItems", "maximum"]) known[key] = known[key] !== undefined && schema[key] !== undefined ? Math.max(known[key], schema[key]) : undefined;
+  for (const key of ["minLength", "minItems", "minimum", "exclusiveMinimum"]) known[key] = known[key] !== undefined && schema[key] !== undefined ? Math.min(known[key], schema[key]) : undefined;
+  for (const key of Object.keys(known)) if (known[key] === undefined) delete known[key];
+}
+
+// 등록부(actions.js)의 동작이 받는 칸을 더한다(AIX1114A01).
 for (const tool of registry.tools()) {
   for (const [name, schema] of Object.entries(tool.properties)) {
     const known = command.properties[name];
     if (!known) command.properties[name] = { ...schema, description: `${tool.action}: ${schema.description ?? name}` };
-    // 같은 이름을 여러 동작이 쓰면 고를 수 있는 값을 합치고 길이는 긴 쪽에 맞춘다(ACT1114A07).
-    else if (known.enum && schema.enum) known.enum = [...new Set([...known.enum, ...schema.enum])];
-    else if (known.type === "string" && schema.type === "string" && schema.maxLength > (known.maxLength ?? Infinity)) known.maxLength = schema.maxLength;
+    else widen(known, schema, tool.action);
   }
 }
 
