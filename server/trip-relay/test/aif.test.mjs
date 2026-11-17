@@ -90,6 +90,15 @@ test("AIF1118A01: the OpenAPI Command schema accepts every value a registry acti
   assert.deepEqual(problems, []);
 });
 
+test("AIF1118A01: trip ledger companions cannot include the user's own \"@me\" (the app refuses it too)", async () => {
+  const { isCommand } = await import("../src/validate.js");
+  const cmd = (action, extra) => ({ format: "bokki-command", version: 1, id: "c1", action, ...extra });
+  assert.equal(isCommand(cmd("addLedgerTrip", { name: "Jeju", start: "2026-12-01", members: ["Mina"] })), true);
+  assert.equal(isCommand(cmd("addLedgerTrip", { name: "Jeju", start: "2026-12-01", members: ["@me", "Mina"] })), false);
+  assert.equal(isCommand(cmd("updateLedgerTrip", { tripId: "t1", members: ["@me"] })), false);
+  assert.equal(isCommand(cmd("updateLedgerTrip", { tripId: "t1", members: [] })), true);
+});
+
 test("AIF1118A01: tool descriptions state the real daily edit limit", async () => {
   const { toolList } = await import("../src/mcp.js");
   const { LIMITS } = await import("../src/state.js");
