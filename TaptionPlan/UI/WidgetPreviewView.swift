@@ -136,7 +136,8 @@ struct WidgetPreviewView: View {
             HStack {
                 Text(activeTimeLabel).font(.taption(size: 11))
                 Spacer()
-                if let planID = activeWidgetPlan?.id {
+                if let plan = activeWidgetPlan, plan.status == .running {
+                    let planID = plan.id
                     Button("종료") {
                         Task {
                             await model.performQuickAction(
