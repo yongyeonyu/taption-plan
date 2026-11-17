@@ -498,6 +498,32 @@ final class ShareSessionTests: XCTestCase {
         XCTAssertEqual(epoch, 2)
     }
 
+    /// 응답을 잃은 사이 소켓이 4001(또는 다른 세대의 `room`)을 받아 세션이 새 비밀번호를 기다리며 연결 고리를 멈췄어도,
+    /// `confirmRotation`이 새 키로 넘어가면 고리를 다시 붙여 방송을 받는다(TSR1117A01).
+    func testConfirmRotationRestartsTheConnectionLoop() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        _ = try await created(owner, "바꾸기 전 일정")
+        let newKeys = try TestRoom.derive(room.invite, "새 비밀번호 2031")
+
+        await room.server.failNextHTTP(pathSuffix: "/rotate", afterHandling: true)
+        await assertThrows(.offline) { try await owner.rotate(to: newKeys) }
+        await room.server.dropSockets(code: 4001)
+        try await eventually { await owner.view().status == .needsRekey }
+        try await eventually { await room.server.socketCount(roomID: room.roomID) == 0 }
+
+        let confirmed = try await owner.confirmRotation(with: newKeys)
+        XCTAssertTrue(confirmed)
+        try await eventually("고리가 다시 소켓을 붙인다") { await room.server.socketCount(roomID: room.roomID) == 1 }
+        try await eventually { await owner.view().status == .live }
+        try await eventually { await owner.view().items.map(\.epoch) == [2] }
+
+        // 방송도 다시 받는다(새 비밀번호로 들어온 사람의 입장 소식).
+        _ = try await ShareRoomClient.join(transport: room.server.transport, roomID: room.roomID, proof: newKeys.proof)
+        try await eventually { await owner.view().members.map(\.no) == [1, 2] }
+    }
+
     func testRekeyRequiredOverHTTPAlsoPausesTheSession() async throws {
         let room = try await TestRoom.make()
         let clock = TestClock()

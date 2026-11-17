@@ -240,7 +240,10 @@ extension ShareRoomSession {
 
     /// 서버가 새 키를 받아 준 뒤: 그것으로 키 교체는 끝났다. 따라잡기는 한 번 해 보고, 안 되면 연결 고리에 맡긴다
     /// (`needsFullSync`가 남아 다음 `hello`·상태 확인이 처음부터 받는다). 앱은 돌려받은 세대와 새 뿌리 키를 적는다.
+    /// 그 사이 4001이나 다른 세대의 `room`으로 고리가 멈췄으면(`needsRekey`) 다시 붙인다.
     private func resumeWithNewKeys() async {
+        if status == .needsRekey { setStatus(.connecting) }
+        start()
         try? await catchUp()
     }
 
