@@ -55,25 +55,13 @@ actor WatchDayDatabase {
         chunks: [TaptionWatchAccelerationChunk]
     ) async throws {
         guard !summaries.isEmpty || !chunks.isEmpty else { return }
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .sortedKeys
-        let outboxItems = try chunks.map {
-            TaptionPlanV3OutboxItem(
-                id: "chunk:\($0.id.uuidString)",
-                kind: TaptionWatchEnvelope.accelerationChunkKey,
-                payload: try encoder.encode($0)
-            )
-        } + summaries.map {
-            TaptionPlanV3OutboxItem(
-                id: "summary:\($0.rawEventID)",
-                kind: TaptionWatchEnvelope.sensorSummaryKey,
-                payload: try encoder.encode($0)
-            )
-        }
         try await store.appendRawEvents(
             try chunks.map(Self.workoutAccelerationEvent)
                 + summaries.map(Self.workoutSummaryEvent),
-            outboxItems: outboxItems
+            outboxItems: try TaptionWatchWorkoutOutbox.items(
+                summaries: summaries,
+                chunks: chunks
+            )
         )
     }
 
