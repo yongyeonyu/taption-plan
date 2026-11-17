@@ -1901,6 +1901,18 @@ extension FeatureEngineTests {
         XCTAssertEqual(detached?.text, memo.text)
     }
 
+    /// AirPods 기록의 근거에는 연결된 경로 이름이 들어간다(문자열 보간이 빠져 글자 그대로 저장되던 것, REV1117A03).
+    @MainActor
+    func testAirPodsRecordEvidenceNamesTheRoute() {
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        let start = makeDate(2026, 8, 3, 9)
+        model.applyAirPodsActivity(AirPodsActivityObservation(
+            id: UUID(), kind: .music, title: "음악", startedAt: start,
+            endedAt: start.addingTimeInterval(600), routeName: "시험 이어폰"
+        ))
+        XCTAssertEqual(model.snapshot.actuals.first?.evidence, ["AirPods · 시험 이어폰"])
+    }
+
     /// 반복 루틴 조각은 벽시계 시각이다. 서머타임이 바뀌는 날에도 09:00–10:00이어야 한다(REV1117A03).
     @MainActor
     func testRepeatActionItemsKeepWallClockAcrossDaylightSaving() {
