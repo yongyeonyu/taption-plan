@@ -109,6 +109,15 @@ test("AIF1118A01: photo links the app refuses (upper-case scheme, explicit port)
   assert.equal(photo("https://UPLOAD.wikimedia.org/a.jpg"), true, "the app lower-cases the host");
 });
 
+test("AIF1118A01: an updateSchedule whose only change is an empty note is refused like the app does", async () => {
+  const { isCommand } = await import("../src/validate.js");
+  const update = (extra) => isCommand({ format: "bokki-command", version: 1, id: "c1", action: "updateSchedule", planId: "A1B2C3D4-E5F6-4789-9ABC-DEF012345678", ...extra });
+  assert.equal(update({ note: "" }), false);
+  assert.equal(update({ note: "  " }), false);
+  assert.equal(update({ note: "", title: "회의" }), true, "the old form with another change still works");
+  assert.equal(update({ note: "준비물" }), true);
+});
+
 test("AIF1118A01: tool descriptions state the real daily edit limit", async () => {
   const { toolList } = await import("../src/mcp.js");
   const { LIMITS } = await import("../src/state.js");

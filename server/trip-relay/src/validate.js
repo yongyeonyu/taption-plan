@@ -403,7 +403,8 @@ export function isCommand(value) {
     case "updateSchedule":
       return planTarget(v) && optional(v.title, title(200)) && optional(v.start, isClock) && optional(v.end, isClock)
         && optional(v.note, note)
-        && [v.title, v.start, v.end, v.note, v.categoryId, v.important, v.parentGoalId, v.placeName, v.plannedSpend, v.clearPlace].some(given)
+        // 빈 메모 글은 앱이 바꿀 것으로 보지 않는다(AIF1118A01): 다른 칸 없이 note만 비우면 받지 않는다.
+        && [v.title, v.start, v.end, nonEmpty(v.note, 1000) ? v.note : undefined, v.categoryId, v.important, v.parentGoalId, v.placeName, v.plannedSpend, v.clearPlace].some(given)
         // 장소를 지우는 것과 새로 정하는 것은 함께 보내지 않는다.
         && schedulePlace(v) && optional(v.plannedSpend, plannedSpend) && optional(v.clearPlace, (c) => c === true && !given(v.placeName))
         // parentGoalId "none"은 루틴에서 떼어 낸다.
