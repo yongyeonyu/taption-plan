@@ -82,4 +82,27 @@ final class TravelTimeZonesTests: XCTestCase {
         detail.parentItemID = "x"
         XCTAssertEqual(TravelTimeZones.offset(trip: bangkokTrip, items: [other, detail], dayKey: "2031-12-03", minute: 600), bangkok, "비행이 없는 것과 같다")
     }
+    /// TVM1117A02: 칸·재생 헤드에서 넣는 지출 시각은 지금 시차가 아니라 그 칸(그 날·그 분)의 시차를 쓴다.
+    func testExpenseTimeUsesThatCellsZone() {
+        var lunch = flights[0]
+        lunch.itemID = "lunch"
+        lunch.kind = "meal"
+        lunch.start = time("2031-12-02", 12, offset: bangkok)
+        lunch.end = time("2031-12-02", 13, offset: bangkok)
+        lunch.startOffsetSeconds = bangkok
+        lunch.endOffsetSeconds = bangkok
+        let items = flights + [lunch]
+        XCTAssertEqual(TravelPlanSpend.date(trip: bangkokTrip, items: items, dayKey: "2031-12-01", minute: 10 * 60),
+                       time("2031-12-01", 10, offset: seoul), "출국 전 칸은 한국 시각")
+        XCTAssertEqual(TravelPlanSpend.date(trip: bangkokTrip, items: items, dayKey: "2031-12-03", minute: 10 * 60),
+                       time("2031-12-03", 10, offset: bangkok), "도착 뒤는 현지 시각")
+        XCTAssertEqual(TravelPlanSpend.date(trip: bangkokTrip, items: items, dayKey: "2031-12-02", minute: 12 * 60, itemID: "lunch"), lunch.start, "일정 칸은 그 일정의 시작")
+        // 어제 서울에서 떠난 비행이 0시부터 걸친 칸: 그 칸은 도착지 시차로 센다.
+        XCTAssertEqual(TravelPlanSpend.date(trip: bangkokTrip, items: items, dayKey: "2031-12-02", minute: 60, itemID: "out"),
+                       time("2031-12-02", 1, offset: bangkok))
+        // 시간대가 서머타임을 쓰면 지금이 아니라 그날의 시차다(지금 오프셋을 쓰면 한 시간 어긋난다).
+        let sydney = TravelTrip(id: "t1", title: "시드니", startDay: "2031-07-01", endDay: "2031-07-03", countryCode: "AU", timeZoneID: "Australia/Sydney")
+        XCTAssertEqual(TravelPlanSpend.date(trip: sydney, items: [], dayKey: "2031-07-02", minute: 9 * 60), time("2031-07-02", 9, offset: 10 * 3_600), "7월은 +10")
+        XCTAssertEqual(TravelPlanSpend.date(trip: sydney, items: [], dayKey: "2031-01-02", minute: 9 * 60), time("2031-01-02", 9, offset: 11 * 3_600), "1월은 +11")
+    }
 }

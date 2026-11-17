@@ -36,6 +36,8 @@ struct TravelModeView: View {
     /// 위키백과 장소 사진(C6). 연락처가 설정돼 있고 스위치가 켜져 있을 때만 받는다.
     @State private var placePhotos = TravelPlacePhotoStore()
     @State private var planHistory = TravelPlanHistory()
+    /// 계획표 모델 캐시(TVM1117A02). 값이 아니라 참조라 고쳐도 본문을 다시 그리지 않는다.
+    @State private var tableCache = TravelPlanTableCache()
     @State private var deleteCandidate: TravelTripDirectory.Entry?
     /// AI로 만들기(가져오기) 창. 예전에는 지도 여행 모드로 건너가야 했다.
     @State private var isImportPresented = false
@@ -309,26 +311,25 @@ struct TravelModeView: View {
         }
     }
 
-    /// 재생 헤드가 가리키는 절대 시각(그 여행의 시간대, 없으면 기기 시간대).
+    /// 재생 헤드가 가리키는 절대 시각(그 날·그 분의 시차, TVM1117A02).
     private func playDate(_ entry: TravelTripDirectory.Entry) -> Date {
-        let zone = entry.trip.timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
-        return TravelQuickEntrySheet.date(dayKey: dayKey(entry), minute: currentPlayMinute(entry), offsetSeconds: zone.secondsFromGMT())
+        TravelPlanSpend.date(trip: entry.trip, items: model.settings.travelTripItems ?? [], dayKey: dayKey(entry), minute: currentPlayMinute(entry))
     }
 
     /// 지출 넣기. 장부가 있으면 바로 입력 칸을 연다: 고른 일정의 시작, 없으면 재생 헤드의 시각(계획표가 내려 있으면 지금).
-    private func addExpense(_ entry: TravelTripDirectory.Entry, minute: Int?) {
+    private func addExpense(_ entry: TravelTripDirectory.Entry, minute: Int?, itemID: String? = nil) {
         guard book.trip(entry.id) != nil else {
             // 가계부에 이 여행이 아직 없으면 예산 없는 여행 장부를 만들고 바로 입력 칸을 연다(TVX1116A01). 만들 수 없으면 전처럼 가계부를 연다.
             let planned = LedgerBook.plannedTrips(stops: model.settings.travelPlanStops, items: model.settings.travelTripItems ?? [], trips: model.settings.travelTrips ?? [])
             guard let trip = planned.first(where: { $0.id == entry.id }) else { return ledgerTripID = entry.id }
             Task {
                 await book.saveTrip(trip)
-                if book.trip(entry.id) != nil { addExpense(entry, minute: minute) } else { ledgerTripID = entry.id }
+                if book.trip(entry.id) != nil { addExpense(entry, minute: minute, itemID: itemID) } else { ledgerTripID = entry.id }
             }
             return
         }
-        let zone = entry.trip.timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
-        let picked = minute.map { TravelQuickEntrySheet.date(dayKey: dayKey(entry), minute: $0, offsetSeconds: zone.secondsFromGMT()) }
+        let items = model.settings.travelTripItems ?? []
+        let picked = minute.map { TravelPlanSpend.date(trip: entry.trip, items: items, dayKey: dayKey(entry), minute: $0, itemID: itemID) }
         expenseDraft = TravelPlanSpend.draft(tripID: entry.id, at: picked ?? (isPlanUp ? playDate(entry) : .now))
     }
 
@@ -667,7 +668,9 @@ struct TravelModeView: View {
         // 길게 누르기를 모르는 사람도 고치기·지우기를 찾게 ⋯ 단추로도 같은 메뉴를 연다(TVX1116A01).
         .overlay(alignment: .topTrailing) {
             Menu { cardMenu(entry) } label: {
-                Image(systemName: "ellipsis").font(.system(size: 14, weight: .semibold)).frame(width: 34, height: 26).contentShape(Rectangle())
+                // 메뉴는 그림 밖 contentShape를 누르는 자리로 쓰지 않아 틀 자체를 44×44로 둔다. 그림은 오른쪽 위 그대로, 넓힌 자리는 카드 안쪽(TVM1117A02).
+                Image(systemName: "ellipsis").font(.system(size: 14, weight: .semibold)).frame(width: 34, height: 26)
+                    .padding(.leading, 10).padding(.bottom, 18).contentShape(Rectangle())
                     .foregroundStyle(entry.state == .someday ? TravelInk.plan : TravelInk.land)
             }
             .accessibilityLabel(language.text("여행 메뉴", "Trip menu"))
@@ -870,11 +873,21 @@ struct TravelModeView: View {
         TravelTripDay.components(key).flatMap(Calendar.autoupdatingCurrent.date(from:)) ?? .now
     }
 
+    /// 그날 계획표 모델. 본문 한 번에 여러 곳이 묻지만 내용이 같으면 한 번만 만든다(TVM1117A02).
     private func table(_ entry: TravelTripDirectory.Entry) -> TravelPlanTableModel {
-        let day = dayDate(dayKey(entry))
+        let key = dayKey(entry), now = Date.now
+        let cacheKey = TravelPlanTableCache.Key(
+            tripID: entry.id, dayKey: key, contentRevision: model.snapshotContentRevision, ledgerRevision: book.revision,
+            columns: entry.trip.columns, nowMinute: TravelPlanTableCache.minute(now), timeZone: TimeZone.autoupdatingCurrent.identifier
+        )
+        return tableCache.table(cacheKey) { makeTable(entry, dayKey: key, now: now) }
+    }
+
+    private func makeTable(_ entry: TravelTripDirectory.Entry, dayKey: String, now: Date) -> TravelPlanTableModel {
+        let day = dayDate(dayKey)
         return TravelPlanTableModel.make(
             items: model.settings.travelTripItems ?? [], tripID: entry.id, day: day,
-            actual: MapHomeTimeRailSegmentEngine.segments(from: model.snapshot.actuals, on: day), now: .now,
+            actual: MapHomeTimeRailSegmentEngine.segments(from: model.snapshot.actuals, on: day), now: now,
             spent: TravelPlanSpend.byItem(items: model.settings.travelTripItems ?? [], tripID: entry.id, entries: book.entries),
             columns: TravelPlanColumns.resolved(entry.trip.columns)
         )
@@ -916,7 +929,7 @@ struct TravelModeView: View {
                 TravelPlanTable(
                     table: table(entry), language: language, shareTripID: entry.id,
                     onSelect: { block in editEntry(entry, itemID: block.id) },
-                    onExpense: { block in addExpense(entry, minute: block.startMinute) },
+                    onExpense: { block in addExpense(entry, minute: block.startMinute, itemID: block.id) },
                     onDelete: { block in deleteEntry(entry, itemID: block.id) },
                     onAdd: { cell in addEntry(entry, cell: cell) },
                     cell: $planCell,
@@ -938,7 +951,7 @@ struct TravelModeView: View {
             }
             sheetFoot(entry)
         }
-        .travelDayBoard(model: model, tripID: entry.id, trip: entry.trip, dayKey: dayKey(entry), language: language, history: $planHistory)
+        .travelDayBoard(model: model, tripID: entry.id, trip: entry.trip, dayKey: dayKey(entry), blocks: table(entry).blocks, language: language, history: $planHistory)
         .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: corner, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: corner, style: .continuous).stroke(TravelInk.border, lineWidth: 1) }
         .frame(maxWidth: Self.isWide(viewSize) ? min(460, viewSize.width * 0.5) : .infinity)

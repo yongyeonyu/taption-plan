@@ -48,6 +48,22 @@ final class TravelDayBoardTests: XCTestCase {
         XCTAssertEqual(TravelCourseSort.sorted(stops), stops)
     }
 
+    /// TVM1117A02: 겹친 일정이 있는 구간은 정리하지 않는다. 겹침(음수 틈)을 0으로 펴면 구간이 길어져 뒤의 고정 일정을 넘는다.
+    func testSortLeavesASegmentWithOverlappingPlansAlone() {
+        // a 09:00–11:00(첫 곳), b 10:00–11:00(a와 겹침, 멀다), c 10:30–11:00(가깝다), 예약 x 11:00. 펴면 c·b가 11:00을 넘는다.
+        let overlapping = [stop("a", 540, 660, 35.00), stop("b", 600, 660, 35.09), stop("c", 630, 660, 35.01), stop("x", 660, 720, 35.02, fixed: true)]
+        XCTAssertEqual(TravelCourseSort.movableGroups(overlapping), [], "겹친 구간은 바꿀 자리가 없다")
+        XCTAssertNil(TravelCourseSort.plan(overlapping))
+        // 같은 곳들이 겹치지 않으면 전처럼 정리하고, 예약 앞에서 끝난다.
+        let apart = [stop("a", 540, 600, 35.00), stop("b", 600, 630, 35.09), stop("c", 630, 660, 35.01), stop("x", 660, 720, 35.02, fixed: true)]
+        let plan = TravelCourseSort.plan(apart)
+        XCTAssertEqual(plan?.order, ["a", "c", "b", "x"])
+        XCTAssertEqual(plan?.moves, ["c": -30, "b": 30], "예약 11:00 앞에서 끝난다")
+        // 다른 구간의 겹침은 이 구간을 막지 않는다.
+        let laterOverlap = apart + [stop("d", 720, 840, 35.03), stop("e", 780, 840, 35.04)]
+        XCTAssertEqual(TravelCourseSort.movableGroups(laterOverlap), [[1, 2]])
+    }
+
     func testSortReturnsNilWhenAlreadyNearestOrTooFewPins() {
         XCTAssertNil(TravelCourseSort.plan([stop("a", 540, 600, 35.00), stop("b", 600, 660, 35.01), stop("c", 660, 720, 35.02)]), "이미 가까운 순서")
         XCTAssertNil(TravelCourseSort.plan([stop("a", 540, 600, 35.00), stop("b", 600, 660, nil), stop("c", 660, 720, nil)]), "핀이 없으면 바꾸지 않는다")

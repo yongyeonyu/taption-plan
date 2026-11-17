@@ -3,6 +3,7 @@ import Foundation
 /// 동선 정리(TVY1116B01): 그날 코스의 핀 있는 곳들을 가까운 순서로 다시 줄 세운다. 길 찾기 없이 직선 거리로만 셈한다.
 ///
 /// - 시각이 정해진 곳(예약·숙소·잠·이동·항공)은 자리도 시각도 그대로다. 다른 곳은 그것을 넘어가지 않는다(그 사이 구간 안에서만 바뀐다).
+/// - 일정이 서로 겹친 구간은 그대로 둔다.
 /// - 핀 없는 곳과 첫 곳은 순서의 제자리에 둔다.
 /// - 시각은 `TravelCoursePlanner.reorder`와 같은 규칙으로 다시 잡는다: 구간의 첫 시작과 일정 사이 틈은 자리에, 길이는 일정을 따라간다.
 enum TravelCourseSort {
@@ -59,16 +60,19 @@ enum TravelCourseSort {
     }
 
     /// 순서를 바꿔도 되는 자리들: 시각이 정해진 곳 사이 구간마다, 핀이 있고 첫 곳이 아닌 자리.
+    /// 앞 일정과 겹치는 일정이 있는 구간은 뺀다(TVM1117A02): 다시 잡을 때 겹침을 펴면 구간이 길어져 뒤의 고정 일정을 넘는다.
     static func movableGroups(_ stops: [Stop]) -> [[Int]] {
-        var groups: [[Int]] = [[]]
+        var groups: [[Int]] = [[]], overlaps = [false]
         for (index, stop) in stops.enumerated() {
             if stop.isTimeFixed {
                 groups.append([])
-            } else if index > 0, stop.hasPin {
-                groups[groups.count - 1].append(index)
+                overlaps.append(false)
+                continue
             }
+            if index > 0, !stops[index - 1].isTimeFixed, stop.startMinute < stops[index - 1].endMinute { overlaps[overlaps.count - 1] = true }
+            if index > 0, stop.hasPin { groups[groups.count - 1].append(index) }
         }
-        return groups.filter { !$0.isEmpty }
+        return zip(groups, overlaps).filter { !$0.0.isEmpty && !$0.1 }.map(\.0)
     }
 
     private static func nearestNeighbor(_ stops: [Stop], groups: [[Int]]) -> [Stop] {

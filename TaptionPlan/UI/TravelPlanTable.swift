@@ -26,6 +26,8 @@ struct TravelPlanTableModel: Equatable {
         var kind = ""
         /// 딸린 코스 곳(세부 계획이면). 그 곳이 같은 날에 없으면 코스에서는 굵은 곳으로 본다.
         var parentID: String?
+        /// 그날 0시 전에 시작해 이어진 칸(어젯밤 들어간 숙소·잠 등, TVM1117A02).
+        var carriesOver = false
     }
 
     struct Actual: Identifiable, Equatable {
@@ -65,7 +67,8 @@ struct TravelPlanTableModel: Equatable {
             blocks.append(Block(
                 id: item.itemID, column: column, startMinute: segment.startMinute, endMinute: segment.endMinute, title: item.title,
                 tripStatus: segment.tripStatus, status: .pending, hasNote: !(item.note ?? "").isEmpty, spent: spent[item.itemID] ?? 0,
-                colorHex: item.colorHex, planned: item.plannedSpendKRW ?? 0, kind: item.kind, parentID: item.parentItemID
+                colorHex: item.colorHex, planned: item.plannedSpendKRW ?? 0, kind: item.kind, parentID: item.parentItemID,
+                carriesOver: TravelTripRail.startsBefore(item, day: day, calendar: calendar)
             ))
             spans.append(.init(id: item.itemID, start: segment.startMinute, end: segment.endMinute, isMove: item.kind == "transfer" || item.kind == "flight"))
         }
@@ -95,6 +98,41 @@ struct TravelPlanTableModel: Equatable {
             nowMinute: nowMinute
         )
     }
+}
+
+/// 여행 화면 본문 한 번에 계획표 모델을 한 번만 만든다(TVM1117A02). 본문이 지도·핀·고양이·돈 줄·계획표마다 따로 물어
+/// 20번 넘게 새로 만들던 것을, 내용 번호(앱 자료·장부)와 날·지금 분·열이 같으면 지난 값으로 돌려준다.
+@MainActor
+final class TravelPlanTableCache {
+    struct Key: Equatable {
+        var tripID: String
+        var dayKey: String
+        /// `AppModel.snapshotContentRevision`: 일정·실제 기록·설정이 바뀔 때만 오른다.
+        var contentRevision: UInt64
+        /// `LedgerBook.revision`: 지출이 바뀔 때만 오른다.
+        var ledgerRevision: Int
+        var columns: [TravelTripColumn]?
+        /// 지금 시각(분). 지금 선과 「갔음·늦음」 판정이 분 단위로 바뀐다.
+        var nowMinute: Int
+        var timeZone: String
+    }
+
+    private var key: Key?
+    private var value: TravelPlanTableModel?
+    /// 실제로 새로 만든 횟수(계측용).
+    private(set) var builds = 0
+    private(set) var lookups = 0
+
+    func table(_ key: Key, make: () -> TravelPlanTableModel) -> TravelPlanTableModel {
+        lookups += 1
+        if let value, self.key == key { return value }
+        let built = make()
+        builds += 1
+        (self.key, value) = (key, built)
+        return built
+    }
+
+    static func minute(_ now: Date) -> Int { Int((now.timeIntervalSinceReferenceDate / 60).rounded(.down)) }
 }
 
 /// 여행의 날짜들(`YYYY-MM-DD`)과 기기 달력의 그날.
@@ -363,15 +401,19 @@ struct TravelPlanTable: View {
     private var zoomButtons: some View {
         let index = Self.zooms.firstIndex { $0 >= zoom - 0.01 } ?? 1
         return HStack(spacing: 2) {
-            zoomButton("minus.magnifyingglass", language.text("계획표 축소", "Zoom out"), isOn: index > 0) { zoom = Self.zooms[max(0, index - 1)] }
-            zoomButton("plus.magnifyingglass", language.text("계획표 확대", "Zoom in"), isOn: index < Self.zooms.count - 1) { zoom = Self.zooms[min(Self.zooms.count - 1, index + 1)] }
+            zoomButton("minus.magnifyingglass", language.text("계획표 축소", "Zoom out"), isOn: index > 0, outward: .leading) { zoom = Self.zooms[max(0, index - 1)] }
+            zoomButton("plus.magnifyingglass", language.text("계획표 확대", "Zoom in"), isOn: index < Self.zooms.count - 1, outward: .trailing) { zoom = Self.zooms[min(Self.zooms.count - 1, index + 1)] }
         }
         .padding(.leading, 2)
     }
 
-    private func zoomButton(_ symbol: String, _ label: String, isOn: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    /// 두 단추가 붙어 있어 누르는 영역은 바깥쪽(`outward`)으로만 넓혀 44pt를 만든다(TVM1117A02). 보이는 그림은 그대로.
+    private func zoomButton(_ symbol: String, _ label: String, isOn: Bool, outward: HorizontalEdge, action: @escaping () -> Void) -> some View {
+        let edge: Edge.Set = outward == .leading ? .leading : .trailing
+        let extra = TaptionMenuMetrics.minimumHitSize - 22, rise = (TaptionMenuMetrics.minimumHitSize - 24) / 2
+        return Button(action: action) {
             Image(systemName: symbol).font(.system(size: 12, weight: .medium)).frame(width: 22, height: 24)
+                .padding(edge, extra).padding(.vertical, rise).contentShape(Rectangle()).padding(edge, -extra).padding(.vertical, -rise)
         }
         .buttonStyle(.plain)
         .foregroundStyle(TravelInk.plan.opacity(isOn ? 0.9 : 0.3))
@@ -619,6 +661,7 @@ struct TravelPlanTable: View {
                 Text(Self.clock(minute)).font(.system(size: 11, weight: .medium).monospacedDigit()).foregroundStyle(TravelInk.land)
                     .frame(width: Self.leading - 4, height: 24)
                     .background(TravelInk.plan, in: Capsule())
+                    .taptionTouchTarget(visualWidth: Self.leading - 4, visualHeight: 24)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("재생 헤드", "Playhead"))

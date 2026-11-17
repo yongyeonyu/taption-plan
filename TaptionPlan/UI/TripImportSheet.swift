@@ -143,12 +143,20 @@ extension AppModel {
     /// 여행 일정 하나를 `delta`초 옮긴다. 일상 쪽 계획 기록과 지도 핀 날짜가 함께 바뀐다.
     @discardableResult
     func moveTripItem(tripID: String, itemID: String, by delta: TimeInterval, calendar: Calendar = .autoupdatingCurrent) async -> Bool {
-        guard let items = TravelTripItemEditor.moved(snapshot.settings.travelTripItems ?? [], tripID: tripID, itemID: itemID, by: delta) else { return false }
-        // 코스 곳을 옮기면 딸린 세부 계획도 같은 만큼 옮긴다(TVV1113A01 C4).
-        let details = TravelTripItem.details(of: itemID, tripID: tripID, in: items).map(\.itemID)
-        guard await applyTripItemTimes(items, tripID: tripID, itemID: itemID, calendar: calendar) else { return false }
-        for detail in details { await moveTripItem(tripID: tripID, itemID: detail, by: delta, calendar: calendar) }
-        return true
+        let all = snapshot.settings.travelTripItems ?? []
+        // 코스 곳을 옮기면 딸린 세부 계획(그 아래 세부까지)도 같은 만큼 옮긴다(TVV1113A01 C4).
+        // 한 번에 계산해 한 번에 저장한다: 하나라도 못 옮기면 아무것도 바꾸지 않는다(TVM1117A02).
+        var family = [itemID], cursor = 0
+        while cursor < family.count {
+            family += TravelTripItem.details(of: family[cursor], tripID: tripID, in: all).map(\.itemID).filter { !family.contains($0) }
+            cursor += 1
+        }
+        var items = all
+        for id in family {
+            guard let next = TravelTripItemEditor.moved(items, tripID: tripID, itemID: id, by: delta) else { return false }
+            items = next
+        }
+        return await applyTripItemTimes(items, tripID: tripID, itemIDs: family, calendar: calendar)
     }
 
     /// 여행 일정의 시작·끝을 따로 옮긴다. 5분보다 짧아지면 바꾸지 않는다.
@@ -289,25 +297,39 @@ extension AppModel {
     }
 
     private func applyTripItemTimes(_ items: [TravelTripItem], tripID: String, itemID: String, calendar: Calendar) async -> Bool {
-        guard acceptsDataMutation(), let item = items.first(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return false }
+        await applyTripItemTimes(items, tripID: tripID, itemIDs: [itemID], calendar: calendar)
+    }
+
+    /// `itemIDs`의 새 시각을 일상 계획 기록·지도 핀과 함께 한 번에 저장한다. 하나라도 캘린더 고정이면 아무것도 바꾸지 않는다.
+    private func applyTripItemTimes(_ items: [TravelTripItem], tripID: String, itemIDs: [String], calendar: Calendar) async -> Bool {
+        let changed = itemIDs.compactMap { id in items.first { $0.tripID == tripID && $0.itemID == id } }
+        guard acceptsDataMutation(), !changed.isEmpty, changed.count == itemIDs.count else { return false }
         // 일상 쪽 계획 기록을 같은 시각으로 맞춘다. 캘린더 고정 일정이면 여행 일정도 그대로 둔다.
-        if let planID = item.planID, let index = snapshot.plans.firstIndex(where: { $0.id == planID }) {
-            guard !snapshot.plans[index].isFixed else { return false }
-            snapshot.plans[index].span = TimeSpan(start: item.start, end: item.end)
-            snapshot.plans[index].updatedAt = .now
-            snapshot.plans.sort { $0.span.start < $1.span.start }
+        let planIndices = changed.map { item in item.planID.flatMap { planID in snapshot.plans.firstIndex { $0.id == planID } } }
+        guard !planIndices.contains(where: { $0.map { snapshot.plans[$0].isFixed } == true }) else { return false }
+        if planIndices.contains(where: { $0 != nil }) {
+            var plans = snapshot.plans
+            for (item, index) in zip(changed, planIndices) {
+                guard let index else { continue }
+                plans[index].span = TimeSpan(start: item.start, end: item.end)
+                plans[index].updatedAt = .now
+            }
+            plans.sort { $0.span.start < $1.span.start }
+            snapshot.plans = plans
         }
         snapshot.settings.travelTripItems = items
-        // 날짜가 넘어가면 지도 핀도 그날 맨 뒤로 옮긴다.
-        var stops = snapshot.settings.travelPlanStops
-        let wallDay = TravelTripDay.components(TravelTripDay.string(for: item.start, offsetSeconds: item.startOffsetSeconds))
-        if let index = stops.firstIndex(where: { $0.tripID == tripID && $0.itemID == itemID }),
-           let day = wallDay.flatMap(calendar.date(from:)).map(calendar.startOfDay(for:)),
-           !TravelPlanSchedule.isSameDay(stored: stops[index].day, local: day, calendar: calendar) {
+        // 날짜가 넘어가면 지도 핀도 그날 맨 뒤로 옮긴다(여럿이면 옮긴 차례대로).
+        var stops = snapshot.settings.travelPlanStops, movedPins = 0
+        for item in changed {
+            let wallDay = TravelTripDay.components(TravelTripDay.string(for: item.start, offsetSeconds: item.startOffsetSeconds))
+            guard let index = stops.firstIndex(where: { $0.tripID == tripID && $0.itemID == item.itemID }),
+                  let day = wallDay.flatMap(calendar.date(from:)).map(calendar.startOfDay(for:)),
+                  !TravelPlanSchedule.isSameDay(stored: stops[index].day, local: day, calendar: calendar) else { continue }
             stops[index].day = day
-            stops[index].order = Int.max
-            snapshot.settings.travelPlanStops = TravelPlanSchedule.renumbered(stops)
+            stops[index].order = Int.max - changed.count + movedPins
+            movedPins += 1
         }
+        if movedPins > 0 { snapshot.settings.travelPlanStops = TravelPlanSchedule.renumbered(stops) }
         // 일정이 여행 기간 밖으로 나가면 기간을 늘린다.
         if let trips = snapshot.settings.travelTrips {
             snapshot.settings.travelTrips = TravelTripDirectory.extended(trips, toCover: items)
@@ -346,6 +368,11 @@ enum TravelTripRail {
             return segment
         }
         .sorted { $0.startMinute < $1.startMinute }
+    }
+
+    /// 그 일정이 `day` 전날 이전(그곳 벽시계)에 시작했는가.
+    static func startsBefore(_ item: TravelTripItem, day: Date, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        wallClock(item.start, offset: item.startOffsetSeconds).day < calendar.dateComponents([.year, .month, .day], from: day)
     }
 
     private struct WallClock {

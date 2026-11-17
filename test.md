@@ -95,6 +95,24 @@
 - 구조 지표 기준선 통과, import 경계 통과.
 - 제한: 서버는 **배포하지 않음**(대표 지시 대기). 운영 Workers 런타임의 알람·`getAlarm` 없는 `setAlarm` 덮어쓰기는 가짜 저장소로만 봄. 예전 서버에서는 3(묶음 이름 옮김)이 무시되어 이름이 옛 키에 남음 — 배포 뒤에야 고쳐짐. 실기기·실제 `URLSessionWebSocketTask` 확인 없음. 일정 메모(500자)가 이모지로 4KB를 넘는 경우는 앱 변환(`TripShareMapping`) 쪽이라 손대지 않음.
 
+## TVM1117A02 · 여행 모드 화면·모델 결함 일곱 (2026-11-17~18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: main `460635a6` 위 브랜치 `worktree-agent-ae2c731be04ee94ae`, 끝 커밋 `d3e28be5`(이 기록 커밋 제외). Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/TVM1117A02`. 로그 `build/validation/TVM1117A02/`. 원천: `docs/reviews/REV1117A01.md` 여행 모드 후보.
+- 고친 것(결함마다 시험 먼저·커밋 하나):
+  1. 오늘 카드가 어젯밤부터 이어진 숙소·잠(그날 0시부터 걸친 칸)을 「지금」으로 띄움 → 계획표 칸에 `carriesOver`(그날 0시 전 시작)를 붙이고 이어진 숙소·잠은 지금 후보에서 뺌. 밤샘 비행·오늘 밤 잠은 그대로(`524606ec`, `TravelTodayTests.testLodgingAndSleepCarriedFromYesterdayAreNotNow`).
+  2. 칸·재생 헤드의 「지출 넣기」 시각이 여행 시간대의 지금 시차(`secondsFromGMT()`) → `TravelPlanSpend.date`: 일정 칸은 그 일정 시차(0시 전부터 이어진 칸은 끝 쪽), 시각만 있으면 `TravelTimeZones.offset`(출국 전 출발지·도착 뒤 여행지·서머타임은 그날 값). 돈 줄 「여기까지」도 같음(`494900d3`, `TravelTimeZonesTests.testExpenseTimeUsesThatCellsZone`).
+  3. 여행 화면 본문 한 번에 계획표 모델을 20번 새로 만듦(계획표를 올린 상태: 지구본 그림 6·지도 9·돈 줄 1·계획표 3·날짜 보드 1, 코드로 셈) → `TravelPlanTableCache`: 열쇠 = 여행·날·`snapshotContentRevision`·`LedgerBook.revision`·열·지금 분·기기 시간대. 날짜 보드는 여행 화면이 만든 칸을 받음(`20a2b998`, `TravelTodayTests.testPlanTableCacheBuildsOncePerBodyAndRebuildsOnChange`).
+  4. 열 편집 시트가 줄을 자리 번호로 만들어 옮기기·지우기 뒤 이름 칸이 다른 열을 가리킴 → `TravelColumnRows`(열마다 고정 번호). 저장 형식 그대로(`4e2dc9ae`, `TravelTripUnitTests.testColumnEditorRowsFollowTheirColumnAfterMoveAndDelete`).
+  5. 동선 정리가 겹친 일정의 음수 틈을 0으로 펴 뒤 고정 일정을 넘음 → 앞 일정과 겹치는 일정이 있는 구간은 바꿀 자리에서 뺌(정리 단추도 그 구간만으로는 안 뜸)(`1af582a1`, `TravelDayBoardTests.testSortLeavesASegmentWithOverlappingPlansAlone`).
+  6. 작은 단추 누르는 영역 → 카드 ⋯(틀 자체 44×44, 그림 위치 그대로), 계획표 확대·축소(바깥쪽으로만), 지도 접기, 손잡이 막대, 되돌리기·다시 하기, 재생 헤드 시각, 붙여넣기 배너 닫기(오른쪽으로만)(`669e8816`, `d3e28be5`). 시뮬레이터에서 알게 된 것: **SwiftUI `Menu`는 그림 밖 `contentShape`(`taptionTouchTarget`)를 누르는 자리로 쓰지 않는다** — ⋯ 그림 7pt 아래 누름이 안 됐고(`ui-touch-4`), 틀을 넓힌 뒤 됨(`ui-touch-6`). 단추(`Button`)는 넓힌 자리가 접근성 틀(46×44)에 잡히고 그림 7pt 위 누름이 됨.
+  7. `moveTripItem`이 곳을 저장한 뒤 세부를 하나씩 따로 저장해, 세부 하나가 캘린더 고정이면 곳만 옮겨지고 성공 → 곳·세부(그 아래까지)를 먼저 검사·계산해 한 번에 저장, 하나라도 고정이면 아무것도 안 바뀜(`1e6d2104`, `TravelTripUnitTests.testMovingAStopWithDetailsIsAllOrNothing`).
+- 단위 시험: 관련 6클래스 63건 통과·실패 0·건너뜀 0(`related-2.xcresult`), 같은 파일 다른 4클래스 46건 통과·실패 0(`related-3.xcresult`, 새 시험 2건 포함). 첫 실행(`related-1`)은 새 캐시 시험의 긴 식이 형 검사 시간 초과로 컴파일 실패 → 식을 나눔(`dcd8b298`).
+- `-only-testing:TaptionPlanTests` 전체: 3,039건 중 통과 3,014·실패 0·건너뜀 25(`unit-all.xcresult`, 커밋 `dcd8b298`). 그 뒤 바뀐 것은 ⋯ 메뉴 틀과 화면 시험뿐.
+- 화면 시험 `TaptionPlanTravelPlanUITests`·`TaptionPlanTravelScreensUITests`: 5건 통과·실패 0·건너뜀 0(`ui-travel-2.xcresult`, 끝 커밋 `d3e28be5`). 새 `testSmallTravelButtonsAnswerOutsideTheirPicture`는 재생 헤드 시각(단추)과 카드 ⋯(메뉴)를 그림 밖 7pt에서 눌러 봄. 중간 실패(`ui-travel`, `ui-touch-2~5`)는 시험의 누를 자리 잘못(지도 접은 상태에서 머리말을 누름, 단추 틀이 이미 넓힌 자리)과 메뉴 결함 발견이었음.
+- 성능 전후(시뮬레이터 단위 시험, 일정 40·실제 기록 1,500·지출 600, 본문 한 번 = 묻기 20): 전 20번 만들기 44.6 ms → 후 1번 만들기 + 19번 캐시 2.7 ms(약 16배). 만들기 횟수 20 → 1. 로그 `related-2.log`의 `TVM1117A02 perf`. 실제 화면 그리기 시간·아이폰 11 측정은 하지 않음.
+- 구조 점검: `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과. 번역: 새 사용자 문구 없음, `extract.py`(줄 위치만 바뀜)·`check.py` 실패 0(긴 문구 3, 이전과 같음). `generate.py`는 돌리지 않음(메인 세션).
+- 남음·제한: 아이폰 11 측정·눈 확인 안 함. 지도 접기 단추·손잡이 막대의 넓힌 자리는 판 밖(위쪽 지도·머리말)이라 화면 시험으로 재지 못함(눈 확인 필요), 계획표 확대·축소·되돌리기·배너 닫기도 눌러 보지 않음. 코스 세부 줄(32pt, 위아래로 붙은 목록 줄)은 배치를 바꿔야 해서 그대로. 동선 정리는 겹친 구간을 정리하지 않을 뿐 안내 문구는 없음(정리할 곳이 다른 구간에 없으면 단추가 안 보임). `moveTripItem`은 세부 하나가 고정이면 곳도 옮기지 않음(전에는 곳만 옮겨짐). 같은 `taptionTouchTarget`을 메뉴 라벨에 쓴 다른 곳이 있으면 같은 결함일 수 있음(이 요청 범위 밖, 찾아보지 않음).
+
 ## WSY1117A01 · Watch 동기화 결함 넷 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `0551fecb` 위 브랜치 `worktree-agent-a433e19835cbb9b8d`, 끝 커밋 `b1ad953b`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/WSY1117A01`. 로그 `build/validation/WSY1117A01/`.

@@ -1215,6 +1215,48 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         XCTAssertTrue(app.buttons["취소"].waitForExistence(timeout: 5), "여행 이름을 누르면 여행 고치기 시트가 열린다")
         shot(app, "7-trip-properties")
     }
+
+    /// TVM1117A02: 작은 단추는 보이는 그림 몇 pt 밖을 눌러도 눌린다(누르는 영역 44pt).
+    /// 재생 헤드 시각(46×24, 단추)과 여행 카드 ⋯(34×26, 메뉴)로 본다. 지도 접기 단추는 위가 판 밖이라 재지 않는다(눈 확인으로 남김).
+    func testSmallTravelButtonsAnswerOutsideTheirPicture() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launchWithoutPrompts()
+        let travel = app.buttons["여행으로 가기"]
+        XCTAssertTrue(travel.waitForExistence(timeout: 40))
+        let later = app.buttons["나중에 확인"]
+        if later.waitForExistence(timeout: 3) { later.tap() }
+        travel.tap()
+        let raise = app.buttons["계획표 올리기"].firstMatch
+        if raise.waitForExistence(timeout: 15) {
+            raise.tap()
+            let tableTab = app.buttons["계획표"].firstMatch
+            if tableTab.waitForExistence(timeout: 3) { tableTab.tap() }
+            let playhead = app.buttons["재생 헤드"].firstMatch
+            XCTAssertTrue(playhead.waitForExistence(timeout: 5), "계획표에 재생 헤드가 있다")
+            let clock = playhead.frame
+            print("TVM1117A02 playhead frame \(clock)")
+            // 단추의 틀은 넓힌 자리(44)까지라 보이는 시각 표(24)는 가운데다. 시각 표 위 7pt는 계획표 칸이다
+            // (넓히지 않았으면 빈 칸이 골라져 「일정 넣기」가 뜬다).
+            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: clock.midX, dy: clock.midY - 12 - 7)).tap()
+            let opened = app.buttons["취소"].firstMatch.waitForExistence(timeout: 3) || app.buttons["닫기"].firstMatch.exists
+            XCTAssertTrue(opened, "시각 표 7pt 위를 눌러도 지출 넣기가 열린다")
+            XCTAssertFalse(app.buttons["일정 넣기"].exists, "빈 칸이 골라지지 않는다")
+            app.terminate()
+            app.launchWithoutPrompts()
+            XCTAssertTrue(travel.waitForExistence(timeout: 40))
+            travel.tap()
+        }
+        let back = app.buttons["여행 목록으로"].firstMatch
+        if back.waitForExistence(timeout: 8) { back.tap() }
+        let menu = app.buttons["여행 메뉴"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 8), "지구본에 여행 카드가 있다")
+        let spot = menu.frame
+        print("TVM1117A02 menu frame \(spot)")
+        // ⋯ 그림(오른쪽 위 34×26) 아래 7pt는 카드 몸통이다(예전에는 그 여행으로 날아갔다).
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: spot.maxX - 17, dy: spot.minY + 26 + 7)).tap()
+        XCTAssertTrue(app.buttons["여행 고치기"].waitForExistence(timeout: 3), "⋯ 그림 7pt 아래를 눌러도 여행 메뉴가 열린다")
+    }
 }
 
 /// 할 일 판은 늘 왼쪽 위에 펼쳐져 있고(TDW1114A01, 여는 단추는 없어졌다), 「확인」 탭의 「내가 확인」이 그 질문을 띄운다(TDL1112A01).

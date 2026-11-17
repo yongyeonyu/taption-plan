@@ -155,6 +155,62 @@ struct TravelNewTripSheet: View {
     }
 }
 
+/// 열 편집 시트의 줄(TVM1117A02): 열마다 바뀌지 않는 번호를 붙여, 옮기거나 지운 뒤에도 이름 칸이 같은 열을 가리킨다.
+/// 자리 번호로 줄을 만들면 옮긴 뒤 이름이 다른 열에 들어가고, 지운 뒤 남은 칸이 범위를 벗어난다. 저장 형식은 열 배열 그대로다.
+struct TravelColumnRows: Equatable {
+    struct Row: Identifiable, Equatable {
+        let id: Int
+        var column: TravelTripColumn
+    }
+
+    private(set) var rows: [Row]
+    private var nextID: Int
+
+    init(_ columns: [TravelTripColumn]) {
+        rows = columns.enumerated().map { Row(id: $0.offset, column: $0.element) }
+        nextID = columns.count
+    }
+
+    var columns: [TravelTripColumn] { rows.map(\.column) }
+
+    func name(_ id: Int) -> String { rows.first { $0.id == id }?.column.name ?? "" }
+
+    /// 없는 번호(이미 지운 줄)면 아무것도 하지 않는다.
+    mutating func rename(_ id: Int, to name: String) {
+        guard let index = rows.firstIndex(where: { $0.id == id }) else { return }
+        rows[index].column.name = name
+    }
+
+    mutating func move(fromOffsets source: IndexSet, toOffset destination: Int) { rows.move(fromOffsets: source, toOffset: destination) }
+
+    /// 지운 열의 종류는 왼쪽 열(첫 열이면 오른쪽 열)로 옮긴다. 2열 밑으로는 지우지 않는다.
+    mutating func remove(atOffsets offsets: IndexSet) {
+        for index in offsets.sorted(by: >) {
+            let next = TravelPlanColumns.removing(index, from: columns)
+            guard next.count < rows.count else { continue }
+            var ids = rows.map(\.id)
+            ids.remove(at: index)
+            rows = zip(ids, next).map { Row(id: $0, column: $1) }
+        }
+    }
+
+    mutating func append() {
+        guard rows.count < TravelPlanColumns.countRange.upperBound else { return }
+        rows.append(Row(id: nextID, column: TravelTripColumn(name: "", kinds: [])))
+        nextID += 1
+    }
+
+    /// 열 배열 전체를 바꾼다(종류 옮기기·기본 열로). 자리가 남는 줄은 번호를 지킨다.
+    mutating func replace(with columns: [TravelTripColumn]) {
+        var ids = Array(rows.map(\.id).prefix(columns.count))
+        while ids.count < columns.count {
+            ids.append(nextID)
+            nextID += 1
+        }
+        rows = zip(ids, columns).map { Row(id: $0, column: $1) }
+    }
+}
+
 /// 계획표 열 편집(TVU1113A01, Trip 원본의 분류 관리): 열의 이름·순서·개수(2~6)와, 종류 12가지를 어느 열에 놓을지.
 struct TravelColumnEditorSheet: View {
     @Bindable var model: AppModel
@@ -162,27 +218,31 @@ struct TravelColumnEditorSheet: View {
     let trip: TravelTrip
 
     @Environment(\.dismiss) private var dismiss
-    @State private var columns: [TravelTripColumn] = []
+    @State private var rows = TravelColumnRows([])
     @State private var isSaving = false
 
-    private func title(_ index: Int) -> String { TravelPlanTable.title(columns[index], index: index, language: language) }
+    private var columns: [TravelTripColumn] { rows.columns }
+
+    private func title(_ index: Int) -> String {
+        columns.indices.contains(index) ? TravelPlanTable.title(columns[index], index: index, language: language) : ""
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    ForEach(columns.indices, id: \.self) { index in
+                    ForEach(Array(rows.rows.enumerated()), id: \.element.id) { index, row in
                         VStack(alignment: .leading, spacing: 2) {
-                            TextField(title(index), text: Binding(get: { columns[index].name }, set: { columns[index].name = $0 }))
+                            TextField(title(index), text: Binding(get: { rows.name(row.id) }, set: { rows.rename(row.id, to: $0) }))
                                 .accessibilityIdentifier("travelColumnName-\(index)")
-                            Text(columns[index].kinds.compactMap { TripImportItem.Kind(rawValue: $0)?.planName }.joined(separator: " · "))
+                            Text(row.column.kinds.compactMap { TripImportItem.Kind(rawValue: $0)?.planName }.joined(separator: " · "))
                                 .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                         }
                     }
-                    .onMove { columns.move(fromOffsets: $0, toOffset: $1) }
-                    .onDelete { offsets in for index in offsets.sorted(by: >) { columns = TravelPlanColumns.removing(index, from: columns) } }
+                    .onMove { rows.move(fromOffsets: $0, toOffset: $1) }
+                    .onDelete { rows.remove(atOffsets: $0) }
                     .deleteDisabled(columns.count <= TravelPlanColumns.countRange.lowerBound)
-                    Button(language.text("열 더하기", "Add column"), systemImage: "plus") { columns.append(TravelTripColumn(name: "", kinds: [])) }
+                    Button(language.text("열 더하기", "Add column"), systemImage: "plus") { rows.append() }
                         .disabled(columns.count >= TravelPlanColumns.countRange.upperBound)
                         .accessibilityIdentifier("travelColumnAdd")
                 } header: {
@@ -194,14 +254,14 @@ struct TravelColumnEditorSheet: View {
                     ForEach(TravelPlanColumns.allKinds, id: \.self) { kind in
                         Picker(TripImportItem.Kind(rawValue: kind)?.planName ?? kind, selection: Binding(
                             get: { TravelPlanColumns.index(forKind: kind, in: columns) },
-                            set: { columns = TravelPlanColumns.moving(kind: kind, to: $0, in: columns) }
+                            set: { rows.replace(with: TravelPlanColumns.moving(kind: kind, to: $0, in: columns)) }
                         )) {
                             ForEach(columns.indices, id: \.self) { Text(title($0)).tag($0) }
                         }
                     }
                 }
                 Section {
-                    Button(language.text("기본 열로", "Reset to default columns")) { columns = TravelPlanColumns.defaults }
+                    Button(language.text("기본 열로", "Reset to default columns")) { rows.replace(with: TravelPlanColumns.defaults) }
                         .accessibilityIdentifier("travelColumnReset")
                 }
             }
@@ -212,7 +272,7 @@ struct TravelColumnEditorSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button(language.text("취소", "Cancel")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button(language.text("저장", "Save")) { Task { await save() } }.disabled(isSaving) }
             }
-            .onAppear { if columns.isEmpty { columns = TravelPlanColumns.resolved(trip.columns) } }
+            .onAppear { if columns.isEmpty { rows = TravelColumnRows(TravelPlanColumns.resolved(trip.columns)) } }
         }
         .preferredColorScheme(.light)
     }
