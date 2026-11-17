@@ -183,6 +183,7 @@ private struct SensorCollectionLockScreenView: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white.opacity(0.70))
                     .lineLimit(1)
+                    .privacySensitive()
             }
 
             Spacer(minLength: 8)

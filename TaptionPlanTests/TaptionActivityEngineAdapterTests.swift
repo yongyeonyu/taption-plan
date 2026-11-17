@@ -1064,6 +1064,17 @@ final class ClassifierMigrationTests: XCTestCase {
         XCTAssertEqual(SalaryLiveSnapshot.read(defaults), SalaryLiveSnapshot())
     }
 
+    /// 개인정보 잠금 중에는 잠금 화면 Live Activity에 연봉 카운터를 싣지 않는다(WLA1117A01).
+    func testSalaryLiveSnapshotIsEmptyForLiveActivityWhilePrivacyLocked() throws {
+        let suite = "alg-salary-lock-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let value = SalaryLiveSnapshot(text: "12,000원", baseSeconds: 3_600, hourlyRate: 12_000, measuredAt: start, isWorking: true, tickSeconds: 10)
+        SalaryLiveSnapshot.write(value, to: defaults)
+        XCTAssertEqual(SalaryLiveSnapshot.forLiveActivity(defaults, hidesSensitiveContent: true), SalaryLiveSnapshot())
+        XCTAssertEqual(SalaryLiveSnapshot.forLiveActivity(defaults, hidesSensitiveContent: false), value)
+    }
+
     func testStayDetectionUsesCentroidAndKeepsKnownKeyAsAlias() {
         func reading(_ minute: Double, east: Double) -> SensorReading {
             var value = SensorReading(timestamp: start.addingTimeInterval(minute * 60), motion: .stationary, motionConfidence: .high)

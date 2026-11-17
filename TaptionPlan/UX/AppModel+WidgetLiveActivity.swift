@@ -505,6 +505,8 @@ extension AppModel {
     func concealExternalSurfaces() async {
         setExternalPrivacyLocked(true)
         await liveActivityController.concealAll()
+        // 센서 수집 활동의 연봉 카운터·오늘 요약도 잠근 즉시 걷는다(WLA1117A01).
+        await reconcileSensorCollectionLiveActivity(isForeground: isSceneActive)
     }
 
     /// The iPhone snapshot is the only Watch settings source. This method is

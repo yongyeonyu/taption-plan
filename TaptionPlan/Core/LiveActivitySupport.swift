@@ -167,7 +167,9 @@ actor SensorCollectionLiveActivityController {
         } else {
             sensorHUDUntil = nil
         }
-        let salary = SalaryLiveSnapshot.read()
+        let salary = SalaryLiveSnapshot.forLiveActivity(
+            hidesSensitiveContent: TaptionExternalPrivacyStore.isLocked
+        )
         let activityFrame: Int = hasNewSample
             ? ((previousState?.currentActivityFrame ?? -1) % 6 + 1) % 6
             : (previousState?.currentActivityFrame ?? 0)
@@ -572,6 +574,14 @@ struct SalaryLiveSnapshot: Equatable {
             isWorking: measured ? defaults.bool(forKey: workingKey) : nil,
             tickSeconds: measured ? defaults.integer(forKey: tickKey) : nil
         )
+    }
+
+    /// 개인정보 잠금 중에는 잠금 화면에 금액을 싣지 않는다(WLA1117A01).
+    static func forLiveActivity(
+        _ defaults: UserDefaults = .standard,
+        hidesSensitiveContent: Bool
+    ) -> SalaryLiveSnapshot {
+        hidesSensitiveContent ? SalaryLiveSnapshot() : read(defaults)
     }
 
     /// nil이면 모든 키를 지운다.
