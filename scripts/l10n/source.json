@@ -155,7 +155,7 @@
    "ko": "1 {0} ≈ {1}원",
    "en": "1 {0} ≈ ₩{1}",
    "files": [
-    "LedgerSheet.swift:413"
+    "LedgerSheet.swift:421"
    ],
    "args": [
     "entry.currency",
@@ -242,7 +242,7 @@
    "ko": "12,300원",
    "en": "₩12,300",
    "files": [
-    "FirstRunTutorialView.swift:865"
+    "FirstRunTutorialView.swift:873"
    ],
    "args": [],
    "targets": [
@@ -404,7 +404,7 @@
    "ko": "1시간 5분",
    "en": "1h 5m",
    "files": [
-    "FirstRunTutorialView.swift:863"
+    "FirstRunTutorialView.swift:871"
    ],
    "args": [],
    "targets": [
@@ -525,7 +525,7 @@
    "ko": "25분",
    "en": "25m",
    "files": [
-    "FirstRunTutorialView.swift:864"
+    "FirstRunTutorialView.swift:872"
    ],
    "args": [],
    "targets": [
@@ -574,7 +574,7 @@
    "ko": "3시간 12분",
    "en": "3h 12m",
    "files": [
-    "FirstRunTutorialView.swift:861"
+    "FirstRunTutorialView.swift:869"
    ],
    "args": [],
    "targets": [
@@ -586,7 +586,7 @@
    "ko": "42분",
    "en": "42m",
    "files": [
-    "FirstRunTutorialView.swift:862"
+    "FirstRunTutorialView.swift:870"
    ],
    "args": [],
    "targets": [
@@ -908,7 +908,19 @@
    "ko": "AI 서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't reach the AI server. Try again in a moment.",
    "files": [
-    "AssistantPINSheet.swift:147"
+    "AssistantPINSheet.swift:148"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호(또는 예전 AI PIN)를 한 번만 넣어 주세요.|The AI server still has an old value. Enter your previous app password (or old AI PIN) once.",
+   "ko": "AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호(또는 예전 AI PIN)를 한 번만 넣어 주세요.",
+   "en": "The AI server still has an old value. Enter your previous app password (or old AI PIN) once.",
+   "files": [
+    "AssistantPINSheet.swift:146"
    ],
    "args": [],
    "targets": [
@@ -1125,7 +1137,7 @@
    "ko": "AI가 넣음",
    "en": "Added by AI",
    "files": [
-    "LedgerSheet.swift:308"
+    "LedgerSheet.swift:316"
    ],
    "args": [],
    "targets": [
@@ -1289,7 +1301,7 @@
    "ko": "AI를 연결하면 확인할 것을 AI에게 넘길 수 있어요.",
    "en": "Connect an AI to hand these off.",
    "files": [
-    "MapHomeLaunchPrompts.swift:340"
+    "MapHomeLaunchPrompts.swift:346"
    ],
    "args": [],
    "targets": [
@@ -1314,7 +1326,7 @@
    "ko": "AI에게 넘기기",
    "en": "Hand to AI",
    "files": [
-    "MapHomeLaunchPrompts.swift:311"
+    "MapHomeLaunchPrompts.swift:317"
    ],
    "args": [],
    "targets": [
@@ -1326,7 +1338,7 @@
    "ko": "AI에게 넘김",
    "en": "Handed to AI",
    "files": [
-    "MapHomeLaunchPrompts.swift:308"
+    "MapHomeLaunchPrompts.swift:314"
    ],
    "args": [],
    "targets": [
@@ -1851,7 +1863,7 @@
    "ko": "BOKKI 가계부 {0}",
    "en": "BOKKI ledger {0}",
    "files": [
-    "LedgerSheet.swift:80"
+    "LedgerSheet.swift:83"
    ],
    "args": [
     "monthTitle"
@@ -1865,7 +1877,7 @@
    "ko": "BOKKI 가계부 전체",
    "en": "BOKKI ledger (all)",
    "files": [
-    "LedgerSheet.swift:86"
+    "LedgerSheet.swift:89"
    ],
    "args": [],
    "targets": [
@@ -3196,7 +3208,7 @@
    "ko": "iPhone 실시간 연결",
    "en": "iPhone connected",
    "files": [
-    "WatchConnectivityController.swift:880"
+    "WatchConnectivityController.swift:893"
    ],
    "args": [],
    "targets": [
@@ -3221,7 +3233,7 @@
    "en": "Connecting to iPhone",
    "files": [
     "WatchConnectivityController.swift:23",
-    "WatchConnectivityController.swift:875"
+    "WatchConnectivityController.swift:888"
    ],
    "args": [],
    "targets": [
@@ -3311,7 +3323,7 @@
    "ko": "{0} {1} 결제를 취소됨으로 표시했어요.",
    "en": "Marked {0} {1} as canceled.",
    "files": [
-    "LedgerIntents.swift:147"
+    "LedgerIntents.swift:167"
    ],
    "args": [
     "original.title",
@@ -3388,8 +3400,8 @@
    "ko": "{0} {1}을 가계부에 넣었어요.",
    "en": "Added {0} {1} to the ledger.",
    "files": [
-    "LedgerIntents.swift:102",
-    "LedgerIntents.swift:176",
+    "LedgerIntents.swift:122",
+    "LedgerIntents.swift:196",
     "SiriIntents.swift:96"
    ],
    "args": [
@@ -3420,7 +3432,7 @@
    "ko": "{0} {1}을 수입으로 넣었어요.",
    "en": "Added {0} {1} as income.",
    "files": [
-    "LedgerIntents.swift:115"
+    "LedgerIntents.swift:135"
    ],
    "args": [
     "saved.title",
@@ -3568,7 +3580,7 @@
    "ko": "{0} 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.",
    "en": "{0} is waiting in Needs review. Add or discard it in Memo › Spending.",
    "files": [
-    "LedgerIntents.swift:167"
+    "LedgerIntents.swift:187"
    ],
    "args": [
     "money"
@@ -4056,7 +4068,7 @@
    "ko": "{0} 장부 만들기",
    "en": "Start a ledger for {0}",
    "files": [
-    "LedgerSheet.swift:147"
+    "LedgerSheet.swift:155"
    ],
    "args": [
     "trip.name"
@@ -4459,7 +4471,7 @@
    "ko": "{0}년 {1}월",
    "en": "{0}/{1}",
    "files": [
-    "LedgerSheet.swift:260",
+    "LedgerSheet.swift:268",
     "MapHomeSettingsSheets.swift:749"
    ],
    "args": [
@@ -4981,7 +4993,7 @@
    "ko": "{0}원",
    "en": "₩{0}",
    "files": [
-    "LedgerCore.swift:269",
+    "LedgerCore.swift:278",
     "MapHomeCalendarPolicies.swift:433"
    ],
    "args": [
@@ -15302,7 +15314,7 @@
    "ko": "마이크 입력 장치를 확인해 주세요.",
    "en": "Check your microphone input device.",
    "files": [
-    "AppModel+Memos.swift:465"
+    "AppModel+Memos.swift:498"
    ],
    "args": [],
    "targets": [
@@ -16404,7 +16416,7 @@
    "ko": "음성 메모를 재생하지 못했습니다. {0}",
    "en": "Could not play the voice memo. {0}",
    "files": [
-    "AppModel+Memos.swift:490"
+    "AppModel+Memos.swift:523"
    ],
    "args": [
     "error.localizedDescription"
@@ -16560,7 +16572,7 @@
    "ko": "음성 녹음을 시작하지 못했습니다. {0}",
    "en": "Could not start voice recording. {0}",
    "files": [
-    "AppModel+Memos.swift:469"
+    "AppModel+Memos.swift:502"
    ],
    "args": [
     "reason"
@@ -23863,7 +23875,7 @@
    "ko": "메모는 1,000자까지 저장할 수 있습니다.",
    "en": "Memos can contain up to 1,000 characters.",
    "files": [
-    "AppModel+Memos.swift:406"
+    "AppModel+Memos.swift:439"
    ],
    "args": [],
    "targets": [
@@ -23947,7 +23959,7 @@
    "ko": "음성 메모를 사용하려면 마이크 권한이 필요합니다.",
    "en": "Microphone access is required to use voice memos.",
    "files": [
-    "AppModel+Memos.swift:439"
+    "AppModel+Memos.swift:472"
    ],
    "args": [],
    "targets": [
@@ -26542,7 +26554,7 @@
    "ko": "녹음 준비를 완료하지 못했습니다.",
    "en": "Recording could not be prepared.",
    "files": [
-    "VoiceMemoServices.swift:120"
+    "VoiceMemoServices.swift:152"
    ],
    "args": [],
    "targets": [
@@ -30124,7 +30136,7 @@
    "ko": "현재 오디오 입력 형식을 확인할 수 없습니다.",
    "en": "The current audio input format could not be determined.",
    "files": [
-    "VoiceMemoServices.swift:114"
+    "VoiceMemoServices.swift:146"
    ],
    "args": [],
    "targets": [
@@ -30378,7 +30390,7 @@
    "ko": "마이크 입력 장치를 사용할 수 없습니다.",
    "en": "The microphone input device is unavailable.",
    "files": [
-    "VoiceMemoServices.swift:108"
+    "VoiceMemoServices.swift:140"
    ],
    "args": [],
    "targets": [
@@ -30714,7 +30726,7 @@
    "ko": "음성 메모 파일을 찾지 못했습니다.",
    "en": "The voice memo file could not be found.",
    "files": [
-    "VoiceMemoServices.swift:192"
+    "VoiceMemoServices.swift:224"
    ],
    "args": [],
    "targets": [
@@ -31865,7 +31877,7 @@
    "ko": "음성 메모 재생을 시작하지 못했습니다.",
    "en": "Voice memo playback could not be started.",
    "files": [
-    "VoiceMemoServices.swift:198"
+    "VoiceMemoServices.swift:230"
    ],
    "args": [],
    "targets": [
@@ -33642,7 +33654,7 @@
    "ko": "‘{0}’ 기기가 내 차인가요?",
    "en": "Is ‘{0}’ your car?",
    "files": [
-    "MapHomeLaunchPrompts.swift:328"
+    "MapHomeLaunchPrompts.swift:334"
    ],
    "args": [
     "name"
@@ -33656,7 +33668,7 @@
    "ko": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
    "en": "‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
    "files": [
-    "MapHomeLaunchPrompts.swift:386"
+    "MapHomeLaunchPrompts.swift:392"
    ],
    "args": [
     "name"
@@ -33670,7 +33682,7 @@
    "ko": "‘{0}’ 일정 분류",
    "en": "Classify ‘{0}’",
    "files": [
-    "MapHomeLaunchPrompts.swift:331"
+    "MapHomeLaunchPrompts.swift:337"
    ],
    "args": [
     "title"
@@ -33684,7 +33696,7 @@
    "ko": "‘{0}’ 일정은 무엇인가요?",
    "en": "What is ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:488"
+    "MapHomeLaunchPrompts.swift:494"
    ],
    "args": [
     "calendarTitle ?? \"\""
@@ -33698,7 +33710,7 @@
    "ko": "‘{0}’ 중 무엇인가요?",
    "en": "Which ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:516"
+    "MapHomeLaunchPrompts.swift:522"
    ],
    "args": [
     "category?.localizedTitle(language) ?? \"\""
@@ -33712,7 +33724,7 @@
    "ko": "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?",
    "en": "You stayed at ‘{0}’ {1} times. What is it?",
    "files": [
-    "MapHomeLaunchPrompts.swift:544"
+    "MapHomeLaunchPrompts.swift:550"
    ],
    "args": [
     "name",
@@ -33940,7 +33952,7 @@
    "ko": "「{0}」이(가) 든 글은 넣지 않게 해 두었어요.",
    "en": "Texts containing “{0}” are set to be skipped.",
    "files": [
-    "LedgerIntents.swift:73"
+    "LedgerIntents.swift:95"
    ],
    "args": [
     "word"
@@ -34098,7 +34110,7 @@
    "ko": "가계부 {0} 표",
    "en": "Ledger {0} table",
    "files": [
-    "LedgerSheet.swift:82"
+    "LedgerSheet.swift:85"
    ],
    "args": [
     "monthTitle"
@@ -34187,7 +34199,7 @@
    "ko": "가계부 전체 표",
    "en": "Whole ledger table",
    "files": [
-    "LedgerSheet.swift:88"
+    "LedgerSheet.swift:91"
    ],
    "args": [],
    "targets": [
@@ -34249,7 +34261,7 @@
    "ko": "가계부에 넣을 결제 문자가 아니에요.",
    "en": "Not a payment message, so nothing was added.",
    "files": [
-    "LedgerIntents.swift:119"
+    "LedgerIntents.swift:139"
    ],
    "args": [],
    "targets": [
@@ -34273,8 +34285,8 @@
    "ko": "가계부에 넣지 않는 문자예요.",
    "en": "This kind of text is not added to the ledger.",
    "files": [
-    "LedgerIntents.swift:78",
-    "LedgerIntents.swift:86"
+    "LedgerIntents.swift:99",
+    "LedgerIntents.swift:106"
    ],
    "args": [],
    "targets": [
@@ -35062,7 +35074,7 @@
    "ko": "걷기",
    "en": "Walking",
    "files": [
-    "MapHomeLaunchPrompts.swift:438",
+    "MapHomeLaunchPrompts.swift:444",
     "MapHomeNLEClipFactory.swift:120",
     "MapHomeStickmanAction.swift:182"
    ],
@@ -35404,8 +35416,8 @@
    "ko": "결제 문자 자동으로 넣기",
    "en": "Add payment texts automatically",
    "files": [
-    "LedgerSheet.swift:74",
-    "LedgerSheet.swift:184"
+    "LedgerSheet.swift:77",
+    "LedgerSheet.swift:192"
    ],
    "args": [],
    "targets": [
@@ -35430,7 +35442,7 @@
    "en": "Payment text",
    "files": [
     "LedgerExport.swift:48",
-    "LedgerSheet.swift:309"
+    "LedgerSheet.swift:317"
    ],
    "args": [],
    "targets": [
@@ -35466,7 +35478,7 @@
    "ko": "결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.",
    "en": "Couldn't read the payment text, so it was sent to your AI to check.",
    "files": [
-    "LedgerIntents.swift:129"
+    "LedgerIntents.swift:149"
    ],
    "args": [],
    "targets": [
@@ -35478,7 +35490,7 @@
    "ko": "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.",
    "en": "Couldn't read the payment text. Add it in the ledger yourself.",
    "files": [
-    "LedgerIntents.swift:131"
+    "LedgerIntents.swift:151"
    ],
    "args": [],
    "targets": [
@@ -36430,7 +36442,7 @@
    "ko": "공유 만들기",
    "en": "Create share",
    "files": [
-    "TripShareCreateSheet.swift:164"
+    "TripShareCreateSheet.swift:166"
    ],
    "args": [],
    "targets": [
@@ -36540,7 +36552,7 @@
    "ko": "공유가 끝났어요. 이 기기의 사본은 남아 있어요.",
    "en": "Sharing ended. The copy on this device remains.",
    "files": [
-    "TripShareHost.swift:300"
+    "TripShareHost.swift:315"
    ],
    "args": [],
    "targets": [
@@ -36785,7 +36797,7 @@
    "ko": "교육",
    "en": "Education",
    "files": [
-    "LedgerCore.swift:20"
+    "LedgerCore.swift:29"
    ],
    "args": [],
    "targets": [
@@ -36797,7 +36809,7 @@
    "ko": "교통",
    "en": "Transport",
    "files": [
-    "LedgerCore.swift:13"
+    "LedgerCore.swift:22"
    ],
    "args": [],
    "targets": [
@@ -37270,7 +37282,7 @@
    "ko": "그 사이 다른 사람이 고쳤어요. 최신 내용을 확인하고 다시 해 주세요.",
    "en": "Someone else changed this meanwhile. Check the latest and try again.",
    "files": [
-    "TripShareLedger.swift:405"
+    "TripShareLedger.swift:486"
    ],
    "args": [],
    "targets": [
@@ -37536,7 +37548,7 @@
    "ko": "금액(원)",
    "en": "Amount (KRW)",
    "files": [
-    "LedgerSheet.swift:438"
+    "LedgerSheet.swift:446"
    ],
    "args": [],
    "targets": [
@@ -37548,7 +37560,7 @@
    "ko": "금액",
    "en": "Amount",
    "files": [
-    "LedgerSheet.swift:407",
+    "LedgerSheet.swift:415",
     "LedgerSummary.swift:132",
     "LedgerSummary.swift:137"
    ],
@@ -37610,7 +37622,7 @@
    "ko": "급여",
    "en": "Salary",
    "files": [
-    "LedgerCore.swift:22"
+    "LedgerCore.swift:31"
    ],
    "args": [],
    "targets": [
@@ -37768,7 +37780,7 @@
    "ko": "기기에 값을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't save on this device. Try again in a moment.",
    "files": [
-    "AssistantPINSheet.swift:116"
+    "AssistantPINSheet.swift:117"
    ],
    "args": [],
    "targets": [
@@ -37821,7 +37833,7 @@
    "ko": "기록 고치기",
    "en": "Edit entry",
    "files": [
-    "LedgerSheet.swift:384"
+    "LedgerSheet.swift:392"
    ],
    "args": [],
    "targets": [
@@ -37845,8 +37857,8 @@
    "ko": "기록 더하기",
    "en": "Add entry",
    "files": [
-    "LedgerSheet.swift:93",
-    "LedgerSheet.swift:384"
+    "LedgerSheet.swift:96",
+    "LedgerSheet.swift:392"
    ],
    "args": [],
    "targets": [
@@ -38306,7 +38318,7 @@
    "ko": "기차를 탔나요?",
    "en": "Did you take a train?",
    "files": [
-    "MapHomeLaunchPrompts.swift:470"
+    "MapHomeLaunchPrompts.swift:476"
    ],
    "args": [],
    "targets": [
@@ -38357,7 +38369,7 @@
    "ko": "기타",
    "en": "Other",
    "files": [
-    "LedgerCore.swift:23",
+    "LedgerCore.swift:32",
     "AssistantAIProvider.swift:37",
     "AssistantMoreActions.swift:35"
    ],
@@ -38524,7 +38536,7 @@
    "ko": "끄면 비밀번호는 백업에만 쓰입니다.",
    "en": "When off, the password is used only for backups.",
    "files": [
-    "FirstRunTutorialView.swift:708"
+    "FirstRunTutorialView.swift:716"
    ],
    "args": [],
    "targets": [
@@ -38708,7 +38720,7 @@
    "ko": "나",
    "en": "Me",
    "files": [
-    "LedgerSheet.swift:560",
+    "LedgerSheet.swift:568",
     "LedgerTripView.swift:118",
     "TripShareMembersView.swift:73"
    ],
@@ -38782,7 +38794,7 @@
    "ko": "나도 포함해 똑같이 나눠요. 기록의 「낸 사람」이 비었으면 내가 낸 것이에요.",
    "en": "Split equally including you. A blank payer means you paid.",
    "files": [
-    "LedgerSheet.swift:558"
+    "LedgerSheet.swift:566"
    ],
    "args": [],
    "targets": [
@@ -38870,7 +38882,7 @@
    "ko": "나중에 확인",
    "en": "Check later",
    "files": [
-    "MapHomeLaunchPrompts.swift:377"
+    "MapHomeLaunchPrompts.swift:383"
    ],
    "args": [],
    "targets": [
@@ -39287,7 +39299,7 @@
    "ko": "내 계좌 사이에서 옮긴 돈이라 넣지 않았어요.",
    "en": "A transfer between your own accounts, so nothing was added.",
    "files": [
-    "LedgerIntents.swift:81"
+    "LedgerIntents.swift:101"
    ],
    "args": [],
    "targets": [
@@ -39325,7 +39337,7 @@
    "files": [
     "AssistantSafetyViews.swift:533",
     "LedgerReviewBand.swift:128",
-    "LedgerSheet.swift:77"
+    "LedgerSheet.swift:80"
    ],
    "args": [],
    "targets": [
@@ -39337,7 +39349,7 @@
    "ko": "내 계좌로 옮긴 돈이라 가계부에 넣지 않았어요.",
    "en": "That was a transfer to your own account, so nothing was added.",
    "files": [
-    "LedgerIntents.swift:123"
+    "LedgerIntents.swift:143"
    ],
    "args": [],
    "targets": [
@@ -39361,7 +39373,7 @@
    "ko": "내 닉네임",
    "en": "My nickname",
    "files": [
-    "TripShareCreateSheet.swift:150",
+    "TripShareCreateSheet.swift:152",
     "TripShareJoinSheet.swift:70"
    ],
    "args": [],
@@ -39620,7 +39632,7 @@
    "ko": "내 차로 등록",
    "en": "Register as my car",
    "files": [
-    "MapHomeLaunchPrompts.swift:382"
+    "MapHomeLaunchPrompts.swift:388"
    ],
    "args": [],
    "targets": [
@@ -39693,7 +39705,7 @@
    "ko": "내가 확인",
    "en": "I'll check",
    "files": [
-    "MapHomeLaunchPrompts.swift:304"
+    "MapHomeLaunchPrompts.swift:310"
    ],
    "args": [],
    "targets": [
@@ -39778,7 +39790,7 @@
    "ko": "내용 (예: 커피)",
    "en": "What (e.g. Coffee)",
    "files": [
-    "LedgerSheet.swift:402"
+    "LedgerSheet.swift:410"
    ],
    "args": [],
    "targets": [
@@ -39790,7 +39802,7 @@
    "ko": "낸 사람 (비우면 나)",
    "en": "Paid by (blank = me)",
    "files": [
-    "LedgerSheet.swift:357"
+    "LedgerSheet.swift:365"
    ],
    "args": [],
    "targets": [
@@ -39814,7 +39826,7 @@
    "ko": "낸 사람을 적으면 「정산하기」에서 나눌 돈을 계산해요.",
    "en": "Add who paid to split costs in Settle up.",
    "files": [
-    "LedgerSheet.swift:362"
+    "LedgerSheet.swift:370"
    ],
    "args": [],
    "targets": [
@@ -39826,7 +39838,7 @@
    "ko": "낸 사람이나 나눌 사람 가운데 이 여행에 없는 이름이 있어요.",
    "en": "Someone in Paid by or For whom isn't in this trip.",
    "files": [
-    "TripShareLedger.swift:404"
+    "TripShareLedger.swift:485"
    ],
    "args": [],
    "targets": [
@@ -39947,7 +39959,7 @@
    "ko": "녹음 준비를 완료하지 못했습니다.",
    "en": "Recording could not be prepared.",
    "files": [
-    "VoiceMemoServices.swift:119"
+    "VoiceMemoServices.swift:151"
    ],
    "args": [],
    "targets": [
@@ -40207,7 +40219,7 @@
    "ko": "다른 기기에서 열려 여기서는 멈췄어요.",
    "en": "Opened on another device, so it paused here.",
    "files": [
-    "TripShareHost.swift:299",
+    "TripShareHost.swift:314",
     "TripSharePanel.swift:85"
    ],
    "args": [],
@@ -40244,7 +40256,7 @@
    "ko": "다른 사람이 고치는 중이에요. 잠시 뒤에 다시 해 주세요.",
    "en": "Someone else is editing this. Try again in a moment.",
    "files": [
-    "TripShareLedger.swift:403",
+    "TripShareLedger.swift:484",
     "TripSharePlanEditor.swift:19"
    ],
    "args": [],
@@ -40321,7 +40333,7 @@
    "ko": "다시 연결",
    "en": "Reconnect",
    "files": [
-    "TripShareHost.swift:310"
+    "TripShareHost.swift:325"
    ],
    "args": [],
    "targets": [
@@ -41669,7 +41681,7 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
-    "MapHomeLaunchPrompts.swift:415",
+    "MapHomeLaunchPrompts.swift:421",
     "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
@@ -41744,7 +41756,7 @@
    "ko": "등록 안 함",
    "en": "Don't register",
    "files": [
-    "MapHomeLaunchPrompts.swift:447"
+    "MapHomeLaunchPrompts.swift:453"
    ],
    "args": [],
    "targets": [
@@ -41780,7 +41792,7 @@
    "ko": "등록된 비밀번호가 있습니다",
    "en": "A password is already set",
    "files": [
-    "FirstRunTutorialView.swift:671"
+    "FirstRunTutorialView.swift:679"
    ],
    "args": [],
    "targets": [
@@ -41903,8 +41915,8 @@
    "ko": "때",
    "en": "When",
    "files": [
-    "LedgerSheet.swift:421",
-    "LedgerSheet.swift:441"
+    "LedgerSheet.swift:429",
+    "LedgerSheet.swift:449"
    ],
    "args": [],
    "targets": [
@@ -42125,7 +42137,7 @@
    "ko": "마이크 입력 장치를 사용할 수 없습니다.",
    "en": "The microphone input device is unavailable.",
    "files": [
-    "VoiceMemoServices.swift:107"
+    "VoiceMemoServices.swift:139"
    ],
    "args": [],
    "targets": [
@@ -42137,7 +42149,7 @@
    "ko": "마이크 입력 장치를 확인해 주세요.",
    "en": "Check your microphone input device.",
    "files": [
-    "AppModel+Memos.swift:464"
+    "AppModel+Memos.swift:497"
    ],
    "args": [],
    "targets": [
@@ -42325,7 +42337,7 @@
    "ko": "맞아요",
    "en": "Yes",
    "files": [
-    "MapHomeLaunchPrompts.swift:435"
+    "MapHomeLaunchPrompts.swift:441"
    ],
    "args": [],
    "targets": [
@@ -42485,7 +42497,7 @@
    "ko": "먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.",
    "en": "Pick a category first. Once set, events with the same title won't be asked again.",
    "files": [
-    "MapHomeLaunchPrompts.swift:408"
+    "MapHomeLaunchPrompts.swift:414"
    ],
    "args": [],
    "targets": [
@@ -42497,7 +42509,7 @@
    "ko": "먼저 메뉴에서 앱 비밀번호(6자리)를 만들어 주세요.",
    "en": "Create an app password (6 digits) in the menu first.",
    "files": [
-    "AssistantPINSheet.swift:39"
+    "AssistantPINSheet.swift:40"
    ],
    "args": [],
    "targets": [
@@ -42509,7 +42521,7 @@
    "ko": "먼저 메뉴에서 앱 비밀번호를 만들어 주세요.",
    "en": "Create an app password in the menu first.",
    "files": [
-    "AssistantPINSheet.swift:112"
+    "AssistantPINSheet.swift:113"
    ],
    "args": [],
    "targets": [
@@ -42712,7 +42724,7 @@
    "ko": "메뉴의 앱 비밀번호와 같아요. AI 서버에는 비밀번호 대신 따로 만든 값만 보내요.",
    "en": "Same as your app password in the menu. The AI server only gets a separate value, never the password.",
    "files": [
-    "AssistantPINSheet.swift:78"
+    "AssistantPINSheet.swift:79"
    ],
    "args": [],
    "targets": [
@@ -42954,7 +42966,7 @@
    "ko": "메모",
    "en": "Note",
    "files": [
-    "LedgerSheet.swift:360"
+    "LedgerSheet.swift:368"
    ],
    "args": [],
    "targets": [
@@ -42978,7 +42990,7 @@
    "ko": "메모는 1,000자까지 저장할 수 있습니다.",
    "en": "Memos can contain up to 1,000 characters.",
    "files": [
-    "AppModel+Memos.swift:405"
+    "AppModel+Memos.swift:438"
    ],
    "args": [],
    "targets": [
@@ -43347,7 +43359,7 @@
    "ko": "문화·여가",
    "en": "Leisure",
    "files": [
-    "LedgerCore.swift:17"
+    "LedgerCore.swift:26"
    ],
    "args": [],
    "targets": [
@@ -43500,7 +43512,7 @@
    "ko": "미확인 시간 {0}분",
    "en": "{0} min unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:333"
+    "MapHomeLaunchPrompts.swift:339"
    ],
    "args": [
     "minutes"
@@ -43538,7 +43550,7 @@
    "ko": "미확인 시간이 있어요",
    "en": "Some time is unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:452"
+    "MapHomeLaunchPrompts.swift:458"
    ],
    "args": [],
    "targets": [
@@ -43580,6 +43592,30 @@
    "en": "Replace and delete everything",
    "files": [
     "AssistantSettingsView.swift:92"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "바꾸기 전 앱 비밀번호 또는 예전 AI PIN 6자리|Previous app password or old AI PIN (6 digits)",
+   "ko": "바꾸기 전 앱 비밀번호 또는 예전 AI PIN 6자리",
+   "en": "Previous app password or old AI PIN (6 digits)",
+   "files": [
+    "AssistantPINSheet.swift:38"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "바꾸기 전 앱 비밀번호(또는 예전에 따로 정한 AI PIN)를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.|Enter your previous app password (or the AI PIN you set before) once, and it switches to your current app password.",
+   "ko": "바꾸기 전 앱 비밀번호(또는 예전에 따로 정한 AI PIN)를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.",
+   "en": "Enter your previous app password (or the AI PIN you set before) once, and it switches to your current app password.",
+   "files": [
+    "AssistantPINSheet.swift:78"
    ],
    "args": [],
    "targets": [
@@ -43640,7 +43676,7 @@
    "ko": "바꾸지 않으면 그대로 씁니다.",
    "en": "It stays as is unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:673"
+    "FirstRunTutorialView.swift:681"
    ],
    "args": [],
    "targets": [
@@ -43652,7 +43688,7 @@
    "ko": "바꾸지 않으면 이 번호로 시작합니다.",
    "en": "This is used unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:685"
+    "FirstRunTutorialView.swift:693"
    ],
    "args": [],
    "targets": [
@@ -43748,7 +43784,7 @@
    "ko": "반경",
    "en": "Radius",
    "files": [
-    "FirstRunTutorialView.swift:609",
+    "FirstRunTutorialView.swift:614",
     "MapHomeInfoSheets.swift:99"
    ],
    "args": [],
@@ -44047,7 +44083,7 @@
    "ko": "방금 같은 금액의 결제가 있어 「확인 필요」에 두었어요.",
    "en": "A payment of the same amount was just added, so this one is waiting in Needs review.",
    "files": [
-    "LedgerIntents.swift:155"
+    "LedgerIntents.swift:175"
    ],
    "args": [],
    "targets": [
@@ -44119,7 +44155,7 @@
    "ko": "방을 만드는 중…",
    "en": "Creating the room…",
    "files": [
-    "TripShareCreateSheet.swift:164"
+    "TripShareCreateSheet.swift:166"
    ],
    "args": [],
    "targets": [
@@ -44155,7 +44191,7 @@
    "ko": "방을 만든 사람이 비밀번호를 바꿨어요. 새 비밀번호를 물어봐 주세요.",
    "en": "The room's creator changed the password. Ask them for the new one.",
    "files": [
-    "TripShareHost.swift:341"
+    "TripShareHost.swift:356"
    ],
    "args": [],
    "targets": [
@@ -44167,7 +44203,7 @@
    "ko": "방을 만들었어요",
    "en": "Room created",
    "files": [
-    "TripShareCreateSheet.swift:180"
+    "TripShareCreateSheet.swift:182"
    ],
    "args": [],
    "targets": [
@@ -44244,7 +44280,7 @@
    "ko": "배를 탔나요?",
    "en": "Did you take a boat?",
    "files": [
-    "MapHomeLaunchPrompts.swift:471"
+    "MapHomeLaunchPrompts.swift:477"
    ],
    "args": [],
    "targets": [
@@ -44285,7 +44321,7 @@
    "ko": "백그라운드 동기화",
    "en": "Background sync",
    "files": [
-    "WatchConnectivityController.swift:881"
+    "WatchConnectivityController.swift:894"
    ],
    "args": [],
    "targets": [
@@ -44611,7 +44647,7 @@
    "ko": "버스 · {0}번",
    "en": "Bus {0}",
    "files": [
-    "MapHomeLaunchPrompts.swift:431"
+    "MapHomeLaunchPrompts.swift:437"
    ],
    "args": [
     "route.number"
@@ -44661,7 +44697,7 @@
    "ko": "버스(노선 모름)",
    "en": "Bus (route unknown)",
    "files": [
-    "MapHomeLaunchPrompts.swift:433"
+    "MapHomeLaunchPrompts.swift:439"
    ],
    "args": [],
    "targets": [
@@ -44701,7 +44737,7 @@
    "ko": "버스를 탔나요?",
    "en": "Did you take a bus?",
    "files": [
-    "MapHomeLaunchPrompts.swift:474"
+    "MapHomeLaunchPrompts.swift:480"
    ],
    "args": [],
    "targets": [
@@ -45006,7 +45042,7 @@
    "ko": "보낼 돈",
    "en": "Transfers",
    "files": [
-    "LedgerSheet.swift:563"
+    "LedgerSheet.swift:571"
    ],
    "args": [],
    "targets": [
@@ -45386,7 +45422,7 @@
    "ko": "분류 안 함",
    "en": "Don't classify",
    "files": [
-    "MapHomeLaunchPrompts.swift:405"
+    "MapHomeLaunchPrompts.swift:411"
    ],
    "args": [],
    "targets": [
@@ -45446,7 +45482,7 @@
    "ko": "분류",
    "en": "Category",
    "files": [
-    "LedgerSheet.swift:418",
+    "LedgerSheet.swift:426",
     "MapHomeNLEClipEditor.swift:566",
     "MapHomeNLERawDetail.swift:50"
    ],
@@ -45535,7 +45571,7 @@
    "ko": "비밀번호 (6자 이상)",
    "en": "Password (6+ characters)",
    "files": [
-    "TripShareCreateSheet.swift:147"
+    "TripShareCreateSheet.swift:149"
    ],
    "args": [],
    "targets": [
@@ -45612,7 +45648,7 @@
    "ko": "비밀번호 확인",
    "en": "Confirm password",
    "files": [
-    "FirstRunTutorialView.swift:693",
+    "FirstRunTutorialView.swift:701",
     "MapHomeSettingsSheets.swift:347"
    ],
    "args": [],
@@ -45640,7 +45676,7 @@
    "files": [
     "MapHomeSettingsSheets.swift:342",
     "MapHomeSettingsSheets.swift:471",
-    "TripShareCreateSheet.swift:178"
+    "TripShareCreateSheet.swift:180"
    ],
    "args": [],
    "targets": [
@@ -45678,7 +45714,7 @@
    "ko": "비밀번호가 바뀌었어요. 새 비밀번호를 넣어야 이어서 볼 수 있어요.",
    "en": "The password changed. Enter the new one to keep syncing.",
    "files": [
-    "TripShareHost.swift:298"
+    "TripShareHost.swift:313"
    ],
    "args": [],
    "targets": [
@@ -45728,7 +45764,7 @@
    "ko": "비밀번호는 이 화면에서만 보여요. 링크와 다른 방법으로 따로 알려 주세요. 링크는 이 앱이 깔린 기기에서 열려요.",
    "en": "The password is shown only here. Send it separately from the link. The link opens on devices with this app installed.",
    "files": [
-    "TripShareCreateSheet.swift:182"
+    "TripShareCreateSheet.swift:184"
    ],
    "args": [],
    "targets": [
@@ -45824,7 +45860,7 @@
    "ko": "비밀번호를 잊으면 백업을 복구할 수 없습니다. 예전 iCloud 백업은 그때 쓴 비밀번호로 열립니다.",
    "en": "Without the password, backups can't be restored. Older iCloud backups open with the password used then.",
    "files": [
-    "FirstRunTutorialView.swift:711"
+    "FirstRunTutorialView.swift:719"
    ],
    "args": [],
    "targets": [
@@ -45913,7 +45949,7 @@
    "ko": "비행기를 탔나요?",
    "en": "Did you take a flight?",
    "files": [
-    "MapHomeLaunchPrompts.swift:472"
+    "MapHomeLaunchPrompts.swift:478"
    ],
    "args": [],
    "targets": [
@@ -46755,7 +46791,7 @@
    "ko": "새 비밀번호(6자리)",
    "en": "New password (6 digits)",
    "files": [
-    "FirstRunTutorialView.swift:690"
+    "FirstRunTutorialView.swift:698"
    ],
    "args": [],
    "targets": [
@@ -46767,9 +46803,9 @@
    "ko": "새 비밀번호",
    "en": "New password",
    "files": [
-    "FirstRunTutorialView.swift:692",
-    "TripShareHost.swift:337",
-    "TripShareHost.swift:354"
+    "FirstRunTutorialView.swift:700",
+    "TripShareHost.swift:352",
+    "TripShareHost.swift:369"
    ],
    "args": [],
    "targets": [
@@ -46781,7 +46817,7 @@
    "ko": "새 여행 장부",
    "en": "New trip ledger",
    "files": [
-    "LedgerSheet.swift:151"
+    "LedgerSheet.swift:159"
    ],
    "args": [],
    "targets": [
@@ -47015,7 +47051,7 @@
    "ko": "생활",
    "en": "Living",
    "files": [
-    "LedgerCore.swift:15"
+    "LedgerCore.swift:24"
    ],
    "args": [],
    "targets": [
@@ -47202,7 +47238,7 @@
    "ko": "선물·경조사",
    "en": "Gifts",
    "files": [
-    "LedgerCore.swift:21"
+    "LedgerCore.swift:30"
    ],
    "args": [],
    "targets": [
@@ -47945,7 +47981,7 @@
    "ko": "쇼핑",
    "en": "Shopping",
    "files": [
-    "LedgerCore.swift:14",
+    "LedgerCore.swift:23",
     "TripImportSheet.swift:467"
    ],
    "args": [],
@@ -48242,7 +48278,7 @@
    "ko": "숙소",
    "en": "Lodging",
    "files": [
-    "LedgerCore.swift:19",
+    "LedgerCore.swift:28",
     "TripImportSheet.swift:459"
    ],
    "args": [],
@@ -49010,7 +49046,7 @@
    "en": "Restaurant",
    "files": [
     "AssistantMoreActions.swift:34",
-    "MapHomeLaunchPrompts.swift:558"
+    "MapHomeLaunchPrompts.swift:564"
    ],
    "args": [],
    "targets": [
@@ -49022,7 +49058,7 @@
    "ko": "식비",
    "en": "Food",
    "files": [
-    "LedgerCore.swift:11"
+    "LedgerCore.swift:20"
    ],
    "args": [],
    "targets": [
@@ -49307,7 +49343,7 @@
    "ko": "아니요",
    "en": "No",
    "files": [
-    "MapHomeLaunchPrompts.swift:383"
+    "MapHomeLaunchPrompts.swift:389"
    ],
    "args": [],
    "targets": [
@@ -49391,7 +49427,7 @@
    "ko": "아래에 적고 다음을 누르면 저장됩니다.",
    "en": "Enter one below and tap Next to save it.",
    "files": [
-    "FirstRunTutorialView.swift:677"
+    "FirstRunTutorialView.swift:685"
    ],
    "args": [],
    "targets": [
@@ -49563,7 +49599,7 @@
    "ko": "아직 비밀번호가 없습니다",
    "en": "No password yet",
    "files": [
-    "FirstRunTutorialView.swift:675"
+    "FirstRunTutorialView.swift:683"
    ],
    "args": [],
    "targets": [
@@ -50134,7 +50170,7 @@
    "ko": "앱 비밀번호 6자리",
    "en": "6-digit app password",
    "files": [
-    "AssistantPINSheet.swift:36"
+    "AssistantPINSheet.swift:37"
    ],
    "args": [],
    "targets": [
@@ -50146,7 +50182,7 @@
    "ko": "앱 비밀번호",
    "en": "App password",
    "files": [
-    "AssistantPINSheet.swift:55"
+    "AssistantPINSheet.swift:56"
    ],
    "args": [],
    "targets": [
@@ -50158,7 +50194,7 @@
    "ko": "앱 비밀번호가 맞지 않아요.",
    "en": "Wrong app password.",
    "files": [
-    "AssistantPINSheet.swift:106"
+    "AssistantPINSheet.swift:107"
    ],
    "args": [],
    "targets": [
@@ -50450,7 +50486,7 @@
    "ko": "앱을 열 때마다 잠금",
    "en": "Lock whenever the app opens",
    "files": [
-    "FirstRunTutorialView.swift:703",
+    "FirstRunTutorialView.swift:711",
     "MapHomeSettingsSheets.swift:374"
    ],
    "args": [],
@@ -50572,7 +50608,7 @@
    "ko": "어느 노선인가요?",
    "en": "Which line?",
    "files": [
-    "MapHomeLaunchPrompts.swift:469"
+    "MapHomeLaunchPrompts.swift:475"
    ],
    "args": [],
    "targets": [
@@ -51069,7 +51105,7 @@
    "ko": "여러 번 틀려 {0}초 동안 막혔어요.",
    "en": "Too many tries. Wait {0} s.",
    "files": [
-    "AssistantPINSheet.swift:109"
+    "AssistantPINSheet.swift:110"
    ],
    "args": [
     "max(1, Int(retryAfter.rounded(.up)))"
@@ -51328,7 +51364,7 @@
    "ko": "여행 예산은 일상에서 「여행 경비」로 나가고, 여행이 끝나면 남은 돈이 「여행 정산」으로 돌아와요.",
    "en": "A trip budget leaves daily as a trip expense; leftovers come back as a trip refund when it ends.",
    "files": [
-    "LedgerSheet.swift:156"
+    "LedgerSheet.swift:164"
    ],
    "args": [],
    "targets": [
@@ -51340,7 +51376,7 @@
    "ko": "여행 예산이에요. 고치면 일상의 「여행 경비」와 여행의 「경비 받음」이 함께 바뀌어요.",
    "en": "This is the trip budget. Editing it changes both the daily and trip sides.",
    "files": [
-    "LedgerSheet.swift:444"
+    "LedgerSheet.swift:452"
    ],
    "args": [],
    "targets": [
@@ -51509,7 +51545,7 @@
    "ko": "여행 장부",
    "en": "Trip ledger",
    "files": [
-    "LedgerSheet.swift:48",
+    "LedgerSheet.swift:51",
     "LedgerTripView.swift:300"
    ],
    "args": [],
@@ -51522,7 +51558,7 @@
    "ko": "여행 장부",
    "en": "Trip ledgers",
    "files": [
-    "LedgerSheet.swift:154"
+    "LedgerSheet.swift:162"
    ],
    "args": [],
    "targets": [
@@ -51546,7 +51582,7 @@
    "ko": "여행 정산이에요. 고치면 그 금액으로 고정돼요. 일상 쪽 수입이면 반납, 지출이면 추가 경비예요.",
    "en": "This is the trip settlement. Editing fixes it to this amount. Daily income means returned, expense means extra.",
    "files": [
-    "LedgerSheet.swift:445"
+    "LedgerSheet.swift:453"
    ],
    "args": [],
    "targets": [
@@ -51607,7 +51643,7 @@
    "ko": "여행",
    "en": "Travel",
    "files": [
-    "LedgerCore.swift:18"
+    "LedgerCore.swift:27"
    ],
    "args": [],
    "targets": [
@@ -51765,7 +51801,7 @@
    "ko": "연결 대기",
    "en": "Waiting for connection",
    "files": [
-    "WatchConnectivityController.swift:877"
+    "WatchConnectivityController.swift:890"
    ],
    "args": [],
    "targets": [
@@ -51789,7 +51825,7 @@
    "ko": "연결 상태 확인 중",
    "en": "Checking connection",
    "files": [
-    "WatchConnectivityController.swift:883"
+    "WatchConnectivityController.swift:896"
    ],
    "args": [],
    "targets": [
@@ -52393,7 +52429,7 @@
    "ko": "연결을 지원하지 않음",
    "en": "Connectivity unavailable",
    "files": [
-    "WatchConnectivityController.swift:177"
+    "WatchConnectivityController.swift:178"
    ],
    "args": [],
    "targets": [
@@ -52627,7 +52663,7 @@
    "ko": "연봉 카운터",
    "en": "Salary counter",
    "files": [
-    "FirstRunTutorialView.swift:818",
+    "FirstRunTutorialView.swift:826",
     "MapHomeAlarm.swift:25",
     "MapHomeSalarySettingsSheet.swift:124"
    ],
@@ -52691,7 +52727,7 @@
    "ko": "연봉을 적으면 나타납니다",
    "en": "Appears once you enter a salary",
    "files": [
-    "FirstRunTutorialView.swift:820"
+    "FirstRunTutorialView.swift:828"
    ],
    "args": [],
    "targets": [
@@ -52970,7 +53006,7 @@
    "en": "Receipt",
    "files": [
     "LedgerExport.swift:49",
-    "LedgerSheet.swift:310"
+    "LedgerSheet.swift:318"
    ],
    "args": [],
    "targets": [
@@ -52982,7 +53018,7 @@
    "ko": "영수증·캡처",
    "en": "Receipt or capture",
    "files": [
-    "LedgerSheet.swift:178"
+    "LedgerSheet.swift:186"
    ],
    "args": [],
    "targets": [
@@ -53073,7 +53109,7 @@
    "ko": "예산 남음",
    "en": "Budget left",
    "files": [
-    "LedgerSheet.swift:246",
+    "LedgerSheet.swift:254",
     "LedgerSummary.swift:94"
    ],
    "args": [],
@@ -53122,7 +53158,7 @@
    "ko": "예산",
    "en": "Budget",
    "files": [
-    "LedgerSheet.swift:523",
+    "LedgerSheet.swift:531",
     "LedgerSummary.swift:94",
     "LedgerTripView.swift:23"
    ],
@@ -53226,7 +53262,7 @@
    "ko": "예시",
    "en": "Example",
    "files": [
-    "FirstRunTutorialView.swift:800"
+    "FirstRunTutorialView.swift:808"
    ],
    "args": [],
    "targets": [
@@ -53258,47 +53294,11 @@
    ]
   },
   {
-   "key": "예전 AI 연결 PIN 6자리|Old 6-digit AI PIN",
-   "ko": "예전 AI 연결 PIN 6자리",
-   "en": "Old 6-digit AI PIN",
-   "files": [
-    "AssistantPINSheet.swift:37"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "예전 PIN을 잊었어요|I forgot the old PIN",
    "ko": "예전 PIN을 잊었어요",
    "en": "I forgot the old PIN",
    "files": [
-    "AssistantPINSheet.swift:47"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "예전에 따로 정한 AI PIN을 한 번만 넣으면 앱 비밀번호로 바꿔요.|Enter the AI PIN you set before once, and it switches to your app password.",
-   "ko": "예전에 따로 정한 AI PIN을 한 번만 넣으면 앱 비밀번호로 바꿔요.",
-   "en": "Enter the AI PIN you set before once, and it switches to your app password.",
-   "files": [
-    "AssistantPINSheet.swift:77"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "예전에 따로 정한 AI PIN이 있어요. 그 PIN을 한 번만 넣어 주세요.|An AI PIN you set before is on the server. Enter it once.",
-   "ko": "예전에 따로 정한 AI PIN이 있어요. 그 PIN을 한 번만 넣어 주세요.",
-   "en": "An AI PIN you set before is on the server. Enter it once.",
-   "files": [
-    "AssistantPINSheet.swift:145"
+    "AssistantPINSheet.swift:48"
    ],
    "args": [],
    "targets": [
@@ -53370,7 +53370,7 @@
    "ko": "오늘 {0}분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?",
    "en": "{0} min today are unconfirmed. Review them now?",
    "files": [
-    "MapHomeLaunchPrompts.swift:456"
+    "MapHomeLaunchPrompts.swift:462"
    ],
    "args": [
     "minutes"
@@ -53508,7 +53508,7 @@
    "ko": "오늘 손익(세후 월급 기준)",
    "en": "Today's net (after-tax pay)",
    "files": [
-    "LedgerSheet.swift:251"
+    "LedgerSheet.swift:259"
    ],
    "args": [],
    "targets": [
@@ -53781,7 +53781,7 @@
    "ko": "오프라인 — 보기만 할 수 있어요.",
    "en": "Offline — view only.",
    "files": [
-    "TripShareHost.swift:297"
+    "TripShareHost.swift:312"
    ],
    "args": [],
    "targets": [
@@ -53818,7 +53818,7 @@
    "ko": "올리다 끊겼어요. 다시 연결되면 이어서 올려요.",
    "en": "The upload was interrupted. It resumes when you're back online.",
    "files": [
-    "TripShareCreateSheet.swift:198"
+    "TripShareCreateSheet.swift:200"
    ],
    "args": [],
    "targets": [
@@ -54102,7 +54102,7 @@
    "ko": "운동 저장을 완료하지 못했습니다. {0}",
    "en": "Couldn't finish saving the workout. {0}",
    "files": [
-    "WatchWorkoutManager.swift:529"
+    "WatchWorkoutManager.swift:540"
    ],
    "args": [
     "error.localizedDescription"
@@ -54116,7 +54116,7 @@
    "ko": "운동 측정이 중단됐습니다. {0}",
    "en": "Workout tracking stopped. {0}",
    "files": [
-    "WatchWorkoutManager.swift:924"
+    "WatchWorkoutManager.swift:938"
    ],
    "args": [
     "error.localizedDescription"
@@ -54132,7 +54132,7 @@
    "files": [
     "AssistantMoreActions.swift:33",
     "MapHomeInteractionPolicy.swift:454",
-    "MapHomeLaunchPrompts.swift:557"
+    "MapHomeLaunchPrompts.swift:563"
    ],
    "args": [],
    "targets": [
@@ -54183,7 +54183,7 @@
    "ko": "운동을 시작하지 못했습니다. {0}",
    "en": "Couldn't start the workout. {0}",
    "files": [
-    "WatchWorkoutManager.swift:402"
+    "WatchWorkoutManager.swift:413"
    ],
    "args": [
     "error.localizedDescription"
@@ -55013,7 +55013,7 @@
    "ko": "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.",
    "en": "Couldn't find it. Try another name.",
    "files": [
-    "FirstRunTutorialView.swift:582"
+    "FirstRunTutorialView.swift:585"
    ],
    "args": [],
    "targets": [
@@ -55025,7 +55025,7 @@
    "ko": "위치를 허용하면 현재 위치로도 저장할 수 있습니다.",
    "en": "Allow location to use your current position.",
    "files": [
-    "FirstRunTutorialView.swift:604"
+    "FirstRunTutorialView.swift:609"
    ],
    "args": [],
    "targets": [
@@ -55086,7 +55086,7 @@
    "ko": "음성 녹음을 시작하지 못했습니다. {0}",
    "en": "Could not start voice recording. {0}",
    "files": [
-    "AppModel+Memos.swift:468"
+    "AppModel+Memos.swift:501"
    ],
    "args": [
     "reason"
@@ -55100,7 +55100,7 @@
    "ko": "음성 메모 재생을 시작하지 못했습니다.",
    "en": "Voice memo playback could not be started.",
    "files": [
-    "VoiceMemoServices.swift:197"
+    "VoiceMemoServices.swift:229"
    ],
    "args": [],
    "targets": [
@@ -55112,7 +55112,7 @@
    "ko": "음성 메모 파일을 찾지 못했습니다.",
    "en": "The voice memo file could not be found.",
    "files": [
-    "VoiceMemoServices.swift:191"
+    "VoiceMemoServices.swift:223"
    ],
    "args": [],
    "targets": [
@@ -55124,7 +55124,7 @@
    "ko": "음성 메모를 사용하려면 마이크 권한이 필요합니다.",
    "en": "Microphone access is required to use voice memos.",
    "files": [
-    "AppModel+Memos.swift:438"
+    "AppModel+Memos.swift:471"
    ],
    "args": [],
    "targets": [
@@ -55136,7 +55136,7 @@
    "ko": "음성 메모를 재생하지 못했습니다. {0}",
    "en": "Could not play the voice memo. {0}",
    "files": [
-    "AppModel+Memos.swift:489"
+    "AppModel+Memos.swift:522"
    ],
    "args": [
     "error.localizedDescription"
@@ -55216,7 +55216,7 @@
    "ko": "의료·건강",
    "en": "Health",
    "files": [
-    "LedgerCore.swift:16"
+    "LedgerCore.swift:25"
    ],
    "args": [],
    "targets": [
@@ -55372,7 +55372,7 @@
    "ko": "이 기기가 내 차 같아요",
    "en": "This looks like your car",
    "files": [
-    "MapHomeLaunchPrompts.swift:381"
+    "MapHomeLaunchPrompts.swift:387"
    ],
    "args": [],
    "targets": [
@@ -55759,7 +55759,7 @@
    "ko": "이 달 예산",
    "en": "Monthly budget",
    "files": [
-    "LedgerSheet.swift:71"
+    "LedgerSheet.swift:74"
    ],
    "args": [],
    "targets": [
@@ -55771,7 +55771,7 @@
    "ko": "이 달 지출 예산(원)",
    "en": "Spending budget this month (KRW)",
    "files": [
-    "LedgerSheet.swift:517"
+    "LedgerSheet.swift:525"
    ],
    "args": [],
    "targets": [
@@ -55783,7 +55783,7 @@
    "ko": "이 달 표로 내보내기",
    "en": "Export this month as a table",
    "files": [
-    "LedgerSheet.swift:83"
+    "LedgerSheet.swift:86"
    ],
    "args": [],
    "targets": [
@@ -55795,7 +55795,7 @@
    "ko": "이 달에는 기록이 없어요. + 로 더해 보세요.",
    "en": "No entries this month. Tap + to add one.",
    "files": [
-    "LedgerSheet.swift:55"
+    "LedgerSheet.swift:58"
    ],
    "args": [],
    "targets": [
@@ -55930,7 +55930,7 @@
    "ko": "이 안에 있으면 이 장소로 봐요. 나중에 장소 정보에서 바꿀 수 있어요.",
    "en": "Inside this range counts as this place. You can change it later in the place details.",
    "files": [
-    "FirstRunTutorialView.swift:611"
+    "FirstRunTutorialView.swift:616"
    ],
    "args": [],
    "targets": [
@@ -56102,7 +56102,7 @@
    "ko": "이 자리",
    "en": "This spot",
    "files": [
-    "MapHomeLaunchPrompts.swift:543"
+    "MapHomeLaunchPrompts.swift:549"
    ],
    "args": [],
    "targets": [
@@ -56635,7 +56635,7 @@
    "ko": "이름을 넣으면 계산해요.",
    "en": "Enter names to calculate.",
    "files": [
-    "LedgerSheet.swift:565"
+    "LedgerSheet.swift:573"
    ],
    "args": [],
    "targets": [
@@ -56659,8 +56659,8 @@
    "ko": "이미 가계부에 넣은 결제예요.",
    "en": "That payment is already in the ledger.",
    "files": [
-    "LedgerIntents.swift:98",
-    "LedgerIntents.swift:151"
+    "LedgerIntents.swift:118",
+    "LedgerIntents.swift:171"
    ],
    "args": [],
    "targets": [
@@ -56672,7 +56672,7 @@
    "ko": "이미 가계부에 넣은 입금이에요.",
    "en": "That deposit is already in the ledger.",
    "files": [
-    "LedgerIntents.swift:111"
+    "LedgerIntents.swift:131"
    ],
    "args": [],
    "targets": [
@@ -56900,7 +56900,7 @@
    "en": "Carried over",
    "files": [
     "LedgerExport.swift:84",
-    "LedgerSheet.swift:239",
+    "LedgerSheet.swift:247",
     "LedgerSummary.swift:92"
    ],
    "args": [],
@@ -57354,7 +57354,7 @@
    "ko": "일정 이어 올리기",
    "en": "Resume uploading plans",
    "files": [
-    "TripShareCreateSheet.swift:190"
+    "TripShareCreateSheet.swift:192"
    ],
    "args": [],
    "targets": [
@@ -57490,7 +57490,7 @@
    "ko": "일정을 방에 올리는 중이에요.",
    "en": "Uploading plans to the room.",
    "files": [
-    "TripShareHost.swift:296",
+    "TripShareHost.swift:311",
     "TripSharePanel.swift:81"
    ],
    "args": [],
@@ -57503,7 +57503,7 @@
    "ko": "일정을 올리는 중…",
    "en": "Uploading plans…",
    "files": [
-    "TripShareCreateSheet.swift:192"
+    "TripShareCreateSheet.swift:194"
    ],
    "args": [],
    "targets": [
@@ -57659,7 +57659,7 @@
    "ko": "읽지 못해 AI에게 확인을 맡겼어요. 메모 › AI에서 볼 수 있어요.",
    "en": "Couldn't read it, so it was sent to your AI. See Memo › AI.",
    "files": [
-    "LedgerSheet.swift:197"
+    "LedgerSheet.swift:205"
    ],
    "args": [],
    "targets": [
@@ -57671,7 +57671,7 @@
    "ko": "읽지 못했어요. + 로 직접 넣어 주세요.",
    "en": "Couldn't read it. Tap + to enter it yourself.",
    "files": [
-    "LedgerSheet.swift:200"
+    "LedgerSheet.swift:208"
    ],
    "args": [],
    "targets": [
@@ -57708,7 +57708,7 @@
    "ko": "입력",
    "en": "Enter",
    "files": [
-    "TripShareHost.swift:308"
+    "TripShareHost.swift:323"
    ],
    "args": [],
    "targets": [
@@ -57884,7 +57884,7 @@
    "ko": "자동 정산으로 되돌리기",
    "en": "Back to automatic settlement",
    "files": [
-    "LedgerSheet.swift:449"
+    "LedgerSheet.swift:457"
    ],
    "args": [],
    "targets": [
@@ -57945,7 +57945,7 @@
    "ko": "자동차(내 차·택시)",
    "en": "Car (mine or a taxi)",
    "files": [
-    "MapHomeLaunchPrompts.swift:437"
+    "MapHomeLaunchPrompts.swift:443"
    ],
    "args": [],
    "targets": [
@@ -58051,7 +58051,19 @@
    "ko": "자전거를 탔나요?",
    "en": "Did you ride a bicycle?",
    "files": [
-    "MapHomeLaunchPrompts.swift:473"
+    "MapHomeLaunchPrompts.swift:479"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "자주 가는 곳|Frequent place",
+   "ko": "자주 가는 곳",
+   "en": "Frequent place",
+   "files": [
+    "AppModel+FrequentPlaces.swift:782"
    ],
    "args": [],
    "targets": [
@@ -58135,7 +58147,7 @@
    "ko": "자주 머무는 곳 등록",
    "en": "Register a place you stay often",
    "files": [
-    "MapHomeLaunchPrompts.swift:332"
+    "MapHomeLaunchPrompts.swift:338"
    ],
    "args": [],
    "targets": [
@@ -58159,7 +58171,7 @@
    "ko": "자주 머무는 곳이 있어요",
    "en": "You stay here often",
    "files": [
-    "MapHomeLaunchPrompts.swift:443"
+    "MapHomeLaunchPrompts.swift:449"
    ],
    "args": [],
    "targets": [
@@ -58208,7 +58220,7 @@
    "en": "Balance",
    "files": [
     "LedgerExport.swift:22",
-    "LedgerSheet.swift:242",
+    "LedgerSheet.swift:250",
     "LedgerSummary.swift:93"
    ],
    "args": [],
@@ -58448,7 +58460,7 @@
    "ko": "장소",
    "en": "Place",
    "files": [
-    "LedgerSheet.swift:359",
+    "LedgerSheet.swift:367",
     "MapHomeNLEClipEditor.swift:254"
    ],
    "args": [],
@@ -58633,8 +58645,8 @@
    "ko": "저장",
    "en": "Save",
    "files": [
-    "LedgerSheet.swift:389",
-    "LedgerSheet.swift:529",
+    "LedgerSheet.swift:397",
+    "LedgerSheet.swift:537",
     "LedgerTripView.swift:305"
    ],
    "args": [],
@@ -58699,8 +58711,8 @@
    "en": "Saved",
    "files": [
     "FirstRunTutorialGuides.swift:670",
-    "FirstRunTutorialView.swift:501",
-    "FirstRunTutorialView.swift:511"
+    "FirstRunTutorialView.swift:502",
+    "FirstRunTutorialView.swift:512"
    ],
    "args": [],
    "targets": [
@@ -58785,7 +58797,7 @@
    "ko": "저장하지 못했어요. 잠시 뒤에 다시 해 주세요.",
    "en": "Couldn't save. Try again in a moment.",
    "files": [
-    "TripShareLedger.swift:406"
+    "TripShareLedger.swift:487"
    ],
    "args": [],
    "targets": [
@@ -59031,7 +59043,7 @@
    "ko": "전체 표로 내보내기",
    "en": "Export everything as a table",
    "files": [
-    "LedgerSheet.swift:89"
+    "LedgerSheet.swift:92"
    ],
    "args": [],
    "targets": [
@@ -59212,7 +59224,7 @@
    "ko": "정산을 마감해서 공동 지출은 바꿀 수 없어요.",
    "en": "Settlement is closed, so shared expenses can't be changed.",
    "files": [
-    "TripShareLedger.swift:402"
+    "TripShareLedger.swift:483"
    ],
    "args": [],
    "targets": [
@@ -59236,8 +59248,8 @@
    "ko": "정산하기",
    "en": "Settle up",
    "files": [
-    "LedgerSheet.swift:72",
-    "LedgerSheet.swift:579"
+    "LedgerSheet.swift:75",
+    "LedgerSheet.swift:587"
    ],
    "args": [],
    "targets": [
@@ -59525,8 +59537,8 @@
    "ko": "종류",
    "en": "Type",
    "files": [
-    "LedgerSheet.swift:397",
-    "LedgerSheet.swift:431"
+    "LedgerSheet.swift:405",
+    "LedgerSheet.swift:439"
    ],
    "args": [],
    "targets": [
@@ -59696,7 +59708,7 @@
    "ko": "주소나 장소 이름 검색",
    "en": "Search address or place",
    "files": [
-    "FirstRunTutorialView.swift:531"
+    "FirstRunTutorialView.swift:534"
    ],
    "args": [],
    "targets": [
@@ -60049,7 +60061,7 @@
    "ko": "지금 정하기",
    "en": "Review now",
    "files": [
-    "MapHomeLaunchPrompts.swift:453"
+    "MapHomeLaunchPrompts.swift:459"
    ],
    "args": [],
    "targets": [
@@ -60702,7 +60714,7 @@
    "ko": "지도에서 저장됨",
    "en": "Saved from the map",
    "files": [
-    "FirstRunTutorialView.swift:523"
+    "FirstRunTutorialView.swift:525"
    ],
    "args": [],
    "targets": [
@@ -60803,8 +60815,8 @@
    "ko": "지우기",
    "en": "Delete",
    "files": [
-    "LedgerSheet.swift:46",
-    "LedgerSheet.swift:366",
+    "LedgerSheet.swift:49",
+    "LedgerSheet.swift:374",
     "LedgerTripView.swift:36"
    ],
    "args": [],
@@ -60829,7 +60841,7 @@
    "ko": "지우면 이 메모는 「메모로만」이 돼 다시 가계부에 들어오지 않아요.",
    "en": "Deleting makes this memo note-only so it won't come back to the ledger.",
    "files": [
-    "LedgerSheet.swift:375"
+    "LedgerSheet.swift:383"
    ],
    "args": [],
    "targets": [
@@ -60934,7 +60946,7 @@
    "ko": "지출",
    "en": "Spent",
    "files": [
-    "LedgerSheet.swift:241",
+    "LedgerSheet.swift:249",
     "MapHomeInteractionPolicy.swift:455"
    ],
    "args": [],
@@ -61059,7 +61071,7 @@
    "ko": "지하철·버스 탑승 확인",
    "en": "Check a subway or bus ride",
    "files": [
-    "MapHomeLaunchPrompts.swift:329"
+    "MapHomeLaunchPrompts.swift:335"
    ],
    "args": [],
    "targets": [
@@ -61139,7 +61151,7 @@
    "ko": "직접 넣는 환율 (1단위 = 원)",
    "en": "Manual rate (1 unit = KRW)",
    "files": [
-    "LedgerSheet.swift:416"
+    "LedgerSheet.swift:424"
    ],
    "args": [],
    "targets": [
@@ -61711,7 +61723,7 @@
    "ko": "초기 비밀번호",
    "en": "Default password",
    "files": [
-    "FirstRunTutorialView.swift:679"
+    "FirstRunTutorialView.swift:687"
    ],
    "args": [],
    "targets": [
@@ -61738,7 +61750,7 @@
    "ko": "초대 링크 보내기",
    "en": "Send invite link",
    "files": [
-    "TripShareCreateSheet.swift:176",
+    "TripShareCreateSheet.swift:178",
     "TripSharePanel.swift:53"
    ],
    "args": [],
@@ -61787,7 +61799,7 @@
    "ko": "초대 링크와 비밀번호를 둘 다 아는 사람만 들어올 수 있어요(10명까지). 비밀번호는 링크와 다른 방법으로 알려 주세요. 장소의 좌표는 올리지 않고 이름만 함께 봐요.",
    "en": "Only people who know both the invite link and the password can join (up to 10). Send the password separately from the link. Place coordinates stay on your device; only names are shared.",
    "files": [
-    "TripShareCreateSheet.swift:155"
+    "TripShareCreateSheet.swift:157"
    ],
    "args": [],
    "targets": [
@@ -62064,7 +62076,7 @@
    "ko": "추천: {0}",
    "en": "Suggested: {0}",
    "files": [
-    "MapHomeLaunchPrompts.swift:394"
+    "MapHomeLaunchPrompts.swift:400"
    ],
    "args": [
     "rule.label"
@@ -62233,7 +62245,7 @@
    "files": [
     "AssistantMoreActions.swift:32",
     "MapHomeInteractionPolicy.swift:453",
-    "MapHomeLaunchPrompts.swift:556"
+    "MapHomeLaunchPrompts.swift:562"
    ],
    "args": [],
    "targets": [
@@ -62287,7 +62299,7 @@
    "en": "Canceled",
    "files": [
     "LedgerMemoPanel.swift:265",
-    "LedgerSheet.swift:285"
+    "LedgerSheet.swift:293"
    ],
    "args": [],
    "targets": [
@@ -62454,7 +62466,7 @@
    "ko": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진·결제 화면 캡처를 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.",
    "en": "Paste a card payment text, or pick a receipt photo or a payment screenshot, to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.",
    "files": [
-    "LedgerSheet.swift:187"
+    "LedgerSheet.swift:195"
    ],
    "args": [],
    "targets": [
@@ -62588,7 +62600,7 @@
    "ko": "카페·간식",
    "en": "Cafe",
    "files": [
-    "LedgerCore.swift:12",
+    "LedgerCore.swift:21",
     "StickerArtBasics.swift:10"
    ],
    "args": [],
@@ -63158,7 +63170,7 @@
    "ko": "탈것 탑승 확인",
    "en": "Check a ride",
    "files": [
-    "MapHomeLaunchPrompts.swift:330"
+    "MapHomeLaunchPrompts.swift:336"
    ],
    "args": [],
    "targets": [
@@ -64187,7 +64199,7 @@
    "en": "School",
    "files": [
     "AssistantMoreActions.swift:29",
-    "MapHomeLaunchPrompts.swift:553"
+    "MapHomeLaunchPrompts.swift:559"
    ],
    "args": [],
    "targets": [
@@ -64260,7 +64272,7 @@
    "en": "Academy",
    "files": [
     "AssistantMoreActions.swift:30",
-    "MapHomeLaunchPrompts.swift:554",
+    "MapHomeLaunchPrompts.swift:560",
     "record-classification.json:0"
    ],
    "args": [],
@@ -64408,7 +64420,7 @@
    "ko": "할 일 목록",
    "en": "To-do list",
    "files": [
-    "MapHomeLaunchPrompts.swift:281"
+    "MapHomeLaunchPrompts.swift:287"
    ],
    "args": [],
    "targets": [
@@ -64468,7 +64480,7 @@
    "ko": "함께 쓰기",
    "en": "Share with companions",
    "files": [
-    "TripShareCreateSheet.swift:153"
+    "TripShareCreateSheet.swift:155"
    ],
    "args": [],
    "targets": [
@@ -64552,7 +64564,7 @@
    "ko": "함께 쓴 돈",
    "en": "Total spent",
    "files": [
-    "LedgerSheet.swift:572"
+    "LedgerSheet.swift:580"
    ],
    "args": [],
    "targets": [
@@ -64579,7 +64591,7 @@
    "ko": "함께한 사람 (쉼표로, 예: 민수, 지영)",
    "en": "People (comma separated)",
    "files": [
-    "LedgerSheet.swift:556"
+    "LedgerSheet.swift:564"
    ],
    "args": [],
    "targets": [
@@ -64938,7 +64950,7 @@
    "ko": "현재 오디오 입력 형식을 확인할 수 없습니다.",
    "en": "The current audio input format could not be determined.",
    "files": [
-    "VoiceMemoServices.swift:113"
+    "VoiceMemoServices.swift:145"
    ],
    "args": [],
    "targets": [
@@ -65027,7 +65039,7 @@
    "ko": "현재 위치로 저장",
    "en": "Use current location",
    "files": [
-    "FirstRunTutorialView.swift:593"
+    "FirstRunTutorialView.swift:598"
    ],
    "args": [],
    "targets": [
@@ -65039,7 +65051,7 @@
    "ko": "현재 위치로 저장됨",
    "en": "Saved from current location",
    "files": [
-    "FirstRunTutorialView.swift:590"
+    "FirstRunTutorialView.swift:594"
    ],
    "args": [],
    "targets": [
@@ -65063,7 +65075,7 @@
    "ko": "현재 위치를 받는 중입니다. 검색으로도 저장할 수 있습니다.",
    "en": "Waiting for your location. You can also search.",
    "files": [
-    "FirstRunTutorialView.swift:603"
+    "FirstRunTutorialView.swift:608"
    ],
    "args": [],
    "targets": [
@@ -65469,7 +65481,7 @@
    "files": [
     "AppShellView.swift:1101",
     "AssistantConnectView.swift:213",
-    "AssistantPINSheet.swift:60"
+    "AssistantPINSheet.swift:61"
    ],
    "args": [],
    "targets": [
@@ -65506,7 +65518,7 @@
    "ko": "확인할 것은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.",
    "en": "You can hand these to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.",
    "files": [
-    "MapHomeLaunchPrompts.swift:339"
+    "MapHomeLaunchPrompts.swift:345"
    ],
    "args": [],
    "targets": [
@@ -65592,7 +65604,7 @@
    "ko": "환율을 몰라요. 아래에 직접 넣어 주세요.",
    "en": "Rate unknown. Enter it below.",
    "files": [
-    "LedgerSheet.swift:414"
+    "LedgerSheet.swift:422"
    ],
    "args": [],
    "targets": [
@@ -65725,7 +65737,7 @@
    "files": [
     "AssistantMoreActions.swift:31",
     "FirstRunTutorialGuides.swift:695",
-    "MapHomeLaunchPrompts.swift:555"
+    "MapHomeLaunchPrompts.swift:561"
    ],
    "args": [],
    "targets": [

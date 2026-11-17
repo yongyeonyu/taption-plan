@@ -6079,6 +6079,10 @@
 "내 데이터 내보내기|Export my data": "Exportar mis datos",
 "내 데이터|My data": "Mis datos",
 "모든 BOKKI Plan 데이터를 삭제할까요?|Delete all BOKKI Plan data?": "¿Eliminar todos los datos de BOKKI Plan?",
-"모든 데이터 삭제|Delete all data": "Eliminar todos los datos"
+"모든 데이터 삭제|Delete all data": "Eliminar todos los datos",
+"AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호(또는 예전 AI PIN)를 한 번만 넣어 주세요.|The AI server still has an old value. Enter your previous app password (or old AI PIN) once.": "El servidor de IA aún tiene un valor antiguo. Introduce una vez tu contraseña de la app anterior (o el PIN de IA antiguo).",
+"바꾸기 전 앱 비밀번호 또는 예전 AI PIN 6자리|Previous app password or old AI PIN (6 digits)": "Contraseña de la app anterior o PIN de IA antiguo (6 dígitos)",
+"바꾸기 전 앱 비밀번호(또는 예전에 따로 정한 AI PIN)를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.|Enter your previous app password (or the AI PIN you set before) once, and it switches to your current app password.": "Introduce una vez tu contraseña de la app anterior (o el PIN de IA que configuraste antes) y se cambiará a tu contraseña de la app actual.",
+"자주 가는 곳|Frequent place": "Lugar frecuente"
 }
 }
