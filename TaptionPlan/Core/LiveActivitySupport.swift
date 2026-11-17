@@ -536,6 +536,17 @@ actor TaptionLiveActivityController {
     }
 }
 
+/// 계획을 고친 뒤 Live Activity를 다시 그릴 계획. 실행 중이고 활동에 보이는 값이 바뀐 것만 고른다.
+enum LiveActivityPlanEditPolicy {
+    static func changedRunningPlans(before: [PlanRecord], after: [PlanRecord]) -> [PlanRecord] {
+        let previous = Dictionary(before.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return after.filter { plan in
+            guard plan.status == .running, let old = previous[plan.id] else { return false }
+            return old.title != plan.title || old.categoryID != plan.categoryID || old.span != plan.span
+        }
+    }
+}
+
 enum LiveActivityLiveness {
     static func isLive(_ state: ActivityState) -> Bool {
         switch state {

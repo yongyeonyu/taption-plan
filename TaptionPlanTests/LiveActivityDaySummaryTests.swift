@@ -179,4 +179,28 @@ final class LiveActivityPlanTests: XCTestCase {
         XCTAssertNotEqual(stopped.status, .running)
     }
 
+    /// 실행 중 계획의 제목·분류·시간을 고치면 그 계획만 Live Activity를 다시 그린다.
+    func testEditedRunningPlanIsSelectedForLiveActivityUpdate() {
+        let running = runningPlan()
+        let planned = PlanRecord(
+            title: "회의",
+            span: TimeSpan(start: now.addingTimeInterval(3_600), end: now.addingTimeInterval(7_200)),
+            categoryID: "work"
+        )
+        var renamed = running
+        renamed.title = "소설 읽기"
+        var moved = planned
+        moved.span = TimeSpan(start: now.addingTimeInterval(4_000), end: now.addingTimeInterval(8_000))
+        XCTAssertEqual(
+            LiveActivityPlanEditPolicy.changedRunningPlans(before: [running, planned], after: [renamed, moved]).map(\.id),
+            [running.id]
+        )
+        var extended = running
+        extended.span = TimeSpan(start: running.span.start, end: running.span.end.addingTimeInterval(900))
+        XCTAssertEqual(
+            LiveActivityPlanEditPolicy.changedRunningPlans(before: [running], after: [extended]).map(\.span),
+            [extended.span]
+        )
+        XCTAssertTrue(LiveActivityPlanEditPolicy.changedRunningPlans(before: [running], after: [running]).isEmpty)
+    }
 }

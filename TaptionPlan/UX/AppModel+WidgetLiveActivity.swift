@@ -287,6 +287,21 @@ extension AppModel {
         await persist()
     }
 
+    /// 사용자 편집 저장이 끝난 뒤, 실행 중 계획의 표시 값이 바뀌었으면 그 Live Activity만 고친다(WLA1117A01).
+    func refreshRunningPlanLiveActivity(before: [PlanRecord]) async {
+        guard !TaptionExternalPrivacyStore.isLocked else { return }
+        for plan in LiveActivityPlanEditPolicy.changedRunningPlans(before: before, after: snapshot.plans) {
+            let majorCategory = currentMajorCategory(for: plan)
+            try? await liveActivityController.update(
+                plan: plan,
+                catStyle: snapshot.settings.catStyle,
+                majorCategoryID: majorCategory.id,
+                majorCategoryTitle: majorCategory.title,
+                majorCategorySystemImage: majorCategory.systemImage
+            )
+        }
+    }
+
     func skipPlan(_ planID: UUID) async {
         guard let index = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
             userFacingError = AppLanguagePreference.text(
