@@ -965,11 +965,10 @@ struct TravelModeView: View {
         let minute = detail?.start ?? cell?.minute
         if planCell != nil { planCell = nil }
         let key = dayKey(entry), table = table(entry)
-        let last = table.blocks.max { $0.endMinute < $1.endMinute }
         let kind = column.map { TravelPlanColumns.kind(forColumn: $0, in: table.columns) }.flatMap(TripImportItem.Kind.init(rawValue:)) ?? (parent == nil ? .sight : .other)
         var target = TravelQuickEntrySheet.Target.new(
             trip: entry.trip, dayKey: key, dayLabel: dayLabel(entry, key: key),
-            startMinute: minute ?? TravelQuickEntry.nextStart(lastEndMinute: last?.endMinute, nowMinute: table.nowMinute), kind: kind
+            startMinute: minute ?? TravelCoursePlanner.nextStart(blocks: table.blocks, nowMinute: table.nowMinute), kind: kind
         )
         target.anchor = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops).point
         target.duration = detail?.duration ?? cell?.chosenDuration

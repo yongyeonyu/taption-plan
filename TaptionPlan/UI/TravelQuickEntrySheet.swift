@@ -98,8 +98,10 @@ struct TravelQuickEntrySheet: View {
     static let sliderStep = 5
 
     /// 시작 슬라이더: 길이는 그대로 두고 옮기되, 끝이 24시를 넘으면 길이를 줄인다.
-    static func movingStart(to minute: Int, duration: Int) -> (start: Int, duration: Int) {
+    /// 이미 자정을 넘는 일정(밤 비행·잠)은 `previous`(옮기기 전 시작)로 알아보고 길이를 줄이지 않는다.
+    static func movingStart(to minute: Int, duration: Int, from previous: Int? = nil) -> (start: Int, duration: Int) {
         let start = min(max(minute / sliderStep * sliderStep, 0), 1_440 - sliderStep)
+        if let previous, previous + duration > 1_440 { return (start, duration) }
         return (start, min(max(duration, sliderStep), 1_440 - start))
     }
 
@@ -291,7 +293,7 @@ struct TravelQuickEntrySheet: View {
     private var timeSliders: some View {
         VStack(spacing: 6) {
             timeSlider(language.text("시작", "Start"), minute: startMinute, range: 0...Double(1_440 - Self.sliderStep), id: "Start") { value in
-                let next = Self.movingStart(to: value, duration: duration)
+                let next = Self.movingStart(to: value, duration: duration, from: startMinute)
                 if next.start != startMinute { startMinute = next.start }
                 if next.duration != duration { duration = next.duration }
             }
