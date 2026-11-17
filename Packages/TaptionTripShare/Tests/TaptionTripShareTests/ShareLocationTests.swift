@@ -40,6 +40,27 @@ final class ShareLocationTests: XCTestCase {
         XCTAssertEqual(ShareLocationPayload(state: .help, latitude: 1, longitude: 2, at: 0, note: String(repeating: "가", count: 80)).note?.count, 40)
     }
 
+    /// 도움 요청 메모는 40자여도 이모지처럼 큰 글자면 수백 바이트다. 잠근 뒤 서버 한도(512바이트)를 넘으면 늘 413이라
+    /// 메모 끝을 덜어 한도 안에 넣는다(TSR1117A01).
+    func testLongHelpNoteIsTrimmedToFitTheServerLimit() throws {
+        let family = "👨‍👩‍👧‍👦"
+        let help = ShareLocationPayload(state: .help, latitude: -33.123456789, longitude: 151.987654321, accuracy: 1234, at: 1_765_000_000_000,
+                                        note: String(repeating: family, count: 60))
+        XCTAssertEqual(help.note?.count, 40)
+        XCTAssertGreaterThan(help.note?.utf8.count ?? 0, 512)
+        let sealed = try ShareLocationSealer.seal(help, keys: keys, roomID: "AAECAwQFBgcICQoLDA0ODw", member: 2, epoch: 1)
+        XCTAssertLessThanOrEqual(ShareBytes.data(base64URL: sealed)?.count ?? 999, ShareLocationSealer.maxCipherBytes)
+        let opened = try XCTUnwrap(ShareLocationSealer.open(sealed, keys: keys, roomID: "AAECAwQFBgcICQoLDA0ODw", member: 2, epoch: 1))
+        let note = try XCTUnwrap(opened.note)
+        XCTAssertFalse(note.isEmpty)
+        XCTAssertTrue(help.note?.hasPrefix(note) == true, "앞에서부터 글자 단위로 남긴다")
+        XCTAssertEqual([opened.lat, opened.lon], [help.lat, help.lon])
+        // 짧은 메모는 그대로.
+        let short = ShareLocationPayload(state: .help, latitude: 1, longitude: 2, at: 0, note: "역 앞 출구 3번")
+        let plain = try ShareLocationSealer.seal(short, keys: keys, roomID: "AAECAwQFBgcICQoLDA0ODw", member: 2, epoch: 1)
+        XCTAssertEqual(ShareLocationSealer.open(plain, keys: keys, roomID: "AAECAwQFBgcICQoLDA0ODw", member: 2, epoch: 1)?.note, "역 앞 출구 3번")
+    }
+
     /// 모이는 곳을 해제하면 방에 남는 항목에 좌표·이름·시각이 남지 않는다(REV1117A01). 정한 사람만 둔다.
     func testClearedMeetingPointKeepsNoCoordinates() {
         let spot = ShareMeetContent(name: "역 앞", latitude: 35.68, longitude: 139.76, at: 1_800_000_000_000, by: 2)
