@@ -243,6 +243,20 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(transfers.reduce(0) { $0 + $1.amountKRW }, 50_000, accuracy: 1)
     }
 
+    /// 낸 사람 칸 끝의 빈칸(REV1117A04): 「민수 」가 낸 돈이 내 돈으로 세지 않는다.
+    func testSettlementTrimsPayerBeforeLookingUp() {
+        let entries = [LedgerEntry(occurredAt: at(12), amount: 30_000, amountKRW: 30_000, title: "점심", payer: "민수 ")]
+        let transfers = LedgerSettlement.transfers(entries, people: ["민수"], me: "나")
+        XCTAssertEqual(transfers, [LedgerSettlement.Transfer(from: "나", to: "민수", amountKRW: 15_000)])
+    }
+
+    /// 아주 큰 금액(REV1117A04): 표 내보내기가 Int 변환으로 멈추지 않는다.
+    func testTablePlainSurvivesHugeAmounts() {
+        XCTAssertEqual(LedgerTable.plain(12_000), "12000")
+        XCTAssertEqual(LedgerTable.plain(1e20), "100000000000000000000.00")
+        XCTAssertEqual(LedgerTable.plain(.infinity), "inf")
+    }
+
     func testBookSavesDeletesAndComputesTodayNet() async {
         let book = LedgerBook(store: { nil })
         let lunch = await book.save(LedgerEntry(occurredAt: at(12), amount: 10_000, title: "점심"))
