@@ -68,12 +68,7 @@ actor TaptionBackupEngine {
         var outcome: Outcome
         var header: TaptionBackupHeader?
         var message: String
-        /// `.failed`일 때의 원래 오류. 화면은 연관값(진단용 원문) 대신 이것으로 문장을 만든다.
-        var failure: Error? = nil
-
-        static func == (lhs: Self, rhs: Self) -> Bool {
-            lhs.scope == rhs.scope && lhs.outcome == rhs.outcome && lhs.header == rhs.header && lhs.message == rhs.message
-        }
+        var failureDetail: String? = nil // `.failed`의 사용자 문장. 연관값은 진단용 원문이다.
     }
 
     struct RestoreSummary: Equatable, Sendable {
@@ -308,13 +303,9 @@ actor TaptionBackupEngine {
         do {
             return try await performBackup(scope: scope, password: password, now: now)
         } catch is CancellationError {
-            var value = result(scope, .failed("취소됨"), "\(scope.fileName): 백업이 취소됐다")
-            value.failure = CancellationError()
-            return value
+            return result(scope, .failed("취소됨"), "\(scope.fileName): 백업이 취소됐다", failure: CancellationError())
         } catch {
-            var value = result(scope, .failed("\(error)"), "\(scope.fileName): 백업에 실패했다 - \(error)")
-            value.failure = error
-            return value
+            return result(scope, .failed("\(error)"), "\(scope.fileName): 백업에 실패했다 - \(error)", failure: error)
         }
     }
 
@@ -1195,9 +1186,9 @@ actor TaptionBackupEngine {
 
     private func result(
         _ scope: TaptionBackupScope, _ outcome: BackupResult.Outcome, _ message: String,
-        header: TaptionBackupHeader? = nil
+        header: TaptionBackupHeader? = nil, failure: Error? = nil
     ) -> BackupResult {
-        BackupResult(scope: scope, outcome: outcome, header: header, message: message)
+        BackupResult(scope: scope, outcome: outcome, header: header, message: message, failureDetail: failure.map(PlanBackupPresenter.message(for:)))
     }
 
     private func interval(of month: TaptionBackupMonth) throws -> (start: Date, end: Date) {
