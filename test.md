@@ -15,6 +15,18 @@
 - 앞선 시도: r1 단위 시험은 `WatchDayDatabase`가 앱 시험 대상에 없어 컴파일 실패 → 시험을 패키지로 옮김.
 - 제한: 실기기·실제 WatchConnectivity 전달·watchOS 백그라운드 예산(10초, 창 1개가 그 안에 끝나는지)은 확인 못 함. 옛 판 재생성 시간은 재지 않음(2시간이면 창 5,625 × 표본 36,000 비교). 하루에 누적 요약이 많으면 요약마다 표본 정렬 O(N log N)은 남음. ack를 안 주는 iPhone이면 운동 항목도 주변 기록처럼 outbox(4,096건 상한)에 쌓이고 넘치면 예전 직접 전송으로 돌아감.
 
+## FRT1117A01 · 첫 실행 안내 결함 둘: 장소 검색 경쟁·「내 차」 재탭 영구 제외 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 출발: REV1117A04 「안 고친 것」 Medium(첫 실행), main `0551fecb`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data는 외장 볼륨. 로그 `build/validation/FRT1117A01/`.
+- ① 장소 검색: `FirstRunPlacePicker`가 검색 결과를 누르면 `MKLocalSearch`를 기다린 뒤 무조건 저장해, 그 사이 고른 다른 결과·다녀온 곳·지도 핀·현재 위치를 늦게 온 옛 결과가 덮음. 고침: `FirstRunPlaceSelection`(고르기마다 차례를 올리고, 검색은 끝났을 때 자기 차례가 마지막일 때만 저장·실패 표시). 커밋 `17283d65`.
+- ② 「내 차」: 튜토리얼 줄은 체크 토글인데 다시 누르면 `setCarAudio(isMyCar: false)`로 거절 목록에 넣고 최근 목록에서도 빼서, 지금 연결 중이 아니면 줄이 사라지고 CarPlay 자동 등록·묻기도 막힘. 「아니요」·「삭제」의 영구 제외는 의도(`setCarAudio` 주석, `testCarPlayRegistersEveryCarAndRemembersNo`)라 그대로 두고, 튜토리얼 끄기만 `toggleTutorialCarAudio`로 등록만 풀고 최근 목록 앞에 돌려 둠. 커밋 `dae56005`.
+- 먼저 실패: 새 시험 3개를 고치기 전 동작(차례 확인 없음, 끄기 = `setCarAudio(false)`)에 돌려 `testLateSearchDoesNotOverwriteLaterChoice`·`testCarRowSecondTapUndoesInsteadOfDismissing` 실패 6건(`red-2.log`) → 고친 뒤 `FirstRunTutorialTests` 26·`CarAudioTravelConfirmationTests` 12 통과(`green-1.log`).
+- 단위 `-only-testing:TaptionPlanTests`: 2,974건 **실패 0**, 건너뜀 25(`unit-all-2.log`, 시험 빌드 = 앱 Debug 빌드). 첫 실행(`unit-all.log`)은 시뮬레이터가 앱을 띄우지 못해(`launchApplicationWithID … No such process`) 시험 없이 끝나 다시 돌림.
+- UI `TaptionPlanFirstRunTutorialUITests` 5건 통과(`ui-firstrun.log`). 튜토리얼을 지나는 `TaptionPlanLanguagePackUITests.testWalkMainScreens`는 언어 지정 환경값이 없어 건너뜀(`ui-langpack.log`) — 통과로 치지 않음.
+- 구조 지표 기준선 통과, import 경계 통과(`arch-metrics-final.log`·`import-boundary-final.log`). 새 문구 없음 → 번역 작업 없음.
+- 지킨 것: 기본 앱 비밀번호 등록 흐름·권한 창·홈 배치·저장 형식 그대로, 위젯·Live Activity·Watch 파일 안 건드림.
+- 하지 않은 것: 실기기 확인(이번 범위 밖), 지도 위 실제 MapKit 검색 지연 재현은 단위 시험의 기다리는 검색으로 대신함.
+
 ## MRG1117A02 · 리뷰 4개·옛 화면 정리·성능 고침을 합친 main 전체 확인 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: `d72ac89e`(REV1117A01~04, LGC1117A01, PRF1117A02 합침 + 번역 재생성). Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data는 외장 볼륨. 로그 `build/validation/MRG1117A02/`.

@@ -455,6 +455,7 @@ private struct FirstRunPlacePicker: View {
     @State private var completer = MapHomeSearchCompleter()
     @State private var savedName: String?
     @State private var searchFailed = false
+    @State private var selection = FirstRunPlaceSelection()
     @FocusState private var isSearchFocused: Bool
 
     private var place: FrequentPlace? {
@@ -519,8 +520,10 @@ private struct FirstRunPlacePicker: View {
                 language: language
             ) { coordinate in
                 guard let place else { return }
-                model.setFrequentPlaceLocation(place.id, latitude: coordinate.latitude, longitude: coordinate.longitude)
-                savedName = language.text("지도에서 저장됨", "Saved from the map")
+                selection.choose {
+                    model.setFrequentPlaceLocation(place.id, latitude: coordinate.latitude, longitude: coordinate.longitude)
+                    savedName = language.text("지도에서 저장됨", "Saved from the map")
+                }
                 clearSearch()
             }
 
@@ -586,8 +589,10 @@ private struct FirstRunPlacePicker: View {
 
             Button {
                 guard let place else { return }
-                model.setFrequentPlaceToCurrentLocation(place.id)
-                savedName = language.text("현재 위치로 저장됨", "Saved from current location")
+                selection.choose {
+                    model.setFrequentPlaceToCurrentLocation(place.id)
+                    savedName = language.text("현재 위치로 저장됨", "Saved from current location")
+                }
                 clearSearch()
             } label: {
                 Label(language.text("현재 위치로 저장", "Use current location"), systemImage: "location.fill")
@@ -619,26 +624,29 @@ private struct FirstRunPlacePicker: View {
     private func select(_ completion: MKLocalSearchCompletion) {
         let request = MKLocalSearch.Request(completion: completion)
         Task { @MainActor in
-            guard let item = try? await MKLocalSearch(request: request).start().mapItems.first,
-                  let place else {
-                searchFailed = true
-                return
+            await selection.search({ try? await MKLocalSearch(request: request).start().mapItems.first }) { item in
+                guard let item, let place else {
+                    searchFailed = true
+                    return
+                }
+                let coordinate = item.placemark.coordinate
+                model.setFrequentPlaceLocation(
+                    place.id,
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude
+                )
+                savedName = item.name ?? completion.title
+                clearSearch()
             }
-            let coordinate = item.placemark.coordinate
-            model.setFrequentPlaceLocation(
-                place.id,
-                latitude: coordinate.latitude,
-                longitude: coordinate.longitude
-            )
-            savedName = item.name ?? completion.title
-            clearSearch()
         }
     }
 
     private func select(_ result: MapHomeSearchResult) {
         guard let place else { return }
-        model.setFrequentPlaceLocation(place.id, latitude: result.coordinate.latitude, longitude: result.coordinate.longitude)
-        savedName = result.title
+        selection.choose {
+            model.setFrequentPlaceLocation(place.id, latitude: result.coordinate.latitude, longitude: result.coordinate.longitude)
+            savedName = result.title
+        }
         clearSearch()
     }
 
