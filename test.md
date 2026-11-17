@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## LGC1117A01 · 꺼진 옛 화면 걷기 (2026-11-17, 빌드·시험 미완료)
+
+- 판: 브랜치 `worktree-agent-aec7227c3e3bd694e`, `4aa16489` 위 커밋 4개. 살림·제거 표와 전후 줄 수는 `docs/reviews/LGC1117A01.md`(앱 Swift 206,315 → 178,293줄, 단위 시험 87,108 → 84,659줄, 파일 67개 지움).
+- 통과: 구조 점검 `architecture-metrics.py --check` 통과, import 경계 통과, 번역 `check.py` 실패 0(로그 `build/validation/LGC1117A01/architecture-check.log`·`import-boundary.log`·`l10n.log`). 타입 도달성 재계산으로 새로 닿지 않게 된 타입 0개.
+- 앱 Debug 빌드: 1차는 `TimelineFrameBudgetProbe.swift`의 `#endif`를 함께 지운 오류, 2차는 SwiftData `PlanItem`이 쓰는 `PlanCategory`를 지운 오류로 실패(`app-build-1.log`·`app-build-2.log`). 둘 다 고침(`PlanItem.swift`는 HEAD 그대로 되돌림, 프로브 파일은 남은 사용처가 없어 지움). 2차 로그의 오류는 이 한 파일뿐이었으나 한 파일 오류가 다른 오류를 가렸을 수 있음.
+- **멈춤**: 3·4차 빌드 직전 남은 공간이 29GB(기준 30GB 아래)라 규칙대로 빌드를 멈춤(`app-build-3.log`·`app-build-4.log`). 공용 잠금은 다른 세션 Release 빌드로 약 40분 기다렸음.
+- 남은 검증 기준: 앱 Debug·위젯·Watch·Watch 위젯 빌드, `-only-testing:TaptionPlanTests` 전체 실패 0(예외 `FeatureEngineTests.testImmediateSensorAnalysisKeepsEveryPendingDay`), UI 시험 `TaptionPlanSmokeUITests/testUploadDiagnosticsLogs`(데이터 보호 시트)·`testLaunchShowsHomeWithoutChangingData`. 실기기·TestFlight 없음.
+
 ## TFB1117A349 · TestFlight 349 (2026-11-17 새벽)
 
 - 판: main `25176d78`(TBH1116A01·RFT1116A02·RFT1116A03·PRF1116A02·DCB1116A01·MRG1117A01을 합침). 올리기 전 전체 시험 실패 0(`MRG1117A01` 절), 서버 206·패키지 시험 통과.
