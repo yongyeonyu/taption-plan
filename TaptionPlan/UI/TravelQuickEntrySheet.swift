@@ -82,6 +82,8 @@ struct TravelQuickEntrySheet: View {
     @State private var parsed = TravelQuickEntry.Parsed(title: "")
     @State private var isSaving = false
     @State private var didFail = false
+    /// 캘린더 고정 세부가 있는 곳을 다른 날로 옮길 때 묻는 창(대표 결정 2026-11-18).
+    @State private var fixedQuestion: TravelFixedMoveQuestion?
     @State private var isConfirmingDelete = false
     /// 붙인 장소(지도 핀).
     @State private var place: TravelItemPlace?
@@ -240,7 +242,7 @@ struct TravelQuickEntrySheet: View {
                 Button(language.text("전날로", "Move to previous day"), systemImage: "arrow.left") { Task { await shiftDay(-1) } }
                 Button(language.text("다음 날로", "Move to next day"), systemImage: "arrow.right") { Task { await shiftDay(1) } }
                 if let item = target.editing {
-                    TravelDayMoveMenu(model: model, item: item, language: language) { step in
+                    TravelDayMoveMenu(model: model, item: item, language: language, fixedQuestion: $fixedQuestion) { step in
                         didFail = step == nil
                         if let step {
                             onHistory(step)
@@ -260,6 +262,7 @@ struct TravelQuickEntrySheet: View {
                 .confirmationDialog(language.text("이 일정을 지울까요?", "Delete this plan?"), isPresented: $isConfirmingDelete, titleVisibility: .visible) {
                     Button(language.text("지우기", "Delete"), role: .destructive) { Task { await remove() } }
                 }
+                .travelFixedMoveQuestion($fixedQuestion, language: language)
         }
     }
 
@@ -502,7 +505,19 @@ struct TravelQuickEntrySheet: View {
 
     private func shiftDay(_ days: Int) async {
         guard let item = target.editing else { return }
-        didFail = !(await TripSharePlanEditor.moveItem(model: model, tripID: item.tripID, itemID: item.itemID, by: TimeInterval(days * 86_400)))
+        let delta = TimeInterval(days * 86_400)
+        // 캘린더 고정 세부가 있으면 먼저 묻고, 「옮기기」면 앱 안에서 모두 옮긴다(대표 결정 2026-11-18).
+        let fixed = TravelDayBoard.fixedCount(model: model, tripID: item.tripID, itemID: item.itemID)
+        if fixed > 0 {
+            fixedQuestion = .init(count: fixed) {
+                Task {
+                    didFail = !(await model.moveTripItem(tripID: item.tripID, itemID: item.itemID, by: delta, includingFixed: true))
+                    if !didFail { dismiss() }
+                }
+            }
+            return
+        }
+        didFail = !(await TripSharePlanEditor.moveItem(model: model, tripID: item.tripID, itemID: item.itemID, by: delta))
         if !didFail { dismiss() }
     }
 

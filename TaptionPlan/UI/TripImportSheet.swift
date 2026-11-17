@@ -142,21 +142,39 @@ extension AppModel {
 
     /// 여행 일정 하나를 `delta`초 옮긴다. 일상 쪽 계획 기록과 지도 핀 날짜가 함께 바뀐다.
     @discardableResult
-    func moveTripItem(tripID: String, itemID: String, by delta: TimeInterval, calendar: Calendar = .autoupdatingCurrent) async -> Bool {
+    /// `includingFixed`가 참이면 캘린더 고정 일정도 앱 안에서만 옮긴다(대표 결정 2026-11-18: 묻고 다 옮김). 캘린더 앱의 일정은 그대로다.
+    func moveTripItem(
+        tripID: String, itemID: String, by delta: TimeInterval, includingFixed: Bool = false, calendar: Calendar = .autoupdatingCurrent
+    ) async -> Bool {
         let all = snapshot.settings.travelTripItems ?? []
         // 코스 곳을 옮기면 딸린 세부 계획(그 아래 세부까지)도 같은 만큼 옮긴다(TVV1113A01 C4).
         // 한 번에 계산해 한 번에 저장한다: 하나라도 못 옮기면 아무것도 바꾸지 않는다(TVM1117A02).
-        var family = [itemID], cursor = 0
-        while cursor < family.count {
-            family += TravelTripItem.details(of: family[cursor], tripID: tripID, in: all).map(\.itemID).filter { !family.contains($0) }
-            cursor += 1
-        }
+        let family = tripItemFamily(tripID: tripID, itemID: itemID, in: all)
         var items = all
         for id in family {
             guard let next = TravelTripItemEditor.moved(items, tripID: tripID, itemID: id, by: delta) else { return false }
             items = next
         }
-        return await applyTripItemTimes(items, tripID: tripID, itemIDs: family, calendar: calendar)
+        return await applyTripItemTimes(items, tripID: tripID, itemIDs: family, allowsFixed: includingFixed, calendar: calendar)
+    }
+
+    /// 그 일정과 딸린 세부(그 아래 세부까지)의 번호. 첫째가 그 일정이다.
+    private func tripItemFamily(tripID: String, itemID: String, in items: [TravelTripItem]) -> [String] {
+        var family = [itemID], cursor = 0
+        while cursor < family.count {
+            family += TravelTripItem.details(of: family[cursor], tripID: tripID, in: items).map(\.itemID).filter { !family.contains($0) }
+            cursor += 1
+        }
+        return family
+    }
+
+    /// 그 일정을 옮길 때 함께 옮겨질 캘린더 고정 일정 수(그 일정과 세부 모두).
+    func tripItemFixedCount(tripID: String, itemID: String) -> Int {
+        let items = snapshot.settings.travelTripItems ?? []
+        let fixed = Set(snapshot.plans.filter(\.isFixed).map(\.id))
+        return tripItemFamily(tripID: tripID, itemID: itemID, in: items).filter { id in
+            items.first { $0.tripID == tripID && $0.itemID == id }?.planID.map(fixed.contains) == true
+        }.count
     }
 
     /// 여행 일정의 시작·끝을 따로 옮긴다. 5분보다 짧아지면 바꾸지 않는다.
@@ -300,13 +318,14 @@ extension AppModel {
         await applyTripItemTimes(items, tripID: tripID, itemIDs: [itemID], calendar: calendar)
     }
 
-    /// `itemIDs`의 새 시각을 일상 계획 기록·지도 핀과 함께 한 번에 저장한다. 하나라도 캘린더 고정이면 아무것도 바꾸지 않는다.
-    private func applyTripItemTimes(_ items: [TravelTripItem], tripID: String, itemIDs: [String], calendar: Calendar) async -> Bool {
+    /// `itemIDs`의 새 시각을 일상 계획 기록·지도 핀과 함께 한 번에 저장한다. 하나라도 캘린더 고정이면(`allowsFixed`가 아니면) 아무것도 바꾸지 않는다.
+    /// 고정 일정을 옮겨도 앱의 계획 기록만 바뀌고 고정 표시와 캘린더 앱의 일정(`calendarEvents`)은 그대로다.
+    private func applyTripItemTimes(_ items: [TravelTripItem], tripID: String, itemIDs: [String], allowsFixed: Bool = false, calendar: Calendar) async -> Bool {
         let changed = itemIDs.compactMap { id in items.first { $0.tripID == tripID && $0.itemID == id } }
         guard acceptsDataMutation(), !changed.isEmpty, changed.count == itemIDs.count else { return false }
         // 일상 쪽 계획 기록을 같은 시각으로 맞춘다. 캘린더 고정 일정이면 여행 일정도 그대로 둔다.
         let planIndices = changed.map { item in item.planID.flatMap { planID in snapshot.plans.firstIndex { $0.id == planID } } }
-        guard !planIndices.contains(where: { $0.map { snapshot.plans[$0].isFixed } == true }) else { return false }
+        guard allowsFixed || !planIndices.contains(where: { $0.map { snapshot.plans[$0].isFixed } == true }) else { return false }
         if planIndices.contains(where: { $0 != nil }) {
             var plans = snapshot.plans
             for (item, index) in zip(changed, planIndices) {

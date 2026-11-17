@@ -334,6 +334,8 @@ struct TravelPlanHistory: Equatable {
         var exists: Bool?
         /// 한 번에 함께 바뀐 걸음들(코스 순서 바꾸기). 되돌릴 때는 거꾸로 하나씩 되돌린다.
         var group: [Step] = []
+        /// 캘린더 고정 일정도 함께 옮긴 걸음(묻고 옮김, 대표 결정 2026-11-18). 되돌릴 때도 함께 옮긴다.
+        var includesFixed = false
 
         var inverse: Step {
             var step = self
@@ -415,7 +417,7 @@ extension AppModel {
         } else if let exists = step.exists, let item = step.item {
             _ = exists ? await restoreTripItem(item, place: step.place) : await deleteTripItem(tripID: step.tripID, itemID: step.itemID)
         } else if step.move != 0 {
-            _ = await moveTripItem(tripID: step.tripID, itemID: step.itemID, by: TimeInterval(step.move * 60))
+            _ = await moveTripItem(tripID: step.tripID, itemID: step.itemID, by: TimeInterval(step.move * 60), includingFixed: step.includesFixed)
         } else {
             _ = await resizeTripItem(tripID: step.tripID, itemID: step.itemID, endDelta: TimeInterval(step.resize * 60))
         }
