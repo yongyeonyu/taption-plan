@@ -406,8 +406,8 @@ actor TaptionStoreRepository: PlanDataRepository {
     }
 
     func handleMemoryPressure() async {
-        // 다음 저장 때 저장소에서 다시 읽어 비교 기준을 만든다.
-        known = nil
+        // 큰 값(마지막 스냅샷·해시)만 버린다. 행 지문(`known`)까지 버리면 다음 저장이 저장소를 다시 읽어
+        // 이 저장소가 본 적 없는 다른 쪽 쓰기를 「스냅샷에 없음」으로 지운다(REV1117A03).
         knownHashes = [:]
         lastSynced = nil
     }

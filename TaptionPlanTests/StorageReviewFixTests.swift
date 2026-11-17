@@ -113,6 +113,30 @@ final class StorageReviewFixTests: XCTestCase {
         XCTAssertTrue(ids.contains("unreadable-plan"), "읽지 못한 행은 다음 저장에서 지워지지 않는다")
     }
 
+    /// 메모리 압력으로 비교 기준을 버린 뒤 저장해도, 이 저장소가 본 적 없는 다른 쓰기(같은 파일의 다른 저장소)는
+    /// 지우지 않는다. 압력이 없을 때와 같은 결과여야 한다(REV1117A03).
+    func testMemoryPressureDoesNotMakeNextSaveDeleteOtherWriters() async throws {
+        let url = try makeDirectory().appendingPathComponent("store.sqlite")
+        let store = try TaptionStoreV2(url: url)
+        let app = TaptionStoreRepository(store: store)
+        let snapshot = planSnapshot(["앱 계획"])
+        try await app.save(snapshot)
+        _ = try await app.load()
+
+        let other = TaptionStoreRepository(store: store)
+        var otherSnapshot = try await other.load()
+        otherSnapshot.plans += planSnapshot(["다른 쪽 계획"]).plans
+        try await other.save(otherSnapshot)
+
+        await app.handleMemoryPressure()
+        var edited = snapshot
+        edited.updatedAt = Date(timeIntervalSince1970: 2_000)
+        try await app.save(edited)
+
+        let titles = try await TaptionStoreRepository(store: store).load().plans.map(\.title)
+        XCTAssertTrue(titles.contains("다른 쪽 계획"), "메모리 압력 뒤 저장이 다른 쪽이 쓴 행을 지우지 않는다")
+    }
+
     private func planSnapshot(_ titles: [String]) -> TaptionDataSnapshot {
         var snapshot = TaptionDataSnapshot.empty
         snapshot.updatedAt = Date(timeIntervalSince1970: 1_000)
