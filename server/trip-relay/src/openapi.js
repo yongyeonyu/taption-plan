@@ -123,7 +123,7 @@ const command = {
     placeName: { type: "string", maxLength: 100, description: "addSchedule, updateSchedule: name of the plan's place; always with latitude and longitude" },
     plannedSpend: { type: "number", exclusiveMinimum: 0, maximum: 1e10, description: "addSchedule, updateSchedule: money the user expects to spend, in KRW" },
     clearPlace: { type: "boolean", description: "updateSchedule: true removes the plan's place" },
-    shareNames: { type: "array", items: { type: "string", maxLength: 30 }, maxItems: 20, description: "addExpense, updateExpense: who shares a trip expense (\"@me\" is the user; [] or left out: everyone)" },
+    shareNames: { type: "array", items: { type: "string", maxLength: 30 }, maxItems: 20, description: "addExpense, updateExpense: who shares a trip expense (\"@me\" is the user, [] everyone on the trip; addExpense left out: only the user, updateExpense left out: unchanged)" },
   },
 };
 // 같은 이름을 여러 동작이 쓰면 어느 동작의 값도 받도록 넓힌다(ACT1114A07). 값의 형이 다르면 형을 적지 않고,

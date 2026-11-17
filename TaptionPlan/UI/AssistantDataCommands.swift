@@ -303,13 +303,16 @@ extension AssistantCommandParser {
         // ACT1114A07: 여행 가계부·몫을 나누는 사람·메모.
         if raw.tripId != nil, clean(raw.tripId, max: 100) == nil { return nil }
         if raw.note != nil, clean(raw.note, max: 200) == nil { return nil }
-        let sharers = raw.shareNames.map { AssistantExpenseChange.sharers($0, minimum: 1) }
+        // 대표 결정(2026-11-18): AI가 몫을 말했으면 나눈다(`[]`는 「다 같이」), 말하지 않았으면 나만(표지 없는 자동 기록).
+        let sharers = raw.shareNames.map { AssistantExpenseChange.sharers($0, minimum: 0) }
         if let sharers, sharers == nil { return nil }
-        return .addExpense(LedgerEntry(
+        var entry = LedgerEntry(
             occurredAt: at, amount: amount, currency: currency, kind: kind, category: category,
             title: title, payer: clean(raw.payer, max: 30), tripID: clean(raw.tripId, max: 100), note: clean(raw.note, max: 200), source: .assistant,
-            shareNames: sharers ?? nil
-        ))
+            shareNames: (sharers ?? nil).flatMap { $0.isEmpty ? nil : $0 }
+        )
+        if sharers != nil { entry.shareChosen = true }
+        return .addExpense(entry)
     }
 
     /// updateExpense(AIQ1111A01): 고칠 칸이 하나라도 있거나 지우기여야 한다. 서버와 같은 규칙.

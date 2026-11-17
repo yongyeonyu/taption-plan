@@ -61,8 +61,10 @@ const ID = str("Optional unique command id: 1-100 of letters, digits, _ . : -; g
 const enumOf = (description, values) => str(description, { enum: values });
 const integer = (description, minimum, maximum) => ({ type: "integer", description, minimum, maximum });
 // ACT1114A07: 여행 지출의 몫을 나누는 사람.
-const SHARE_NAMES = (min) => ({ type: "array", items: { type: "string", maxLength: 30 }, minItems: min, maxItems: 20,
-  description: "Who shares a trip expense: companion names, \"@me\" for the user" + (min ? "" : "; [] means everyone") + ". Left out: everyone" });
+// AIF1118A01(대표 결정 2026-11-18): 몫을 말하지 않은 AI 지출은 나만, 「다 같이」는 []로 밝힌다.
+const SHARE_NAMES = (update) => ({ type: "array", items: { type: "string", maxLength: 30 }, minItems: 0, maxItems: 20,
+  description: "Who shares a trip expense: companion names, \"@me\" for the user; [] means everyone on the trip. "
+    + (update ? "Left out: unchanged" : "Left out: only the user pays for it (not split); give shareNames only when the user said who shares it") });
 const object = (properties, required = []) => ({ type: "object", properties, required, additionalProperties: false });
 
 // empty: 저장된 것이 없을 때 돌려줄 글. changes: 읽기 키로 부르지만 서버 상태를 바꾸는 도구(AIC1112A01).
@@ -176,13 +178,13 @@ const TOOLS = [
     { amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0, maximum: 1e10 }, currency: str("ISO 4217, e.g. KRW, JPY, USD", { pattern: "^[A-Z]{3}$" }),
       title: str("1-60 characters, e.g. Coffee", { maxLength: 60 }), category: enumOf("Category", EXPENSE_CATEGORIES), kind: enumOf("expense or income", ["expense", "income"]),
       payer: str("Who paid, 1-30 characters (for group trips)", { maxLength: 30 }), date: DATE, time: HHMM("Time"),
-      tripId: str("Trip ledger id (get_app_state ledger.trips) to put the entry in that trip's ledger"), shareNames: SHARE_NAMES(1), note: str("Note, up to 200 characters", { maxLength: 200 }) }, ["amount", "title"]),
+      tripId: str("Trip ledger id (get_app_state ledger.trips) to put the entry in that trip's ledger"), shareNames: SHARE_NAMES(false), note: str("Note, up to 200 characters", { maxLength: 200 }) }, ["amount", "title"]),
   commandTool("update_expense", "updateExpense", "Edit expense", "Fix or delete a ledger entry the app added (entryId from an AI task's context), "
     + "e.g. the merchant name, category or amount from a payment text. Only the given fields change; delete:true removes it (undoable).",
     { entryId: str("Ledger entry id"), amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0, maximum: 1e10 },
       currency: str("ISO 4217", { pattern: "^[A-Z]{3}$" }), title: str("1-60 characters", { maxLength: 60 }), category: enumOf("Category", EXPENSE_CATEGORIES),
       kind: enumOf("expense or income", ["expense", "income"]), delete: { type: "boolean", description: "true to delete the entry" },
-      tripId: str("Trip ledger id to move the entry into, or \"none\" for the daily ledger"), shareNames: SHARE_NAMES(0), note: str("New note, up to 200 characters", { maxLength: 200 }),
+      tripId: str("Trip ledger id to move the entry into, or \"none\" for the daily ledger"), shareNames: SHARE_NAMES(true), note: str("New note, up to 200 characters", { maxLength: 200 }),
       date: DATE, time: HHMM("New time") }, ["entryId"]),
   addTool("add_payment_rule", "addPaymentRule", "Add payment message rule", "Teach the app to read one issuer's payment message layout by itself "
     + "(answer to an AI task of kind payment_rule). pattern is an ICU regular expression (iOS NSRegularExpression; the dot also matches newlines) "

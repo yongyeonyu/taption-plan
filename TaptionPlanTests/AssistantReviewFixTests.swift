@@ -778,7 +778,8 @@ final class AssistantReviewFixTests: XCTestCase {
         defer { AppModel.memoLedgerBookForTests = nil }
         let store = defaults()
         let model = await makeModel()
-        let memoID = try XCTUnwrap(model.addMemo(text: "커피 4500", kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: at(9)))
+        let memoID = try XCTUnwrap(model.addMemo(text: "메모", kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: at(9)))
+        model.updateMemo(memoID, text: "커피 4500", kind: .idea)
         try await waitUntil { book.entry(forMemo: memoID)?.amount == 4_500 }
 
         let journal = AssistantCommandJournal(defaults: store)
@@ -912,6 +913,13 @@ final class AssistantSharedLedgerTests: XCTestCase {
         }
     }
 
+    private func roomSplit(_ session: ShareRoomSession, _ itemID: String) async -> Int? {
+        await session.view().items.first { $0.id == itemID }.flatMap { item in
+            if case .sharedExpense(let content) = item.content { return content.split.count }
+            return nil
+        }
+    }
+
     func testAIEditsOfASharedExpenseGoThroughTheRoomAndALockedItemIsRefused() async throws {
         try await openRoom()
         let friend = try await join("봄")
@@ -930,6 +938,14 @@ final class AssistantSharedLedgerTests: XCTestCase {
         XCTAssertNil(edited.reason)
         XCTAssertEqual(book.entries.first { $0.id == dinner.id }?.amount, 25_000)
         await waitUntil("동행이 고친 금액을 봄") { await self.roomAmount(friend, itemID) == 25_000 }
+
+        // AI가 말한 몫도 방으로 간다: 나만 → 다 같이([]).
+        let mine = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "shareNames": ["@me"]]), preferences: preferences)
+        XCTAssertNil(mine.reason)
+        await waitUntil("동행이 나만으로 봄") { await self.roomSplit(friend, itemID) == 1 }
+        let together = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "shareNames": [String]()]), preferences: preferences)
+        XCTAssertNil(together.reason)
+        await waitUntil("동행이 다 같이로 봄") { await self.roomSplit(friend, itemID) == 2 }
 
         // 동행이 잠그고 있으면 고치지 않고 까닭을 돌려준다.
         try await friend.lock(items: [itemID])

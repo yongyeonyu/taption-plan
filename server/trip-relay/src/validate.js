@@ -194,7 +194,7 @@ export const COMMAND_FIELDS = {
   setTravelMode: ["date", "moveId", "mode", "line"],
   setBubble: ["date", "start", "end", "text", "kind"],
   // LED1110A01: 가계부 지출·수입. amount는 그 통화의 금액(양수), kind는 expense 기본 | income.
-  // ACT1114A07: tripId(여행 가계부)·shareNames(몫을 나누는 사람, "@me"는 나)·note. 옛 앱은 모르는 칸을 그냥 넘긴다.
+  // ACT1114A07: tripId(여행 가계부)·shareNames(몫을 나누는 사람, "@me"는 나, []는 다 같이, 없으면 나만 — AIF1118A01)·note. 옛 앱은 모르는 칸을 그냥 넘긴다.
   addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer", "tripId", "shareNames", "note"],
   // AIQ1111A01: 앱이 넣은 가계부 기록 고치기·지우기. 고칠 칸이 하나 이상이거나 delete.
   updateExpense: ["entryId", "amount", "currency", "title", "category", "kind", "delete", "tripId", "shareNames", "note", "date", "time"],
@@ -375,7 +375,7 @@ export function isCommand(value) {
         && optional(v.currency, (c) => /^[A-Z]{3}$/.test(c)) && nonEmpty(v.title, 60)
         && optional(v.category, (c) => EXPENSE_CATEGORIES.includes(c)) && optional(v.kind, (k) => k === "expense" || k === "income")
         && optional(v.payer, (p) => nonEmpty(p, 30)) && optional(v.date, isDate) && optional(v.time, isTime)
-        && optional(v.tripId, targetID) && optional(v.shareNames, shareNames(1)) && optional(v.note, (n) => nonEmpty(n, 200));
+        && optional(v.tripId, targetID) && optional(v.shareNames, shareNames(0)) && optional(v.note, (n) => nonEmpty(n, 200));
     case "updateExpense":
       return targetID(v.entryId) && optional(v.amount, (a) => typeof a === "number" && Number.isFinite(a) && a > 0 && a <= 1e10)
         && optional(v.currency, (c) => /^[A-Z]{3}$/.test(c)) && optional(v.title, (t) => nonEmpty(t, 60))

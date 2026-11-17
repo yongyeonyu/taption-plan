@@ -118,6 +118,18 @@ test("AIF1118A01: an updateSchedule whose only change is an empty note is refuse
   assert.equal(update({ note: "준비물" }), true);
 });
 
+test("AIF1118A01: addExpense takes [] as an explicit everyone, and the tool says left out means only the user", async () => {
+  const { isCommand } = await import("../src/validate.js");
+  const { toolList } = await import("../src/mcp.js");
+  const add = (extra) => isCommand({ format: "bokki-command", version: 1, id: "c1", action: "addExpense", amount: 30000, title: "택시", tripId: "t1", ...extra });
+  assert.equal(add({ shareNames: [] }), true);
+  assert.equal(add({ shareNames: ["@me", "민수", "지영"] }), true);
+  assert.equal(add({}), true);
+  const tool = toolList().find((t) => t.name === "add_expense");
+  assert.equal(tool.inputSchema.properties.shareNames.minItems, 0);
+  assert.match(tool.inputSchema.properties.shareNames.description, /Left out: only the user/);
+});
+
 test("AIF1118A01: tool descriptions state the real daily edit limit", async () => {
   const { toolList } = await import("../src/mcp.js");
   const { LIMITS } = await import("../src/state.js");
