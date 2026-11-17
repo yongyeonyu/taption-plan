@@ -231,7 +231,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    func syncNow(requestID: String? = nil) async {
+    func syncNow(requestID: String? = nil, isBackground: Bool = false) async {
         let id = requestID ?? "none"
         guard !isCommerceLocked else {
             WatchLaunchDiagnostics.mark(
@@ -252,8 +252,19 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         async let healthSync: Void = requestHealthSnapshot(
             expectedGeneration: syncGeneration
         )
-        refreshAmbientRecording(allowBeforeSceneReady: true)
-        await ambientDrainTask?.value
+        refreshAmbientRecording(
+            allowBeforeSceneReady: true,
+            windowBudget: isBackground
+                ? TaptionWatchBackgroundBudget.ambientWindowsPerBackgroundRun
+                : WatchAmbientSensorRecorder.maximumWindowsPerCall
+        )
+        // 비우기는 따로 띄운 Task라 취소가 저절로 닿지 않는다. 예산을 넘기면 함께 멈춘다(WSY1117A01).
+        let drain = ambientDrainTask
+        await withTaskCancellationHandler {
+            await drain?.value
+        } onCancel: {
+            drain?.cancel()
+        }
         guard workoutStartGate.accepts(syncGeneration) else {
             WatchLaunchDiagnostics.mark(
                 "manual data sync skipped id=\(id) reason=workout_generation_changed"
@@ -624,7 +635,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     /// 앱이 실행되는 모든 경로에서 호출한다. 기록 자체는 모션 데몬이 계속
     /// 이어가므로 앱이 할 일은 (1) 기록을 다시 걸고 (2) 지난 실행 이후
     /// 쌓인 표본을 비우는 것뿐이다.
-    private func refreshAmbientRecording(allowBeforeSceneReady: Bool = false) {
+    private func refreshAmbientRecording(
+        allowBeforeSceneReady: Bool = false,
+        windowBudget: Int = WatchAmbientSensorRecorder.maximumWindowsPerCall
+    ) {
         guard workoutStartGate.allowsAmbientRecording else {
             WatchLaunchDiagnostics.mark(
                 "ambient refresh skipped reason=workout_transition"
@@ -661,7 +675,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             let recorder = self.ambientRecorder
             if isEnabled {
                 await recorder.arm()
-                let result = await recorder.drain()
+                let result = await recorder.drain(windowBudget: windowBudget)
                 guard !Task.isCancelled, !self.isCommerceLocked else {
                     self.ambientDrainTask = nil
                     return

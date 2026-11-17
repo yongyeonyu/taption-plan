@@ -68,6 +68,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     var ambientOutboxFlushTask: Task<Void, Never>?
     var ambientOutboxFlushGeneration: UInt64 = 0
     var ambientLiveDeliveryGate = TaptionWatchAmbientLiveDeliveryGate()
+    var ambientResendGate = TaptionWatchOutboxResendGate()
     var ambientOutboxRetryTask: Task<Void, Never>?
     var ambientOutboxRetryID: UUID?
     var ambientOutboxRetryAttempts: [String: Int] = [:]
@@ -306,6 +307,13 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             "sensor send requested sequence=\(summary.sequence) samples=\(summary.accelerometerSampleCount)"
         )
         if let dayDatabase {
+            // 원본과 outbox에 함께 넣고, iPhone ack가 올 때까지 outbox가 다시 보낸다(WSY1117A01).
+            if (try? await dayDatabase.enqueueWorkoutBatch([summary], chunks: [])) != nil {
+                guard !isPurgingData else { return }
+                flushPendingAmbientOutbox(using: .default)
+                return
+            }
+            // outbox가 가득 차는 등으로 못 넣으면 예전처럼 원본만 남기고 한 번 보낸다.
             do {
                 try await dayDatabase.append(summary)
             } catch {
@@ -357,6 +365,11 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             "acceleration send requested chunk=\(chunk.id.uuidString) samples=\(chunk.samples.count)"
         )
         if let dayDatabase {
+            if (try? await dayDatabase.enqueueWorkoutBatch([], chunks: [chunk])) != nil {
+                guard !isPurgingData else { return }
+                flushPendingAmbientOutbox(using: .default)
+                return
+            }
             do {
                 try await dayDatabase.append(chunk)
             } catch {

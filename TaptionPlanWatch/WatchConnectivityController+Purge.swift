@@ -98,6 +98,7 @@ extension WatchConnectivityController {
     private func executePurge() async -> Bool {
         isPurgingData = true
         ambientLiveDeliveryGate.reset()
+        ambientResendGate.reset()
         defer {
             isPurgingData = false
         }

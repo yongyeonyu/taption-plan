@@ -3213,3 +3213,89 @@ final class WatchReviewFixTests: XCTestCase {
         XCTAssertFalse(summary.isCurrent(at: today.addingTimeInterval(86_400 + 1_800)), "자정이 지나면 어제 요약")
     }
 }
+
+// WSY1117A01: Watch 동기화 결함 넷.
+final class WatchSyncDeliveryTests: XCTestCase {
+    private let start = Date(timeIntervalSinceReferenceDate: 816_000_000.123_456)
+
+    private func workoutSummary(sessionID: UUID, sequence: Int) -> TaptionWatchSensorSummary {
+        TaptionWatchSensorSummary(
+            sessionID: sessionID, sequence: sequence, workoutKind: .walking,
+            linkedPlanID: nil, linkedPlanTitle: nil, linkedCategoryID: nil,
+            startedAt: start, endedAt: start.addingTimeInterval(Double(sequence) * 30),
+            isFinal: false, accelerometerSampleCount: 100 * sequence,
+            accelerometerAverageG: nil, peakAccelerationG: 1.2,
+            gyroscopeSampleCount: 0, gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: nil, gravity: nil, userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil, attitudeRadians: nil,
+            relativeAltitudeMeters: nil, pressureKilopascals: nil, stepCount: 40 * sequence,
+            distanceMeters: nil, floorsAscended: nil, floorsDescended: nil,
+            latestHeartRate: 110, averageHeartRate: 105, maximumHeartRate: 120,
+            activeEnergyKilocalories: nil, isAmbient: false
+        )
+    }
+
+    /// 창 자르기는 창마다 전체 표본을 거르던 예전 방식과 같은 표본을 같은 순서로 낸다.
+    func testReplayWindowsMatchFilteringEveryWindow() {
+        var samples: [WatchMotionSample] = []
+        var time = start
+        for index in 0..<900 {
+            // 고른 간격·겹친 시각·빈 구간·창 경계에 걸친 시각을 섞는다.
+            let step: TimeInterval = index % 97 == 0 ? 4 : (index % 13 == 0 ? 0 : 0.08 + Double(index % 5) * 0.03)
+            time = time.addingTimeInterval(step)
+            samples.append(WatchMotionSample(
+                capturedAt: time,
+                acceleration: TaptionWatchSensorVector3(x: Double(index), y: 0, z: 1),
+                rotationRate: nil, gravity: nil
+            ))
+        }
+        samples.sort { $0.capturedAt < $1.capturedAt }
+        let duration = WatchBehaviorWindowAnalyzer.windowDuration
+        var expected: [[WatchMotionSample]] = []
+        var windowEnd = samples[0].capturedAt.addingTimeInterval(duration)
+        while windowEnd <= samples[samples.count - 1].capturedAt {
+            let windowStart = windowEnd.addingTimeInterval(-duration)
+            expected.append(samples.filter { $0.capturedAt >= windowStart && $0.capturedAt <= windowEnd })
+            windowEnd = windowEnd.addingTimeInterval(WatchBehaviorWindowAnalyzer.strideDuration)
+        }
+        var actual: [[WatchMotionSample]] = []
+        WatchActivityRawReplayEngine.forEachWindow(in: samples) { actual.append(Array($0)) }
+        XCTAssertEqual(actual.count, expected.count)
+        XCTAssertEqual(actual, expected)
+        XCTAssertTrue(actual.contains { $0.isEmpty }, "빈 구간 창도 같은 자리에서 나온다")
+    }
+
+    /// 운동 요약은 시작부터 누적이다. 2시간 운동(보관 5Hz, 30초 묶음 240개)을 다시 계산해도 몇 초 안에 끝나야 한다.
+    func testTwoHourWorkoutReplayStaysLinear() {
+        let sessionID = UUID()
+        let duration: TimeInterval = 2 * 3_600
+        var summary = workoutSummary(sessionID: sessionID, sequence: 240)
+        summary.endedAt = start.addingTimeInterval(duration)
+        let chunks = (0..<240).map { chunkIndex in
+            let chunkStart = start.addingTimeInterval(Double(chunkIndex) * 30)
+            let samples = (0..<150).map { index in
+                let offset = Double(index) * 0.2
+                return TaptionWatchAccelerationSample(
+                    capturedAt: chunkStart.addingTimeInterval(offset),
+                    acceleration: TaptionWatchSensorVector3(
+                        x: sin((Double(chunkIndex) * 30 + offset) * 2 * .pi * 0.9) * 0.3,
+                        y: 0.1,
+                        z: 1
+                    ),
+                    sessionID: sessionID, sequence: chunkIndex * 150 + index + 1, isAmbient: false
+                )
+            }
+            return TaptionWatchAccelerationChunk(
+                sessionID: sessionID, sequence: chunkIndex + 1, startedAt: chunkStart,
+                endedAt: chunkStart.addingTimeInterval(29.8), samples: samples
+            )
+        }
+        let began = Date()
+        let replayed = WatchActivityRawReplayEngine.replaying(summaries: [summary], chunks: chunks)
+        let elapsed = Date().timeIntervalSince(began)
+        XCTAssertEqual(replayed.first?.behaviorModelVersion, WatchActivityRawReplayEngine.modelVersion)
+        XCTAssertTrue(replayed.first?.behaviorEvidence?.contains("raw 표본 36000개") == true)
+        XCTAssertFalse(replayed.first?.behaviorSegments?.isEmpty ?? true)
+        XCTAssertLessThan(elapsed, 5, "창×표본으로 거르면 2억 번 넘게 비교한다")
+    }
+}

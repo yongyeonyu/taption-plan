@@ -265,6 +265,64 @@ public struct TaptionWatchAmbientLiveDeliveryGate {
     }
 }
 
+/// 운동 요약·가속도 묶음을 ack까지 다시 보낼 outbox 항목(WSY1117A01). iPhone은
+/// `summary:`·`chunk:` ID면 저장 뒤 ack하고, 키·JSON은 예전 직접 전송과 같다.
+public enum TaptionWatchWorkoutOutbox {
+    public static func items(
+        summaries: [TaptionWatchSensorSummary],
+        chunks: [TaptionWatchAccelerationChunk]
+    ) throws -> [TaptionPlanV3OutboxItem] {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return try chunks.map {
+            TaptionPlanV3OutboxItem(
+                id: "chunk:\($0.id.uuidString)",
+                kind: TaptionWatchEnvelope.accelerationChunkKey,
+                payload: try encoder.encode($0)
+            )
+        } + summaries.map {
+            TaptionPlanV3OutboxItem(
+                id: "summary:\($0.rawEventID)",
+                kind: TaptionWatchEnvelope.sensorSummaryKey,
+                payload: try encoder.encode($0)
+            )
+        }
+    }
+}
+
+/// 한 번 보낸 outbox 항목은 iPhone ack를 기다린다. 재시도 타이머가 부르거나 ack 대기
+/// 시간(`delay(retryCount:)`)이 지나기 전에는 다시 보내지 않는다(WSY1117A01).
+/// 메모리에만 두므로 앱을 다시 켜면 남은 항목을 한 번 다시 보낸다.
+public struct TaptionWatchOutboxResendGate {
+    public init() {}
+
+    private var sentAt: [String: TimeInterval] = [:]
+
+    public mutating func shouldTransfer(
+        id: String,
+        retryCount: Int,
+        isOutstanding: Bool,
+        isRetryDue: Bool,
+        now: TimeInterval
+    ) -> Bool {
+        guard !isOutstanding else { return false }
+        if !isRetryDue, let last = sentAt[id], now >= last,
+           now - last < TaptionWatchAmbientAcknowledgementRetryPolicy.delay(retryCount: retryCount) {
+            return false
+        }
+        sentAt[id] = now
+        return true
+    }
+
+    public mutating func acknowledge(_ id: String) {
+        sentAt[id] = nil
+    }
+
+    public mutating func reset() {
+        sentAt.removeAll(keepingCapacity: false)
+    }
+}
+
 public enum TaptionWatchAmbientAcknowledgementRetryPolicy {
     public static let outboxReadRetryID = "outbox-read"
     public static let initialDelay: TimeInterval = 5

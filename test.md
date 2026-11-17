@@ -2,6 +2,19 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## WSY1117A01 · Watch 동기화 결함 넷 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: main `0551fecb` 위 브랜치 `worktree-agent-a433e19835cbb9b8d`, 끝 커밋 `b1ad953b`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/WSY1117A01`. 로그 `build/validation/WSY1117A01/`.
+- 고친 것(결함마다 커밋, 보완 커밋 2개 포함):
+  1. 운동 요약·운동 가속도 묶음이 `transferUserInfo` 한 번 뒤 대기열에서 지워져 다시 보낼 길이 없음 → Watch DB가 있으면 원본과 함께 outbox(`summary:<세션>:<순번>`·`chunk:<UUID>`)에 넣고 주변 기록과 같은 ack·재시도를 탄다(`40ca2876`, 항목 만들기는 `TaptionWatchWorkoutOutbox`로 옮김 `d183245f`). 키·JSON·원본 행은 그대로, 지금 iPhone은 이 접두어면 저장 뒤 ack(접두어 검사만 함). outbox에 못 넣으면 예전 직접 전송으로.
+  2. 주변 outbox가 ack·연결·새 기록 때마다, 전송은 끝났지만 ack 전인 항목을 바로 다시 보냄 → `TaptionWatchOutboxResendGate`: 재시도 타이머가 부른 항목이나 ack 대기(5초부터 지수, 최대 5분)가 지난 항목만 다시 보냄(`6cd3a06e`).
+  3. 원본 재생성이 창마다 전체 표본을 걸러 O(창×표본) → 정렬된 표본에 두 포인터(`ab43cba8`). 예전 거르기와 창별 표본이 같음을 시험으로 비교.
+  4. 백그라운드 새로고침이 25초 뒤에도 작업이 끝날 때까지 기다리고(주변 비우기는 따로 띄운 Task라 취소도 안 닿음), 30분 창 6개를 읽고, 연결 대기 20초 → 10초 예산을 넘기면 취소를 먼저 알리고 기다리지 않고 완료 보고, 비우기 Task에 취소 전달, 백그라운드는 창 1개, 연결 대기 10초(`aa6c791e`, `b1ad953b`).
+- 시험: `TaptionWatchSync` `swift test` 59건 실패 0(`swift-test-all-4.log`; 새 시험 `WatchOutboxResendGateTests` 5·`WatchBackgroundBudgetTests` 3·`WatchWorkoutOutboxTests` 2). 새 시험 셋은 고치기 전 컴파일 실패로 먼저 확인(`swift-test-gate-before.log`·`swift-test-budget-before.log`), 예산 시험 5회 반복 통과. `-only-testing:TaptionPlanTests` 전체 **3,000 통과·실패 0·건너뜀 25**(`unit-all-r2.xcresult`, 흔들리는 `testSameVersionWatchRedeliveryCompletesUnappliedSnapshotBeforeAck`도 이번엔 통과). 새 앱 시험 `WatchSyncDeliveryTests`(창 동일성 0.006초, 2시간 운동 3만 6천 표본 재생성 0.24초) 통과. 같은 판 단독 실행(`unit-WatchSyncDeliveryTests-r2`)은 시뮬레이터가 앱을 띄우지 못해(「No such process」) 0건 — 전체 실행 결과로 갈음.
+- 빌드: `TaptionPlanWatch`(watchOS 시뮬레이터)·`TaptionPlanWatchWidget`(iOS 시뮬레이터) 성공. 구조 지표 기준선 통과(처음 `@unchecked Sendable` 하나 늘어 `Mutex`로 바꿈), import 경계 통과.
+- 앞선 시도: r1 단위 시험은 `WatchDayDatabase`가 앱 시험 대상에 없어 컴파일 실패 → 시험을 패키지로 옮김.
+- 제한: 실기기·실제 WatchConnectivity 전달·watchOS 백그라운드 예산(10초, 창 1개가 그 안에 끝나는지)은 확인 못 함. 옛 판 재생성 시간은 재지 않음(2시간이면 창 5,625 × 표본 36,000 비교). 하루에 누적 요약이 많으면 요약마다 표본 정렬 O(N log N)은 남음. ack를 안 주는 iPhone이면 운동 항목도 주변 기록처럼 outbox(4,096건 상한)에 쌓이고 넘치면 예전 직접 전송으로 돌아감.
+
 ## MRG1117A02 · 리뷰 4개·옛 화면 정리·성능 고침을 합친 main 전체 확인 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: `d72ac89e`(REV1117A01~04, LGC1117A01, PRF1117A02 합침 + 번역 재생성). Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data는 외장 볼륨. 로그 `build/validation/MRG1117A02/`.

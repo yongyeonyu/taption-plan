@@ -102,7 +102,7 @@ struct TaptionPlanWatchApp: App {
             }
             // 수집을 끈 동안에는 백그라운드에서 아무것도 하지 않는다.
             guard workout.accelerationSettings?.isEnabled == true else { return }
-            await workout.syncNow(requestID: "background")
+            await workout.syncNow(requestID: "background", isBackground: true)
         }
         connectivity.activateConnectivity()
         _connectivity = StateObject(wrappedValue: connectivity)

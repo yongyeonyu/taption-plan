@@ -164,7 +164,10 @@ actor WatchAmbientSensorRecorder {
 
     /// 마지막으로 처리한 지점 이후의 표본만 읽어 기존 특징 파이프라인에
     /// 통과시킨다.
-    func drain(now: Date = .now) -> WatchAmbientDrainResult {
+    func drain(
+        now: Date = .now,
+        windowBudget: Int = maximumWindowsPerCall
+    ) -> WatchAmbientDrainResult {
         let authorization = CMSensorRecorder.authorizationStatus()
         guard CMSensorRecorder.isAccelerometerRecordingAvailable(),
               authorization == .authorized else {
@@ -195,7 +198,7 @@ actor WatchAmbientSensorRecorder {
             now: now,
             armedAt: armedAt,
             cursor: cursor,
-            budget: Self.maximumWindowsPerCall
+            budget: max(1, min(windowBudget, Self.maximumWindowsPerCall))
         )
         let windows = plan.ordered
         guard !windows.isEmpty else {
