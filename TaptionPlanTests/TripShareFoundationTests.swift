@@ -423,6 +423,45 @@ final class TripShareFoundationTests: XCTestCase {
         XCTAssertEqual(store.environment.sidecar.links(), [])
     }
 
+    /// 열기·닫기·잊기가 겹쳐 불려도 차례대로 돈다: 닫은 방이 다시 살아나거나 잊은 방의 곁 파일이 되살아나지 않는다(TSA1117A01).
+    func testOpenCloseAndForgetDoNotInterleave() async throws {
+        let server = ShareFakeServer()
+        let store = TripShareStore(environment: environment(transport: server.transport))
+        let invite = ShareInvite.make()
+        let keys = try ShareKeys.derive(roomID: invite.roomID, linkSecret: invite.linkSecret, password: "가을여행-2031", iterations: 20)
+        let ownerKey = ShareIdentifiers.ownerKey()
+        let entry = try await ShareRoomClient.createRoom(
+            transport: server.transport, appKey: "test-app-key",
+            request: ShareCreateRequest(roomID: invite.roomID, proof: keys.proof, ownerKey: ownerKey, expiresAt: await server.now + 86_400_000)
+        )
+        try store.register(
+            TripShareLink(roomID: invite.roomID, tripID: "t1", role: .owner, phase: .sharing),
+            secrets: ShareRoomSecrets(root: keys.root, linkSecret: invite.linkSecret, token: entry.token, ownerKey: ownerKey, member: entry.member, epoch: entry.epoch)
+        )
+
+        // 열기 도중에 닫기가 들어온다: 닫기가 이긴다(살아 있는 세션·화면 값이 남지 않는다).
+        let opening = Task { await store.open(tripID: "t1") }
+        let closing = Task { await store.close(tripID: "t1") }
+        let opened = await opening.value
+        await closing.value
+        XCTAssertNil(store.session(tripID: "t1"), "닫은 뒤에 세션이 남지 않는다")
+        XCTAssertNil(store.view(tripID: "t1"), "닫은 뒤에 화면 값이 남지 않는다")
+        let status = await opened?.view().status
+        XCTAssertNotEqual(status, .live, "닫은 세션이 다시 이어지지 않는다")
+
+        // 닫기 도중에 잊기가 들어온다: 늦은 사본 쓰기가 곁 파일을 되살리지 않는다.
+        await store.open(tripID: "t1")
+        let closingAgain = Task { await store.close(tripID: "t1") }
+        let forgetting = Task { await store.forget(tripID: "t1") }
+        await closingAgain.value
+        await forgetting.value
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(store.environment.sidecar.links(), [])
+        let left = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        XCTAssertEqual(left, [], "잊은 방의 곁 파일이 되살아나지 않는다")
+        XCTAssertNil(try store.environment.secrets.secrets(roomID: invite.roomID))
+    }
+
     // MARK: 투영·가드
 
     func testProjectionWritesManyChangesWithOneSave() async throws {
