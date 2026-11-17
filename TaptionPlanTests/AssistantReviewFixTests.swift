@@ -81,6 +81,53 @@ final class AssistantReviewFixTests: XCTestCase {
         XCTAssertEqual(Phase3RelayStub.requests.map(\.summary), ["POST /register", "POST /register", "DELETE /keys", "DELETE /activity"])
     }
 
+    /// AIF1118A01(대표 결정 2026-11-18): 주 키를 바꾸면 AI 규칙을 새 자리로 옮긴 뒤에만 예전 자리에서 지운다.
+    func testRotationMovesTheRulesToTheNewMasterBeforeDeletingTheOldOnes() async throws {
+        let rule = Rule(id: "skip-ad", type: RuleType.skipWord.rawValue, match: ["word": .text("광고")], source: .init(by: "user"))
+        let listed = String(decoding: try JSONEncoder().encode(RuleSet(version: 7, rules: [rule])), as: UTF8.self)
+        func run(opsStatus: Int) async -> (AssistantMemorySecrets, UserDefaults, Bool) {
+            let store = defaults()
+            let secrets = AssistantMemorySecrets([.master: master])
+            var env = environment(secrets, store) { request in
+                switch (request.httpMethod ?? "", request.url?.path ?? "") {
+                case ("GET", "/rules"):
+                    Phase3RelayStub.body = listed
+                    return 200
+                case ("POST", "/rules/ops"):
+                    Phase3RelayStub.body = #"{"ok":true,"version":1,"stale":false}"#
+                    return opsStatus
+                default:
+                    Phase3RelayStub.body = "{}"
+                    return 201
+                }
+            }
+            env.moveRules = { old, fresh, env in await AssistantRuleStore.move(from: old, to: fresh, env: env) }
+            return (secrets, store, await AssistantRegistration.rotate(env))
+        }
+
+        let (secrets, store, rotated) = await run(opsStatus: 200)
+        XCTAssertTrue(rotated)
+        let fresh = try XCTUnwrap(secrets.read(.master))
+        let seen = Phase3RelayStub.requests
+        let get = try XCTUnwrap(seen.firstIndex { $0.summary == "GET /rules" })
+        let put = try XCTUnwrap(seen.firstIndex { $0.summary == "POST /rules/ops" })
+        let delete = try XCTUnwrap(seen.firstIndex { $0.summary == "DELETE /rules" })
+        XCTAssertLessThan(get, put)
+        XCTAssertLessThan(put, delete, "the old rules go only after the new master has them")
+        XCTAssertEqual([seen[get].token, seen[put].token, seen[delete].token], [master, fresh, master])
+        XCTAssertEqual(seen[delete].query, "ids=skip-ad")
+        let body = try XCTUnwrap(try JSONSerialization.jsonObject(with: seen[put].body) as? [String: Any])
+        XCTAssertEqual((body["ops"] as? [[String: Any]])?.compactMap { $0["id"] as? String }, ["skip-ad"])
+        XCTAssertEqual(AssistantRuleStore.stored(store).rules.map(\.id), ["skip-ad"])
+        XCTAssertEqual(AssistantRuleStore.stored(store).version, 1, "counts from the new slot's version")
+
+        // 새 자리에 올리지 못하면 예전 규칙도 예전 자료도 지우지 않고 다음에 다시 한다.
+        let (kept, _, failed) = await run(opsStatus: 500)
+        XCTAssertFalse(failed)
+        XCTAssertEqual(kept.read(.master), master)
+        XCTAssertFalse(Phase3RelayStub.requests.contains { $0.method == "DELETE" })
+    }
+
     func testRotationNeedsTheOldMasterRegisteredBeforeDeleting() async {
         let store = defaults()
         let secrets = AssistantMemorySecrets([.master: master])
@@ -912,6 +959,80 @@ final class AssistantSharedLedgerTests: XCTestCase {
             if case .sharedExpense(let content) = item.content { return content.split.count }
             return nil
         }
+    }
+
+    private func preferences() -> AssistantPreferenceStore {
+        var preferences = AssistantPreferenceStore.test(UserDefaults(suiteName: suiteName)!)
+        preferences.ledger = book
+        return preferences
+    }
+
+    private func add(_ extra: [String: Any]) throws -> AssistantCommand.Action {
+        let command: [String: Any] = ["format": "bokki-command", "version": 1, "id": "add", "action": "addExpense", "keyId": "aaaa1111", "source": "rest", "tripId": tripID]
+        let data = try JSONSerialization.data(withJSONObject: ["commands": [command.merging(extra) { _, new in new }]])
+        return try XCTUnwrap(AssistantCommandParser.parse(data)?.commands.first?.action)
+    }
+
+    /// 대표 결정(2026-11-18): AI가 몫을 말한 새 지출은 손으로 넣은 것처럼 방에 공유 지출로 올리고, 몫을 말하지 않은 것은 이 기기에만 둔다.
+    func testANewAIExpenseWithSharesGoesToTheRoomAndOneWithoutStaysLocal() async throws {
+        try await openRoom()
+        let friend = try await join("봄")
+        await book.saveTrip(LedgerTrip(id: tripID, name: "가을 여행", start: Date(timeIntervalSince1970: 1_949_000_000), end: Date(timeIntervalSince1970: 1_951_000_000)))
+        let taxi = await model.applyAssistantAction(try add(["amount": 30_000, "title": "택시", "shareNames": ["@me", "봄"]]), preferences: preferences())
+        XCTAssertNil(taxi.reason)
+        let taxiID = try XCTUnwrap(taxi.ledgerEntryID)
+        await waitUntil("동행이 택시를 봄") { await self.roomAmount(friend, TripShareMapping.roomItemID(entryID: taxiID)) == 30_000 }
+        let taxiSplit = await roomSplit(friend, TripShareMapping.roomItemID(entryID: taxiID))
+        XCTAssertEqual(taxiSplit, 2)
+
+        let snack = await model.applyAssistantAction(try add(["amount": 4_000, "title": "편의점"]), preferences: preferences())
+        XCTAssertNil(snack.reason)
+        let snackID = try XCTUnwrap(snack.ledgerEntryID)
+        XCTAssertTrue(book.entries.contains { $0.id == snackID })
+        try await Task.sleep(for: .milliseconds(200))
+        let snackInRoom = await friend.view().items.contains { $0.id == TripShareMapping.roomItemID(entryID: snackID) }
+        XCTAssertFalse(snackInRoom, "no shares said: only me, not uploaded")
+
+        // 되돌리면 방에서도 빠진다.
+        var delta = AssistantEditDelta()
+        delta.ledgerEntryID = taxi.ledgerEntryID
+        delta.ledgerEntry = taxi.ledgerEntry
+        let undone = await model.undoAssistantEntry(
+            AssistantLogEntry(commandID: "add", kind: .addExpense, appliedAt: .now, before: taxi.before, after: taxi.after, delta: delta), preferences: preferences()
+        )
+        XCTAssertTrue(undone)
+        await waitUntil("동행에게서도 빠짐") { await self.roomAmount(friend, TripShareMapping.roomItemID(entryID: taxiID)) == nil }
+
+        // 인터넷이 없으면 올리지 못해 거절한다.
+        await server.setOffline(true)
+        let offline = await model.applyAssistantAction(try add(["amount": 9_000, "title": "숙소", "shareNames": [String]()]), preferences: preferences())
+        XCTAssertEqual(offline.reason, "shared_offline")
+        XCTAssertFalse(book.entries.contains { $0.title == "숙소" })
+    }
+
+    /// 대표 결정(2026-11-18): 인터넷이 없을 때 방에 올린 적 없는 내 지출은 기기에서 고치고, 공유 지출은 `shared_offline`.
+    func testOfflineAIEditsFixPrivateExpensesAndRefuseSharedOnes() async throws {
+        try await openRoom()
+        _ = try await join("봄")
+        let souvenir = LedgerEntry(occurredAt: Date(timeIntervalSince1970: 1_950_000_000), amount: 20_000, amountKRW: 20_000, category: .shopping, title: "기념품", tripID: tripID, source: .manual)
+        let hiddenFailure = await TripShareLedger.save(souvenir, scope: .ownHidden)
+        XCTAssertNil(hiddenFailure)
+        let dinner = LedgerEntry(occurredAt: Date(timeIntervalSince1970: 1_950_000_000), amount: 30_000, amountKRW: 30_000, category: .food, title: "저녁", tripID: tripID, source: .manual)
+        let sharedFailure = await TripShareLedger.save(dinner, scope: .shared)
+        XCTAssertNil(sharedFailure)
+
+        await server.setOffline(true)
+        let fixed = await model.applyAssistantAction(try action(["entryId": souvenir.id.uuidString, "amount": 25_000]), preferences: preferences())
+        XCTAssertNil(fixed.reason)
+        XCTAssertEqual(book.entries.first { $0.id == souvenir.id }?.amount, 25_000)
+        let refused = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "amount": 25_000]), preferences: preferences())
+        XCTAssertEqual(refused.reason, "shared_offline")
+        XCTAssertEqual(book.entries.first { $0.id == dinner.id }?.amount, 30_000)
+
+        // 방을 열지 못할 때(방 사본도 없음)는 곁 파일의 기록으로 판단한다.
+        XCTAssertTrue(AssistantSharedLedger.neverShared(souvenir, tripID: tripID))
+        XCTAssertFalse(AssistantSharedLedger.neverShared(dinner, tripID: tripID))
+        XCTAssertFalse(AssistantSharedLedger.neverShared(souvenir, tripID: "other"), "no link: unknown, so not private")
     }
 
     func testAIEditsOfASharedExpenseGoThroughTheRoomAndALockedItemIsRefused() async throws {

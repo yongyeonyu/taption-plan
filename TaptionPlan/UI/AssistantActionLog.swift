@@ -400,7 +400,21 @@ extension AppModel {
         }
         // 공유 여행 방에 있는 지출은 방으로 되돌린다. 동행이 잠갔거나 보기만이면 되돌리지 않는다(AIF1118A01).
         var ledgerUndone = false
-        if let before = entry.delta.ledgerBefore, entry.delta.ledgerEntry != nil {
+        if entry.delta.ledgerBefore == nil, let added = entry.delta.ledgerEntry {
+            // AI가 방에 올린 새 지출은 방에서 지운다.
+            switch await AssistantSharedLedger.scope(of: added, ledger: preferences.ledger) {
+            case .local: break
+            case .offline:
+                userFacingError = TripShareLedger.Failure.viewOnly.message(.current)
+                return false
+            case .inRoom:
+                if let failure = await TripShareLedger.remove(added) {
+                    userFacingError = failure.message(.current)
+                    return false
+                }
+                ledgerUndone = true
+            }
+        } else if let before = entry.delta.ledgerBefore, entry.delta.ledgerEntry != nil {
             switch await AssistantSharedLedger.scope(of: before, ledger: preferences.ledger) {
             case .local: break
             case .offline:

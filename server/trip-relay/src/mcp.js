@@ -64,7 +64,7 @@ const integer = (description, minimum, maximum) => ({ type: "integer", descripti
 // AIF1118A01(대표 결정 2026-11-18): 몫을 말하지 않은 AI 지출은 나만, 「다 같이」는 []로 밝힌다.
 const SHARE_NAMES = (update) => ({ type: "array", items: { type: "string", maxLength: 30 }, minItems: 0, maxItems: 20,
   description: "Who shares a trip expense: companion names, \"@me\" for the user; [] means everyone on the trip. "
-    + (update ? "Left out: unchanged" : "Left out: only the user pays for it (not split); give shareNames only when the user said who shares it") });
+    + (update ? "Left out: unchanged" : "Left out: only the user pays for it (not split); give shareNames only when the user said who shares it. On a trip shared with companions an expense with shareNames is sent to them as a shared expense") });
 const object = (properties, required = []) => ({ type: "object", properties, required, additionalProperties: false });
 
 // empty: 저장된 것이 없을 때 돌려줄 글. changes: 읽기 키로 부르지만 서버 상태를 바꾸는 도구(AIC1112A01).
