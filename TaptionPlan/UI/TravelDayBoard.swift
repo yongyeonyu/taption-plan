@@ -111,7 +111,7 @@ extension TravelDayBoard {
 struct TravelDayBoardLinks {
     var days: [(key: String, label: String)]
     var currentDay: String
-    /// 정리할 수 있는 곳(핀이 있고 고정이 아닌 곳)이 한 구간에 둘 이상 있는가.
+    /// 정리할 수 있는 곳(핀이 있고 고정이 아닌 곳)이 한 구간에 둘 이상 있는가(겹쳐서 그대로 둔다고 알릴 구간도 포함).
     var canSort: Bool
     /// 일정 번호, 옮겨 갈 날.
     var move: (String, String) -> Void
@@ -124,7 +124,9 @@ extension EnvironmentValues {
 
 private struct TravelDayBoardHost: ViewModifier {
     enum Prompt {
-        case sort(TravelCourseSort.Plan)
+        case sort(TravelCourseSort.Plan, leftOverlap: Bool)
+        /// 겹친 일정이 있는 구간만 있어 그대로 둔다는 안내.
+        case overlapOnly
         case alreadySorted
     }
 
@@ -143,27 +145,46 @@ private struct TravelDayBoardHost: ViewModifier {
         let stops = TravelDayBoard.sortStops(model: model, tripID: tripID, dayKey: dayKey, blocks: blocks)
         content
             .environment(\.travelDayBoard, TravelDayBoardLinks(
-                days: days, currentDay: dayKey, canSort: TravelCourseSort.movableGroups(stops).contains { $0.count > 1 },
+                days: days, currentDay: dayKey, canSort: TravelCourseSort.canSort(stops),
                 move: { itemID, day in move(itemID, to: day, label: days.first { $0.key == day }?.label ?? "") },
-                sort: { prompt = TravelCourseSort.plan(stops).map(Prompt.sort) ?? .alreadySorted }
+                sort: { prompt = Self.prompt(TravelCourseSort.outcome(stops)) }
             ))
             .alert(title, isPresented: Binding(get: { prompt != nil }, set: { if !$0 { prompt = nil } }), presenting: prompt) { prompt in
-                if case .sort(let plan) = prompt {
+                if case .sort(let plan, _) = prompt {
                     Button(language.text("바꾸기", "Reorder")) { apply(plan) }
                     Button(language.text("취소", "Cancel"), role: .cancel) {}
                 } else {
                     Button(language.text("확인", "OK")) {}
                 }
             } message: { prompt in
-                if case .sort(let plan) = prompt {
+                switch prompt {
+                case .sort(let plan, let leftOverlap):
                     let before = TravelCourseSort.kilometers(plan.beforeMeters), after = TravelCourseSort.kilometers(plan.afterMeters)
-                    Text(language.runtimeText(
+                    let distance = language.runtimeText(
                         "이동 거리 약 \(before) km → \(after) km (직선 거리 기준). 예약·숙소·이동과 첫 곳은 그대로 둡니다.",
                         "Travel distance about \(before) km → \(after) km (straight line). Booked plans, lodging, transfers, and the first stop stay put."
-                    ))
+                    )
+                    Text(leftOverlap ? distance + "\n" + overlapNote : distance)
+                case .overlapOnly:
+                    Text(overlapNote)
+                case .alreadySorted:
+                    EmptyView()
                 }
             }
             .travelFixedMoveQuestion($fixedQuestion, language: language)
+    }
+
+    /// 겹친 일정이 있는 구간을 그대로 둘 때의 한 줄(대표 결정 2026-11-18).
+    private var overlapNote: String {
+        language.text("겹친 일정이 있어 그 구간은 그대로 둡니다", "Some plans overlap, so that part stays as it is.")
+    }
+
+    static func prompt(_ outcome: TravelCourseSort.Outcome) -> Prompt {
+        switch outcome {
+        case .plan(let plan, let leftOverlap): .sort(plan, leftOverlap: leftOverlap)
+        case .overlapOnly: .overlapOnly
+        case .alreadySorted: .alreadySorted
+        }
     }
 
     private var title: String {

@@ -64,6 +64,28 @@ final class TravelDayBoardTests: XCTestCase {
         XCTAssertEqual(TravelCourseSort.movableGroups(laterOverlap), [[1, 2]])
     }
 
+    /// TVM1117A02(대표 결정 2026-11-18): 겹친 일정이 있는 구간은 그대로 두고 한 줄로 알린다. 그 구간만 있어도 단추는 보이고, 누르면 안내만 뜬다.
+    func testSortTellsWhenAnOverlappingSegmentIsLeftAlone() {
+        let overlapping = [stop("a", 540, 660, 35.00), stop("b", 600, 660, 35.09), stop("c", 630, 660, 35.01), stop("x", 660, 720, 35.02, fixed: true)]
+        XCTAssertTrue(TravelCourseSort.canSort(overlapping), "겹친 구간만 있어도 단추는 보인다")
+        XCTAssertEqual(TravelCourseSort.outcome(overlapping), .overlapOnly)
+
+        let apart = [stop("a", 540, 600, 35.00), stop("b", 600, 630, 35.09), stop("c", 630, 660, 35.01), stop("x", 660, 720, 35.02, fixed: true)]
+        guard case .plan(let plan, let leftOverlap) = TravelCourseSort.outcome(apart) else { return XCTFail("정리할 것이 있다") }
+        XCTAssertEqual(plan.order, ["a", "c", "b", "x"])
+        XCTAssertFalse(leftOverlap)
+
+        // 앞 구간은 정리하고, 뒤의 겹친 구간은 그대로 두며 안내를 붙인다.
+        let mixed = apart + [stop("d", 720, 840, 35.03), stop("e", 780, 840, 35.09), stop("f", 800, 840, 35.04)]
+        guard case .plan(let mixedPlan, let mixedOverlap) = TravelCourseSort.outcome(mixed) else { return XCTFail("앞 구간은 정리한다") }
+        XCTAssertTrue(mixedOverlap)
+        XCTAssertNil(mixedPlan.moves["e"], "겹친 구간은 그대로")
+        XCTAssertNil(mixedPlan.moves["f"])
+
+        XCTAssertEqual(TravelCourseSort.outcome([stop("a", 540, 600, 35.00), stop("b", 600, 660, 35.01), stop("c", 660, 720, 35.02)]), .alreadySorted)
+        XCTAssertFalse(TravelCourseSort.canSort([stop("a", 540, 600, 35.00), stop("b", 600, 660, 35.01)]), "바꿀 자리가 하나뿐이면 단추가 없다")
+    }
+
     func testSortReturnsNilWhenAlreadyNearestOrTooFewPins() {
         XCTAssertNil(TravelCourseSort.plan([stop("a", 540, 600, 35.00), stop("b", 600, 660, 35.01), stop("c", 660, 720, 35.02)]), "이미 가까운 순서")
         XCTAssertNil(TravelCourseSort.plan([stop("a", 540, 600, 35.00), stop("b", 600, 660, nil), stop("c", 660, 720, nil)]), "핀이 없으면 바꾸지 않는다")
