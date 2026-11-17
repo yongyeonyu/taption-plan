@@ -160,10 +160,34 @@ enum WatchActivityRawReplayEngine {
         from samples: [WatchMotionSample],
         summary: TaptionWatchSensorSummary
     ) -> [WatchBehaviorSegment] {
-        guard let first = samples.first, let last = samples.last else {
-            return []
-        }
         var result: [WatchBehaviorSegment] = []
+        forEachWindow(in: samples) { window in
+            guard let features = WatchBehaviorWindowAnalyzer.features(
+                from: Array(window)
+            ) else { return }
+            let inference = WatchBehaviorClassifier.classifyWindow(
+                features,
+                context: input(for: summary, duration: features.duration)
+            )
+            append(
+                inference,
+                startedAt: features.startedAt,
+                endedAt: features.endedAt,
+                to: &result
+            )
+        }
+        return result
+    }
+
+    /// 시각순으로 정렬된 표본에서 [끝 - 창, 끝] 창을 보폭마다 잘라 넘긴다. 창마다 전체를
+    /// 거르면 O(창×표본)이라(2시간 운동에서 폭증) 두 포인터로 자른다. 같은 표본·순서(WSY1117A01).
+    static func forEachWindow(
+        in samples: [WatchMotionSample],
+        _ body: (ArraySlice<WatchMotionSample>) -> Void
+    ) {
+        guard let first = samples.first, let last = samples.last else { return }
+        var lower = 0
+        var upper = 0
         var windowEnd = first.capturedAt.addingTimeInterval(
             WatchBehaviorWindowAnalyzer.windowDuration
         )
@@ -171,26 +195,18 @@ enum WatchActivityRawReplayEngine {
             let windowStart = windowEnd.addingTimeInterval(
                 -WatchBehaviorWindowAnalyzer.windowDuration
             )
-            let window = samples.filter {
-                $0.capturedAt >= windowStart && $0.capturedAt <= windowEnd
+            while lower < samples.count, samples[lower].capturedAt < windowStart {
+                lower += 1
             }
-            if let features = WatchBehaviorWindowAnalyzer.features(from: window) {
-                let inference = WatchBehaviorClassifier.classifyWindow(
-                    features,
-                    context: input(for: summary, duration: features.duration)
-                )
-                append(
-                    inference,
-                    startedAt: features.startedAt,
-                    endedAt: features.endedAt,
-                    to: &result
-                )
+            upper = max(upper, lower)
+            while upper < samples.count, samples[upper].capturedAt <= windowEnd {
+                upper += 1
             }
+            body(samples[lower..<upper])
             windowEnd = windowEnd.addingTimeInterval(
                 WatchBehaviorWindowAnalyzer.strideDuration
             )
         }
-        return result
     }
 
     private static func append(
