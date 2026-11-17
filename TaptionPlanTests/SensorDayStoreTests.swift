@@ -1693,6 +1693,58 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(model.activeTrackingSession?.id, sessionID)
     }
 
+    /// 다른 기기 저장(센서 한 틱 등)이 진행 중일 때 워치 요약이 오면, 요약 저장이 그 뒤 「따라오는 저장」으로 합쳐지며
+    /// 적용이 실패로 끝나 응답(ack)이 재전송 때까지 미뤄졌다. 전체 실행에서만 앞 시험 영향으로 순서가 바뀌어
+    /// `testSameVersionWatchRedeliveryCompletesUnappliedSnapshotBeforeAck`가 가끔 실패하던 원인(REV1117A03).
+    @MainActor
+    func testWatchSummaryArrivingDuringAnotherDeviceSaveIsStillAppliedAndAcknowledged()
+        async throws {
+        let deletionFence = DataDeletionFenceTestFixture()
+        defer { deletionFence.restore() }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("watch-summary-during-device-save-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let database = try PlanDayDatabase(directory: root.appendingPathComponent("database"))
+        let repository = try GatedSQLitePlanRepository(databaseURL: root.appendingPathComponent("snapshot.sqlite"))
+        let sessionID = UUID()
+        let startedAt = Date.now.addingTimeInterval(-5 * 60)
+        let summary = makeWatchSummary(
+            sessionID: sessionID, sequence: 3, startedAt: startedAt,
+            endedAt: startedAt.addingTimeInterval(100), isAmbient: false
+        )
+        let defaults = UserDefaults.standard
+        let keys = ["taption.watch-summary-high-water.v1.\(sessionID.uuidString)",
+                    "taption.watch-summary-applied-high-water.v1.\(sessionID.uuidString)"]
+        defer { keys.forEach(defaults.removeObject(forKey:)) }
+
+        let service = AppleWatchConnectivityService()
+        let acknowledgements = WatchDeliveryAcknowledgementProbe()
+        service.onAmbientAcknowledgementRequested = { acknowledgements.record($0) }
+        let model = try makeWatchSummaryModel(directory: root, database: database, service: service, repository: repository)
+
+        await repository.blockNextSave()
+        let otherSave = Task { await model.persistDeviceLocalSnapshot() }
+        let saveBlocked = await repository.waitUntilSaveIsBlocked()
+        XCTAssertTrue(saveBlocked, "다른 기기 저장이 진행 중이어야 한다")
+        guard saveBlocked else {
+            await repository.releaseBlockedSave()
+            return
+        }
+        try deliverWatchSummary(summary, through: service)
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertTrue(acknowledgements.values.isEmpty, "저장 전에는 응답하지 않는다")
+
+        await repository.releaseBlockedSave()
+        _ = await otherSave.value
+        let summaryApplied = await waitForWatchSummaryApplied(summary)
+        XCTAssertTrue(summaryApplied, "합쳐진 저장으로 적용을 버리지 않는다")
+        for _ in 0..<100 {
+            if !acknowledgements.values.isEmpty { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(acknowledgements.values, ["summary:\(summary.rawEventID)"], "재전송 없이 응답한다")
+    }
+
     @MainActor
     func testOlderWatchSummaryArchivesDistinctRoutePointsWithoutRegressingSnapshot()
         async throws {

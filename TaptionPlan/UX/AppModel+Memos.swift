@@ -94,10 +94,34 @@ extension AppModel {
     func attachAudio(toMemo memoID: UUID, localIdentifier: String) {
         guard acceptsDataMutation() else { return }
         guard let index = snapshot.memos.firstIndex(where: { $0.id == memoID }) else { return }
+        // 받아쓰기 녹음은 임시 폴더에 생긴다. 시스템이 지우기 전에 앱 폴더로 옮겨 붙인다.
+        let path = VoiceMemoStorage.liveDirectory().map { VoiceMemoStorage.kept(localIdentifier, directory: $0) }
         snapshot.memos[index].attachments.append(
-            MemoAttachment(kind: .audio, localIdentifier: localIdentifier)
+            MemoAttachment(kind: .audio, localIdentifier: path ?? localIdentifier)
         )
         Task { await persist() }
+    }
+
+    /// 기존 음성 첨부를 앱 폴더로 옮기거나(임시 폴더) 지금 경로로 고친다(앱 컨테이너가 바뀐 경우).
+    /// 파일마다 한 번만 옮기고, 바뀐 것이 있으면 `true`. 첨부 경로 문자열 말고는 바꾸지 않는다.
+    @discardableResult
+    func keepVoiceMemoFiles(
+        directory: URL? = VoiceMemoStorage.liveDirectory(),
+        temporary: URL = FileManager.default.temporaryDirectory
+    ) -> Bool {
+        guard let directory else { return false }
+        var changed = false
+        for memoIndex in snapshot.memos.indices {
+            for index in snapshot.memos[memoIndex].attachments.indices
+            where snapshot.memos[memoIndex].attachments[index].kind == .audio {
+                let path = snapshot.memos[memoIndex].attachments[index].localIdentifier
+                let kept = VoiceMemoStorage.kept(path, directory: directory, temporary: temporary)
+                guard kept != path else { continue }
+                snapshot.memos[memoIndex].attachments[index].localIdentifier = kept
+                changed = true
+            }
+        }
+        return changed
     }
 
     func memos(for planID: UUID?) -> [ActionMemo] {

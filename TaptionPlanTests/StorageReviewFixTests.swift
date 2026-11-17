@@ -228,3 +228,144 @@ final class StorageReviewFixTests: XCTestCase {
         )
     }
 }
+
+// MARK: 음성 메모 파일 위치 (REV1117A03, 대표 결정 2026-11-17)
+
+extension StorageReviewFixTests {
+    private func voiceFolders() throws -> (app: URL, temporary: URL) {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("voice-\(UUID().uuidString)", isDirectory: true)
+        directories.append(root)
+        let app = root.appendingPathComponent("Support/TaptionPlan/VoiceMemos", isDirectory: true)
+        let temporary = root.appendingPathComponent("tmp", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+        return (app, temporary)
+    }
+
+    func testVoiceMemoInTemporaryFolderMovesIntoAppFolderOnce() throws {
+        let folders = try voiceFolders()
+        let recorded = folders.temporary.appendingPathComponent("memo-voice-A.m4a")
+        try Data([1, 2, 3]).write(to: recorded)
+
+        let kept = VoiceMemoStorage.kept(recorded.path, directory: folders.app, temporary: folders.temporary)
+        XCTAssertEqual(kept, folders.app.appendingPathComponent("memo-voice-A.m4a").path)
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: kept)), Data([1, 2, 3]), "내용은 그대로 옮긴다")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: recorded.path), "임시 폴더에는 남기지 않는다")
+        XCTAssertEqual(VoiceMemoStorage.kept(kept, directory: folders.app, temporary: folders.temporary), kept, "다시 불러도 그대로")
+    }
+
+    func testVoiceMemoPathFromOldAppContainerFindsTheSameFile() throws {
+        let folders = try voiceFolders()
+        try FileManager.default.createDirectory(at: folders.app, withIntermediateDirectories: true)
+        let current = folders.app.appendingPathComponent("memo-voice-B.m4a")
+        try Data([4]).write(to: current)
+        let old = "/var/mobile/Containers/Data/Application/OLD/Library/Application Support/TaptionPlan/VoiceMemos/memo-voice-B.m4a"
+
+        XCTAssertEqual(VoiceMemoStorage.kept(old, directory: folders.app, temporary: folders.temporary), current.path)
+        let oldTemporary = "/private/var/mobile/Containers/Data/Application/OLD/tmp/memo-voice-B.m4a"
+        XCTAssertEqual(VoiceMemoStorage.kept(oldTemporary, directory: folders.app, temporary: folders.temporary), current.path)
+    }
+
+    func testMissingVoiceMemoKeepsTheStoredPath() throws {
+        let folders = try voiceFolders()
+        let gone = folders.temporary.appendingPathComponent("memo-voice-C.m4a").path
+        XCTAssertEqual(VoiceMemoStorage.kept(gone, directory: folders.app, temporary: folders.temporary), gone,
+                       "지워졌거나 다른 기기의 녹음은 경로를 건드리지 않는다")
+    }
+
+    @MainActor
+    func testStartupMoveChangesOnlyAudioPathsOfExistingMemos() throws {
+        let folders = try voiceFolders()
+        let recorded = folders.temporary.appendingPathComponent("memo-voice-D.m4a")
+        try Data([5]).write(to: recorded)
+        let gone = folders.temporary.appendingPathComponent("memo-voice-gone.m4a").path
+        let memo = ActionMemo(
+            categoryID: "memo", occurredAt: Date(timeIntervalSince1970: 1_000), kind: .idea, text: "음성 메모",
+            attachments: [
+                MemoAttachment(kind: .audio, localIdentifier: recorded.path),
+                MemoAttachment(kind: .audio, localIdentifier: gone),
+                MemoAttachment(kind: .photo, localIdentifier: "photo-asset-1"),
+            ]
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.memos = [memo]
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: stored), cloudSyncService: nil)
+        model.snapshot = stored
+
+        XCTAssertTrue(model.keepVoiceMemoFiles(directory: folders.app, temporary: folders.temporary))
+        let after = try XCTUnwrap(model.snapshot.memos.first)
+        XCTAssertEqual(after.id, memo.id)
+        XCTAssertEqual(after.text, memo.text)
+        XCTAssertEqual(after.attachments.map(\.id), memo.attachments.map(\.id))
+        XCTAssertEqual(after.attachments.map(\.localIdentifier),
+                       [folders.app.appendingPathComponent("memo-voice-D.m4a").path, gone, "photo-asset-1"])
+        XCTAssertFalse(model.keepVoiceMemoFiles(directory: folders.app, temporary: folders.temporary), "두 번째는 바꿀 것이 없다")
+
+        let data = try JSONEncoder().encode(model.snapshot)
+        XCTAssertEqual(try JSONDecoder().decode(TaptionDataSnapshot.self, from: data).memos, model.snapshot.memos,
+                       "저장 형식은 그대로(경로 문자열만 바뀜)")
+    }
+}
+
+// MARK: 확정한 날의 다시 판정 (REV1117A03, 대표 결정 2026-11-17: 원본이 바뀐 날만 봉인을 풀고 다시 판정)
+
+extension StorageReviewFixTests {
+    private func sealedDigest(day: Date, fingerprint: String?) -> TaptionSealedDay {
+        TaptionSealedDayBuilder.make(
+            day: day, sealedAt: day.addingTimeInterval(86_400), sourceFingerprint: fingerprint,
+            categories: ["work": 3_600], metrics: [:], steps: 0, distanceMeters: 0, readings: [],
+            weather: nil, memoCount: 0, actualCount: 1, travelCount: 0, placeCount: 0
+        )
+    }
+
+    @MainActor
+    func testNewRawReadingForSealedPastDayReleasesTheSealAndQueuesAnalysis() {
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: .now)
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+        model.sealedDays[yesterday] = sealedDigest(day: yesterday, fingerprint: "old")
+        model.sealedDays[today] = sealedDigest(day: today, fingerprint: "today")
+
+        model.scheduleSensorAnalysis(containing: yesterday.addingTimeInterval(3 * 3_600), immediately: false)
+
+        XCTAssertNil(model.sealedDay(for: yesterday), "새 원본이 들어온 지난날은 확정을 푼다")
+        XCTAssertNotNil(model.pendingSensorAnalysisRevisions[yesterday], "그날을 다시 판정한다")
+        XCTAssertNotNil(model.sealedDay(for: today), "다른 날 확정은 그대로")
+        model.sensorAnalysisDebounceTask?.cancel()
+    }
+
+    func testSealIsRefreshedOnlyWhenTheDaysRecordsChanged() {
+        let day = Date(timeIntervalSince1970: 1_700_000_000)
+        let sealed = sealedDigest(day: day, fingerprint: "A")
+        XCTAssertFalse(PlanDayRecalculationPolicy.sourceChanged(sealed: sealed, fingerprint: "A", isComplete: true))
+        XCTAssertTrue(PlanDayRecalculationPolicy.sourceChanged(sealed: sealed, fingerprint: "B", isComplete: true),
+                      "그날 기록(실제·장소·이동)이 바뀌면 확정 요약을 다시 만든다")
+        XCTAssertFalse(PlanDayRecalculationPolicy.sourceChanged(sealed: sealed, fingerprint: "B", isComplete: false),
+                       "덜 읽힌 날로는 확정을 바꾸지 않는다")
+        XCTAssertFalse(PlanDayRecalculationPolicy.sourceChanged(sealed: sealed, fingerprint: nil, isComplete: true))
+        XCTAssertFalse(PlanDayRecalculationPolicy.sourceChanged(
+            sealed: sealedDigest(day: day, fingerprint: nil), fingerprint: "B", isComplete: true),
+            "지문이 없던 예전 확정은 그대로 둔다")
+    }
+}
+
+// MARK: 버스 정류장 조회 좌표 (REV1117A03, 대표 결정 2026-11-17: 보내되 서버는 저장·기록하지 않는다)
+
+extension StorageReviewFixTests {
+    func testStopLookupSendsCoordinatesInTheBodyNotTheAddress() throws {
+        let query = ["lat": "37.5", "lng": "127.0"]
+        let request = try XCTUnwrap(BusRouteLookupRunner.request(
+            host: "relay.example.com", path: "/tago/stops", query: query, token: "t", inBody: true))
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertNil(request.url?.query, "주소에는 좌표를 넣지 않는다")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+        let body = try XCTUnwrap(request.httpBody)
+        XCTAssertEqual(try JSONSerialization.jsonObject(with: body) as? [String: Double], ["lat": 37.5, "lng": 127.0])
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer t")
+
+        let old = try XCTUnwrap(BusRouteLookupRunner.request(
+            host: "relay.example.com", path: "/tago/stops", query: query, token: "t", inBody: false))
+        XCTAssertEqual(old.httpMethod, "GET", "본문을 모르는 예전 서버(405)에는 쿼리로 다시 묻는다")
+        XCTAssertNotNil(old.url?.query)
+    }
+}

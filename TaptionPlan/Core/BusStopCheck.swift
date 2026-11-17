@@ -479,15 +479,35 @@ enum BusRouteLookupRunner {
     }
 
     /// 서버에 키가 없거나(503) 실패하면 nil — 기억하지 않고 다음에 다시 본다.
+    /// 정류장 조회 좌표는 주소(요청 로그)에 남지 않게 본문으로 보내고, 본문을 모르는 예전 서버(405)에만 쿼리로 다시 묻는다.
     private static func fetch(host: String, path: String, query: [String: String], token: String) async -> Data? {
+        let inBody = path.hasSuffix("/stops")
+        guard let request = request(host: host, path: path, query: query, token: token, inBody: inBody),
+              let (data, response) = try? await URLSession.shared.data(for: request) else { return nil }
+        let status = (response as? HTTPURLResponse)?.statusCode
+        if inBody, status == 405 { return await fetchWithQuery(host: host, path: path, query: query, token: token) }
+        return status == 200 ? data : nil
+    }
+
+    private static func fetchWithQuery(host: String, path: String, query: [String: String], token: String) async -> Data? {
+        guard let request = request(host: host, path: path, query: query, token: token, inBody: false),
+              let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return data
+    }
+
+    nonisolated static func request(host: String, path: String, query: [String: String], token: String, inBody: Bool) -> URLRequest? {
         guard var components = URLComponents(string: "https://\(host)\(path)") else { return nil }
-        components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
+        if !inBody { components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) } }
         guard let url = components.url else { return nil }
         var request = URLRequest(url: url, timeoutInterval: 8)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        return data
+        if inBody {
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONSerialization.data(withJSONObject: query.compactMapValues(Double.init))
+        }
+        return request
     }
 }
 

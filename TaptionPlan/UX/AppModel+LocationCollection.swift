@@ -869,7 +869,14 @@ extension AppModel {
         immediately: Bool
     ) {
         let day = Calendar.autoupdatingCurrent.startOfDay(for: date)
-        // 확정한 지나간 날은 경로·이동 구간을 다시 만들지 않는다.
+        // 여기로 오는 것은 모두 그날 새 원본이 저장된 때다. 확정한 지난날이면 확정을 풀고 다시 판정한다
+        // (대표 결정 2026-11-17). 다시 확정은 `sealSettledDays`가 한다.
+        if sealedDay(for: day) != nil, PlanDayRecalculationPolicy.isSettled(day, now: .now) {
+            sealedDays[day] = nil
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "day_seal_released_new_raw", fields: ["day": String(Int(day.timeIntervalSince1970))])
+            Task { await removeSeal(for: day) }
+        }
         guard allowsRecalculation(of: day) else {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "sensor_analysis_skipped_sealed",

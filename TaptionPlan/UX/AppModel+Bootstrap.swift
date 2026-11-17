@@ -238,6 +238,7 @@ extension AppModel {
     func bootstrap() async {
         await bootstrapLocalSnapshot()
         migrateLegacyStickersOnce()
+        if acceptsDataMutation(), keepVoiceMemoFiles() { await persist() }
         scheduleBootstrapPreparation()
         await waitForBootstrapPreparation()
         // Siri 동작이 앱을 열지 않고 바로 반영할 모델, 꺼져 있을 때 받은 메모 반영(SIR1111A01).

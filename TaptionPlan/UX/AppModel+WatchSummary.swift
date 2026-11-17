@@ -422,7 +422,9 @@ extension AppModel {
             from: snapshot.actuals,
             suppressedIDs: snapshot.settings.suppressedActualIDs
         )
-        guard await persistDeviceLocalSnapshot() else { return false }
+        // 적용 표시·응답(ack)은 이 저장이 끝나야 한다. 진행 중인 다른 저장에 합쳐 미루면 적용이 실패로 끝나
+        // 재전송 때까지 응답하지 못한다. 강제 저장도 앞선 쓰기 뒤에 줄을 선다(REV1117A03).
+        guard await persistDeviceLocalSnapshot(force: true) else { return false }
         guard acceptsDataMutation(capturedAt: summary.endedAt),
               isCurrentWatchSummary(summary, version: version) else {
             return false
