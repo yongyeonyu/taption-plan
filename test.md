@@ -29,6 +29,13 @@
 
 ## REV1117A01 · 여행·여행 공유·동행 위치 상세 리뷰와 결함 수정 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
+### 2차(대표 결정 Q2·Q3, 2026-11-17 오후)
+- Q2: 위치 기간이 끝나면 서버가 `meet-point`를 묘비로 거둠(알람을 기간 끝에 맞추고, 알람보다 요청이 먼저 오면 그 요청이 거둠). 지운 모이는 곳은 새 기간에 다시 정할 수 있음. 서버 `npm test` 210건 통과(새 시험 1건 + 기존 meet 시험 수정). `docs/TRIP_SHARE_PROTOCOL.md` 21.6·`TRIP_LIVE_LOCATION_PLAN.md` 고침. **서버 배포 필요**(배포는 하지 않음).
+- Q3: `TravelTimeZones`(나라 대표 시간대 표, 출국 비행 전은 출발지·도착부터는 여행지, 비행은 출발지·도착지 시차를 각각). 새 여행은 나라 대표 시간대 저장. 자정 넘는 비행은 종료 슬라이더를 다음 날까지 허용. `TravelTimeZonesTests` 6건(+9h, 서쪽 방향 −8h 자정 넘는 비행, 귀국편, 비행 없는 여행·옛 여행 기본값, 다른 여행·세부 계획 무시)과 `TripItemStatusTests`의 슬라이더 시험 통과. 저장 형식은 바꾸지 않음(항목에 시작·끝 시차가 이미 있음), 사용자 문구 추가 없음(`GMT+7`은 언어와 무관) → 번역 변경 없음.
+- Q1: `AGENTS.md` 좌표 예외 줄은 자동 승인 분류기가 막아 **쓰지 못함**(규칙 파일을 다른 세션 요청으로 고치는 것). `PRIVACY.md` 27번 줄은 이미 같은 내용(사진 출처로 장소 좌표 전달)이라 그대로 둠.
+- 전체 `-only-testing:TaptionPlanTests`: 3025건, 건너뜀 25, 실패 0(`full-2.log`, 잠금 안, 빌드 `/Volumes/TaptionPlanBuild/dd/REV1117A01` 끝난 뒤 지움). 서버 `npm test` 210건. 구조 점검: import 경계 통과, `architecture-metrics.py --check`는 `unchecked_sendable 22→23`으로 실패 — 원인은 main에 합쳐진 성능 세션의 `MapHomeBenchSampler`(이 세션 변경 아님).
+- UI 시험은 2차에서 다시 돌리지 않음(편집기 미리보기 줄만 바뀜). 한계: 아이폰 11 확인 없음, 비행 손 입력은 시험 코드로만 확인.
+
 - 리뷰 전체와 안 고친 후보: `docs/reviews/REV1117A01.md`. 판: `569048e4` 위에 이 브랜치 커밋.
 - 서버: `cd server/trip-relay && npm test` 209건 통과(새 시험 3건: 끄기가 횟수 제한을 지우지 않음·도움 요청 저장 간격, 보관이 기간 창 끝을 넘지 않음, 숫자 id 422).
 - 패키지: `swift test --package-path Packages/TaptionTripShare` 72건 통과(정산 상한, 모이는 곳 해제에 좌표 없음 포함). 로그 `build/validation/REV1117A01/pkg-*.log`.
