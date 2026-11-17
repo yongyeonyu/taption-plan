@@ -1995,11 +1995,13 @@ final class FeatureEngineTests: XCTestCase, UTCDateFixture {
     func waitForInitialForegroundWorkToSettle(
         _ model: AppModel
     ) async {
-        let deadline = Date.now.addingTimeInterval(5)
+        let deadline = Date.now.addingTimeInterval(20)  // 전체 실행 부하
         while Date.now < deadline {
             let log = TaptionPlanDiagnosticsLogger.shared.combinedLog()
+            // 앞 화면 갱신이 끝나도 그것이 부른 센서 갱신이 돌고 있으면, 뒤의 갱신 요청이 그것을 취소한다.
             if log.contains("integration_refresh_finished"),
-               !model.isRefreshingIntegrations {
+               !model.isRefreshingIntegrations,
+               model.sensorTimelineTask == nil {
                 try? await Task.sleep(for: .milliseconds(50))
                 return
             }
