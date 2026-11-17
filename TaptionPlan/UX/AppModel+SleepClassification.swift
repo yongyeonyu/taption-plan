@@ -37,9 +37,16 @@ extension AppModel {
         let homePoint = settings.frequentPlaces.first {
             $0.kind == .home && $0.isAutomaticRecordingEnabled
         }?.point
+        // 이 단계가 지난 갱신에 만든 자동 휴대폰 수면은 아래에서 지우고 다시 만든다. 그것을 「방해물」로 넘기면
+        // 같은 밤을 스스로 막아 수면이 사라지거나 꼬리만 남는다(REV1117A03). 사용자가 고친 수면은 남겨 막게 한다.
+        let corrections = snapshot.settings.activityCorrections
+        let isReplaceable: (ActualRecord) -> Bool = { actual in
+            PhoneSleepFusion.isPhoneSleep(actual) && !ActualRecord.userOwned(actual, activityCorrections: corrections)
+        }
+        let otherActuals = snapshot.actuals.filter { !isReplaceable($0) }
         let strictRecords = TaptionActivityEngineAdapter.strictSleepActuals(
             readings: readings,
-            actuals: snapshot.actuals,
+            actuals: otherActuals,
             inside: span,
             homePoint: homePoint,
             maximumSampleGap: maximumSampleGap,
@@ -49,7 +56,7 @@ extension AppModel {
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
         let records = PhoneSleepFusion.records(
             readings: readings,
-            actuals: snapshot.actuals,
+            actuals: otherActuals,
             inside: span,
             nominalMaximumSampleGap: maximumSampleGap,
             authoritativeSleepSpans: sleepSessions.map(\.span),
@@ -101,11 +108,13 @@ extension AppModel {
         )
         snapshot.actuals.removeAll { actual in
             AutomaticModelVersion.matches(actual.modelVersion, AutomaticModelVersion.phoneSleep)
+                && !ActualRecord.userOwned(actual, activityCorrections: corrections)
                 && actual.span(asOf: span.end)
                     .intersection(with: evidenceSpan) != nil
         }
         snapshot.actuals.removeAll { actual in
             AutomaticModelVersion.matches(actual.modelVersion, TaptionActivityEngineAdapter.strictSleepModelVersion)
+                && !ActualRecord.userOwned(actual, activityCorrections: corrections)
                 && actual.span(asOf: span.end)
                     .intersection(with: evidenceSpan) != nil
         }
