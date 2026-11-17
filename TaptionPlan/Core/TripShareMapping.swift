@@ -84,6 +84,22 @@ enum TripShareMapping {
         var place: String?
     }
 
+    /// 방에 싣는 메모의 바이트 한도. 이모지로 500자를 채워도 방 한 칸(4KB, 잠근 뒤)에 들어가게 한다.
+    static let memoBytes = 2_000
+
+    /// 글자(문자소)를 자르지 않고 UTF-8 `bytes` 안으로 줄인다.
+    static func clipped(_ text: String, bytes: Int) -> String {
+        guard text.utf8.count > bytes else { return text }
+        var out = "", used = 0
+        for character in text {
+            let size = character.utf8.count
+            guard used + size <= bytes else { break }
+            out.append(character)
+            used += size
+        }
+        return out
+    }
+
     /// 일정 → 방 평문. `place`는 그 일정의 장소 이름(핀 이름)만 넘긴다.
     /// 분은 `day`(시작의 현지 날짜) 0시부터 센 벽시계 분이고, 끝은 끝 쪽 시차의 벽시계라 자정을 넘으면 1,440을 넘는다.
     static func plan(_ item: TravelTripItem, place: String? = nil, order: Int? = nil, by: Int? = nil) -> SharePlanContent {
@@ -96,7 +112,7 @@ enum TripShareMapping {
         return SharePlanContent(
             day: day, start: minute(item.start, item.startOffsetSeconds), end: minute(item.end, item.endOffsetSeconds),
             startOffset: item.startOffsetSeconds / 60, endOffset: item.endOffsetSeconds / 60, title: item.title,
-            place: name?.isEmpty == false ? name : nil, memo: item.note,
+            place: name?.isEmpty == false ? name : nil, memo: item.note.map { clipped($0, bytes: memoBytes) },
             cost: item.plannedSpendKRW.map { Int($0.rounded()) }, currency: item.plannedSpendKRW == nil ? nil : ShareSettlementCalculator.baseCurrency,
             order: order, planKind: item.kind, status: item.status, colorHex: item.colorHex,
             parentItemID: item.parentItemID.map { roomItemID(tripID: item.tripID, itemID: $0) }, by: by

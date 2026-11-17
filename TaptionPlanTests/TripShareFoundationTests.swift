@@ -53,6 +53,24 @@ final class TripShareFoundationTests: XCTestCase {
 
     // MARK: 변환
 
+    /// 메모 500자를 이모지로 채워도 방 한 칸(4KB)에 들어가게 바이트 한도 안에서 글자 단위로 줄인다(TSA1117A01).
+    func testALongEmojiMemoStillFitsOneRoomItem() throws {
+        var long = item("m-1a2b3c4d", "성", "2031-10-02T01:00:00Z", "2031-10-02T03:30:00Z")
+        let family = "👨‍👩‍👧‍👦"
+        long.note = String(repeating: family, count: 500)
+        let content = TripShareMapping.plan(long, place: "성문")
+        let memo = try XCTUnwrap(content.memo)
+        XCTAssertLessThanOrEqual(memo.utf8.count, TripShareMapping.memoBytes)
+        XCTAssertTrue(memo.allSatisfy { String($0) == family }, "글자 중간을 자르지 않는다")
+        XCTAssertTrue(long.note?.hasPrefix(memo) ?? false)
+        let plaintext = try JSONEncoder().encode(ShareContent.plan(content))
+        XCTAssertLessThanOrEqual(ShareCipher.sealedBytes(plaintextBytes: plaintext.count), ShareLimits.v1.itemBytes, "방 한 칸에 들어간다")
+
+        // 짧은 메모는 그대로다.
+        long.note = "표는 현장에서 👍"
+        XCTAssertEqual(TripShareMapping.plan(long).memo, "표는 현장에서 👍")
+    }
+
     func testPlanRoundTripsThroughRoomContent() throws {
         var parent = item("m-1a2b3c4d", "성", "2031-10-02T01:00:00Z", "2031-10-02T03:30:00Z")
         parent.colorHex = "#AA3322"
