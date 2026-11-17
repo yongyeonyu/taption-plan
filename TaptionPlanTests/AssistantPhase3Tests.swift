@@ -2097,6 +2097,28 @@ final class AssistantAppControlTests: XCTestCase {
         await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 11))
         XCTAssertEqual(Phase3RelayStub.requests.count, 4, "지운 뒤에는 아무것도 보내지 않는다")
     }
+
+    /// REV1117A02: 제안 id(「suggested-위도,경도」)와 이름 없이 등록한 장소의 좌표 이름은 AI로 나가지 않는다.
+    func testCoordinatesInSuggestionIDsAndPlaceNamesStayOnTheDevice() throws {
+        let point = GeoPoint(latitude: 12.3456, longitude: 65.4321, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 5)
+        var value = try input()
+        value.shareLevel = .visits
+        value.placeSuggestion = FrequentPlaceSuggestion(
+            id: "suggested-12.3456,65.4321", point: point, suggestedName: nil, visitCount: 3,
+            firstVisitedAt: at(11, 5, 9), lastVisitedAt: at(11, 12, 9), reason: .weekly
+        )
+        value.places = [FrequentPlace(kind: .custom, name: "12.34560, 65.43210"), FrequentPlace(kind: .custom, name: "단골 카페")]
+        let body = try XCTUnwrap(AssistantAppStateSync.body(AssistantAppStateSync.make(value)))
+        let text = try XCTUnwrap(String(data: body, encoding: .utf8))
+        XCTAssertFalse(text.contains("12.345"), "좌표가 그대로 나갔다: \(text)")
+        XCTAssertFalse(text.contains("65.432"))
+        XCTAssertTrue(text.contains("단골 카페"))
+
+        let start = at(11, 16, 9)
+        let stay = PlaceStay(placeKey: "frequent-x", displayName: "12.34560, 65.43210", span: TimeSpan(start: start, end: start.addingTimeInterval(3_600)), confidence: .high)
+        XCTAssertEqual(AssistantActivityBuilder.placeName(stay, registered: ["frequent-x": "12.34560, 65.43210"], language: .korean), "머문 곳")
+        XCTAssertEqual(AssistantActivityBuilder.placeName(stay, registered: ["frequent-x": "회사"], language: .korean), "회사")
+    }
 }
 
 // MARK: - 등록부 동작 5·6묶음, 장소 쌍 규칙, 새 규칙 기록 (ACT1114A09)
@@ -2465,28 +2487,6 @@ extension AssistantPhase3Tests {
     }
 
     /// 서버에서 새로 들어온 AI 규칙은 「AI가 한 일」에 남고, 되돌리면 그 규칙이 꺼진다.
-    /// REV1117A02: 제안 id(「suggested-위도,경도」)와 이름 없이 등록한 장소의 좌표 이름은 AI로 나가지 않는다.
-    func testCoordinatesInSuggestionIDsAndPlaceNamesStayOnTheDevice() throws {
-        let point = GeoPoint(latitude: 12.3456, longitude: 65.4321, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 5)
-        var value = try input()
-        value.shareLevel = .visits
-        value.placeSuggestion = FrequentPlaceSuggestion(
-            id: "suggested-12.3456,65.4321", point: point, suggestedName: nil, visitCount: 3,
-            firstVisitedAt: at(11, 5, 9), lastVisitedAt: at(11, 12, 9), reason: .weekly
-        )
-        value.places = [FrequentPlace(kind: .custom, name: "12.34560, 65.43210"), FrequentPlace(kind: .custom, name: "단골 카페")]
-        let body = try XCTUnwrap(AssistantAppStateSync.body(AssistantAppStateSync.make(value)))
-        let text = try XCTUnwrap(String(data: body, encoding: .utf8))
-        XCTAssertFalse(text.contains("12.345"), "좌표가 그대로 나갔다: \(text)")
-        XCTAssertFalse(text.contains("65.432"))
-        XCTAssertTrue(text.contains("단골 카페"))
-
-        let start = at(11, 16, 9)
-        let stay = PlaceStay(placeKey: "frequent-x", displayName: "12.34560, 65.43210", span: TimeSpan(start: start, end: start.addingTimeInterval(3_600)), confidence: .high)
-        XCTAssertEqual(AssistantActivityBuilder.placeName(stay, registered: ["frequent-x": "12.34560, 65.43210"], language: .korean), "머문 곳")
-        XCTAssertEqual(AssistantActivityBuilder.placeName(stay, registered: ["frequent-x": "회사"], language: .korean), "회사")
-    }
-
     func testNewAIRulesAreLoggedAndUndoSwitchesThemOff() async throws {
         let store = defaults()
         let model = await makeModel()
