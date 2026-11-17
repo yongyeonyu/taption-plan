@@ -56,6 +56,9 @@ public struct LedgerEntry: Codable, Identifiable, Equatable, Sendable {
     public var transfer: LedgerTransfer?
     /// 취소된 결제면 그 시각(LCN1111A01, 대표 결정). 기록은 남기고 합계에서만 뺀다. 예전 기록에는 없다.
     public var canceledAt: Date?
+    /// 사용자가 지출 폼에서 몫(다 같이·나만·골라서)을 직접 골랐으면 true(TSA1117A01, 대표 결정 2026-11-18).
+    /// 자동으로 들어온 기록의 「다 같이」(nil)와 사용자가 고른 「다 같이」를 가른다. 예전 기록에는 없다.
+    public var shareChosen: Bool?
 
     public init(id: UUID = UUID(), occurredAt: Date, amount: Double, currency: String = "KRW", amountKRW: Double? = nil, kind: Kind = .expense, category: LedgerCategory = .other, title: String, place: String? = nil, payer: String? = nil, tripID: String? = nil, memoID: UUID? = nil, note: String? = nil, source: Source = .manual, createdAt: Date = Date(), shareNames: [String]? = nil, transfer: LedgerTransfer? = nil, canceledAt: Date? = nil) {
         self.id = id
@@ -122,6 +125,8 @@ extension LedgerEntry {
         shareNames = try values.decodeIfPresent([String].self, forKey: .shareNames)
         transfer = try values.decodeIfPresent(LedgerTransfer.self, forKey: .transfer)
         canceledAt = try values.decodeIfPresent(Date.self, forKey: .canceledAt)
+        // 표지가 이상하면 표지만 버린다(기록은 읽는다).
+        shareChosen = (try? values.decodeIfPresent(Bool.self, forKey: .shareChosen)) ?? nil
     }
 }
 

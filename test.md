@@ -24,6 +24,9 @@
   8. 이모지 메모 500자가 4KB를 넘어 일정이 늘 못 올라감(TSR1117A01이 넘김) → 방에 싣는 메모를 UTF-8 2,000바이트 안으로 문자소 단위로 줄임(`b00190f8`, 시험 고침 `31fb5af2`).
   9. 대표 결정(2026-11-17): 공유 시작 전 「다 같이」 지출을 나만으로 바꾸던 것 → 올리기 끝에 직접 넣은 「다 같이」 지출을 공동 지출로 올리고, 주인 기기가 들어온 동행을 몫에 더함(곁 파일 `allTogether` 칸, `8a0f7488`, 시험 고침 `263ddba3`). 자동 기록은 올리지 않음.
 - 시험: 새 단위 시험 9건(곁 파일 1·키체인 1·순서 1·판 닫기 1·메모 1·카드 1·나간 사람 1·「다 같이」 1·잠금 한도 1, 기존 파일에 추가) 모두 통과. 시험은 구현 전에 썼으나 빌드 잠금이 몇 시간 붐벼 **고치기 전 실패 확인은 돌리지 못함**. `-only-testing:TaptionPlanTests` 전체: r3 2,994건 중 실패 1(「다 같이」 시험이 자동 기록 고정을 너무 일찍 봄 → 시험 순서 고침), 끝 판 r4 **2,994 통과·실패 0·건너뜀 25**(`unit-all-r4.xcresult`). `TripShareLedgerTests` 14건과 `TaptionPlanTravelPlanUITests` 3·`TaptionPlanTravelScreensUITests` 4건 통과(`ledger-and-travel-ui.xcresult`). 구조 점검 `architecture-metrics.py --check`·`check-app-engine-import-boundary.sh` 통과.
+- 덧붙임(2026-11-18, 대표 결정): 자동으로 들어온 기록(문자·영수증·AI)도 사용자가 폼에서 몫(다 같이·나만·골라서)을 직접 고른 것은 공유 시작 때 올린다. 손대지 않은 자동 기록은 그대로 안 올린다. 가를 근거가 없어 `LedgerEntry`에 없어도 되는 칸 `shareChosen: Bool?`을 더하고, 지출 폼의 「누구 몫」 바인딩이 고를 때 표지를 적는다. 비어 있으면 키가 생기지 않아 예전 모양 그대로이고, 모양이 이상하면 표지만 버린다. 예전 기록 되돌리기 코드는 넣지 않음(출시 전). main `5f2d3dbb` 위.
+  - 시험: `LedgerDecodeSafetyTests` 빌드 316 모양 읽기에 표지 없음 확인·새 시험(키 없음·true 읽기·이상한 값)·모든 칸 왕복에 표지 추가, 새 `LedgerShareChosenStorageTests`(SQLite 정본 다시 읽기 + TAPTBK02·03 백업·복원에서 표지 보존, 표지 없는 예전 행은 바이트 그대로), `TripShareLedgerTests` 「다 같이」 시험에 표지 있는 자동 「택시」는 올라가고 손대지 않은 자동 기록은 안 올라감을 더함. `-only-testing:TaptionPlanTests` 전체 **2,996 통과·실패 0·건너뜀 25**(`unit-all-r6.xcresult`). `TaptionLedgerCore`는 시험 대상이 없어 `swift build`만 통과(`swift test`는 「no tests found」). 구조 점검 둘 통과(`arch-r2.log`·`boundary-r2.log`).
+  - 제한: 폼은 처음부터 「다 같이」로 보이므로, 자동 기록을 「다 같이」로 두려면 다른 칸을 눌렀다 다시 골라야 표지가 생긴다(이미 고른 칸을 다시 누르면 바뀜이 없어 표지가 안 생긴다). 화면 시험 없음.
 - 제한: 실기기·실서버 확인 없음. 새 사용자 문구 없음(번역 팩 손대지 않음). 공유 판을 지구본에서 열고 바로 공유를 만들면 올리기가 끝난 뒤 그 방은 열린 채 남음(다음 장면 전환·뒤로 가기에 닫힘).
 
 ## TSR1117A01 · 여행 공유 패키지·서버 방 결함 아홉 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
