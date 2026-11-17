@@ -770,6 +770,30 @@ extension FeatureEngineTests {
         XCTAssertNotEqual(first?.id, second?.id)
     }
 
+    /// 하루 갱신은 지문이 같아도 수면 단계를 다시 돈다. 지난 갱신이 만든 휴대폰 수면이 같은 밤의 「방해물」이 되면
+    /// 두 번째 갱신이 수면을 지우고 아무것도 만들지 못한다. 같은 입력이면 같은 수면이 남아야 한다(REV1117A03).
+    @MainActor
+    func testRepeatedPhoneSleepPassKeepsTheSameNight() {
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: makeDate(2026, 8, 24, 12, 0))
+        let readings = [0.0, 2, 4, 7].map { hourOffset in
+            SensorReading(
+                timestamp: start.addingTimeInterval(hourOffset * hour),
+                motion: .stationary, motionConfidence: .high, stepCount: 0,
+                powerState: .full, screenBrightness: 0.8, screenIsOn: true
+            )
+        }
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(8 * hour))
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+
+        model.applyChargingInactivitySleepRecords(readings: readings, inside: span)
+        let first = model.snapshot.actuals.filter(PhoneSleepFusion.isPhoneSleep)
+        XCTAssertEqual(first.count, 1)
+        model.applyChargingInactivitySleepRecords(readings: readings, inside: span)
+        let second = model.snapshot.actuals.filter(PhoneSleepFusion.isPhoneSleep)
+        XCTAssertEqual(second.map(\.startedAt), first.map(\.startedAt), "다시 돌려도 같은 밤의 수면이 남는다")
+        XCTAssertEqual(second.map(\.endedAt), first.map(\.endedAt))
+    }
+
     func testPhoneSleepFallbackBridgesSparseChargingNight() {
         // 지역 시각 자정부터 본다. UTC 자정은 한국 시각 9~16시라 낮 창 규칙에 걸린다(ALG1102A01).
         let start = Calendar.autoupdatingCurrent.startOfDay(for: makeDate(2026, 8, 24, 12, 0))

@@ -244,6 +244,30 @@ final class DayStoreV3Tests: XCTestCase {
         XCTAssertEqual(finalEvents, [original])
     }
 
+    /// 1초보다 잘게 찍힌 시각은 1970 기준 초로 SQLite에 갔다 오면 마지막 비트가 바뀔 수 있다. 같은 묶음을 다시 보내도
+    /// (Watch 큐 재시도) 충돌로 보면 안 된다(REV1117A03).
+    func testReappendingSubSecondTimestampIsNotAConflict() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanV3Store(url: url, device: .appleWatch)
+        let day = TaptionPlanDayKey(year: 2026, month: 5, day: 9)
+        let events = (0..<16).map { index in
+            TaptionPlanRawEvent(
+                device: .appleWatch, day: day,
+                timestamp: Date(timeIntervalSinceReferenceDate: 800_000_000.123456 + Double(index) * 0x1p-23),
+                sequence: UInt64(index), id: "sub-second-\(index)", domain: "watch-summary",
+                provenance: ["test-source"], payload: Data([UInt8(index)])
+            )
+        }
+        try await store.appendRawEvents(events)
+        try await store.validateRawEventsForAppend(events)
+        let again = try await store.appendRawEvents(events)
+        XCTAssertTrue(again.isEmpty, "같은 묶음을 다시 넣으면 새로 넣은 것이 없다")
+        let stored = try await store.rawEvents(for: day)
+        XCTAssertEqual(stored.count, events.count)
+        XCTAssertEqual(Set(stored), Set(events), "저장 뒤 읽은 값과 넣은 값은 같은 이벤트로 본다")
+    }
+
     func testRawEventPagesVisitStableOrderAndRespectDomain() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }

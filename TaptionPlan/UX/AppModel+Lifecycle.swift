@@ -230,7 +230,7 @@ extension AppModel {
         }
     }
 
-    private func applyAirPodsActivity(
+    func applyAirPodsActivity(
         _ observation: AirPodsActivityObservation
     ) {
         guard acceptsDataMutation(
@@ -260,7 +260,7 @@ extension AppModel {
             confidence: .high,
             createdAt: observation.startedAt,
             behavior: behavior,
-            evidence: ["AirPods · (observation.routeName)"],
+            evidence: ["AirPods · \(observation.routeName)"],
             modelVersion: "airpods-observer-v1"
         )
         if let index = snapshot.actuals.firstIndex(where: {

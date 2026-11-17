@@ -136,6 +136,9 @@ extension FeatureEngineTests {
             cloudSyncService: nil,
             registersHealthBackgroundHandler: false
         )
+        // 앞 시험이 남긴 「integration_refresh_finished」로 대기가 일찍 끝나면, 이 모델의 첫 앞 화면 갱신이
+        // 아래 묶음의 한 날을 취소하고 그날은 120초 뒤에야 다시 돈다(전체 실행에서만 실패, REV1117A03).
+        TaptionPlanDiagnosticsLogger.shared.clear()
         await model.sceneBecameActive()
         await waitForInitialForegroundWorkToSettle(model)
         let persistedBefore = try await repository.load().updatedAt

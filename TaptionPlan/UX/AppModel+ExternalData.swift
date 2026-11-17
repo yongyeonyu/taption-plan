@@ -188,6 +188,21 @@ extension AppModel {
         )
     }
 
+    /// iCloud로 올리는 값. 저장소에 쓰지 않는 메모 초안은 올리지 않는다(REV1117A03).
+    func cloudUploadSnapshot() -> TaptionDataSnapshot {
+        Self.cloudPortableSnapshot(snapshotForPersistence())
+    }
+
+    /// 동기화 결과에는 초안이 없으므로, 메모리에 반영할 때 지금 열린 초안을 다시 붙인다.
+    func keepingPendingMemoDrafts(_ value: TaptionDataSnapshot) -> TaptionDataSnapshot {
+        let present = Set(value.memos.map(\.id))
+        let drafts = snapshot.memos.filter { pendingMapMemoIDs.contains($0.id) && !present.contains($0.id) }
+        guard !drafts.isEmpty else { return value }
+        var result = value
+        result.memos.append(contentsOf: drafts)
+        return result
+    }
+
     func synchronizeCloud(showErrors: Bool = true) async {
         guard !Task.isCancelled, acceptsDataMutation() else { return }
         activeDataMutationCount += 1
@@ -224,20 +239,20 @@ extension AppModel {
             let localDeviceData = snapshot
             let sourceRevision = snapshotRevision
             let (cloudValue, _) = try await cloudSyncService.synchronize(
-                local: Self.cloudPortableSnapshot(snapshot)
+                local: cloudUploadSnapshot()
             )
             guard sourceRevision == snapshotRevision,
                   acceptsDataMutation() else {
                 isCloudSyncing = false
                 return
             }
-            let committed = preparedCloudMergedSnapshot(
+            let committed = keepingPendingMemoDrafts(preparedCloudMergedSnapshot(
                 mergeDeviceLocalData(
                     cloud: cloudValue,
                     local: localDeviceData
                 ),
                 preservingUpdatedAt: localDeviceData.updatedAt
-            )
+            ))
             var persisted = committed
             persisted.memos.removeAll {
                 pendingMapMemoIDs.contains($0.id)

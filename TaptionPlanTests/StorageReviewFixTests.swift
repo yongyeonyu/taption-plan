@@ -92,6 +92,63 @@ final class StorageReviewFixTests: XCTestCase {
         XCTAssertEqual(afterSecondSave.plans, snapshot.plans)
     }
 
+    /// 한 종류라도 해석에 실패하면 비교 기준(`known`)이 남지 않아야 한다. 남으면 다음 저장이 읽지 못한 행을
+    /// 「스냅샷에 없음」으로 보고 지운다(REV1117A03).
+    func testFailedDecodeDoesNotLetNextSaveDeleteUnreadRows() async throws {
+        let url = try makeDirectory().appendingPathComponent("store.sqlite")
+        let store = try TaptionStoreV2(url: url)
+        let writer = TaptionStoreRepository(store: store)
+        let snapshot = planSnapshot(["저장한 계획"])
+        try await writer.save(snapshot)
+        try await store.upsertRecords([record("unreadable-plan", kind: "plan", start: date(2026, 8, 2))])
+
+        let reader = TaptionStoreRepository(store: store)
+        do {
+            _ = try await reader.load()
+            XCTFail("해석하지 못한 행이 있으면 읽기는 실패한다")
+        } catch {}
+        _ = try? await reader.save(snapshot)
+
+        let ids = try await store.allRecordRows(kinds: ["plan"]).map(\.id)
+        XCTAssertTrue(ids.contains("unreadable-plan"), "읽지 못한 행은 다음 저장에서 지워지지 않는다")
+    }
+
+    /// 메모리 압력으로 비교 기준을 버린 뒤 저장해도, 이 저장소가 본 적 없는 다른 쓰기(같은 파일의 다른 저장소)는
+    /// 지우지 않는다. 압력이 없을 때와 같은 결과여야 한다(REV1117A03).
+    func testMemoryPressureDoesNotMakeNextSaveDeleteOtherWriters() async throws {
+        let url = try makeDirectory().appendingPathComponent("store.sqlite")
+        let store = try TaptionStoreV2(url: url)
+        let app = TaptionStoreRepository(store: store)
+        let snapshot = planSnapshot(["앱 계획"])
+        try await app.save(snapshot)
+        _ = try await app.load()
+
+        let other = TaptionStoreRepository(store: store)
+        var otherSnapshot = try await other.load()
+        otherSnapshot.plans += planSnapshot(["다른 쪽 계획"]).plans
+        try await other.save(otherSnapshot)
+
+        await app.handleMemoryPressure()
+        var edited = snapshot
+        edited.updatedAt = Date(timeIntervalSince1970: 2_000)
+        try await app.save(edited)
+
+        let titles = try await TaptionStoreRepository(store: store).load().plans.map(\.title)
+        XCTAssertTrue(titles.contains("다른 쪽 계획"), "메모리 압력 뒤 저장이 다른 쪽이 쓴 행을 지우지 않는다")
+    }
+
+    private func planSnapshot(_ titles: [String]) -> TaptionDataSnapshot {
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_000)
+        snapshot.plans = titles.map { title in
+            PlanRecord(
+                title: title, span: TimeSpan(start: date(2026, 8, 1), end: date(2026, 8, 1, 13)), categoryID: "project",
+                createdAt: Date(timeIntervalSince1970: 1_000), updatedAt: Date(timeIntervalSince1970: 1_000)
+            )
+        }
+        return snapshot
+    }
+
     // MARK: 센서 갱신 되돌리기
 
     @MainActor

@@ -222,6 +222,11 @@ final class AppModelBackupConnectionTests: XCTestCase {
         XCTAssertEqual(model.lastBackupReport?.succeeded, true)
 
         try model.configureBackupPIN("739104")
+        await model.backUpNow(password: "739104", now: date(2026, 10, 20))
+        let refused = model.lastBackupReport?.items.first { $0.name == "2026-10" }
+        XCTAssertEqual(refused?.kind, .rejected)
+        // 엔진 오류 이름(`passwordDiffersFromExistingBackup(...)`)이 그대로 보이지 않고 사용자 문장이 보인다(REV1117A03).
+        XCTAssertEqual(refused?.detail, TaptionBackupError.passwordDiffersFromExistingBackup("2026-10.taptionbackup").userMessage)
         await model.restoreBackup(.month(TaptionBackupMonth(year: 2026, month: 10)), password: "739104")
         XCTAssertEqual(model.lastBackupReport?.succeeded, false, "바꾸기 전에 만든 백업은 새 비밀번호로 열리지 않는다")
         await model.restoreBackup(.month(TaptionBackupMonth(year: 2026, month: 10)), password: password)
@@ -236,14 +241,23 @@ final class AppModelBackupConnectionTests: XCTestCase {
         XCTAssertEqual(kept.kind, .rejected)
         XCTAssertEqual(kept.name, "2026-07")
         XCTAssertTrue(kept.detail.contains("10") && kept.detail.contains("4"))
-        for message in [
-            "2026-07.taptionbackup 백업이 없거나 읽을 수 없다.",
-            "2026-07.taptionbackup은 달이 끝나기 전에 만든 백업이라 지우지 않는다. 다시 백업해야 한다.",
-            "2026-07.taptionbackup의 내용이 로컬과 달라 지우지 않는다. 다시 백업해야 한다.",
-            "2026-07.taptionbackup 검증 후 로컬에 새 행이 들어와 지우지 않았다.",
-            "2026-07.taptionbackup 검증 실패로 지우지 않았다: wrongPassword",
-        ] {
-            XCTAssertNotEqual(PlanBackupPresenter.skipDetail(message), PlanBackupPresenter.skipDetail("알 수 없음"), message)
+        // 엔진(`TaptionBackupEngine.offload`)이 실제로 내는 문장 그대로다. 문장이 어긋나면 모두 「안전을 위해」로만 보인다(REV1117A03).
+        let generic = PlanBackupPresenter.skipDetail("알 수 없음")
+        let verifyFailed = PlanBackupPresenter.skipDetail("2026-07.taptionbackup 검증 실패로 지우지 않았다: wrongPassword")
+        for (message, expected) in [
+            ("2026-07.taptionbackup 백업이 없거나 읽을 수 없다.", nil),
+            ("2026-07.taptionbackup은 달이 끝나기 전에 만든 백업이라 지우지 않는다. 다시 백업해야 한다.", nil),
+            ("2026-07.taptionbackup의 내용이 로컬과 달라 지우지 않는다(3행). 다시 백업해야 한다.", nil),
+            ("2026-07.taptionbackup 검증 실패로 지우지 않았다: wrongPassword", nil),
+            ("2026-07.taptionbackup 검증 뒤 로컬이 바뀌어(새 행·편집·삭제 표시) 지우지 않았다.",
+             AppLanguagePreference.text("확인하는 동안 새 데이터가 들어와 지우지 않았습니다.", "New data arrived during verification, so nothing was removed.")),
+            ("2026-07.taptionbackup: 비밀번호가 기존 백업과 달라 지우지 않는다.", verifyFailed),
+            ("2026-07.taptionbackup은 데이터 전체 삭제 이전의 백업이라 지우지 않는다.",
+             PlanBackupPresenter.keepDetail(.staleAfterDataWipe)),
+        ] as [(String, String?)] {
+            let detail = PlanBackupPresenter.skipDetail(message)
+            XCTAssertNotEqual(detail, generic, message)
+            if let expected { XCTAssertEqual(detail, expected, message) }
         }
     }
 

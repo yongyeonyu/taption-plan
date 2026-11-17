@@ -71,6 +71,17 @@
 - 서버 배포 필요(대표 지시 때만): `shared.js`·`actions.js`·`validate.js`·`state.js`·`store.js`·`index.js`. 옛 서버에서는 앱의 `DELETE /tasks?all=1`이 끝난 일만 지움.
 - 확인 안 한 것: 실기기, 공통 규칙 화면 새 문구의 눈 확인.
 
+## REV1117A03 · 데이터 저장·백업·동기화·분류·센서·경로 상세 리뷰와 결함 고침 (2026-11-17, 시뮬레이터, 실기기 없음)
+
+- 판: 브랜치 `claude/rev-data-b8acb4`, 결함마다 커밋 하나(`6d4566a6`~`81d49b40`, 11건). 전체 리뷰·고치지 않은 것·다른 영역 몫은 `docs/reviews/REV1117A03.md`. 저장 형식·스키마·데이터 경로·대표 결정은 바꾸지 않음. 새 문구 없음(번역 키 변경 없음).
+- 환경: 시뮬레이터 `99AC6F35…`, Debug, `-parallel-testing-enabled NO`, 공유 빌드 잠금. 로그 `build/validation/REV1117A03/`. 앞쪽 빌드는 본체 `build/dd-REV1117A03`, 전체 실행·Watch 빌드는 외장 `/Volumes/TaptionPlanBuild/dd/REV1117A03*`(메인 세션 안내). 작업 중 본체 여유가 한 번 29GB까지 내려갔다 37GB로 돌아옴.
+- 고친 결함(상 4·중 3·하 3·시험 1): V3 원본 이벤트 1초 미만 시각 비교(재전송이 충돌로 막힘), 저장소 해석 실패 뒤 다음 저장이 읽지 못한 행 삭제, 메모리 압력 뒤 다음 저장이 다른 쓰기 삭제, 저장 전 메모 초안 iCloud 업로드·되살아남, 휴대폰 수면 자기 결과에 막힘, 숨긴·고친 식당 식사 되살아남, 반복 루틴 서머타임 한 시간 어긋남, 백업 실패에 Swift 오류 원문, 정리 건너뜀 이유 문장, AirPods 근거 글자, 전체 실행에서만 실패하던 `testImmediateSensorAnalysisKeepsEveryPendingDay`.
+- 빨강→초록: 고치기 전 묶음(`red2`) 12건 중 8건 실패로 백업·저장소 2·서머타임·휴대폰 수면·AirPods 결함 재현. 메모 초안 시험은 새 함수에 기대 고치기 전엔 컴파일 실패로만, 식당 식사 시험은 고친 뒤 통과만 확인(제한). 고친 뒤 새 시험·관련 묶음(`green2`) 20건 통과.
+- 패키지: `swift test --package-path Packages/TaptionPlanCore` XCTest 90 + Swift Testing 11 실패 0(저장 바이트 고정 시험 포함, `spm-core-fix3.log`). 다른 패키지 소스는 바꾸지 않음(저장소 고침은 앱 `TaptionPlan/Core`).
+- 전체 `-only-testing:TaptionPlanTests`(`full.log`): **3,016건 실행, 25건 건너뜀, 실패 0**. 센서 시험 통과(2.4초). 건너뜀은 모두 환경 조건(재생·그림 시트 환경 변수 없음, HealthKit 권한 없음, 기기·시각 조건): 원본 재생 `RawSensorReplayTests` 7·`RawSensorReplayVerdictTests` 4·`SubwayRideTrackTests` 1, `MapHomeStickmanTests` 5, `HealthKitIntegrationTests` 2, `InkWashThemeTests`·`MapHomeCounterDetailTests`·`MapHomeHomeSkyTests`·`MapHomeRangeRenderBenchTests`·`PlaybackRideVisibilityTests`·`BackupArrivalProbeTests` 각 1. 앱 Debug 빌드는 이 시험 빌드로 함께 확인.
+- Watch 스킴 Debug 빌드(`generic/platform=watchOS`) 성공(`watch.log`). `architecture-metrics.py --check` 통과(처음엔 `TaptionBackupEngine.swift` 1,209줄로 예산 넘김 → `81d49b40`에서 1,200줄), `check-app-engine-import-boundary.sh` 통과.
+- 실기기 확인 없음(지시대로). 머지·push·배포는 메인 세션 몫.
+
 ## PRF1117A01 · 콜드 실행 단계별 측정과 시작 막대 고침 (2026-11-17 새벽, 아이폰 11 Pro 실기기 + 시뮬레이터)
 
 - 판: `4aa16489` + 측정 도구, Release + BENCH, 개발 서명, `devicectl` 설치·실행, 기기 공유 잠금은 설치·측정 동안만. 실제 기록 그대로(첫 읽기 44,263~44,288행·12MB). 로그 `build/validation/PRF1117A01/`(숫자만, 회차별 `load.txt`에 맥 부하).

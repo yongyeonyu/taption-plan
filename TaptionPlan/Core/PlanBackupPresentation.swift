@@ -87,7 +87,7 @@ enum PlanBackupPresenter {
                 detail: AppLanguagePreference.text("이 기기에 데이터가 없어 기존 백업을 건드리지 않았습니다.", "No data on this device; the existing backup was not touched.")
             )
         case .failed(let message):
-            return .init(name: name, kind: .rejected, detail: message)
+            return .init(name: name, kind: .rejected, detail: result.failureDetail ?? message)
         }
     }
 
@@ -142,7 +142,8 @@ enum PlanBackupPresenter {
         }
     }
 
-    /// 엔진의 건너뛴 이유(한국어 문장)를 사용자 문구로 옮긴다. 알 수 없는 이유는 일반 문구로 대신한다.
+    /// 엔진의 건너뛴 이유(한국어 문장, `TaptionBackupEngine.offload`)를 사용자 문구로 옮긴다. 알 수 없는 이유는 일반 문구로 대신한다.
+    /// 엔진 문장을 바꾸면 `AppModelBackupConnectionTests`의 문장 목록도 함께 바꾼다.
     static func skipDetail(_ message: String) -> String {
         if message.contains("백업이 없거나") {
             return AppLanguagePreference.text("백업 파일이 없거나 읽을 수 없어 지우지 않았습니다.", "No readable backup file, so nothing was removed.")
@@ -153,10 +154,13 @@ enum PlanBackupPresenter {
         if message.contains("내용이 로컬과 달라") {
             return AppLanguagePreference.text("백업 내용이 이 기기와 달라 지우지 않았습니다. 지금 백업을 다시 하세요.", "The backup differs from this device, so nothing was removed. Back up again.")
         }
-        if message.contains("새 행이 들어와") {
+        if message.contains("검증 뒤 로컬이 바뀌어") {
             return AppLanguagePreference.text("확인하는 동안 새 데이터가 들어와 지우지 않았습니다.", "New data arrived during verification, so nothing was removed.")
         }
-        if message.contains("검증 실패") {
+        if message.contains("데이터 전체 삭제 이전") {
+            return keepDetail(.staleAfterDataWipe)
+        }
+        if message.contains("검증 실패") || message.contains("비밀번호가 기존 백업과 달라") {
             return AppLanguagePreference.text("백업 확인에 실패해(비밀번호가 다르거나 파일이 손상됨) 지우지 않았습니다.", "Backup verification failed (wrong password or damaged file), so nothing was removed.")
         }
         return AppLanguagePreference.text("안전을 위해 지우지 않았습니다.", "Not removed, to be safe.")

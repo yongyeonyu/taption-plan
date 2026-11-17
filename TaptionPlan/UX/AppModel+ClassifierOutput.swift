@@ -350,22 +350,28 @@ extension AppModel {
             && actual.evidence.contains { $0.contains("자주가는 곳: 식당") }
     }
 
-    private func applyRestaurantMealRecords(
+    func applyRestaurantMealRecords(
         readings: [SensorReading],
         watchSummaries: [TaptionWatchSensorSummary],
         watchAccelerationSamples: [TaptionWatchAccelerationSample],
         inside span: TimeSpan
     ) {
         guard !readings.isEmpty else { return }
+        // 다른 단계처럼 숨긴 기록은 되살리지 않고, 사용자가 고친 기록은 지우거나 같은 ID로 다시 만들지 않는다(REV1117A03).
+        let corrections = snapshot.settings.activityCorrections
+        let ownedIDs = Set(snapshot.actuals.filter {
+            ActualRecord.userOwned($0, activityCorrections: corrections)
+        }.map(\.id))
         let fresh = RestaurantMealActualEngine.records(
             restaurants: settings.frequentPlaces,
             readings: readings,
             watchSummaries: watchSummaries,
             watchAccelerationSamples: watchAccelerationSamples,
             inside: span
-        )
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) && !ownedIDs.contains($0.id) }
         snapshot.actuals.removeAll { actual in
             guard actual.source == .location,
+                  !ownedIDs.contains(actual.id),
                   actual.span(asOf: span.end).intersection(with: span) != nil
             else { return false }
             return isAutomaticRestaurantMeal(actual)

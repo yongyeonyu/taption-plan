@@ -1806,6 +1806,37 @@ extension FeatureEngineTests {
         XCTAssertEqual(detached?.text, memo.text)
     }
 
+    /// AirPods 기록의 근거에는 연결된 경로 이름이 들어간다(문자열 보간이 빠져 글자 그대로 저장되던 것, REV1117A03).
+    @MainActor
+    func testAirPodsRecordEvidenceNamesTheRoute() {
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        let start = makeDate(2026, 8, 3, 9)
+        model.applyAirPodsActivity(AirPodsActivityObservation(
+            id: UUID(), kind: .music, title: "음악", startedAt: start,
+            endedAt: start.addingTimeInterval(600), routeName: "시험 이어폰"
+        ))
+        XCTAssertEqual(model.snapshot.actuals.first?.evidence, ["AirPods · 시험 이어폰"])
+    }
+
+    /// 반복 루틴 조각은 벽시계 시각이다. 서머타임이 바뀌는 날에도 09:00–10:00이어야 한다(REV1117A03).
+    @MainActor
+    func testRepeatActionItemsKeepWallClockAcrossDaylightSaving() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let start = calendar.date(from: DateComponents(year: 2026, month: 3, day: 7))!
+        let goal = PlanRecord(
+            title: "운동", span: TimeSpan(start: start, end: start.addingTimeInterval(3 * 86_400)), categoryID: "exercise"
+        )
+        let rule = GoalRepeatRule(weekdays: Set(1...7), startMinuteOfDay: 9 * 60, endMinuteOfDay: 10 * 60)
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        let items = model.repeatActionItems(for: goal, rules: [rule], calendar: calendar)
+        XCTAssertGreaterThanOrEqual(items.count, 3)
+        for item in items {
+            XCTAssertEqual(calendar.component(.hour, from: item.span.start), 9, "\(item.span.start)")
+            XCTAssertEqual(calendar.component(.hour, from: item.span.end), 10, "\(item.span.end)")
+        }
+    }
+
     func testRelationshipGraphOmitsRepeatSegmentsAndKeepsFocusedRoutineChain() {
         let start = makeDate(2026, 8, 2, 22)
         let routine = PlanRecord(

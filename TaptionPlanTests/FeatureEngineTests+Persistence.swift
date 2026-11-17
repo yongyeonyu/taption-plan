@@ -72,6 +72,25 @@ extension FeatureEngineTests {
         XCTAssertEqual(countAfterDelete, 0)
     }
 
+    /// 저장 전 메모 초안은 iCloud로 올리지 않고, 동기화 결과를 반영해도 메모리의 초안은 남는다(REV1117A03).
+    @MainActor
+    func testCloudUploadLeavesOutMemoDraftsAndKeepsThemLocally() {
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        let savedMemo = ActionMemo(categoryID: "memo", occurredAt: Date(timeIntervalSince1970: 1_000), kind: .idea, text: "저장한 메모")
+        model.snapshot.memos.append(savedMemo)
+        let saved = savedMemo.id
+        guard let draft = model.addMemoDraft(text: "아직 저장 안 한 초안") else { return XCTFail("초안이 생긴다") }
+
+        let upload = model.cloudUploadSnapshot()
+        XCTAssertFalse(upload.memos.contains { $0.id == draft }, "초안은 올리지 않는다")
+        XCTAssertTrue(upload.memos.contains { $0.id == saved }, "저장한 메모는 올린다")
+
+        var cloud = upload
+        cloud.memos.removeAll { $0.id == draft }
+        let committed = model.keepingPendingMemoDrafts(cloud)
+        XCTAssertTrue(committed.memos.contains { $0.id == draft }, "동기화 결과를 반영해도 초안은 메모리에 남는다")
+    }
+
     @MainActor
     func testPersistenceCancellationDoesNotSurfaceAsSaveError() async throws {
         let day = makeDate(2026, 8, 12)

@@ -20,7 +20,7 @@ public struct TaptionPlanRawEvent: Codable, Hashable, Sendable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.device == rhs.device
             && lhs.day == rhs.day
-            && lhs.timestamp == rhs.timestamp
+            && lhs.timestamp.timeIntervalSince1970 == rhs.timestamp.timeIntervalSince1970
             && lhs.sequence == rhs.sequence
             && exactlyEqual(lhs.id, rhs.id)
             && exactlyEqual(lhs.domain, rhs.domain)
@@ -31,7 +31,7 @@ public struct TaptionPlanRawEvent: Codable, Hashable, Sendable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(device)
         hasher.combine(day)
-        hasher.combine(timestamp)
+        hasher.combine(timestamp.timeIntervalSince1970)
         hasher.combine(sequence)
         hashExactBytes(id, into: &hasher)
         hashExactBytes(domain, into: &hasher)

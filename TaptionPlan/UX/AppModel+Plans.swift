@@ -508,7 +508,14 @@ extension AppModel {
             || clean.hasPrefix(GoalRecordPolicy.legacyPrefix)
     }
 
-    private func repeatActionItems(
+    private static func wallClock(_ minuteOfDay: Int, on day: Date, calendar: Calendar) -> Date? {
+        let dayOffset = Int((Double(minuteOfDay) / 1_440).rounded(.down))
+        let minute = minuteOfDay - dayOffset * 1_440
+        guard let base = calendar.date(byAdding: .day, value: dayOffset, to: day) else { return nil }
+        return calendar.date(bySettingHour: minute / 60, minute: minute % 60, second: 0, of: base)
+    }
+
+    func repeatActionItems(
         for goal: PlanRecord,
         rules: [GoalRepeatRule],
         calendar: Calendar = .autoupdatingCurrent
@@ -527,11 +534,8 @@ extension AppModel {
             safetyCounter += 1
             let weekday = calendar.component(.weekday, from: cursor)
             for rule in rules where rule.weekdays.contains(weekday) {
-                guard let rawStart = calendar.date(
-                    byAdding: .minute,
-                    value: rule.startMinuteOfDay,
-                    to: cursor
-                ) else {
+                // 흐른 분이 아니라 벽시계 시각이다. 서머타임이 바뀌는 날에도 09:00은 09:00이다(REV1117A03).
+                guard let rawStart = Self.wallClock(rule.startMinuteOfDay, on: cursor, calendar: calendar) else {
                     continue
                 }
                 let endBase: Date
@@ -544,11 +548,7 @@ extension AppModel {
                 } else {
                     endBase = cursor
                 }
-                guard let rawEnd = calendar.date(
-                    byAdding: .minute,
-                    value: rule.endMinuteOfDay,
-                    to: endBase
-                ) else {
+                guard let rawEnd = Self.wallClock(rule.endMinuteOfDay, on: endBase, calendar: calendar) else {
                     continue
                 }
 
