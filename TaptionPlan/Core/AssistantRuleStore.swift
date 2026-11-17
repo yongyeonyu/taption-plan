@@ -110,6 +110,8 @@ enum AssistantRuleStore {
     // MARK: 동기화
 
     private struct OpsBody: Encodable { let baseVersion: Int; let ops: [Op] }
+    /// 서버 `/rules/ops`가 한 번에 받는 수.
+    static let opsPerRequest = 50
     private struct AckBody: Encodable { let version: Int; let engine: Int; let skipped: [String] }
 
     /// 보낼 것을 올리고, 서버 버전이 다르면 받아 오고, 받은 버전을 서버에 알린다. 연결된 AI가 없으면 하지 않는다.
@@ -121,13 +123,15 @@ enum AssistantRuleStore {
         migrateIfNeeded(defaults)
         // 서버와 맞춘 뒤(어느 길로 끝나든) 동의한 사용자의 새 AI 규칙을 공통 규칙 후보로 올린다(SRL1116A01).
         defer { Task { await SharedRuleStore.uploadCandidates(env: env) } }
-        let pending = outbox(defaults)
-        if !pending.isEmpty {
+        // 서버는 한 번에 50개까지 받는다. 그보다 많으면 나눠 올린다(REV1117A02).
+        for _ in 0..<20 {
+            let pending = Array(outbox(defaults).prefix(opsPerRequest))
+            if pending.isEmpty { break }
             let body = try? JSONEncoder().encode(OpsBody(baseVersion: stored(defaults).version, ops: pending))
             let request = body.flatMap { TripRelay.relayRequest("/rules/ops", method: "POST", body: $0, token: master, host: env.host, client: env.client()) }
             guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return false }
             // 올리는 사이에 더해진 것은 남긴다.
-            uploaded = Set(pending.filter { $0.op == "put" }.map(\.id))
+            uploaded.formUnion(pending.filter { $0.op == "put" }.map(\.id))
             let rest = outbox(defaults).filter { !pending.contains($0) }
             if let data = try? JSONEncoder().encode(rest) { defaults.set(data, forKey: outboxKey) }
             defaults.set(true, forKey: migratedKey)
@@ -138,7 +142,18 @@ enum AssistantRuleStore {
         let since = defaults.data(forKey: setKey) == nil || defaults.integer(forKey: ackedKey) < 0 ? nil : String(version)
         let query = since.map { [URLQueryItem(name: "since", value: $0)] } ?? []
         guard let reply = await TripRelay.send(TripRelay.relayRequest("/rules", method: "GET", query: query, token: master, host: env.host, client: env.client()), session: env.session) else { return false }
-        if reply.status == 200, let set = try? JSONDecoder().decode(RuleSet.self, from: reply.data), let data = try? JSONEncoder().encode(set) {
+        if reply.status == 200, let set = try? JSONDecoder().decode(RuleSet.self, from: reply.data), defaults.data(forKey: setKey) != nil,
+           set.version < stored(defaults).version {
+            // 버전은 오르기만 하므로 낮아졌으면 새 서버 자리(키를 바꾼 뒤)다. 빈 목록으로 덮어 기기 규칙·결제 문자 정규식을
+            // 지우지 않고, 가진 규칙을 다시 올릴 것으로 둔 뒤 그 버전부터 다시 센다(REV1117A02).
+            let local = stored(defaults)
+            let requeued = local.rules.map { Op(op: "put", id: $0.id, rule: $0) } + outbox(defaults)
+            if let data = try? JSONEncoder().encode(requeued) { defaults.set(data, forKey: outboxKey) }
+            if let data = try? JSONEncoder().encode(RuleSet(version: set.version, rules: local.rules)) { defaults.set(data, forKey: setKey) }
+            defaults.set(-1, forKey: ackedKey)
+            refreshSnapshot(defaults)
+            return true
+        } else if reply.status == 200, let set = try? JSONDecoder().decode(RuleSet.self, from: reply.data), let data = try? JSONEncoder().encode(set) {
             // 처음 받는 사본은 적지 않는다(연결하기 전부터 있던 규칙이 한꺼번에 쌓이지 않게).
             let known = defaults.data(forKey: setKey) == nil ? nil : Set(stored(defaults).rules.map(\.id)).union(uploaded)
             defaults.set(data, forKey: setKey)
