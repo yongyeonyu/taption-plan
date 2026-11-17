@@ -65,6 +65,58 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         add(attachment)
     }
 
+    /// 가계부 「…」 메뉴(PRF1117A02 고침 9): 단추 이름, 메뉴 여섯 항목, 「이 달 표로 내보내기」 공유 창. 데이터는 바꾸지 않는다.
+    /// `LEDGER_MENU_ARGS`로 실행 인자(전후 비교 `-benchBefore=lmenu`)를, `LEDGER_MENU_SHOTS`·`LEDGER_MENU_TAG`로 사진 폴더·이름을 준다.
+    func testLedgerMoreMenuKeepsItemsAndShares() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        let env = ProcessInfo.processInfo.environment
+        app.launchArguments += (env["LEDGER_MENU_ARGS"] ?? "").split(separator: " ").map(String.init)
+        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
+        app.launchWithoutPrompts()
+        XCTAssertTrue(UITestWait.reachMapHome(app, menu: menu))
+        // 메모 칸의 가계부 줄(오늘·이번 달 금액)을 눌러 연다.
+        // 실행 직후 홈이 다시 그려지며 막 연 시트가 닫히는 때가 있어(전후 판 모두) 세 번까지 다시 연다.
+        let open = app.buttons["memo-ledger-open"].firstMatch
+        let bar = app.navigationBars["가계부"]
+        // 접근성 이름은 기호에서 시스템이 붙인 「더 보기」다(예전 SwiftUI 메뉴와 같음).
+        let button = bar.buttons["더 보기"].firstMatch
+        let opened = (0..<3).contains { _ in
+            if open.waitForExistence(timeout: 10), open.isHittable { open.tap() }
+            return bar.waitForExistence(timeout: 10) && UITestWait.until(10) { button.exists && button.isHittable }
+        }
+        XCTAssertTrue(opened, "가계부 도구 막대에 「…」 단추가 있다")
+        sleep(1)
+        let tag = env["LEDGER_MENU_TAG"] ?? "run"
+        let folder = env["LEDGER_MENU_SHOTS"].map { URL(fileURLWithPath: $0) }
+        func save(_ name: String) {
+            let image = XCUIScreen.main.screenshot()
+            let attachment = XCTAttachment(screenshot: image)
+            attachment.name = "\(tag)-\(name)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            try? image.pngRepresentation.write(to: folder?.appendingPathComponent("\(tag)-\(name).png") ?? URL(fileURLWithPath: "/dev/null"))
+        }
+        let info = ([app.launchArguments.joined(separator: " ")] + bar.buttons.allElementsBoundByIndex.map { "\($0.label)|\($0.identifier)|\($0.frame.integral)" }).joined(separator: "\n")
+        try? info.write(to: folder?.appendingPathComponent("\(tag)-buttons.txt") ?? URL(fileURLWithPath: "/dev/null"), atomically: true, encoding: .utf8)
+        save("button")
+        button.tap()
+        let titles = ["이 달 예산", "정산하기", "결제 문자 자동으로 넣기", "내 계좌 이름", "이 달 표로 내보내기", "전체 표로 내보내기"]
+        let exportMonth = app.buttons["이 달 표로 내보내기"].firstMatch
+        XCTAssertTrue(exportMonth.waitForExistence(timeout: 5))
+        sleep(1)
+        let frames = titles.map { app.buttons[$0].firstMatch.frame }
+        XCTAssertEqual(frames.count, titles.count)
+        XCTAssertEqual(frames.map(\.minY), frames.map(\.minY).sorted(), "메뉴 항목이 예전 순서로 위에서 아래로 놓인다")
+        try? (zip(titles, frames).map { "\($0)|\($1.integral)" }.joined(separator: "\n"))
+            .write(to: folder?.appendingPathComponent("\(tag)-menu.txt") ?? URL(fileURLWithPath: "/dev/null"), atomically: true, encoding: .utf8)
+        save("menu")
+        exportMonth.tap()
+        let share = app.otherElements["ActivityListView"].firstMatch
+        XCTAssertTrue(share.waitForExistence(timeout: 10), "공유 창이 뜬다")
+        sleep(2)
+        save("share")
+    }
+
     /// 하단 '달력'을 열어 화면을 남긴다(데이터는 바꾸지 않는다). 달력 숫자가 0으로 나오는지 눈으로 보기 위함.
     func testOpenCalendarAndCaptureForDiagnosis() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")

@@ -1,5 +1,7 @@
 import CoreTransferable
+import LinkPresentation
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// 가계부 표준 양식(LED1111A07, 대표 지시: 흔히 쓰는 가계부 서식으로 일상·여행 모두 통일).
@@ -125,11 +127,143 @@ struct LedgerTableFile: Transferable {
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .commaSeparatedText) { file in
-            let text = await file.make()
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent(file.name)
-            try Data(text.utf8).write(to: url, options: .atomic)
-            return SentTransferredFile(url)
+            SentTransferredFile(try await file.write())
         }
+    }
+
+    /// 임시 폴더에 표를 쓰고 그 주소를 준다.
+    @MainActor
+    func write() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+        try Data(make().utf8).write(to: url, options: .atomic)
+        return url
+    }
+}
+
+/// 가계부 도구 막대 「…」 메뉴 항목(PRF1117A02 고침 9). 순서·문구·그림은 예전 SwiftUI 메뉴와 같다.
+struct LedgerMoreMenuItem: Equatable {
+    enum Action: Equatable { case budget, settle, shortcuts, ownAccounts, exportMonth, exportAll }
+
+    let action: Action
+    let title: String
+    let systemImage: String?
+
+    @MainActor
+    static func all(language: MapHomeLanguage) -> [LedgerMoreMenuItem] {
+        [
+            .init(action: .budget, title: language.text("이 달 예산", "Monthly budget"), systemImage: nil),
+            .init(action: .settle, title: language.text("정산하기", "Settle up"), systemImage: nil),
+            .init(action: .shortcuts, title: language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"), systemImage: "message.badge"),
+            .init(action: .ownAccounts, title: language.text("내 계좌 이름", "My account names"), systemImage: "building.columns"),
+            .init(action: .exportMonth, title: language.text("이 달 표로 내보내기", "Export this month as a table"), systemImage: "tablecells"),
+            .init(action: .exportAll, title: language.text("전체 표로 내보내기", "Export everything as a table"), systemImage: "square.and.arrow.up"),
+        ]
+    }
+}
+
+/// 내보낼 표 파일과 공유 창 미리보기 제목.
+struct LedgerShareExport {
+    let file: LedgerTableFile
+    let title: String
+}
+
+/// 가계부 「…」 단추. SwiftUI `Menu`는 시트를 열 때 내용(내보내기 `ShareLink` 포함)을 미리 만들어 첫 프레임에 약 11ms를 더했다(PRF1117A02).
+/// UIKit 메뉴는 눌렀을 때만 항목을 만들고, 내보내기는 고른 뒤에 표를 써서 공유 창을 띄운다.
+struct LedgerMoreMenuButton: UIViewRepresentable {
+    let language: MapHomeLanguage
+    let onSelect: (LedgerMoreMenuItem.Action) -> Void
+    /// 내보내기 항목이면 표 파일을 준다. 아니면 `onSelect`로 넘긴다.
+    let export: (LedgerMoreMenuItem.Action) -> LedgerShareExport?
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> UIButton {
+        let button = UIButton(type: .system)
+        // 예전 SwiftUI 도구 막대 그림과 같은 크기(사진 비교로 맞춤).
+        button.setPreferredSymbolConfiguration(UIImage.SymbolConfiguration(pointSize: 20, weight: .regular, scale: .large), forImageIn: .normal)
+        button.showsMenuAsPrimaryAction = true
+        let coordinator = context.coordinator
+        button.menu = UIMenu(children: [UIDeferredMenuElement.uncached { [weak coordinator, weak button] done in
+            MainActor.assumeIsolated { done(coordinator?.menuActions(from: button) ?? []) }
+        }])
+        return button
+    }
+
+    func updateUIView(_ button: UIButton, context: Context) {
+        let coordinator = context.coordinator
+        coordinator.parent = self
+        // SwiftUI 단추와 같은 색. 어두운 화면의 유리는 UIKit 틴트를 밝게 바꾸므로 그림에 색을 박는다.
+        // 메뉴 그림도 SwiftUI처럼 어두운 화면에서만 이 색을 쓴다.
+        let tint = UIColor(Color(Color.tpPrimaryFill.resolve(in: context.environment)))
+        coordinator.menuImageTint = context.environment.colorScheme == .dark ? tint : nil
+        guard coordinator.buttonTint != tint else { return }
+        coordinator.buttonTint = tint
+        button.setImage(UIImage(systemName: "ellipsis.circle")?.withTintColor(tint, renderingMode: .alwaysOriginal), for: .normal)
+    }
+
+    /// 예전 SwiftUI 단추와 같은 칸(사진 비교로 맞춤). 제안 크기를 다 받으면 도구 막대 묶음이 넓어진다.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView button: UIButton, context: Context) -> CGSize? {
+        CGSize(width: 44, height: 36)
+    }
+
+    @MainActor
+    final class Coordinator {
+        var parent: LedgerMoreMenuButton
+        /// 메뉴 항목을 만든 횟수(시험용: 단추를 만들 때는 0이어야 한다).
+        private(set) var builtMenus = 0
+        var buttonTint: UIColor?
+        var menuImageTint: UIColor?
+
+        init(_ parent: LedgerMoreMenuButton) { self.parent = parent }
+
+        func menuActions(from button: UIButton?) -> [UIMenuElement] {
+            builtMenus += 1
+            return LedgerMoreMenuItem.all(language: parent.language).map { item in
+                let image = item.systemImage.flatMap { UIImage(systemName: $0) }
+                let tinted = menuImageTint.flatMap { image?.withTintColor($0, renderingMode: .alwaysOriginal) } ?? image
+                return UIAction(title: item.title, image: tinted) { [weak self, weak button] _ in
+                    self?.select(item.action, from: button)
+                }
+            }
+        }
+
+        func select(_ action: LedgerMoreMenuItem.Action, from button: UIButton?) {
+            guard let export = parent.export(action) else { return parent.onSelect(action) }
+            guard let button, let presenter = Self.presenter(of: button), let url = try? export.file.write() else { return }
+            let share = UIActivityViewController(activityItems: [LedgerShareItem(url: url, title: export.title)], applicationActivities: nil)
+            share.popoverPresentationController?.sourceView = button
+            presenter.present(share, animated: true)
+        }
+
+        private static func presenter(of view: UIView) -> UIViewController? {
+            var responder: UIResponder? = view
+            while let next = responder, !(next is UIViewController) { responder = next.next }
+            var controller = responder as? UIViewController
+            while let presented = controller?.presentedViewController, !presented.isBeingDismissed { controller = presented }
+            return controller
+        }
+    }
+}
+
+/// 공유 창에 표 파일과 미리보기 제목(예전 `SharePreview`)을 준다.
+final class LedgerShareItem: NSObject, UIActivityItemSource {
+    let url: URL
+    let title: String
+
+    init(url: URL, title: String) {
+        self.url = url
+        self.title = title
+    }
+
+    func activityViewControllerPlaceholderItem(_ controller: UIActivityViewController) -> Any { url }
+    func activityViewController(_ controller: UIActivityViewController, itemForActivityType type: UIActivity.ActivityType?) -> Any? { url }
+
+    func activityViewControllerLinkMetadata(_ controller: UIActivityViewController) -> LPLinkMetadata? {
+        let metadata = LPLinkMetadata()
+        metadata.title = title
+        metadata.originalURL = url
+        metadata.url = url
+        return metadata
     }
 }
 

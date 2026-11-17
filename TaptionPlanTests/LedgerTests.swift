@@ -759,6 +759,42 @@ final class LedgerTests: XCTestCase {
 
 /// BKS1111A01: 다른 기기(아이폰 18)가 올린 백업 파일이 이 기기 iCloud 폴더에 보이는지. 비밀번호 없이 이름·크기·시각만 읽고 복원하지 않는다.
 /// 기기에서 `TEST_RUNNER_TAPTION_BACKUP_PROBE=1`일 때만 돈다.
+/// 가계부 「…」 메뉴를 UIKit으로 바꾼 뒤에도 항목·순서·동작이 같다(PRF1117A02 고침 9).
+@MainActor
+final class LedgerMoreMenuTests: XCTestCase {
+    func testItemsKeepOrderTitlesAndSymbols() {
+        let items = LedgerMoreMenuItem.all(language: .korean)
+        XCTAssertEqual(items.map(\.action), [.budget, .settle, .shortcuts, .ownAccounts, .exportMonth, .exportAll])
+        XCTAssertEqual(items.map(\.title), ["이 달 예산", "정산하기", "결제 문자 자동으로 넣기", "내 계좌 이름", "이 달 표로 내보내기", "전체 표로 내보내기"])
+        XCTAssertEqual(items.map(\.systemImage), [nil, nil, "message.badge", "building.columns", "tablecells", "square.and.arrow.up"])
+    }
+
+    func testMenuIsBuiltOnlyWhenAskedAndActionsRouteToSheet() {
+        var selected: [LedgerMoreMenuItem.Action] = []
+        let button = LedgerMoreMenuButton(language: .korean, onSelect: { selected.append($0) }) { action in
+            action == .exportAll ? LedgerShareExport(file: LedgerTableFile(name: "x.csv") { "" }, title: "t") : nil
+        }
+        let coordinator = LedgerMoreMenuButton.Coordinator(button)
+        XCTAssertEqual(coordinator.builtMenus, 0, "단추를 만들 때는 항목을 만들지 않는다")
+        let actions = coordinator.menuActions(from: nil).compactMap { $0 as? UIAction }
+        XCTAssertEqual(coordinator.builtMenus, 1)
+        XCTAssertEqual(actions.map(\.title), LedgerMoreMenuItem.all(language: .korean).map(\.title))
+        XCTAssertEqual(actions.map { $0.image != nil }, [false, false, true, true, true, true])
+        for action in [LedgerMoreMenuItem.Action.budget, .settle, .shortcuts, .ownAccounts, .exportAll] {
+            coordinator.select(action, from: nil)
+        }
+        XCTAssertEqual(selected, [.budget, .settle, .shortcuts, .ownAccounts], "내보내기는 시트 상태를 바꾸지 않고 공유 창으로 간다")
+    }
+
+    func testTableFileWritesNamedCSV() throws {
+        let name = "ledger-menu-\(UUID().uuidString).csv"
+        let url = try LedgerTableFile(name: name) { "a,b\n1,2" }.write()
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertEqual(url.lastPathComponent, name)
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "a,b\n1,2")
+    }
+}
+
 final class BackupArrivalProbeTests: XCTestCase {
     func testListICloudBackups() async throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["TAPTION_BACKUP_PROBE"] == "1", "기기 확인용")
