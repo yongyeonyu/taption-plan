@@ -51,10 +51,16 @@ final class DailyCardBubblePromptTests: XCTestCase {
         XCTAssertNil(DailyCardBubblePrompt.due(now: at(7, 30), time: eight, enabled: false, lastSent: nil, calendar: calendar))
     }
 
+    /// AIF1118A01: 0시대 카드는 읽을 날(어제)이 끝난 0시부터만 맡긴다. 그 전에 맡기면 AI가 덜 끝난 날을 읽는다.
     func testCardJustAfterMidnightUsesTheCardDay() throws {
         let time = DateComponents(hour: 0, minute: 30)
-        let card = try XCTUnwrap(DailyCardBubblePrompt.due(now: at(23, 40, day: 15), time: time, enabled: true, lastSent: nil, calendar: calendar))
+        XCTAssertNil(DailyCardBubblePrompt.due(now: at(23, 40, day: 15), time: time, enabled: true, lastSent: nil, calendar: calendar), "the day being read has not ended")
+        let card = try XCTUnwrap(DailyCardBubblePrompt.due(now: at(0, 5, day: 16), time: time, enabled: true, lastSent: nil, calendar: calendar))
         XCTAssertEqual(card, at(0, 30, day: 16))
+        XCTAssertEqual(
+            DailyCardBubblePrompt.earliestBegin(now: at(22, 0, day: 15), defaultDate: at(3, 0, day: 16), time: time, enabled: true, calendar: calendar),
+            at(0, 0, day: 16), "the refresh is pulled to midnight, not to an hour before the card"
+        )
         XCTAssertEqual(DailyCardBubblePrompt.dayKey(card, calendar: calendar), "2026-11-16")
         XCTAssertNil(DailyCardBubblePrompt.due(now: at(0, 10, day: 16), time: time, enabled: true, lastSent: "2026-11-16", calendar: calendar))
         XCTAssertNil(DailyCardBubblePrompt.due(now: at(23, 29, day: 15), time: time, enabled: true, lastSent: nil, calendar: calendar))

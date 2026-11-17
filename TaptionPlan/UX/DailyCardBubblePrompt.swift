@@ -11,15 +11,20 @@ enum DailyCardBubblePrompt {
     /// 지금 올릴 카드 시각. 창(카드 −1시간 ~ 카드 시각 전)이 아니거나, 꺼졌거나, 그 카드 날에 이미 올렸으면 nil.
     static func due(now: Date, time: DateComponents, enabled: Bool, lastSent: String?, calendar: Calendar) -> Date? {
         guard enabled, let card = nextCard(after: now, time: time, calendar: calendar),
-              card.timeIntervalSince(now) <= lead, lastSent != dayKey(card, calendar: calendar) else { return nil }
+              now >= windowStart(card, calendar: calendar), lastSent != dayKey(card, calendar: calendar) else { return nil }
         return card
+    }
+
+    /// 창 시작: 카드 1시간 전. 다만 AI가 읽는 어제가 끝난 0시보다 이르지 않게 한다(AIF1118A01: 0시대 카드가 덜 끝난 날을 읽던 것).
+    static func windowStart(_ card: Date, calendar: Calendar) -> Date {
+        max(card.addingTimeInterval(-lead), calendar.startOfDay(for: card))
     }
 
     /// 백그라운드 새로고침 예약 시각. 다음 창 시작이 앞으로 올 시각이고 지금 예약보다 이르면 그때로 당긴다.
     /// 이미 창 안이면 당기지 않는다(새로고침마다 곧바로 다시 깨우는 고리를 만들지 않게).
     static func earliestBegin(now: Date, defaultDate: Date, time: DateComponents, enabled: Bool, calendar: Calendar) -> Date {
         guard enabled, let card = nextCard(after: now, time: time, calendar: calendar) else { return defaultDate }
-        let start = card.addingTimeInterval(-lead)
+        let start = windowStart(card, calendar: calendar)
         return start > now && start < defaultDate ? start : defaultDate
     }
 
