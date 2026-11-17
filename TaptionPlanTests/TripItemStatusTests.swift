@@ -475,6 +475,10 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 722, start: 600), 120)
         XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 500, start: 600), 5, "종료는 시작보다 5분 이상 뒤")
         XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 1_440, start: 1_380), 60)
+        XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 1_440 + 210, start: 1_380, maxEnd: TravelQuickEntrySheet.maxEnd(for: .flight)), 270, "밤 비행은 다음 날 끝까지 잡을 수 있다(REV1117A01)")
+        XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 3_000, start: 1_380, maxEnd: TravelQuickEntrySheet.maxEnd(for: .flight)), 1_500, "다음 날 24시까지")
+        XCTAssertEqual(TravelQuickEntrySheet.maxEnd(for: .meal), 1_440)
+        XCTAssertEqual(TravelQuickEntrySheet.movingStart(to: 1_400, duration: 390, maxEnd: 2_880).duration, 390, "비행은 시작을 옮겨도 길이를 자르지 않는다")
     }
 
     /// 일상 → 여행 바로 전환: 보던 날을 품은 여행, 여행 중, 마지막으로 연 여행 순.

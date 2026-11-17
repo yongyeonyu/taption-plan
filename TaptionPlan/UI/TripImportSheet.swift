@@ -166,7 +166,7 @@ extension AppModel {
 
     /// 여행 일정 하나를 손으로 넣는다. 일상 쪽 계획 기록이 함께 생긴다. 넣은 일정 번호를 돌려준다.
     func addTripItem(
-        tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int,
+        tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int, endOffsetSeconds: Int? = nil,
         place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil,
         itemID restoredID: String? = nil, parentItemID: String? = nil
     ) async -> String? {
@@ -181,7 +181,7 @@ extension AppModel {
         let itemID = restoredID.flatMap { taken || $0.isEmpty ? nil : $0 } ?? "m-" + UUID().uuidString.prefix(8).lowercased()
         let items = (snapshot.settings.travelTripItems ?? []) + [TravelTripItem(
             tripID: tripID, itemID: itemID, kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
-            startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: planID,
+            startOffsetSeconds: offsetSeconds, endOffsetSeconds: endOffsetSeconds ?? offsetSeconds, planID: planID,
             note: Self.cleanTripNote(note),
             colorHex: TravelTripItem.cleanColorHex(colorHex), plannedSpendKRW: TravelTripItem.cleanPlannedSpend(plannedSpendKRW),
             parentItemID: parentItemID

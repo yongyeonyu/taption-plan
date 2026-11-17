@@ -839,13 +839,14 @@ struct TravelModeView: View {
     private func addCourseStop(_ entry: TravelTripDirectory.Entry, name: String, place: TravelItemPlace?, kind: String) {
         let key = dayKey(entry), table = table(entry), kind = TripImportItem.Kind(rawValue: kind) ?? .sight
         let slot = TravelCoursePlanner.nextSlot(blocks: table.blocks, kind: kind.rawValue, nowMinute: table.nowMinute)
-        let target = TravelQuickEntrySheet.Target.new(trip: entry.trip, dayKey: key, dayLabel: "", startMinute: slot.start, kind: kind)
-        let start = TravelQuickEntrySheet.date(dayKey: key, minute: slot.start, offsetSeconds: target.offsetSeconds)
+        // 출국 비행 전은 출발지, 도착부터는 여행지 시차(REV1117A01).
+        let offset = TravelTimeZones.offset(trip: entry.trip, items: model.settings.travelTripItems ?? [], dayKey: key, minute: slot.start)
+        let start = TravelQuickEntrySheet.date(dayKey: key, minute: slot.start, offsetSeconds: offset)
         shareEdit(entry, .addStop(dayKey: key)) {
             Task {
                 guard let id = await TripSharePlanEditor.addItem(
                     model: model, tripID: entry.id, kind: kind, title: name, start: start, end: start.addingTimeInterval(TimeInterval(slot.duration * 60)),
-                    offsetSeconds: target.offsetSeconds, place: place
+                    offsetSeconds: offset, place: place
                 ), let added = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == entry.id && $0.itemID == id }) else { return }
                 planHistory.record(.existence(added, place: place, exists: true))
                 playMinute = slot.start
