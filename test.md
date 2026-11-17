@@ -71,6 +71,18 @@
 - 서버 배포 필요(대표 지시 때만): `shared.js`·`actions.js`·`validate.js`·`state.js`·`store.js`·`index.js`. 옛 서버에서는 앱의 `DELETE /tasks?all=1`이 끝난 일만 지움.
 - 확인 안 한 것: 실기기, 공통 규칙 화면 새 문구의 눈 확인.
 
+## REV1117A03 후속 · 대표 결정 반영(음성 메모·확정한 날·정류장 좌표)과 워치 요약 간헐 실패 (2026-11-17 저녁, 시뮬레이터, 실기기 없음)
+
+- 판: `claude/rev-data-b8acb4`, main `0edceea5` 위에 커밋 5개(`83c705ac`·`6cac2296`·`5393714a`·`e10a938e`·`a4fc8261`). 저장 형식·스키마는 그대로(음성 첨부는 경로 문자열만 바뀜). 새 문구 없음. 서버 배포 없음.
+- 환경: 시뮬레이터 `99AC6F35…`, Debug, `-parallel-testing-enabled NO`, 공유 잠금(owner 표시 `REV1117A03 <pid>`), derived data `/Volumes/TaptionPlanBuild/dd/REV1117A03`. 로그 `build/validation/REV1117A03/`.
+- 음성 메모(`83c705ac`): 받아쓰기 녹음을 붙일 때 앱 지원 폴더 `TaptionPlan/VoiceMemos`로 옮기고, 시작할 때 기존 음성 첨부를 옮기거나 앱 컨테이너가 바뀐 옛 경로를 같은 이름으로 고친다. 시험 4건: 한 번 옮김·내용 보존·다시 불러도 그대로, 옛 컨테이너 경로 찾기, 못 찾은 파일은 경로 유지, 모델 이동이 첨부 경로만 바꾸고 JSON 왕복 같음. 백업 파일 형식은 바뀌지 않음(음성 파일은 백업에 들어가지 않고 경로 문자열만 들어감).
+- 확정한 날(`6cac2296`): 새 원본으로 센서 분석을 예약할 때 확정한 지난날이면 확정을 풀고 다시 판정, 이미 읽어 둔 날의 기록 지문이 바뀌면 확정 요약을 다시 만듦. 시험 2건. 제한: 저장소 다시 확정(`sealDay`)은 시험 모델에 확정 저장소가 없어 규칙 함수와 연결만 확인.
+- 정류장 좌표(`5393714a` 서버·`e10a938e` 앱): 서버가 POST 본문으로도 좌표를 받고(예전 GET 유지), 상류 실패·예외는 원문 대신 502로. 우리 코드에는 좌표를 남기는 로그·저장·캐시 키가 없음(제한은 IP 기준, 응답 `no-store`, `wrangler.toml`에 Workers Logs 설정 없음 — 대시보드 설정은 확인 못 함). 앱은 본문으로 보내고 405면 쿼리로 다시 묻는다. 서버 시험 빨강(새 2건 실패, `server-red.log`) → `npm test` **215건 실패 0**(`server-test.log`). 앱 시험 1건(요청 모양).
+- 워치 요약 간헐 실패(`a4fc8261`, 메인 요청 MRG1117A02 `unit-2.log`): 요약 적용의 기기 저장이 진행 중인 다른 저장에 합쳐지면 실패로 돌아와 적용 표시·ack를 건너뛰었다. 재현 시험 `testWatchSummaryArrivingDuringAnotherDeviceSaveIsStillAppliedAndAcknowledged`가 고치기 전 메인 로그와 같은 모양(적용 false·ack 빈 배열)으로 실패(`watch-red.log`) → 적용 저장을 강제(앞선 쓰기 뒤에 줄 섬)로 바꾼 뒤 `SensorDayStoreTests` 53건 통과(`watch-green.log`), 원래 시험 1.99초 → 0.37초.
+- 관련 묶음 `StorageReviewFixTests` 등 16건 통과(`green4.log`). 구조 지표·import 경계 통과(`arch2.log`·`boundary2.log`).
+- 전체 `-only-testing:TaptionPlanTests`: 1회차(`full2.log`) 2,979건 중 실패 1 — `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`가 `UIWindowScene` 없음으로 실패(예전 기록에도 같은 간헐 실패). 단독 재실행은 시험 실행기가 연결 전에 멈춤(`maproute.log`) → 잠금 안에서 시뮬레이터를 끄고 2회차(`full3.log`) **2,979건 실행, 25건 건너뜀, 실패 0**(지도 경로 시험 통과). 건너뜀은 앞 절과 같은 환경 조건.
+- 남김: 서울 정류장 상류가 `http://ws.bus.go.kr`(평문)라 중계 서버 → 서울시 구간 좌표가 암호화되지 않음(https 지원 여부 확인 필요, 바꾸지 않음).
+
 ## REV1117A03 · 데이터 저장·백업·동기화·분류·센서·경로 상세 리뷰와 결함 고침 (2026-11-17, 시뮬레이터, 실기기 없음)
 
 - 판: 브랜치 `claude/rev-data-b8acb4`, 결함마다 커밋 하나(`6d4566a6`~`81d49b40`, 11건). 전체 리뷰·고치지 않은 것·다른 영역 몫은 `docs/reviews/REV1117A03.md`. 저장 형식·스키마·데이터 경로·대표 결정은 바꾸지 않음. 새 문구 없음(번역 키 변경 없음).
