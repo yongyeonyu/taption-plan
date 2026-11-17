@@ -309,26 +309,25 @@ struct TravelModeView: View {
         }
     }
 
-    /// 재생 헤드가 가리키는 절대 시각(그 여행의 시간대, 없으면 기기 시간대).
+    /// 재생 헤드가 가리키는 절대 시각(그 날·그 분의 시차, TVM1117A02).
     private func playDate(_ entry: TravelTripDirectory.Entry) -> Date {
-        let zone = entry.trip.timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
-        return TravelQuickEntrySheet.date(dayKey: dayKey(entry), minute: currentPlayMinute(entry), offsetSeconds: zone.secondsFromGMT())
+        TravelPlanSpend.date(trip: entry.trip, items: model.settings.travelTripItems ?? [], dayKey: dayKey(entry), minute: currentPlayMinute(entry))
     }
 
     /// 지출 넣기. 장부가 있으면 바로 입력 칸을 연다: 고른 일정의 시작, 없으면 재생 헤드의 시각(계획표가 내려 있으면 지금).
-    private func addExpense(_ entry: TravelTripDirectory.Entry, minute: Int?) {
+    private func addExpense(_ entry: TravelTripDirectory.Entry, minute: Int?, itemID: String? = nil) {
         guard book.trip(entry.id) != nil else {
             // 가계부에 이 여행이 아직 없으면 예산 없는 여행 장부를 만들고 바로 입력 칸을 연다(TVX1116A01). 만들 수 없으면 전처럼 가계부를 연다.
             let planned = LedgerBook.plannedTrips(stops: model.settings.travelPlanStops, items: model.settings.travelTripItems ?? [], trips: model.settings.travelTrips ?? [])
             guard let trip = planned.first(where: { $0.id == entry.id }) else { return ledgerTripID = entry.id }
             Task {
                 await book.saveTrip(trip)
-                if book.trip(entry.id) != nil { addExpense(entry, minute: minute) } else { ledgerTripID = entry.id }
+                if book.trip(entry.id) != nil { addExpense(entry, minute: minute, itemID: itemID) } else { ledgerTripID = entry.id }
             }
             return
         }
-        let zone = entry.trip.timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
-        let picked = minute.map { TravelQuickEntrySheet.date(dayKey: dayKey(entry), minute: $0, offsetSeconds: zone.secondsFromGMT()) }
+        let items = model.settings.travelTripItems ?? []
+        let picked = minute.map { TravelPlanSpend.date(trip: entry.trip, items: items, dayKey: dayKey(entry), minute: $0, itemID: itemID) }
         expenseDraft = TravelPlanSpend.draft(tripID: entry.id, at: picked ?? (isPlanUp ? playDate(entry) : .now))
     }
 
@@ -916,7 +915,7 @@ struct TravelModeView: View {
                 TravelPlanTable(
                     table: table(entry), language: language, shareTripID: entry.id,
                     onSelect: { block in editEntry(entry, itemID: block.id) },
-                    onExpense: { block in addExpense(entry, minute: block.startMinute) },
+                    onExpense: { block in addExpense(entry, minute: block.startMinute, itemID: block.id) },
                     onDelete: { block in deleteEntry(entry, itemID: block.id) },
                     onAdd: { cell in addEntry(entry, cell: cell) },
                     cell: $planCell,

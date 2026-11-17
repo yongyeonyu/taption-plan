@@ -25,6 +25,15 @@ enum TravelPlanSpend {
         return result
     }
 
+    /// 칸·재생 헤드에서 넣는 지출의 시각(TVM1117A02): 일정 칸이면 그 일정의 시차(0시 전부터 이어진 칸은 끝 쪽 시차),
+    /// 시각만 있으면 그 날·그 분의 시차(출국 비행 전은 출발지, 도착부터 여행지). 지금 시차를 쓰지 않는다.
+    static func date(trip: TravelTrip, items: [TravelTripItem], dayKey: String, minute: Int, itemID: String? = nil) -> Date {
+        let item = itemID.flatMap { id in items.first { $0.tripID == trip.id && $0.itemID == id } }
+        let offset = item.map { TravelTripDay.string(for: $0.start, offsetSeconds: $0.startOffsetSeconds) == dayKey ? $0.startOffsetSeconds : $0.endOffsetSeconds }
+            ?? TravelTimeZones.offset(trip: trip, items: items, dayKey: dayKey, minute: minute)
+        return TravelQuickEntrySheet.date(dayKey: dayKey, minute: minute, offsetSeconds: offset)
+    }
+
     /// 그 시각으로 미리 채운 새 지출.
     static func draft(tripID: String, at date: Date) -> LedgerEntry {
         LedgerEntry(occurredAt: date, amount: 0, title: "", tripID: tripID)
