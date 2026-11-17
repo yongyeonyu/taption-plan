@@ -25,7 +25,7 @@
 | `GET /activity` | AI·읽기 | 없음 | `200` `{"days":[…]}` 있는 날 중 최근 7일(최신 먼저), `204` 없음 |
 | `DELETE /activity` | 앱 | 없음 | `204` 이 키의 모든 날을 지운다 |
 | `GET /activity/summary?range=week\|month[&end=YYYY-MM-DD]` | AI·읽기 | 없음 | `200` 묶음(8장), `204` 그 기간에 날 없음, `400` 기간·날짜 틀림 |
-| `POST /command` | AI·쓰기 | 아래 명령 하나 | `201` `{"ok":true,"id":"…","queued":n,"remainingToday":n,"expiresInSeconds":604800}`, `422` 형식 틀림(`{"error":"not_command","reason"?}`, `reason`은 `bad_id` 또는 말풍선 이유), `409` `{"error":"id_conflict"}` 다른 연결이 넣어 둔 같은 `id`, `429` 24시간 30개 초과(`{"error":"daily_command_limit","retryAfterSeconds"}`, `Retry-After` 헤더) |
+| `POST /command` | AI·쓰기 | 아래 명령 하나 | `201` `{"ok":true,"id":"…","queued":n,"remainingToday":n,"expiresInSeconds":604800}`, `422` 형식 틀림(`{"error":"not_command","reason"?}`, `reason`은 `bad_id` 또는 말풍선 이유), `409` `{"error":"id_conflict"}` 다른 연결이 넣어 둔 같은 `id`, `429` 24시간 100개 초과(`{"error":"daily_command_limit","retryAfterSeconds"}`, `Retry-After` 헤더) |
 | `GET /command` | 앱 | 없음 | `200` `{"commands":[…]}`, `204` 없음 |
 | `DELETE /command?ids=a,b` | 앱 | `ids`가 없으면 전부 | `204` |
 | `POST /command/result` | 앱 | `{"results":[{"id","status":"applied"\|"rejected","reason"?}]}` | `201` |
@@ -48,7 +48,7 @@
 - 하루는 `act:<주인 해시>:<HMAC(날짜) 32 hex>`에 따로 저장되고(KV 이름에 날짜가 보이지 않는다, 6.3) TTL은 `retentionDays × 86400`초다. 읽어도 지우지 않는다. 어떤 날이 있는지는 Durable Object가 날짜를 잠근 채 가진다(KV `list`를 쓰지 않는다).
 - 하루마다 앱의 공유 수준에 따라 `goals: [{id,title,start,end}]`, `trips: [{tripId, items:[{stopId,itemId,title,order,start,end,status}]}]`, `sleep: [{recordId,start,end,minutes,source}]`가 붙는다. 서버는 하루 JSON을 해석하지 않고 그대로 잠가 두고 `GET /activity`와 MCP `get_activity`로 그대로 준다. (선택) 업로드 최상위의 `goals`·`trips`·`placeBook`도 받아 `ext:<주인>`에 같은 보관 기간으로 두고 날짜 없는 `GET /activity`에 붙인다. 보낸 칸만 바꾸고 `null`이면 지운다. 앱은 지금 쓰지 않는다(`placeBook`은 앱에 없다).
 - 명령 큐는 Durable Object에(명령마다 DEK로 잠금, 최근 50개, 7일 지나면 버림), 결과(`cmdres:<해시>`)는 KV에 최근 50개·TTL 7일. 같은 `id`를 같은 연결이 다시 보내면 새 값으로 바꾸고, 다른 연결이 넣어 둔 `id`면 `409 id_conflict`다. `id`는 영문·숫자·`_`·`.`·`:`·`-` 1~100자(`^[\w.:-]{1,100}$`, 공백·쉼표·한글 없음). `DELETE /command?ids=`와 `POST /command/result`는 예전에 받은 느슨한 id(공백 포함)도 받는다. `GET /command`의 명령마다 `keyId`(보낸 연결의 `id` = 키 해시 앞 8자 hex, OAuth는 연결 id, 주인 키로 보낸 것은 `"master"`, 예전 큐에서 옮긴 것은 `null`)와 `source`(`rest`·`mcp`·`oauth`·`legacy`)가 붙는다. 앱은 `keyId`가 살아 있는 연결이 아니면(그리고 `legacy`가 아니면) 반영하지 않고, 「AI가 한 일」에 연결 이름을 보인다.
-- 명령은 주인 이름 하나에 24시간(이동 창) 30개까지 받는다. Durable Object가 한 줄로 세므로 동시에 보내도 넘지 않는다. 앱이 큐를 비워도 수는 줄지 않는다.
+- 명령은 주인 이름 하나에 24시간(이동 창) 100개까지 받는다. Durable Object가 한 줄로 세므로 동시에 보내도 넘지 않는다. 앱이 큐를 비워도 수는 줄지 않는다.
 - 연결 키·OAuth 연결을 끊으면 그 연결이 보낸, 아직 처리하지 않은 명령도 큐에서 지운다.
 - 명령은 동작마다 정한 칸만 남기고 나머지는 버린다(`keyId`·`source`·`receivedAt`을 보내도 서버 값으로 바뀐다).
 - 공통 오류: `400` JSON 아님, `401` 키 없음·형식 틀림·만료·폐기(`unauthorized`) 또는 등록 안 됨(`unregistered`), `403` 범위 밖, `405` 다른 메서드, `413` 64KB 초과, `429` 속도 제한(`rate_limited`·`daily_request_limit`)·KV 쓰기 예산(`daily_write_limit` 주인마다 하루 600, `write_budget_exhausted` 서버 전체) — 모두 `retryAfter` 초와 `Retry-After`, `503` `storage_unavailable`(저장소가 쓰기를 거절, 잠시 뒤 다시).

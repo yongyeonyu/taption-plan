@@ -155,6 +155,12 @@ extension AppModel {
             guard let before = preferences.ledger.entries.first(where: { $0.id == entryID }) else { return .rejected("no_record") }
             var result = AssistantEditResult(before: "\(before.title) \(LedgerMoney.text(before.amount, currency: before.currency, language: language))")
             result.ledgerBefore = before
+            // 공유 여행 방에 있는 지출은 손 편집과 같은 공유 장부로 보낸다(AIF1118A01, 대표 결정 2026-11-18).
+            switch await AssistantSharedLedger.scope(of: before, ledger: preferences.ledger) {
+            case .offline: return .rejected(AssistantSharedLedger.offline)
+            case .inRoom: return await AssistantSharedLedger.edit(before, change: change, result: result, ledger: preferences.ledger, language: language)
+            case .local: break
+            }
             if change.delete {
                 await preferences.ledger.delete(entryID)
                 // REV1117A02: 끝난 여행의 기록을 지우면 정산 짝 기록도 다시 맞춘다(고칠 때·되돌릴 때와 같이).
@@ -800,6 +806,72 @@ extension AssistantOperations.SetDayCardTime: AssistantOperation {
         var result = AssistantEditResult(before: before, after: after)
         result.appChange = AssistantAppChange(stored: changes)
         return result
+    }
+}
+
+/// AI 가계부 고치기·지우기의 공유 여행 길(AIF1118A01, 대표 결정 2026-11-18).
+/// 방에 있는 지출(공동·공개 개인)은 손 편집과 같은 `TripShareLedger`로 보내 동행에게도 가고,
+/// 동행이 잠갔거나 마감·보기만이면 고치지 않고 까닭을 거절 코드로 돌려준다. 방에 없는 내 기록은 그대로 가계부에만 쓴다.
+@MainActor
+enum AssistantSharedLedger {
+    enum Scope { case local, inRoom, offline }
+
+    nonisolated static let offline = "shared_offline"
+    nonisolated static let moved = "shared_trip_move"
+
+    /// 공유 여행의 기록이면 방을 열어 지금 범위를 본다. 방을 못 열면 범위를 몰라 고치지 않는다.
+    static func scope(of entry: LedgerEntry, ledger: LedgerBook) async -> Scope {
+        guard ledger === TripShareLedger.book, let tripID = entry.tripID, TripShareLedger.handles(entry) else { return .local }
+        guard await TripShareLedger.open(tripID: tripID) != nil else { return .offline }
+        return TripShareLedger.scope(of: entry) == .ownHidden ? .local : .inRoom
+    }
+
+    static func edit(
+        _ before: LedgerEntry, change: AssistantExpenseChange, result: AssistantEditResult, ledger: LedgerBook, language: MapHomeLanguage
+    ) async -> AssistantEditResult {
+        var result = result
+        if change.delete {
+            if let failure = await TripShareLedger.remove(before) { return .rejected(failure.assistantReason) }
+            result.after = language.text("지움", "Deleted")
+            // 방에서 지운 번호는 다시 쓰지 못한다: 되살리면 동행에게는 다른 지출이 된다.
+            result.cannotUndo = true
+            return result
+        }
+        var value = change.applied(to: before)
+        // 다른 여행·일상으로 옮기면 방에서 빠진다. 손으로만 한다.
+        guard value.tripID == before.tripID else { return .rejected(moved) }
+        // 동행 이름은 방이 정본이다: 방에 없는 이름이면 공유 장부가 `shared_unknown_person`으로 막는다.
+        if value.amount != before.amount || value.currency != before.currency { value.amountKRW = ledger.krw(value.amount, currency: value.currency) }
+        if let failure = await save(value) { return .rejected(failure.assistantReason) }
+        let saved = ledger.entries.first { $0.id == value.id } ?? value
+        (result.before, result.after) = AssistantChangeSummary.expensePair(before: before, after: saved, language: language)
+        result.ledgerEntryID = saved.id
+        result.ledgerEntry = saved
+        return result
+    }
+
+    /// 지금 범위 그대로 저장한다(되돌리기도 쓴다).
+    static func save(_ entry: LedgerEntry) async -> TripShareLedger.Failure? {
+        await TripShareLedger.save(entry, scope: TripShareLedger.scope(of: entry))
+    }
+}
+
+extension TripShareLedger.Failure {
+    /// 명령 결과에 쓰는 거절 사유. 저장하지 못한 것은 다른 편집과 같은 `edit_failed`.
+    var assistantReason: String {
+        switch self {
+        case .viewOnly: AssistantSharedLedger.offline
+        case .closed: "shared_closed"
+        case .locked: "shared_locked"
+        case .unknownPerson: "shared_unknown_person"
+        case .conflict: "shared_conflict"
+        case .failed: "edit_failed"
+        }
+    }
+
+    init?(assistantReason reason: String) {
+        guard let match = [Self.viewOnly, .closed, .locked, .unknownPerson, .conflict].first(where: { $0.assistantReason == reason }) else { return nil }
+        self = match
     }
 }
 

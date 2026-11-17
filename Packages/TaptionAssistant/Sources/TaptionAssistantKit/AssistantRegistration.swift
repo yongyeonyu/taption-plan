@@ -12,6 +12,8 @@ public enum AssistantRegistration {
     public static let rotationTag = "SEC1110A02"
     /// 바꾸기 전에 AI 연결이 있었으면 다시 만들어 달라고 알린다.
     public static let reconnectKey = "assistantNeedsReconnect"
+    /// 앱이 서버에 올린 푸시 토큰 표시(`AssistantPush`). 주 키를 바꾸면 새 자리에 다시 올리게 지운다(AIF1118A01).
+    nonisolated public static let pushUploadedKey = "assistantPushUploaded"
 
     public typealias Environment = AssistantEnvironment
 
@@ -78,6 +80,8 @@ public enum AssistantRegistration {
         AssistantKeyLabels.removeAll(defaults: env.defaults)
         // 새 키에는 서버 기록이 없으니 처음부터 다시 올린다.
         AssistantActivityUploadGate.reset(defaults: env.defaults)
+        // 푸시 토큰도 새 자리에 다시 올린다(예전 표시가 남으면 7일 동안 푸시가 오지 않는다).
+        env.defaults.removeObject(forKey: pushUploadedKey)
         env.defaults.set(false, forKey: AssistantActivityFlags.sharedKey)
         env.defaults.set(false, forKey: AssistantActivityFlags.pendingClearKey)
         if hadConnections { env.defaults.set(true, forKey: reconnectKey) }
@@ -95,6 +99,11 @@ public enum AssistantRegistration {
         for path in TripRelay.rotationDeletionPaths {
             let reply = await TripRelay.send(TripRelay.relayRequest(path, method: "DELETE", token: old, host: env.host, client: env.client()), session: env.session)
             guard let reply, (200..<300).contains(reply.status) else { return false }
+        }
+        // AIF1118A01: 앱 상태·다듬기·답·AI 일·푸시 토큰도 지운다. 그 경로를 모르는 서버(404)면 건너뛴다.
+        for (path, query) in TripRelay.rotationCleanup {
+            let request = TripRelay.relayRequest(path, method: "DELETE", query: query, token: old, host: env.host, client: env.client())
+            guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) || reply.status == 404 else { return false }
         }
         return true
     }

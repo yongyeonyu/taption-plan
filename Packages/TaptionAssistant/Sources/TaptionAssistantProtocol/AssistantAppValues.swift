@@ -128,7 +128,11 @@ public struct AssistantExpenseChange: Equatable, Sendable {
             value.tripID = tripID.isEmpty ? nil : tripID
             if tripID.isEmpty { value.shareNames = nil }
         }
-        if let shareNames { value.shareNames = shareNames.isEmpty ? nil : shareNames }
+        if let shareNames {
+            value.shareNames = shareNames.isEmpty ? nil : shareNames
+            // AI가 몫을 말했다: 자동 기록이어도 그 몫으로 나눈다(대표 결정 2026-11-18).
+            value.shareChosen = true
+        }
         if let note { value.note = note }
         value.occurredAt = AssistantWhenChange(date: date, minutes: minutes).applied(to: entry.occurredAt, calendar: calendar)
         return value

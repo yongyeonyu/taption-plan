@@ -118,8 +118,10 @@ enum AssistantCommandRunner {
     static func apply(
         _ batch: AssistantCommandBatch, model: AppModel, defaults: UserDefaults = .standard, env: AssistantRegistration.Environment = .live
     ) async -> AssistantCommandOutcome? {
+        // 확인 시트의 묶음은 오래됐을 수 있다: 그 사이 처리했거나 지금 다른 실행이 잡은 명령은 다시 보지 않는다(AIF1118A01).
+        let batch = fresh(batch, defaults: defaults)
         let ids = Set(batch.commands.map(\.id) + batch.invalidIDs)
-        guard claimed.isDisjoint(with: ids) else { return nil }
+        guard !ids.isEmpty else { return nil }
         claimed.formUnion(ids)
         defer { claimed.subtract(ids) }
         let journal = AssistantCommandJournal(defaults: defaults)
@@ -136,8 +138,14 @@ enum AssistantCommandRunner {
         _ batch: AssistantCommandBatch, defaults: UserDefaults = .standard, env: AssistantRegistration.Environment = .live
     ) async {
         let journal = AssistantCommandJournal(defaults: defaults)
+        let batch = fresh(batch, defaults: defaults)
         journal.record((batch.commands.map(\.id) + batch.invalidIDs).map { .init(id: $0, applied: false, reason: "declined") })
         await deliver(journal, env: env)
+    }
+
+    /// 아직 처리하지 않았고 지금 반영 중도 아닌 명령만.
+    private static func fresh(_ batch: AssistantCommandBatch, defaults: UserDefaults) -> AssistantCommandBatch {
+        AssistantCommandLedger.unseen(batch, defaults: defaults).excluding(claimed)
     }
 
     /// 밀린 결과를 보낸다. 서버가 받은 것만 장부와 큐에서 지우고, 못 보낸 것은 다음에 다시 보낸다.
@@ -266,7 +274,7 @@ enum AssistantCommandRefresh {
 enum AssistantPush {
     enum Kind: String { case cmd, q, task, rules }
 
-    nonisolated static let uploadedKey = "assistantPushUploaded"
+    nonisolated static let uploadedKey = AssistantRegistration.pushUploadedKey
     nonisolated static let uploadedAtKey = "assistantPushUploadedAt"
     /// 서버가 토큰을 지웠을 수 있어(만료·모두 끊기) 이만큼 지나면 다시 올린다.
     nonisolated static let reuploadAfter: TimeInterval = 7 * 86_400

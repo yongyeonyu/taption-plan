@@ -3,7 +3,12 @@
 // 어느 쪽이든 KV 이름을 추가 인증 데이터로 써서 값을 다른 이름으로 옮기면 풀리지 않는다.
 
 const encoder = new TextEncoder();
-export const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes));
+// 한 번에 펼치면 큰 값(약 120KB 넘게)에서 호출 스택이 넘친다(AIF1118A01): 조각마다 글자로 바꾼다.
+export const toBase64 = (bytes) => {
+  let text = "";
+  for (let start = 0; start < bytes.length; start += 0x8000) text += String.fromCharCode(...bytes.subarray(start, start + 0x8000));
+  return btoa(text);
+};
 export const fromBase64 = (text) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
 export async function sha256Hex(text) {

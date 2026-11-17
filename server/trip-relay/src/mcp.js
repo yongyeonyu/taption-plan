@@ -61,8 +61,10 @@ const ID = str("Optional unique command id: 1-100 of letters, digits, _ . : -; g
 const enumOf = (description, values) => str(description, { enum: values });
 const integer = (description, minimum, maximum) => ({ type: "integer", description, minimum, maximum });
 // ACT1114A07: 여행 지출의 몫을 나누는 사람.
-const SHARE_NAMES = (min) => ({ type: "array", items: { type: "string", maxLength: 30 }, minItems: min, maxItems: 20,
-  description: "Who shares a trip expense: companion names, \"@me\" for the user" + (min ? "" : "; [] means everyone") + ". Left out: everyone" });
+// AIF1118A01(대표 결정 2026-11-18): 몫을 말하지 않은 AI 지출은 나만, 「다 같이」는 []로 밝힌다.
+const SHARE_NAMES = (update) => ({ type: "array", items: { type: "string", maxLength: 30 }, minItems: 0, maxItems: 20,
+  description: "Who shares a trip expense: companion names, \"@me\" for the user; [] means everyone on the trip. "
+    + (update ? "Left out: unchanged" : "Left out: only the user pays for it (not split); give shareNames only when the user said who shares it") });
 const object = (properties, required = []) => ({ type: "object", properties, required, additionalProperties: false });
 
 // empty: 저장된 것이 없을 때 돌려줄 글. changes: 읽기 키로 부르지만 서버 상태를 바꾸는 도구(AIC1112A01).
@@ -145,7 +147,7 @@ const TOOLS = [
     + "items are still ahead and context.from the time it was sent. Read that day's schedule, work out new times for the remaining items only (shorten, move or drop), "
     + "show the proposal with ask_user before changing anything, then apply what they accept with update_schedule or update_trip_stop. Always finish each task with complete_ai_task.",
     object({ limit: integer("How many to take at most, 1-20 (default 20). Urgent kinds (payment and receipt texts) come first.", 1, 20) }),
-    (ctx, a) => claimTasks(ctx, a.limit, allows(ctx.auth.scope, "write")), { empty: "No AI tasks waiting." }),
+    (ctx, a) => claimTasks(ctx, a.limit, allows(ctx.auth.scope, "write")), { empty: "No AI tasks waiting.", changesWith: "write" }),
   // 끝내기는 쓰기 연결만 한다(AIP1114A05).
   writeRunTool("complete_ai_task", "Complete AI task", "Report one AI task as done (with a short result the user sees) or failed (with a reason). Needs a write connection.",
     object({ id: str("Task id from get_ai_tasks"), status: enumOf("done or failed", ["done", "failed"]), result: str("Up to 300 characters, what you did"),
@@ -176,13 +178,13 @@ const TOOLS = [
     { amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0, maximum: 1e10 }, currency: str("ISO 4217, e.g. KRW, JPY, USD", { pattern: "^[A-Z]{3}$" }),
       title: str("1-60 characters, e.g. Coffee", { maxLength: 60 }), category: enumOf("Category", EXPENSE_CATEGORIES), kind: enumOf("expense or income", ["expense", "income"]),
       payer: str("Who paid, 1-30 characters (for group trips)", { maxLength: 30 }), date: DATE, time: HHMM("Time"),
-      tripId: str("Trip ledger id (get_app_state ledger.trips) to put the entry in that trip's ledger"), shareNames: SHARE_NAMES(1), note: str("Note, up to 200 characters", { maxLength: 200 }) }, ["amount", "title"]),
+      tripId: str("Trip ledger id (get_app_state ledger.trips) to put the entry in that trip's ledger"), shareNames: SHARE_NAMES(false), note: str("Note, up to 200 characters", { maxLength: 200 }) }, ["amount", "title"]),
   commandTool("update_expense", "updateExpense", "Edit expense", "Fix or delete a ledger entry the app added (entryId from an AI task's context), "
     + "e.g. the merchant name, category or amount from a payment text. Only the given fields change; delete:true removes it (undoable).",
     { entryId: str("Ledger entry id"), amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0, maximum: 1e10 },
       currency: str("ISO 4217", { pattern: "^[A-Z]{3}$" }), title: str("1-60 characters", { maxLength: 60 }), category: enumOf("Category", EXPENSE_CATEGORIES),
       kind: enumOf("expense or income", ["expense", "income"]), delete: { type: "boolean", description: "true to delete the entry" },
-      tripId: str("Trip ledger id to move the entry into, or \"none\" for the daily ledger"), shareNames: SHARE_NAMES(0), note: str("New note, up to 200 characters", { maxLength: 200 }),
+      tripId: str("Trip ledger id to move the entry into, or \"none\" for the daily ledger"), shareNames: SHARE_NAMES(true), note: str("New note, up to 200 characters", { maxLength: 200 }),
       date: DATE, time: HHMM("New time") }, ["entryId"]),
   addTool("add_payment_rule", "addPaymentRule", "Add payment message rule", "Teach the app to read one issuer's payment message layout by itself "
     + "(answer to an AI task of kind payment_rule). pattern is an ICU regular expression (iOS NSRegularExpression; the dot also matches newlines) "
@@ -369,7 +371,7 @@ const TOOLS = [
     + "Display-only: it does not create, change or delete any record, plan or memo. Text: up to 80 visible characters; up to 3 links, https only, "
     + "as a bare URL followed by a space or [label](https://...) with a label of up to 20 characters that is not itself an address; 300 characters "
     + "in total. Link hosts must be plain ASCII domains (no IP, punycode, user@ or parentheses; percent-encode other characters). No backslash, "
-    + "no [ ] < > outside a link, and no other scheme such as http:, tel: or mailto:. At most 48 bubbles per 24 hours, separate from the 30-edit limit.",
+    + "no [ ] < > outside a link, and no other scheme such as http:, tel: or mailto:. At most 48 bubbles per 24 hours, separate from the 100-edit limit.",
     { date: DATE, start: HHMM("Start (optional for kind event)"), end: HHMM("End, after start on the same day (optional for kind event)"), text: str("Bubble text"),
       kind: enumOf("routine (default): shown from start to end. event: a reminder for that whole day, shown before routine bubbles and deleted by the app after the day", ["routine", "event"]) },
     ["date", "text"]),
@@ -442,9 +444,13 @@ TOOLS.push(
 );
 const BY_NAME = new Map(TOOLS.map((tool) => [tool.name, tool]));
 
-const describe = (tool) => ({
+// changesWith: 그 범위 이상의 연결로 부르면 서버 상태를 바꾼다(get_ai_tasks는 쓰기 연결이면 일을 맡는다, AIF1118A01). 범위를 모르면 바꾸는 쪽으로 본다.
+const describe = (tool, scope = "master") => ({
   name: tool.name, title: tool.title, description: tool.description, inputSchema: tool.inputSchema,
-  annotations: { readOnlyHint: tool.scope === "read" && !tool.changes, destructiveHint: tool.destructive, idempotentHint: false, openWorldHint: false },
+  annotations: {
+    readOnlyHint: tool.scope === "read" && !tool.changes && !(tool.changesWith && allows(scope, tool.changesWith)),
+    destructiveHint: tool.destructive, idempotentHint: false, openWorldHint: false,
+  },
 });
 
 // MARK: 믿을 수 없는 글 감싸기 (finding 7)
@@ -510,12 +516,13 @@ const RAW_VALUES = {
   error: (v) => /^[a-z][a-z_]{0,39}$/.test(v) && SERVER_ERRORS.has(v),
   // 읽기 연결에 주는 서버의 안내 글(AIP1114A05).
   hint: (v) => v === TASK_READ_ONLY_HINT,
-  reason: oneOf("invalid", "no_record", "unknown_category", "memo_failed", "schedule_failed", "noMerchant", "duplicate", "transfer", "toll", "cardBill", "fare"),
+  // 앱 거절 사유는 짧은 snake_case 낱말이다(AIF1118A01: 목록에 없는 앱 사유까지 감싸던 것). 띄어 쓴 글은 사람이 쓴 것이라 감싼다.
+  reason: (v) => /^[a-z][a-z_]{1,39}$/.test(v) || ["noMerchant", "cardBill"].includes(v),
   // NTF1112A01: 문자 자동화의 트리거 낱말(앱이 정한 값).
   paymentTriggerWords: oneOf("원", "승인", "출금", "취소", "입금", "결제", "일시불", "할부"),
 };
 const SERVER_ERRORS = new Set(["not_command", "not_trip_plan", "bad_date", "bad_range", "rate_limited", "daily_command_limit", "daily_bubble_limit",
-  "daily_request_limit", "daily_write_limit", "write_budget_exhausted", "id_conflict", "forbidden", "not_task_result", "no_task", "not_claimer", "queue_full"]);
+  "daily_request_limit", "daily_write_limit", "write_budget_exhausted", "id_conflict", "forbidden", "not_task_result", "no_task", "not_claimer", "already_finished", "queue_full"]);
 // 칸 이름: 짧은 영문 낱말(camelCase)만 그대로 둔다. 사용자 글이 이름으로 온 것(장소 이름을 키로 쓴 표 등)은 따로 담는다.
 const SAFE_KEY = /^[A-Za-z][A-Za-z0-9]{0,31}$/;
 
@@ -582,7 +589,7 @@ async function dispatch(request, ctx, message) {
     case "ping":
       return rpcResult(id, {});
     case "tools/list":
-      return rpcResult(id, { tools: TOOLS.filter((tool) => allows(ctx.auth.scope, tool.scope)).map(describe) });
+      return rpcResult(id, { tools: TOOLS.filter((tool) => allows(ctx.auth.scope, tool.scope)).map((tool) => describe(tool, ctx.auth.scope)) });
     case "tools/call":
       return callTool(request, ctx, id, params);
     default:
@@ -605,4 +612,4 @@ export async function mcpRoute(request, ctx) {
 }
 
 export const toolNames = () => TOOLS.map((tool) => tool.name);
-export const toolList = () => TOOLS.map(describe);
+export const toolList = () => TOOLS.map((tool) => describe(tool));

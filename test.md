@@ -8,6 +8,15 @@
 - 모의 배포(`--dry-run`) 종료 0. 실제 배포는 에이전트 명령이 안전 검사에 막혀 대표가 터미널에서 실행: 업로드·트리거 배포 성공, 버전 ID `65de4279`. 코드는 버전 `1153a89e`와 같고 로그 설정만 바뀜.
 - 대시보드 화면은 확인하지 않음(설정 파일이 배포마다 끔을 적용).
 
+## AIF1118A01 · REV1117A02 남은 AI 연결 결함 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: main `4aa16489`→`207a63ce`→`d9fa0fa3`(TSA1117A02 합침) 위 브랜치 `worktree-agent-a03b0aebc9a4d8bf7`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/AIF1118A01`. 로그 `build/validation/AIF1118A01/`. 서버는 배포하지 않음.
+- 고치기 전 실패 확인: `r01-prefix.log`(오래된 확인 묶음이 다시 반영·`declined`로 덮음, 공유 장부를 거치지 않음 — 잠겨도 고침·`shared_trip_move` 없음), `r06b-memo-prefix.log`(메모 지우기 되돌린 뒤 가계부 기록 0건), 가리기 `swift test`(띄어 쓴 번호·메일 새어 나감), 서버 새 시험은 고치기 전 각각 실패를 본 뒤 고침. 주 키 바꾸기 정리·0시대 카드는 시험을 먼저 고쳐 썼으나 잠금 대기로 고치기 전 실행은 남기지 못함.
+- 고친 것(앱): ① 명령 실행기 `apply`/`decline`이 처리한 것·잡힌 것을 뺀 묶음만 씀 ② AI 가계부 고치기·지우기·되돌리기를 공유 여행 방(`TripShareLedger`)으로, 실패는 `shared_locked`·`shared_closed`·`shared_offline`·`shared_conflict`·`shared_unknown_person`·`shared_trip_move` ③ 메모 지우기 되돌리기가 새 id로 가계부를 맞춤 ④ 가리기(띄어 쓴 전화·`+82`·Amex 4-6-5·메일, 모호한 모양은 되돌리지 않음) ⑤ 주 키 바꾸기가 `/app`·`/polish`·`/answers`·`/tasks?all=1`·`/push/token`도 지우고 푸시 토큰 표시를 지움(`/rules`는 남김) ⑥ 0시대 하루 카드 창을 0시부터 ⑦ PIN 맞추기가 `ensureReady()` ⑧ AI가 몫을 말한 지출만 `shareChosen`(대표 결정 2026-11-18).
+- 고친 것(서버): `toBase64` 조각, 끝난 AI 일 다시 끝내기 409 `already_finished`, MCP 사유 코드 감싸지 않음, `get_ai_tasks` 읽기 전용 표시를 연결 범위로, 설명 「30-edit」→100, OpenAPI 칸 넓히기, 동행에 `@me` 거절, 사진 주소 대문자 scheme·포트 거절, note만 비운 `updateSchedule` 거절, `addExpense` `shareNames: []` 받음.
+- 결과: 관련 묶음 `r05.log` 159건 중 실패 1(메모 시험 준비 잘못 — `addMemo`는 가계부를 맞추지 않아 손 편집처럼 `updateMemo`로 고침, 이후 `r07-full`에서 확인), 서버 `npm test` 228건 실패 0, `Packages/TaptionAssistant` `swift test` 실패 0, `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과, 번역 extract·check 실패 0(새 문구 없음, 줄 위치만 바뀌어 되돌림). 전체 `-only-testing:TaptionPlanTests`(`r07-full.log`, 앱 Debug 빌드 포함): 3,010건 실패 0, 건너뜀 25(기존 조건부 시험).
+- 남은 것: `setTripItemPhoto` tripId, 하루 카드 요청 시간 창·정적 DateFormatter 시간대·말풍선 파일 크기·넣을 때마다 올리기 Task, 설계 항목(같은 때 사용자 편집 섞임·되돌리기 두 번·다시 쓴 id·`receivedAt`은 쓰이고 있음), `/rules` 처리는 대표 결정 대기. 공유 여행에 AI가 *새로* 넣는 지출은 여전히 이 기기에만(방에 올리지 않음).
+
 ## REV1117A03 · 서울도 TAGO로 (2026-11-18, 시뮬레이터 `99AC6F35…`)
 
 - 대표 결정(2026-11-17): 정류장 찾기를 https인 `/tago/stops`로 먼저, TAGO가 응답했는데 가까운 정류장이 없을 때만 평문 `/seoul/stops`(좌표는 POST 본문). 동작 변경: TAGO가 응답하지 않으면 서울시로 넘어가지 않고 nil(다음 판정 때 다시).

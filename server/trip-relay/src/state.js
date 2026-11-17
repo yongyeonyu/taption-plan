@@ -227,6 +227,8 @@ const OPS = {
     await sweepTasks(s, now);
     const t = await s.get("task:" + id);
     if (!t) return { ok: false, error: "no_task" };
+    // AIF1118A01: 끝난 일(완료·실패·만료)은 다시 끝내지 못한다. 다른 연결이 낸 결과를 덮지 않게.
+    if (!TASK_OPEN.has(t.status)) return { ok: false, error: "already_finished" };
     if (t.status === "processing" && t.claimedBy && t.claimedBy !== keyId) return { ok: false, error: "not_claimer" };
     Object.assign(t, { status: askedId ? "asked" : status, sealed, updatedAt: now, ...(askedId ? { askedId } : {}) });
     delete t.code;

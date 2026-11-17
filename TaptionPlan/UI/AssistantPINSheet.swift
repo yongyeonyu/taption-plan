@@ -157,7 +157,9 @@ struct AssistantPINSheet: View {
         _ derived: String, old: String?, language: MapHomeLanguage, env: AssistantRegistration.Environment = .live,
         derive: (String) -> String? = { AssistantPINDerivation.pin(appPassword: $0) }
     ) async -> AlignFailure? {
-        guard await AssistantRegistration.prepare(env), let status = await AssistantPINStore.status(env: env) else { return .failed }
+        // 실제 저장소면 다른 곳과 같은 준비 작업을 기다린다(겹쳐 돌면 바꾸기가 두 번 시작돼 실패하던 것, AIF1118A01).
+        let ready = env.defaults === UserDefaults.standard ? await AssistantRegistration.ensureReady() : await AssistantRegistration.prepare(env)
+        guard ready, let status = await AssistantPINStore.status(env: env) else { return .failed }
         guard status.isSet else { return outcome(await AssistantPINStore.set(pin: derived, current: nil, env: env), old: old) }
         guard let old else { return outcome(await AssistantPINStore.set(pin: derived, current: derived, env: env), old: nil) }
         guard let previous = derive(old) else { return .failed }

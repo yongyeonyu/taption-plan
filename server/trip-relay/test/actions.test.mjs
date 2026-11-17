@@ -139,7 +139,8 @@ test("actions batch 1: ledger", () => {
 test("actions batch 1: expenses take a trip, sharers, a note and (when edited) a new day and time", () => {
   const base = { amount: 12000, title: "Dinner" };
   accepts("addExpense", { ...base, tripId: "ledger-1", shareNames: ["@me", "Mina"], note: "half each" });
-  refuses("addExpense", { ...base, shareNames: [] });
+  // AIF1118A01(대표 결정 2026-11-18): [] 는 「다 같이」를 밝힌 것이다(없으면 나만).
+  accepts("addExpense", { ...base, shareNames: [] });
   refuses("addExpense", { ...base, shareNames: ["Mina", "Mina"] });
   refuses("addExpense", { ...base, note: "x".repeat(201) });
   accepts("updateExpense", { entryId: "e1", date: "2026-11-13" });

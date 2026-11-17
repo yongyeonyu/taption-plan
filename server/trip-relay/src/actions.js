@@ -110,6 +110,8 @@ const SINCE = 341;
 export const PHOTO_HOSTS = ["upload.wikimedia.org", "images.unsplash.com", "images.pexels.com"];
 const photoLink = (v) => {
   if (typeof v !== "string" || v.length > 500) return false;
+  // 앱은 소문자 https와 포트·사용자 없는 주소만 받는다(URL이 HTTPS·:443을 고쳐 읽으므로 원문으로 본다, AIF1118A01).
+  if (!/^https:\/\/[^/?#:@]+(?:[/?#]|$)/.test(v)) return false;
   try {
     const url = new URL(v);
     return url.protocol === "https:" && !url.username && !url.password && !url.port && PHOTO_HOSTS.includes(url.hostname.toLowerCase());
@@ -119,6 +121,8 @@ const UUID = /^[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$/;
 const given = (v) => v !== undefined && v !== null;
 const anyOf = (v, names) => names.some((name) => given(v[name]));
 const distinct = (list) => !given(list) || new Set(list.map((x) => x.trim())).size === list.length;
+// 동행 이름에 「나」("@me")는 넣지 않는다. 앱도 거절한다(AIF1118A01).
+const companions = (list) => distinct(list) && !(list ?? []).some((x) => x.trim() === "@me");
 const ordered = (start, end) => !given(start) || !given(end) || end >= start;
 const person = (description) => f.text(30, description);
 
@@ -174,7 +178,7 @@ registry
       end: f.date("Last day, default the first day"),
       members: f.list(person(), 20, "Companion names, 1-30 characters each"),
     },
-    check: (v) => ordered(v.start, v.end) && distinct(v.members),
+    check: (v) => ordered(v.start, v.end) && companions(v.members),
   })
   .add("updateLedgerTrip", {
     tool: "update_ledger_trip", title: "Edit a trip ledger", since: SINCE,
@@ -193,7 +197,7 @@ registry
       settlementDate: f.date("Day of the settlement"),
     },
     check: (v) => anyOf(v, ["name", "start", "end", "members", "settlementKRW", "autoSettlement", "fundingDate", "settlementDate"])
-      && ordered(v.start, v.end) && distinct(v.members) && !(v.autoSettlement === true && given(v.settlementKRW)) && v.autoSettlement !== false,
+      && ordered(v.start, v.end) && companions(v.members) && !(v.autoSettlement === true && given(v.settlementKRW)) && v.autoSettlement !== false,
   })
   .add("deleteLedgerTrip", {
     tool: "delete_ledger_trip", title: "Delete a trip ledger", since: SINCE,

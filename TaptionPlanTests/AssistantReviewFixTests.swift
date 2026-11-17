@@ -1,5 +1,9 @@
 import XCTest
+import TaptionLedgerCore
 import TaptionPlanCore
+import TaptionPlanStore
+import TaptionTripShare
+import TaptionTripShareTesting
 @testable import TaptionPlan
 
 /// REV1110A06 리뷰 수정: 주 키 바꾸기, 공유 수준 낮추기, 틀린 명령, 서버와 같은 한도, 말풍선 문법,
@@ -733,6 +737,63 @@ final class AssistantReviewFixTests: XCTestCase {
         done.resolveInterrupted()
         XCTAssertEqual(done.pending, [.init(id: "z", applied: true, reason: nil)])
     }
+
+    /// AIF1118A01: 확인 시트에 남은 오래된 묶음으로 「모두 반영」·「반영하지 않기」를 눌러도 이미 처리한 명령은 다시 보지 않는다.
+    func testAStaleConfirmationBatchDoesNotApplyOrDeclineHandledCommandsAgain() async throws {
+        let store = defaults()
+        let model = await makeModel()
+        var resultStatus = 500
+        let env = runnerEnvironment(store, commands: []) { resultStatus }
+        let journal = AssistantCommandJournal(defaults: store)
+        addTeardownBlock { try? FileManager.default.removeItem(at: journal.logFile) }
+        let stale = try batch([command("m1", "addMemo", ["text": "우유 사기"])])
+
+        let first = await AssistantCommandRunner.apply(stale, model: model, defaults: store, env: env)
+        XCTAssertNotNil(first)
+        XCTAssertEqual(model.snapshot.memos.count, 1)
+        XCTAssertEqual(journal.pending, [.init(id: "m1", applied: true, reason: nil)], "the report failed, so the result waits")
+
+        let again = await AssistantCommandRunner.apply(stale, model: model, defaults: store, env: env)
+        XCTAssertNil(again, "nothing new to apply")
+        XCTAssertEqual(model.snapshot.memos.count, 1, "the same command is not applied twice")
+
+        await AssistantCommandRunner.decline(stale, defaults: store, env: env)
+        XCTAssertEqual(journal.pending, [.init(id: "m1", applied: true, reason: nil)], "declining a stale batch does not overwrite the applied result")
+
+        resultStatus = 201
+        await AssistantCommandRunner.deliver(journal, env: env)
+        XCTAssertEqual(try postedResults().last?["status"], "applied")
+    }
+
+    /// AIF1118A01: AI가 지운 금액 메모를 되돌리면 새 id로 되살아나고, 그 메모의 가계부 기록도 돌아온다.
+    func testUndoingAnAIMemoDeletionBringsItsLedgerEntryBack() async throws {
+        let book = LedgerBook(store: { nil })
+        AppModel.memoLedgerBookForTests = book
+        defer { AppModel.memoLedgerBookForTests = nil }
+        let store = defaults()
+        let model = await makeModel()
+        let memoID = try XCTUnwrap(model.addMemo(text: "메모", kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: at(9)))
+        model.updateMemo(memoID, text: "커피 4500", kind: .idea)
+        try await waitUntil { book.entry(forMemo: memoID)?.amount == 4_500 }
+
+        let journal = AssistantCommandJournal(defaults: store)
+        addTeardownBlock { try? FileManager.default.removeItem(at: journal.logFile) }
+        _ = await model.applyAssistantCommands(try batch([command("d1", "deleteMemo", ["memoId": memoID.uuidString])]), defaults: store, journal: journal)
+        try await waitUntil { book.entries.isEmpty }
+
+        let entry = try XCTUnwrap(AssistantActionLog.load(from: journal.logFile).first { $0.commandID == "d1" })
+        let undone = await model.undoAssistantEntry(entry, preferences: .test(store))
+        XCTAssertTrue(undone)
+        let restored = try XCTUnwrap(model.snapshot.memos.first { $0.text == "커피 4500" })
+        XCTAssertNotEqual(restored.id, memoID, "a deleted memo comes back with a new id")
+        try await waitUntil { book.entry(forMemo: restored.id)?.amount == 4_500 }
+        XCTAssertEqual(book.entries.count, 1, "\(book.entries.map { ($0.memoID?.uuidString ?? "-", $0.amount) }) restored \(restored.id) old \(memoID)")
+    }
+
+    private func waitUntil(file: StaticString = #filePath, line: UInt = #line, _ condition: @MainActor () -> Bool) async throws {
+        for _ in 0..<100 where !condition() { try await Task.sleep(for: .milliseconds(30)) }
+        XCTAssertTrue(condition(), file: file, line: line)
+    }
 }
 
 private extension AssistantActivityDay {
@@ -744,5 +805,161 @@ private extension AssistantActivityDay {
         var day = AssistantActivityBuilder.make(input, level: .summary)!
         day.date = date
         return day
+    }
+}
+
+/// AIF1118A01(대표 결정 2026-11-18): AI의 가계부 고치기·지우기도 손 편집처럼 공유 여행 방을 거친다.
+/// 동행이 그 칸을 잠그고 있으면 고치지 않고 거절 코드를 돌려준다.
+@MainActor
+final class AssistantSharedLedgerTests: XCTestCase {
+    private let tripID = "t1"
+    private var originalStore: TripShareStore!
+    private var folder: URL!
+    private var suiteName: String!
+    private var server: ShareFakeServer!
+    private var store: TripShareStore!
+    private var book: LedgerBook!
+    private var keys: ShareKeys!
+    private var roomID: String!
+    private var model: AppModel!
+    private var others: [ShareRoomSession] = []
+
+    override func setUp() async throws {
+        originalStore = TripShareStore.shared
+        folder = FileManager.default.temporaryDirectory.appendingPathComponent("AssistantSharedLedgerTests-\(UUID().uuidString)", isDirectory: true)
+        suiteName = "AssistantSharedLedgerTests-\(UUID().uuidString)"
+        book = LedgerBook(store: { nil })
+        TripShareLedger.book = book
+        server = ShareFakeServer()
+        store = TripShareStore(environment: TripShareEnvironment(
+            transport: server.transport, secrets: TripShareMemorySecrets(), sidecar: TripShareSidecar(directory: folder), appKey: { "test-app-key" }
+        ))
+        TripShareStore.shared = store
+        model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        await model.bootstrap()
+        store.attach(model)
+    }
+
+    override func tearDown() async throws {
+        for session in others { await session.stop() }
+        others = []
+        await store.close(tripID: tripID)
+        TripShareStore.shared = originalStore
+        TripShareLedger.book = .shared
+        UserDefaults().removePersistentDomain(forName: suiteName)
+        try? FileManager.default.removeItem(at: folder)
+    }
+
+    private func waitUntil(_ what: String = "", file: StaticString = #filePath, line: UInt = #line, _ condition: @MainActor () async -> Bool) async {
+        for _ in 0..<200 {
+            if await condition() { return }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        XCTFail("기다린 일이 일어나지 않았다 \(what)", file: file, line: line)
+    }
+
+    private func openRoom() async throws {
+        let invite = ShareInvite.make()
+        roomID = invite.roomID
+        keys = try ShareKeys.derive(roomID: invite.roomID, linkSecret: invite.linkSecret, password: "가을여행-2031", iterations: 20)
+        let ownerKey = ShareIdentifiers.ownerKey()
+        let entry = try await ShareRoomClient.createRoom(
+            transport: server.transport, appKey: "test-app-key",
+            request: ShareCreateRequest(roomID: invite.roomID, proof: keys.proof, ownerKey: ownerKey, expiresAt: await server.now + 86_400_000)
+        )
+        try store.register(
+            TripShareLink(roomID: invite.roomID, tripID: tripID, role: .owner, phase: .sharing),
+            secrets: ShareRoomSecrets(root: keys.root, linkSecret: invite.linkSecret, token: entry.token, ownerKey: ownerKey, member: entry.member, epoch: entry.epoch)
+        )
+        let opened = await store.open(tripID: tripID)
+        let session = try XCTUnwrap(opened)
+        await waitUntil("이 기기 연결") { await session.view().status == .live }
+        _ = try await session.publish(card: ShareMemberCard(name: "가을", color: "#112233"))
+        let trip = TravelTrip(id: tripID, title: "가을 여행", startDay: "2031-10-01", endDay: "2031-10-03")
+        _ = try await session.publish(meta: TripShareMapping.meta(trip, budget: nil, guests: [], shareAllExpenses: nil))
+        await store.refresh(tripID: tripID)
+    }
+
+    private func join(_ name: String) async throws -> ShareRoomSession {
+        let entry = try await ShareRoomClient.join(transport: server.transport, roomID: roomID, proof: keys.proof)
+        let session = ShareRoomSession(
+            roomID: roomID, member: entry.member, epoch: entry.epoch, keys: keys,
+            client: ShareRoomClient(transport: server.transport, roomID: roomID, token: entry.token, socketTimeout: 2)
+        )
+        others.append(session)
+        await session.start()
+        await waitUntil("다른 기기 연결") { await session.view().status == .live }
+        _ = try await session.publish(card: ShareMemberCard(name: name, color: "#445566"))
+        await waitUntil("이 기기가 새 사람을 봄") { self.store.names(tripID: self.tripID)?.others.contains(name) == true }
+        return session
+    }
+
+    private func action(_ extra: [String: Any]) throws -> AssistantCommand.Action {
+        let command: [String: Any] = ["format": "bokki-command", "version": 1, "id": "op", "action": "updateExpense", "keyId": "aaaa1111", "source": "rest"]
+        let data = try JSONSerialization.data(withJSONObject: ["commands": [command.merging(extra) { _, new in new }]])
+        return try XCTUnwrap(AssistantCommandParser.parse(data)?.commands.first?.action)
+    }
+
+    private func roomAmount(_ session: ShareRoomSession, _ itemID: String) async -> Int? {
+        await session.view().items.first { $0.id == itemID }.flatMap { item in
+            if case .sharedExpense(let content) = item.content { return content.amount }
+            return nil
+        }
+    }
+
+    private func roomSplit(_ session: ShareRoomSession, _ itemID: String) async -> Int? {
+        await session.view().items.first { $0.id == itemID }.flatMap { item in
+            if case .sharedExpense(let content) = item.content { return content.split.count }
+            return nil
+        }
+    }
+
+    func testAIEditsOfASharedExpenseGoThroughTheRoomAndALockedItemIsRefused() async throws {
+        try await openRoom()
+        let friend = try await join("봄")
+        var preferences = AssistantPreferenceStore.test(UserDefaults(suiteName: suiteName)!)
+        preferences.ledger = book
+        let dinner = LedgerEntry(
+            occurredAt: Date(timeIntervalSince1970: 1_950_000_000), amount: 30_000, amountKRW: 30_000, category: .food, title: "저녁", tripID: tripID, source: .manual
+        )
+        let saved = await TripShareLedger.save(dinner, scope: .shared)
+        XCTAssertNil(saved)
+        let itemID = TripShareMapping.roomItemID(entryID: dinner.id)
+        await waitUntil("동행이 공동 지출을 봄") { await self.roomAmount(friend, itemID) == 30_000 }
+
+        // 고치면 방에도 올라가 동행이 본다.
+        let edited = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "amount": 25_000]), preferences: preferences)
+        XCTAssertNil(edited.reason)
+        XCTAssertEqual(book.entries.first { $0.id == dinner.id }?.amount, 25_000)
+        await waitUntil("동행이 고친 금액을 봄") { await self.roomAmount(friend, itemID) == 25_000 }
+
+        // AI가 말한 몫도 방으로 간다: 나만 → 다 같이([]).
+        let mine = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "shareNames": ["@me"]]), preferences: preferences)
+        XCTAssertNil(mine.reason)
+        await waitUntil("동행이 나만으로 봄") { await self.roomSplit(friend, itemID) == 1 }
+        let together = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "shareNames": [String]()]), preferences: preferences)
+        XCTAssertNil(together.reason)
+        await waitUntil("동행이 다 같이로 봄") { await self.roomSplit(friend, itemID) == 2 }
+
+        // 동행이 잠그고 있으면 고치지 않고 까닭을 돌려준다.
+        try await friend.lock(items: [itemID])
+        let locked = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "amount": 20_000]), preferences: preferences)
+        XCTAssertEqual(locked.reason, "shared_locked")
+        XCTAssertEqual(book.entries.first { $0.id == dinner.id }?.amount, 25_000, "nothing changes locally")
+        let lockedDelete = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "delete": true]), preferences: preferences)
+        XCTAssertEqual(lockedDelete.reason, "shared_locked")
+        XCTAssertTrue(book.entries.contains { $0.id == dinner.id })
+        try await friend.unlock(items: [itemID])
+
+        // 다른 여행으로 옮기는 것은 방에서 빠지는 일이라 AI는 하지 않는다.
+        let moved = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "tripId": "none"]), preferences: preferences)
+        XCTAssertEqual(moved.reason, "shared_trip_move")
+
+        // 지우면 방에서도 사라진다. 방에서 지운 번호는 다시 쓰지 못해 되돌릴 수 없다고 적는다.
+        let removed = await model.applyAssistantAction(try action(["entryId": dinner.id.uuidString, "delete": true]), preferences: preferences)
+        XCTAssertNil(removed.reason)
+        XCTAssertTrue(removed.cannotUndo)
+        XCTAssertFalse(book.entries.contains { $0.id == dinner.id })
+        await waitUntil("동행에게서도 사라짐") { await self.roomAmount(friend, itemID) == nil }
     }
 }
