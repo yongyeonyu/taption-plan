@@ -70,9 +70,7 @@ struct LedgerSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(language.text("닫기", "Close")) { dismiss() } }
                 ToolbarItemGroup(placement: .primaryAction) {
-                    if PerfBenchBefore.has("lmenu") { swiftUIMoreMenu } else {
-                        LedgerMoreMenuButton(language: language, onSelect: selectMore, export: export)
-                    }
+                    LedgerMoreMenuButton(language: language, onSelect: selectMore, export: export)
                     Button { isAdding = true } label: { Image(systemName: "plus") }
                         .accessibilityLabel(language.text("기록 더하기", "Add entry"))
                 }
@@ -241,32 +239,6 @@ struct LedgerSheet: View {
                     .foregroundStyle(net < 0 ? Color.red : Color.green)
             }
         }
-    }
-
-    /// 고침 9 전의 SwiftUI 메뉴(`-benchBefore=lmenu`, 전후 비교용). 시트를 열 때 내용을 미리 만든다.
-    private var swiftUIMoreMenu: some View {
-        Menu {
-            Button(language.text("이 달 예산", "Monthly budget")) { isEditingBudget = true }
-            Button(language.text("정산하기", "Settle up")) { isSettling = true }
-            Button { isShowingShortcutGuide = true } label: {
-                Label(language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"), systemImage: "message.badge")
-            }
-            Button { isShowingOwnAccounts = true } label: {
-                Label(language.text("내 계좌 이름", "My account names"), systemImage: "building.columns")
-            }
-            ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv") { [summary, monthTitle, language] in
-                LedgerTable.csv(summary.entries, carryOver: summary.carryOver, title: language.text("BOKKI 가계부 \(monthTitle)", "BOKKI ledger \(monthTitle)"), language: language)
-            },
-                      preview: SharePreview(language.text("가계부 \(monthTitle) 표", "Ledger \(monthTitle) table"))) {
-                Label(language.text("이 달 표로 내보내기", "Export this month as a table"), systemImage: "tablecells")
-            }
-            ShareLink(item: LedgerTableFile(name: "BOKKI-ledger.csv") { [language] in
-                LedgerTable.csv(LedgerBook.shared.dailyEntries, title: language.text("BOKKI 가계부 전체", "BOKKI ledger (all)"), language: language)
-            },
-                      preview: SharePreview(language.text("가계부 전체 표", "Whole ledger table"))) {
-                Label(language.text("전체 표로 내보내기", "Export everything as a table"), systemImage: "square.and.arrow.up")
-            }
-        } label: { Image(systemName: "ellipsis.circle") }
     }
 
     private func selectMore(_ action: LedgerMoreMenuItem.Action) {
