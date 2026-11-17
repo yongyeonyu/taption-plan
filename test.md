@@ -10,7 +10,10 @@
 - 앱 관련 시험(Debug, `-parallel-testing-enabled NO`): `TripLiveLocationTests`·`TripShareLedgerTests`·`TripItemStatusTests`·`TravelPuzzleTests`·`TravelTodayTests`·`TravelDayBoardTests`·`TripShareFoundationTests` 83건 통과(`batch-5.log`). 앞의 두 번은 「시험 실행기가 연결 전에 멈춤」(맥 부하 평균 76, 시뮬레이터 4대 켜짐)으로 실패했고 코드와 무관해 같은 코드로 다시 돌려 통과.
 - 구조 점검: `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과.
 - 번역: 사용자 문구를 바꾸지 않아 번역 파일은 건드리지 않음.
-- 전체 `TaptionPlanTests`·`TaptionPlanTravel*UITests` 결과는 아래 줄에 이어 적는다.
+- 전체 `-only-testing:TaptionPlanTests`: 3016건, 건너뜀 25(원래 건너뛰는 시험), 실패 0(`full-1.log`, 잠금 안).
+- 여행 UI 시험 `TaptionPlanTravelScreensUITests`·`TaptionPlanTravelPlanUITests` 7건 통과(`ui-2.log`, 잠금 안, 빌드는 `/Volumes/TaptionPlanBuild/dd/REV1117A01`, 끝난 뒤 지움).
+- 실수 기록: 시험 클래스를 잘못 찾아 한 번 멈추는 중에 빌드 잠금을 `rmdir`로 지워 그 사이 잠금 없는 실행이 겹쳤다(약 15:16). 겹친 실행은 종료했고 그 시간의 결과는 쓰지 않았다. 위 결과는 모두 잠금 안에서 돈 것이다.
+- 한계: 실기기·아이폰 11 확인 없음, 사진 취소 고침과 `locs` 없는 상태 확인 고침은 단위 시험이 없다(네트워크·소켓 경로).
 
 ## PRF1117A01 · 콜드 실행 단계별 측정과 시작 막대 고침 (2026-11-17 새벽, 아이폰 11 Pro 실기기 + 시뮬레이터)
 
