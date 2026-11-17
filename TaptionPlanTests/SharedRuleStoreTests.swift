@@ -72,6 +72,15 @@ final class SharedRuleStoreTests: XCTestCase {
         XCTAssertNil(LedgerMessageRules.match(text, defaults: store), "without the shared rule nothing reads it")
     }
 
+    /// REV1117A02: 저장할 판 번호는 서명한 글 안의 것과 같아야 한다(겉 번호만 키운 예전 묶음이 새 판을 막지 못하게).
+    func testTheStoredVersionComesFromTheSignedPayload() throws {
+        var renumbered = try bundle(3, rules: cafe)
+        renumbered.version = Int.max
+        XCTAssertEqual(SharedRuleStore.signedVersion(renumbered), 3)
+        XCTAssertEqual(SharedRuleStore.signedVersion(try bundle(4, rules: cafe)), 4)
+        XCTAssertNil(SharedRuleStore.signedVersion(.init(version: 1, payload: "not json", signature: "")))
+    }
+
     func testOnlyFilteredAIRulesAreOfferedAndOnlyOnce() {
         let ai = Rule.Source(by: "ai")
         let rules = [

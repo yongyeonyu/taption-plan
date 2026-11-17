@@ -2517,4 +2517,77 @@ extension AssistantPhase3Tests {
         XCTAssertEqual(AssistantActionLog.load(from: file).count, 1, "이미 있던 규칙은 다시 적지 않는다")
         AssistantRuleSnapshot.set([])
     }
+
+    /// REV1117A02: 키를 바꿔 서버 자리가 새로 생기면(버전 0) 빈 목록으로 기기 규칙·결제 문자 정규식을 지우지 않고 다시 올린다.
+    func testANewServerAfterAKeyChangeKeepsTheDevicesRulesAndUploadsThemAgain() async throws {
+        let store = defaults()
+        store.set(1, forKey: AssistantKeyLabels.serverCountKey)
+        store.set(true, forKey: AssistantRuleStore.migratedKey)
+        let secrets = AssistantMemorySecrets([.master: oldMaster])
+        let payment = Rule(id: UUID().uuidString, type: "payment_text",
+                           match: ["pattern": .text("(?<merchant>.+) (?<amount>[\\d,]+)원 승인"), "sample": .text("가게 12,000원 승인")],
+                           result: ["kind": .text("expense")], source: .init(by: "ai"))
+        let word = Rule(id: "skip-ad", type: "skip_word", match: ["word": .text("광고")], source: .init(by: "user"))
+        store.set(try JSONEncoder().encode(RuleSet(version: 12, rules: [payment, word])), forKey: AssistantRuleStore.setKey)
+        store.set(12_000, forKey: AssistantRuleStore.ackedKey)
+        AssistantRuleStore.refreshSnapshot(store)
+        XCTAssertEqual(LedgerMessageRules.rules(store).count, 1)
+
+        let env = environment(secrets, store, status: { _ in 200 })
+        Phase3RelayStub.body = String(decoding: try JSONEncoder().encode(RuleSet(version: 0, rules: [])), as: UTF8.self)
+        let first = await AssistantRuleStore.sync(env: env)
+        XCTAssertTrue(first)
+        XCTAssertEqual(LedgerMessageRules.rules(store).count, 1, "결제 문자 정규식이 남는다")
+        XCTAssertEqual(Set(AssistantRuleStore.effective(store).rules.map(\.id)), [payment.id, word.id])
+        XCTAssertEqual(AssistantRuleStore.outbox(store).map(\.op), ["put", "put"], "새 서버에 다시 올릴 것으로 둔다")
+
+        Phase3RelayStub.body = String(decoding: try JSONEncoder().encode(RuleSet(version: 1, rules: [payment, word])), as: UTF8.self)
+        let second = await AssistantRuleStore.sync(env: env)
+        XCTAssertTrue(second)
+        XCTAssertEqual(Phase3RelayStub.requests.filter { $0.summary == "POST /rules/ops" }.count, 1)
+        XCTAssertTrue(AssistantRuleStore.outbox(store).isEmpty)
+        XCTAssertEqual(AssistantRuleStore.stored(store).version, 1)
+        XCTAssertEqual(LedgerMessageRules.rules(store).count, 1)
+        AssistantRuleSnapshot.set([])
+    }
+
+    /// REV1117A02: 서버는 한 번에 50개까지만 받으므로 보낼 것이 많으면 나눠 올린다(전에는 422로 계속 막혔다).
+    func testRuleOutboxIsSentInChunksTheServerAccepts() async throws {
+        let store = defaults()
+        store.set(1, forKey: AssistantKeyLabels.serverCountKey)
+        store.set(true, forKey: AssistantRuleStore.migratedKey)
+        let ops = (0..<60).map { AssistantRuleStore.Op(op: "delete", id: "r\($0)") }
+        store.set(try JSONEncoder().encode(ops), forKey: AssistantRuleStore.outboxKey)
+        let env = environment(AssistantMemorySecrets([.master: oldMaster]), store, status: { _ in 200 })
+        Phase3RelayStub.body = String(decoding: try JSONEncoder().encode(RuleSet(version: 2, rules: [])), as: UTF8.self)
+        let ok = await AssistantRuleStore.sync(env: env)
+        XCTAssertTrue(ok)
+        let sizes = try Phase3RelayStub.requests.filter { $0.summary == "POST /rules/ops" }.map { request -> Int in
+            let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.body) as? [String: Any])
+            return (body["ops"] as? [Any])?.count ?? 0
+        }
+        XCTAssertEqual(sizes, [50, 10])
+        XCTAssertTrue(AssistantRuleStore.outbox(store).isEmpty)
+        AssistantRuleSnapshot.set([])
+    }
+
+    /// REV1117A02: 사용자가 지웠지만 아직 서버에 못 올린 AI 규칙은 공통 규칙 후보로 올리지 않는다.
+    func testCandidateUploadLeavesOutAnAIRuleTheUserJustDeleted() async throws {
+        let store = defaults()
+        store.set(1, forKey: AssistantKeyLabels.serverCountKey)
+        SharedRuleStore.setContributing(true, defaults: store)
+        let keep = Rule(id: "a", type: "merchant_category", match: ["contains": .list(["빵집"])], result: ["category": .text("cafe")], source: .init(by: "ai"))
+        let gone = Rule(id: "b", type: "merchant_category", match: ["contains": .list(["꽃가게"])], result: ["category": .text("shopping")], source: .init(by: "ai"))
+        store.set(try JSONEncoder().encode(RuleSet(version: 3, rules: [keep, gone])), forKey: AssistantRuleStore.setKey)
+        AssistantRuleStore.delete("b", defaults: store)
+        let env = environment(AssistantMemorySecrets([.master: oldMaster]), store, status: { _ in 200 })
+        Phase3RelayStub.body = #"{"ok":true,"accepted":1,"refused":0}"#
+        let sent = await SharedRuleStore.uploadCandidates(env: env)
+        XCTAssertEqual(sent, 1)
+        let body = try XCTUnwrap(Phase3RelayStub.requests.last { $0.path == "/shared/candidates" }?.body)
+        let text = String(decoding: body, as: UTF8.self)
+        XCTAssertTrue(text.contains("빵집"))
+        XCTAssertFalse(text.contains("꽃가게"))
+        AssistantRuleSnapshot.set([])
+    }
 }
