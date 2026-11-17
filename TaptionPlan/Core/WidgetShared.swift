@@ -99,6 +99,8 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
     var categoryName: String?
     var categoryHex: String?
     var lane: TaptionWidgetLane?
+    /// 끝나지 않은 자동 기록. 위젯이 그리는 시각까지 막대를 늘린다(WLA1117A01). 옛 payload에는 없다.
+    var isOpenEnded: Bool?
 
     init(
         id: UUID,
@@ -110,7 +112,8 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
         isFixed: Bool,
         categoryName: String? = nil,
         categoryHex: String? = nil,
-        lane: TaptionWidgetLane? = nil
+        lane: TaptionWidgetLane? = nil,
+        isOpenEnded: Bool? = nil
     ) {
         self.id = id
         self.title = title
@@ -122,6 +125,7 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
         self.categoryName = categoryName
         self.categoryHex = categoryHex
         self.lane = lane
+        self.isOpenEnded = isOpenEnded
     }
 
     var isRunning: Bool {
@@ -351,6 +355,21 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
     var reducesMotion: Bool?
     var locationTrackingEnabled: Bool? = nil
     var locationPermissionState: String? = nil
+
+    /// payload는 만든 시각의 끝만 담아 열린 기록 막대가 멈췄다. 그리는 시각을 막 지나도록 늘려
+    /// 막대가 자라고 지금 칸으로도 잡히게 한다(WLA1117A01).
+    func extendingOpenEndedItems(to date: Date) -> TaptionWidgetPayload {
+        guard items.contains(where: { $0.isOpenEnded == true }) else { return self }
+        let end = date.addingTimeInterval(1)
+        var copy = self
+        copy.items = items.map { item in
+            guard item.isOpenEnded == true, item.endsAt < end else { return item }
+            var item = item
+            item.endsAt = end
+            return item
+        }
+        return copy
+    }
 
     static var empty: TaptionWidgetPayload {
         let calendar = Calendar.autoupdatingCurrent

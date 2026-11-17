@@ -140,6 +140,8 @@ enum TaptionWidgetPayloadFactory {
             ),
             asOf: now
         )
+        // 위 엔진이 열린 기록의 끝을 지금으로 잘라 두므로, 열려 있던 것은 원본에서 고른다.
+        let openActualIDs = Set(snapshot.actuals.lazy.filter { $0.endedAt == nil }.map(\.id))
         let movementItems = automaticItems
             .filter { $0.categoryID == "movement" }
             .map { actual in
@@ -153,7 +155,8 @@ enum TaptionWidgetPayloadFactory {
                     isFixed: true,
                     categoryName: "이동",
                     categoryHex: "#D2AE76",
-                    lane: .movement
+                    lane: .movement,
+                    isOpenEnded: openActualIDs.contains(actual.id) ? true : nil
                 )
             }
         let sleepItems = automaticItems
@@ -169,7 +172,8 @@ enum TaptionWidgetPayloadFactory {
                     isFixed: true,
                     categoryName: "수면",
                     categoryHex: "#C9D6E5",
-                    lane: .sleep
+                    lane: .sleep,
+                    isOpenEnded: openActualIDs.contains(actual.id) ? true : nil
                 )
             }
         let activityItems = automaticItems
@@ -189,7 +193,8 @@ enum TaptionWidgetPayloadFactory {
                     isFixed: true,
                     categoryName: "활동",
                     categoryHex: "#7CA980",
-                    lane: .activity
+                    lane: .activity,
+                    isOpenEnded: openActualIDs.contains(actual.id) ? true : nil
                 )
             }
 
@@ -206,7 +211,8 @@ enum TaptionWidgetPayloadFactory {
                     isFixed: true,
                     categoryName: "어플",
                     categoryHex: "#8C7AB8",
-                    lane: .appUsage
+                    lane: .appUsage,
+                    isOpenEnded: openActualIDs.contains(actual.id) ? true : nil
                 )
             }
 

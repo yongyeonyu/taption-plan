@@ -747,4 +747,45 @@ extension FeatureEngineTests {
         )
     }
 
+    /// 열린 자동 기록 막대는 위젯 타임라인 칸마다 그 시각까지 자란다(WLA1117A01).
+    func testWidgetOpenAutomaticRecordBarGrowsWithTimelineEntries() throws {
+        let now = makeDate(2026, 8, 1, 18, 0)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = now
+        snapshot.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "걷기",
+                categoryID: "walking",
+                startedAt: now.addingTimeInterval(-10 * 60),
+                source: .healthKit
+            ),
+        ]
+        let payload = TaptionWidgetPayloadFactory.make(from: snapshot, now: now)
+        let open = try XCTUnwrap(payload.items.first { $0.isOpenEnded == true })
+        XCTAssertEqual(open.endsAt, now)
+
+        let later = now.addingTimeInterval(5 * 60)
+        let extended = payload.extendingOpenEndedItems(to: later)
+        let grown = try XCTUnwrap(extended.items.first { $0.id == open.id })
+        XCTAssertGreaterThan(grown.endsAt, later)
+        XCTAssertEqual(
+            TaptionWidgetPlaybackEngine.activeItems(in: open.resolvedLane, from: extended.items, at: later).map(\.id),
+            [open.id]
+        )
+
+        let closed = TaptionWidgetItem(
+            id: UUID(),
+            title: "독서",
+            categoryID: "activity",
+            startsAt: now.addingTimeInterval(-3_600),
+            endsAt: now.addingTimeInterval(-1_800),
+            status: "recorded",
+            isFixed: true,
+            lane: .activity
+        )
+        var mixed = payload
+        mixed.items.append(closed)
+        XCTAssertEqual(mixed.extendingOpenEndedItems(to: later).items.last?.endsAt, closed.endsAt)
+    }
 }
