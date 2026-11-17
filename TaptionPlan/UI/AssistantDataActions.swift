@@ -334,7 +334,7 @@ enum AssistantTripEdit {
             if let from = dayStops.firstIndex(where: { $0.id == stopID }) {
                 let moving = dayStops.remove(at: from)
                 dayStops.insert(moving, at: min(order, dayStops.count))
-                let positions = Dictionary(uniqueKeysWithValues: dayStops.enumerated().map { ($1.id, $0) })
+                let positions = Dictionary(dayStops.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
                 for position in stops.indices { if let value = positions[stops[position].id] { stops[position].order = value } }
             }
         }
