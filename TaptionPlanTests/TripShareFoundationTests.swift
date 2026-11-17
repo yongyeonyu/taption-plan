@@ -63,8 +63,8 @@ final class TripShareFoundationTests: XCTestCase {
         XCTAssertLessThanOrEqual(memo.utf8.count, TripShareMapping.memoBytes)
         XCTAssertTrue(memo.allSatisfy { String($0) == family }, "글자 중간을 자르지 않는다")
         XCTAssertTrue(long.note?.hasPrefix(memo) ?? false)
-        let plaintext = try JSONEncoder().encode(ShareContent.plan(content))
-        XCTAssertLessThanOrEqual(ShareCipher.sealedBytes(plaintextBytes: plaintext.count), ShareLimits.v1.itemBytes, "방 한 칸에 들어간다")
+        let plaintext = try JSONEncoder().encode(content)
+        XCTAssertLessThanOrEqual(ShareCipher.sealedBytes(plaintextBytes: plaintext.count + 64), ShareLimits.v1.itemBytes, "방 한 칸에 들어간다")
 
         // 짧은 메모는 그대로다.
         long.note = "표는 현장에서 👍"
