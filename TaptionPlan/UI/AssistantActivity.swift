@@ -306,7 +306,7 @@ enum AssistantActivityBuilder {
     }
 
     /// 도로명·지번·좌표·구·丁目처럼 보이면 보내지 않는다(SEC1110A02에서 구·군·区·丁目·길 이름·거리 접미어를 더함).
-    /// REV1117A02: 이름 없이 등록한 장소는 「37.56650, 126.97800」을 이름으로 갖는다. 좌표는 AI로 보내지 않는다.
+    /// REV1117A02: 이름 없이 등록한 장소는 「12.34560, 65.43210」을 이름으로 갖는다. 좌표는 AI로 보내지 않는다.
     static func hasCoordinates(_ text: String) -> Bool {
         text.range(of: #"-?\d{1,3}\.\d{3,}\s*,\s*-?\d{1,3}\.\d{3,}"#, options: .regularExpression) != nil
     }
