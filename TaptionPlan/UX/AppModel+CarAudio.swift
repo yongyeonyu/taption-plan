@@ -38,4 +38,17 @@ extension AppModel {
             : others(settings.registeredCarAudioNames)
         await updateCarAudioNames(registered: registered, recent: others(settings.recentCarAudioNames))
     }
+
+    /// 튜토리얼 「내 차」 줄의 켜고 끄기(FRT1117A01). 끄면 등록만 풀고 최근 목록 앞에 돌려 둔다.
+    /// 「아니요」·「삭제」와 달리 거절로 남기지 않아, 줄이 남고 다시 눌러 되돌릴 수 있다.
+    func toggleTutorialCarAudio(_ name: String) async {
+        guard settings.registeredCarAudioNames.contains(name) else {
+            await setCarAudio(name, isMyCar: true)
+            return
+        }
+        await updateCarAudioNames(
+            registered: settings.registeredCarAudioNames.filter { $0 != name },
+            recent: AppFeatureSettings.normalizedCarAudioNames([name] + settings.recentCarAudioNames)
+        )
+    }
 }

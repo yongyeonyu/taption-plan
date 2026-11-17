@@ -296,6 +296,32 @@ extension FirstRunTutorialTests {
         XCTAssertTrue(applied)
         XCTAssertEqual(saved.names, ["실패"])
     }
+
+    /// 튜토리얼 「내 차」 줄을 다시 누르면 등록 전으로 돌아가고, 줄이 남아 또 누를 수 있다.
+    @MainActor
+    func testCarRowSecondTapUndoesInsteadOfDismissing() async {
+        var source = TaptionDataSnapshot.empty
+        source.settings.recentCarAudioNames = ["Audi MMI"]
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: source), cloudSyncService: nil)
+        await model.bootstrap()
+
+        await model.toggleTutorialCarAudio("Audi MMI")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["Audi MMI"])
+
+        await model.toggleTutorialCarAudio("Audi MMI")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, [])
+        XCTAssertEqual(model.settings.dismissedCarAudioNames, [])
+        XCTAssertEqual(model.settings.recentCarAudioNames, ["Audi MMI"])
+        XCTAssertEqual(model.pendingCarAudioSuggestion, "Audi MMI")
+
+        await model.toggleTutorialCarAudio("Audi MMI")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["Audi MMI"])
+
+        // 튜토리얼에서 뺀 CarPlay 차도 다음 연결 때 다시 등록된다.
+        await model.toggleTutorialCarAudio("Audi MMI")
+        await model.registerCarPlay("Audi MMI")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["Audi MMI"])
+    }
 }
 
 private final class InMemoryCredentialStore: PlanCredentialStore {
