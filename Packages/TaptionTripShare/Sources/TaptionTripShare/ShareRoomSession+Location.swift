@@ -22,7 +22,7 @@ extension ShareRoomSession {
         do {
             try await client.sendLocation(epoch: epoch, cipher: cipher, help: payload.s == .help)
         } catch let error as ShareError {
-            if case .server(let failure) = error, failure.detail.error == "loc_closed" { locWindow = failure.detail.locWindow; emitLocations() }
+            if case .server(let failure) = error, failure.code == .locClosed { locWindow = failure.detail.locWindow; emitLocations() }
             throw error
         }
     }

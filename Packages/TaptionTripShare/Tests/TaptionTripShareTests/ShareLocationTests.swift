@@ -66,6 +66,15 @@ final class ShareLocationTests: XCTestCase {
         XCTAssertEqual(ShareLocationFreshness(ageMs: 31 * 60_000), .lost)
     }
 
+    /// 위치 오류(21.3절)도 이름 있는 코드다(TSR1117A01). 모르는 코드(`unknown`)로 떨어지면 앱이 거절·한도를 가리지 못한다.
+    func testLocationErrorCodesAreNamed() {
+        XCTAssertEqual(ShareErrorCode(rawValue: "loc_closed"), .locClosed)
+        XCTAssertEqual(ShareErrorCode(rawValue: "loc_rate"), .locRate)
+        var detail = ShareErrorDetail(error: "loc_rate")
+        detail.retryAfter = 3
+        XCTAssertEqual(ShareServerError(status: 429, detail: detail).code, .locRate)
+    }
+
     func testSocketMessageParsing() throws {
         XCTAssertEqual(try ShareSocketMessage.parse(#"{"t":"loc","by":2,"off":true}"#), .loc(ShareWireLocation(by: 2, off: true)))
         guard case .loc(let wire) = try ShareSocketMessage.parse(#"{"t":"loc","by":3,"cipher":"AQ","epoch":1,"at":9,"help":true}"#) else { return XCTFail() }
@@ -82,7 +91,7 @@ final class ShareLocationTests: XCTestCase {
 
         // 기간 창이 없으면 서버가 거절하고 세션이 창을 안다.
         let first = payload()
-        do { try await guest.sendLocation(first); XCTFail("창이 없으면 거절") } catch ShareError.server(let error) { XCTAssertEqual(error.detail.error, "loc_closed") }
+        do { try await guest.sendLocation(first); XCTFail("창이 없으면 거절") } catch ShareError.server(let error) { XCTAssertEqual(error.code, .locClosed) }
 
         let now = await room.server.now
         try await owner.setLocationWindow(ShareLocWindow(from: now - 1000, until: now + 86_400_000))
