@@ -713,6 +713,26 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertTrue(AssistantBubbleStore.load(from: file).isEmpty)
     }
 
+    /// HOF1118A01: 어느 길로 지웠든(AI 명령·다른 화면은 `deleteMemo`를 부른다) 지운 메모는 다듬기 대기열과 AI 표시에서 빠진다.
+    func testDeletingAMemoTakesItOutOfThePolishQueue() async throws {
+        let book = LedgerBook(store: { nil })
+        AppModel.memoLedgerBookForTests = book
+        defer { AppModel.memoLedgerBookForTests = nil }
+        let store = defaults()
+        let model = await makeModel()
+        let kept = try XCTUnwrap(model.addMemo(text: "남길 메모", kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: .now))
+        let gone = try XCTUnwrap(model.addMemo(text: "지울 메모", kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: .now))
+        XCTAssertTrue(MemoPolishQueue.enqueue(kept, text: "남길 메모", day: nil, defaults: store))
+        XCTAssertTrue(MemoPolishQueue.enqueue(gone, text: "지울 메모", day: nil, defaults: store))
+        MemoAIEditMarks.set(gone, by: "피클", text: "지울 메모", defaults: store)
+        store.set(false, forKey: MemoPolishQueue.needsUploadKey)
+
+        model.deleteMemo(gone, defaults: store)
+        XCTAssertEqual(MemoPolishQueue.items(store).map(\.memoID), [kept])
+        XCTAssertNil(MemoAIEditMarks.all(store)[gone.uuidString])
+        XCTAssertTrue(store.bool(forKey: MemoPolishQueue.needsUploadKey), "the server copy is replaced on the next upload")
+    }
+
     /// 연결된 AI에게 맡긴 메모는 목록으로 올리고, AI가 고쳐 보내면 빠진다(MEM1110A02).
     func testPolishQueueUploadsTheListAndEmptiesIt() async throws {
         let store = defaults()

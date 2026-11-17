@@ -306,7 +306,7 @@ extension AppModel {
 
     func isMemoDraft(_ memoID: UUID) -> Bool { pendingMapMemoIDs.contains(memoID) }
 
-    func discardMapMemoDraft(_ memoID: UUID) {
+    func discardMapMemoDraft(_ memoID: UUID, defaults: UserDefaults = .standard) {
         guard acceptsDataMutation() else { return }
         guard snapshot.memos.contains(where: { memo in
             memo.id == memoID && (memo.mapPoint != nil || pendingMapMemoIDs.contains(memoID))
@@ -316,12 +316,21 @@ extension AppModel {
         pendingMapMemoIDs.remove(memoID)
         snapshot.memos.removeAll { $0.id == memoID }
         memoEntry?.memoIDs.removeAll { $0 == memoID }
+        forgetMemoAIState(memoID, defaults: defaults)
     }
 
-    func deleteMemo(_ memoID: UUID) {
+    /// 지운 메모는 AI 다듬기 대기열(서버 사본 포함)과 「AI가 수정함」 표시에서도 뺀다(HOF1118A01).
+    /// 어느 화면·AI 명령으로 지웠든 여기를 지난다.
+    private func forgetMemoAIState(_ memoID: UUID, defaults: UserDefaults) {
+        MemoPolishQueue.resolve(memoID, defaults: defaults)
+        MemoAIEditMarks.clear(memoID, defaults: defaults)
+    }
+
+    func deleteMemo(_ memoID: UUID, defaults: UserDefaults = .standard) {
         guard let memo = snapshot.memos.first(where: { $0.id == memoID }) else {
             return
         }
+        forgetMemoAIState(memoID, defaults: defaults)
         if pendingMapMemoIDs.remove(memoID) != nil {
             snapshot.memos.removeAll { $0.id == memoID }
             memoEntry?.memoIDs.removeAll { $0 == memoID }
