@@ -40,6 +40,19 @@ final class ShareLocationTests: XCTestCase {
         XCTAssertEqual(ShareLocationPayload(state: .help, latitude: 1, longitude: 2, at: 0, note: String(repeating: "가", count: 80)).note?.count, 40)
     }
 
+    /// 모이는 곳을 해제하면 방에 남는 항목에 좌표·이름·시각이 남지 않는다(REV1117A01). 정한 사람만 둔다.
+    func testClearedMeetingPointKeepsNoCoordinates() {
+        let spot = ShareMeetContent(name: "역 앞", latitude: 35.68, longitude: 139.76, at: 1_800_000_000_000, by: 2)
+        let cleared = spot.cleared
+        XCTAssertFalse(cleared.on)
+        XCTAssertEqual(cleared.lat, 0)
+        XCTAssertEqual(cleared.lon, 0)
+        XCTAssertEqual(cleared.name, "")
+        XCTAssertNil(cleared.at)
+        XCTAssertEqual(cleared.by, 2)
+        XCTAssertTrue(cleared.isValid, "서버·세션의 검사를 그대로 통과한다")
+    }
+
     func testDistanceWalkingTimeAndFreshness() {
         let seoul = (lat: 37.5665, lon: 126.9780), busan = (lat: 35.1796, lon: 129.0756)
         XCTAssertEqual(ShareLocationMath.distanceMeters(seoul, busan) / 1000, 325, accuracy: 3)

@@ -52,7 +52,8 @@ extension ShareRoomSession {
 
     func absorbLocations(_ state: ShareRoomState) {
         locWindow = state.locWindow
-        applyStored(state.locs ?? [])
+        // `locs`가 없는 상태(HTTP 상태 확인·소켓 `state`)는 위치를 모른다는 뜻이지 모두 없다는 뜻이 아니다.
+        if let locs = state.locs { applyStored(locs) }
     }
 
     func receiveLocationWindow(_ event: ShareRoomEvent) {

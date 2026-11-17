@@ -120,6 +120,9 @@ enum TripShareLedger {
 
     /// 지출을 고른 범위로 저장한다. 방에 올리거나 내릴 것이 있으면 서버가 받아 준 뒤에만 가계부에 쓴다.
     /// 공유하지 않는 여행이면 그대로 가계부에 쓴다.
+    /// 범위 고르기가 방을 열어 지금 범위를 읽는 중인 지출 폼(`TripShareExpenseScopePicker`). 읽는 동안의 폼 값은 믿지 않는다.
+    static var pendingScopeForms: Set<UUID> = []
+
     @discardableResult
     static func save(_ entry: LedgerEntry, scope wanted: TripShareExpenseScope) async -> Failure? {
         guard let tripID = entry.tripID, handles(entry) else {
@@ -127,8 +130,9 @@ enum TripShareLedger {
             return nil
         }
         let room = await open(tripID: tripID)
-        let scope = canShare(entry) ? wanted : .ownHidden
         let current = Self.scope(of: entry)
+        // 폼이 방에서 지금 범위를 읽기 전(`pendingScopeForms`)에 저장하면 폼의 값은 처음 값일 뿐이다: 범위는 그대로 둔다.
+        let scope = canShare(entry) ? (pendingScopeForms.contains(entry.id) ? current : wanted) : .ownHidden
         var value = entry
         if value.amountKRW == nil { value.amountKRW = book.krw(value.amount, currency: value.currency) }
         guard scope != .ownHidden || current != .ownHidden else {

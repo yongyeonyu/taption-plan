@@ -73,7 +73,7 @@ extension AppModel {
             setTripItemStatus(status, tripID: tripID, itemID: itemID)
         } else if acceptsDataMutation(), let index = snapshot.settings.travelPlanStops.firstIndex(where: { $0.id == stopID }),
                   TripItemStatus(raw: stop.status) != status {
-            snapshot.settings.travelPlanStops[index].status = status.stored
+            snapshot.settings.travelPlanStops[index].status = TravelVisitMark.stored(TravelVisitMark(stored: stop.status), over: status.stored)
             Task { await persist() }
         }
     }
@@ -85,12 +85,14 @@ extension AppModel {
         var items = snapshot.settings.travelTripItems ?? []
         var stops = snapshot.settings.travelPlanStops
         var changed = false
-        for index in items.indices where items[index].tripID == tripID && items[index].itemID == itemID && items[index].status != status.stored {
-            items[index].status = status.stored
+        // 「갔음·건너뜀」 확정(TVZ1116C01)은 상태를 바꿔도 이어 붙인다. 그냥 덮으면 확정이 사라진다.
+        func next(_ current: String?) -> String? { TravelVisitMark.stored(TravelVisitMark(stored: current), over: status.stored) }
+        for index in items.indices where items[index].tripID == tripID && items[index].itemID == itemID && items[index].status != next(items[index].status) {
+            items[index].status = next(items[index].status)
             changed = true
         }
-        for index in stops.indices where stops[index].tripID == tripID && stops[index].itemID == itemID && stops[index].status != status.stored {
-            stops[index].status = status.stored
+        for index in stops.indices where stops[index].tripID == tripID && stops[index].itemID == itemID && stops[index].status != next(stops[index].status) {
+            stops[index].status = next(stops[index].status)
             changed = true
         }
         guard changed else { return }

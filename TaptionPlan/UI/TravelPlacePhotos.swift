@@ -263,6 +263,8 @@ final class TravelPlacePhotoStore {
                 photos[place.itemID] = fetched
                 trim(folder)
             } else {
+                // 받는 도중 취소(곳을 더하거나 탭을 바꿈)된 것은 「사진 없음」이 아니다: 7일 동안 막지 않고 다음에 다시 묻는다.
+                if Task.isCancelled { asked.remove(place.itemID + key); return }
                 try? Data().write(to: folder.appendingPathComponent(key + ".none"))
                 if let picture = await fallbackPicture(place) { photos[place.itemID] = picture }
             }

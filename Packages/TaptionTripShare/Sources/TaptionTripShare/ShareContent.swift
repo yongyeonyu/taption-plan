@@ -274,6 +274,9 @@ public struct ShareMeetContent: Codable, Sendable, Equatable {
 
     public var isValid: Bool { (-90...90).contains(lat) && (-180...180).contains(lon) }
     public static let itemID = "meet-point"
+
+    /// 해제한 모양: 지우지 못하는 항목이라 덮어쓰되, 좌표·이름·시각은 남기지 않는다.
+    public var cleared: ShareMeetContent { ShareMeetContent(on: false, name: "", latitude: 0, longitude: 0, by: by) }
 }
 
 /// 항목 하나의 평문.

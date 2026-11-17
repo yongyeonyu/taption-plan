@@ -197,4 +197,16 @@ final class ShareContentTests: XCTestCase {
         XCTAssertEqual(settlement.transfers, [ShareTransfer(from: a, to: gone, amount: 3_000, currency: "KRW")])
         XCTAssertEqual(ShareSettlementCalculator.settle([], parties: [a, b]), [])
     }
+
+    /// 터무니없이 큰 금액 두 건이 합계를 넘치게 해 모든 기기를 멈추게 하지 못한다(REV1117A01).
+    func testAbsurdAmountsAreIgnoredInsteadOfOverflowing() throws {
+        let result = ShareSettlementCalculator.settle([
+            entry("exp-0001", Int.max / 2, payer: a, split: [a, b]),
+            entry("exp-0002", Int.max / 2, payer: a, split: [a, b]),
+            entry("exp-0003", ShareSettlementCalculator.maxAmount, payer: a, split: [a, b]),
+            entry("exp-0004", ShareSettlementCalculator.maxAmount + 1, payer: b, split: [a, b]),
+        ], parties: [a, b])
+        let settlement = try XCTUnwrap(result.first)
+        XCTAssertEqual(settlement.balances.map(\.paid), [ShareSettlementCalculator.maxAmount, 0])
+    }
 }
