@@ -265,6 +265,39 @@ public struct TaptionWatchAmbientLiveDeliveryGate {
     }
 }
 
+/// 한 번 보낸 outbox 항목은 iPhone ack를 기다린다. 재시도 타이머가 부르거나 ack 대기
+/// 시간(`delay(retryCount:)`)이 지나기 전에는 다시 보내지 않는다(WSY1117A01).
+/// 메모리에만 두므로 앱을 다시 켜면 남은 항목을 한 번 다시 보낸다.
+public struct TaptionWatchOutboxResendGate {
+    public init() {}
+
+    private var sentAt: [String: TimeInterval] = [:]
+
+    public mutating func shouldTransfer(
+        id: String,
+        retryCount: Int,
+        isOutstanding: Bool,
+        isRetryDue: Bool,
+        now: TimeInterval
+    ) -> Bool {
+        guard !isOutstanding else { return false }
+        if !isRetryDue, let last = sentAt[id], now >= last,
+           now - last < TaptionWatchAmbientAcknowledgementRetryPolicy.delay(retryCount: retryCount) {
+            return false
+        }
+        sentAt[id] = now
+        return true
+    }
+
+    public mutating func acknowledge(_ id: String) {
+        sentAt[id] = nil
+    }
+
+    public mutating func reset() {
+        sentAt.removeAll(keepingCapacity: false)
+    }
+}
+
 public enum TaptionWatchAmbientAcknowledgementRetryPolicy {
     public static let outboxReadRetryID = "outbox-read"
     public static let initialDelay: TimeInterval = 5

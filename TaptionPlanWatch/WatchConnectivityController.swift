@@ -68,6 +68,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     var ambientOutboxFlushTask: Task<Void, Never>?
     var ambientOutboxFlushGeneration: UInt64 = 0
     var ambientLiveDeliveryGate = TaptionWatchAmbientLiveDeliveryGate()
+    var ambientResendGate = TaptionWatchOutboxResendGate()
     var ambientOutboxRetryTask: Task<Void, Never>?
     var ambientOutboxRetryID: UUID?
     var ambientOutboxRetryAttempts: [String: Int] = [:]

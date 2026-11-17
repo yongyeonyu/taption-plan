@@ -81,7 +81,14 @@ extension WatchConnectivityController {
                         envelope[TaptionWatchEnvelope.dataSyncRequestIDKey] =
                             requestID
                     }
-                    if !outstandingIDs.contains(item.id) {
+                    // 보낸 항목은 ack를 기다린다. 재시도 타이머가 부른 것만 대기 시간 전에 다시 보낸다(WSY1117A01).
+                    if self.ambientResendGate.shouldTransfer(
+                        id: item.id,
+                        retryCount: self.ambientOutboxRetryAttempts[item.id] ?? 0,
+                        isOutstanding: outstandingIDs.contains(item.id),
+                        isRetryDue: deliveryIDs?.contains(item.id) == true,
+                        now: ProcessInfo.processInfo.systemUptime
+                    ) {
                         session.transferUserInfo(envelope)
                         WatchLaunchDiagnostics.mark(
                             "ambient outbox transfer scheduled id=\(item.id) kind=\(item.kind)"
@@ -223,6 +230,7 @@ extension WatchConnectivityController {
             )
         guard deleted else { return }
         ambientLiveDeliveryGate.acknowledge(id)
+        ambientResendGate.acknowledge(id)
         ambientOutboxRetryAttempts[id] = nil
         persistAmbientOutboxRetryAttempts()
         if ambientOutboxRetryAttempts.isEmpty {
