@@ -63,10 +63,15 @@ enum DailyCardBubblePrompt {
     }
 
     /// 알림 권한을 읽고 판단한다. 앞으로 올 때·백그라운드 새로고침 때 부른다.
+    /// 넣었으면 올리기까지 기다린다. 백그라운드 작업이 먼저 끝나 요청이 기기에만 남지 않게 한다(HOF1118A01).
     @MainActor
-    static func run() async {
-        let authorized = await MapHomeAlarmCenter.shared.isAuthorized()
-        runIfDue(authorized: authorized)
+    static func run(
+        now: Date = .now, defaults: UserDefaults = .standard, calendar: Calendar = .autoupdatingCurrent,
+        isAuthorized: () async -> Bool = { await MapHomeAlarmCenter.shared.isAuthorized() },
+        upload: () async -> Void = { await AITaskQueue.upload() }
+    ) async {
+        guard runIfDue(now: now, authorized: await isAuthorized(), defaults: defaults, calendar: calendar) else { return }
+        await upload()
     }
 
     /// 백그라운드 새로고침 예약에 쓰는 시각.

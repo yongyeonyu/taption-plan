@@ -107,4 +107,17 @@ final class DailyCardBubblePromptTests: XCTestCase {
         XCTAssertFalse(DailyCardBubblePrompt.runIfDue(now: at(7, 10), authorized: true, defaults: store, calendar: calendar))
         XCTAssertTrue(AITaskQueue.pendingUploads(store).isEmpty)
     }
+
+    /// HOF1118A01: 백그라운드 새로고침이 끝나기 전에 넣은 요청을 올린다(올리기를 기다린다).
+    func testRunWaitsForTheUploadAfterEnqueueing() async {
+        let store = defaults()
+        store.set(["key": "피클"], forKey: AssistantKeyLabels.labelsKey)
+        var uploads = 0
+        await DailyCardBubblePrompt.run(now: at(7, 10), defaults: store, calendar: calendar, isAuthorized: { true }, upload: { uploads += 1 })
+        XCTAssertEqual(uploads, 1, "the upload finished before run returned")
+        XCTAssertEqual(AITaskQueue.pendingUploads(store).count, 1)
+        // 이미 올린 날은 다시 넣지도 올리지도 않는다.
+        await DailyCardBubblePrompt.run(now: at(7, 40), defaults: store, calendar: calendar, isAuthorized: { true }, upload: { uploads += 1 })
+        XCTAssertEqual(uploads, 1)
+    }
 }
