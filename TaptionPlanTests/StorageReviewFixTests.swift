@@ -228,3 +228,80 @@ final class StorageReviewFixTests: XCTestCase {
         )
     }
 }
+
+// MARK: 음성 메모 파일 위치 (REV1117A03, 대표 결정 2026-11-17)
+
+extension StorageReviewFixTests {
+    private func voiceFolders() throws -> (app: URL, temporary: URL) {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("voice-\(UUID().uuidString)", isDirectory: true)
+        directories.append(root)
+        let app = root.appendingPathComponent("Support/TaptionPlan/VoiceMemos", isDirectory: true)
+        let temporary = root.appendingPathComponent("tmp", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+        return (app, temporary)
+    }
+
+    func testVoiceMemoInTemporaryFolderMovesIntoAppFolderOnce() throws {
+        let folders = try voiceFolders()
+        let recorded = folders.temporary.appendingPathComponent("memo-voice-A.m4a")
+        try Data([1, 2, 3]).write(to: recorded)
+
+        let kept = VoiceMemoStorage.kept(recorded.path, directory: folders.app, temporary: folders.temporary)
+        XCTAssertEqual(kept, folders.app.appendingPathComponent("memo-voice-A.m4a").path)
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: kept)), Data([1, 2, 3]), "내용은 그대로 옮긴다")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: recorded.path), "임시 폴더에는 남기지 않는다")
+        XCTAssertEqual(VoiceMemoStorage.kept(kept, directory: folders.app, temporary: folders.temporary), kept, "다시 불러도 그대로")
+    }
+
+    func testVoiceMemoPathFromOldAppContainerFindsTheSameFile() throws {
+        let folders = try voiceFolders()
+        try FileManager.default.createDirectory(at: folders.app, withIntermediateDirectories: true)
+        let current = folders.app.appendingPathComponent("memo-voice-B.m4a")
+        try Data([4]).write(to: current)
+        let old = "/var/mobile/Containers/Data/Application/OLD/Library/Application Support/TaptionPlan/VoiceMemos/memo-voice-B.m4a"
+
+        XCTAssertEqual(VoiceMemoStorage.kept(old, directory: folders.app, temporary: folders.temporary), current.path)
+        let oldTemporary = "/private/var/mobile/Containers/Data/Application/OLD/tmp/memo-voice-B.m4a"
+        XCTAssertEqual(VoiceMemoStorage.kept(oldTemporary, directory: folders.app, temporary: folders.temporary), current.path)
+    }
+
+    func testMissingVoiceMemoKeepsTheStoredPath() throws {
+        let folders = try voiceFolders()
+        let gone = folders.temporary.appendingPathComponent("memo-voice-C.m4a").path
+        XCTAssertEqual(VoiceMemoStorage.kept(gone, directory: folders.app, temporary: folders.temporary), gone,
+                       "지워졌거나 다른 기기의 녹음은 경로를 건드리지 않는다")
+    }
+
+    @MainActor
+    func testStartupMoveChangesOnlyAudioPathsOfExistingMemos() throws {
+        let folders = try voiceFolders()
+        let recorded = folders.temporary.appendingPathComponent("memo-voice-D.m4a")
+        try Data([5]).write(to: recorded)
+        let gone = folders.temporary.appendingPathComponent("memo-voice-gone.m4a").path
+        let memo = ActionMemo(
+            categoryID: "memo", occurredAt: Date(timeIntervalSince1970: 1_000), kind: .idea, text: "음성 메모",
+            attachments: [
+                MemoAttachment(kind: .audio, localIdentifier: recorded.path),
+                MemoAttachment(kind: .audio, localIdentifier: gone),
+                MemoAttachment(kind: .photo, localIdentifier: "photo-asset-1"),
+            ]
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.memos = [memo]
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: stored), cloudSyncService: nil)
+        model.snapshot = stored
+
+        XCTAssertTrue(model.keepVoiceMemoFiles(directory: folders.app, temporary: folders.temporary))
+        let after = try XCTUnwrap(model.snapshot.memos.first)
+        XCTAssertEqual(after.id, memo.id)
+        XCTAssertEqual(after.text, memo.text)
+        XCTAssertEqual(after.attachments.map(\.id), memo.attachments.map(\.id))
+        XCTAssertEqual(after.attachments.map(\.localIdentifier),
+                       [folders.app.appendingPathComponent("memo-voice-D.m4a").path, gone, "photo-asset-1"])
+        XCTAssertFalse(model.keepVoiceMemoFiles(directory: folders.app, temporary: folders.temporary), "두 번째는 바꿀 것이 없다")
+
+        let data = try JSONEncoder().encode(model.snapshot)
+        XCTAssertEqual(try JSONDecoder().decode(TaptionDataSnapshot.self, from: data).memos, model.snapshot.memos,
+                       "저장 형식은 그대로(경로 문자열만 바뀜)")
+    }
+}
