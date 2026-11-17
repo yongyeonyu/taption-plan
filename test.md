@@ -8,6 +8,7 @@
 - 통과: 구조 점검 `architecture-metrics.py --check` 통과, import 경계 통과, 번역 `check.py` 실패 0(로그 `build/validation/LGC1117A01/architecture-check.log`·`import-boundary.log`·`l10n.log`). 타입 도달성 재계산으로 새로 닿지 않게 된 타입 0개.
 - 앱 Debug 빌드: 1차는 `TimelineFrameBudgetProbe.swift`의 `#endif`를 함께 지운 오류, 2차는 SwiftData `PlanItem`이 쓰는 `PlanCategory`를 지운 오류로 실패(`app-build-1.log`·`app-build-2.log`). 둘 다 고침(`PlanItem.swift`는 HEAD 그대로 되돌림, 프로브 파일은 남은 사용처가 없어 지움). 2차 로그의 오류는 이 한 파일뿐이었으나 한 파일 오류가 다른 오류를 가렸을 수 있음.
 - **멈춤**: 3·4차 빌드 직전 남은 공간이 29GB(기준 30GB 아래)라 규칙대로 빌드를 멈춤(`app-build-3.log`·`app-build-4.log`). 공용 잠금은 다른 세션 Release 빌드로 약 40분 기다렸음.
+- 이어서(12:10~13:27): main `a0c0a176`을 합침(`bea389c5`). 충돌은 `WidgetPreviewView.swift`(main의 수정은 옛 위젯 미리보기 안의 「종료」 단추라 지운 채 둠)와 `temp.md`·`test.md`(양쪽 항목 모두 살림). 합친 뒤 번역 check 실패 0·카탈로그 변화 없음. 빌드 위치를 외장 볼륨(`/Volumes/TaptionPlanBuild/dd/LGC1117A01`, 199GB 남음)으로 바꿈. **다시 멈춤**: 공용 잠금 `/tmp/taptionplan-xcodebuild.lock`이 12:08부터 1시간 넘게 잡혀 있고, 그동안 TaptionPlan xcodebuild는 돌지 않았으며 다른 세션 대기자 둘(REV1117A03·성능 벤치)도 같이 기다림. 주인 없는 잠금일 수 있으나 남의 잠금이라 지우지 않음.
 - 남은 검증 기준: 앱 Debug·위젯·Watch·Watch 위젯 빌드, `-only-testing:TaptionPlanTests` 전체 실패 0(예외 `FeatureEngineTests.testImmediateSensorAnalysisKeepsEveryPendingDay`), UI 시험 `TaptionPlanSmokeUITests/testUploadDiagnosticsLogs`(데이터 보호 시트)·`testLaunchShowsHomeWithoutChangingData`. 실기기·TestFlight 없음.
 
 ## REV1117A04 · 가계부·결제 문자·설정·목표·메모·일정·첫 실행·위젯·Watch 리뷰 (2026-11-17, 시뮬레이터)
