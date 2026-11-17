@@ -2,14 +2,17 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
-## LGC1117A01 · 꺼진 옛 화면 걷기 (2026-11-17, 빌드·시험 미완료)
+## LGC1117A01 · 꺼진 옛 화면 걷기 (2026-11-17, 시뮬레이터, 실기기 없음)
 
-- 판: 브랜치 `worktree-agent-aec7227c3e3bd694e`, `4aa16489` 위 커밋 4개. 살림·제거 표와 전후 줄 수는 `docs/reviews/LGC1117A01.md`(앱 Swift 206,315 → 178,293줄, 단위 시험 87,108 → 84,659줄, 파일 67개 지움).
-- 통과: 구조 점검 `architecture-metrics.py --check` 통과, import 경계 통과, 번역 `check.py` 실패 0(로그 `build/validation/LGC1117A01/architecture-check.log`·`import-boundary.log`·`l10n.log`). 타입 도달성 재계산으로 새로 닿지 않게 된 타입 0개.
-- 앱 Debug 빌드: 1차는 `TimelineFrameBudgetProbe.swift`의 `#endif`를 함께 지운 오류, 2차는 SwiftData `PlanItem`이 쓰는 `PlanCategory`를 지운 오류로 실패(`app-build-1.log`·`app-build-2.log`). 둘 다 고침(`PlanItem.swift`는 HEAD 그대로 되돌림, 프로브 파일은 남은 사용처가 없어 지움). 2차 로그의 오류는 이 한 파일뿐이었으나 한 파일 오류가 다른 오류를 가렸을 수 있음.
-- **멈춤**: 3·4차 빌드 직전 남은 공간이 29GB(기준 30GB 아래)라 규칙대로 빌드를 멈춤(`app-build-3.log`·`app-build-4.log`). 공용 잠금은 다른 세션 Release 빌드로 약 40분 기다렸음.
-- 이어서(12:10~13:27): main `a0c0a176`을 합침(`bea389c5`). 충돌은 `WidgetPreviewView.swift`(main의 수정은 옛 위젯 미리보기 안의 「종료」 단추라 지운 채 둠)와 `temp.md`·`test.md`(양쪽 항목 모두 살림). 합친 뒤 번역 check 실패 0·카탈로그 변화 없음. 빌드 위치를 외장 볼륨(`/Volumes/TaptionPlanBuild/dd/LGC1117A01`, 199GB 남음)으로 바꿈. **다시 멈춤**: 공용 잠금 `/tmp/taptionplan-xcodebuild.lock`이 12:08부터 1시간 넘게 잡혀 있고, 그동안 TaptionPlan xcodebuild는 돌지 않았으며 다른 세션 대기자 둘(REV1117A03·성능 벤치)도 같이 기다림. 주인 없는 잠금일 수 있으나 남의 잠금이라 지우지 않음.
-- 남은 검증 기준: 앱 Debug·위젯·Watch·Watch 위젯 빌드, `-only-testing:TaptionPlanTests` 전체 실패 0(예외 `FeatureEngineTests.testImmediateSensorAnalysisKeepsEveryPendingDay`), UI 시험 `TaptionPlanSmokeUITests/testUploadDiagnosticsLogs`(데이터 보호 시트)·`testLaunchShowsHomeWithoutChangingData`. 실기기·TestFlight 없음.
+- 판: 브랜치 `worktree-agent-aec7227c3e3bd694e`(main `a0c0a176`을 합친 `bea389c5` 뒤). 살림·제거 표와 전후 줄 수는 `docs/reviews/LGC1117A01.md`(앱 Swift 206,315 → 178,293줄, 단위 시험 87,108 → 84,659줄, 파일 67개 지움).
+- 빌드(Debug, 산출물 `/Volumes/TaptionPlanBuild/dd/LGC1117A01`, 끝난 뒤 지움): 앱 `TaptionPlan` generic iOS 성공·오류 0(`app-build-7.log`), `TaptionPlanWidget`·`TaptionPlanWatch`·`TaptionPlanWatchWidget` 모두 성공·오류 0(`widget-build.log`·`watch-build.log`·`watchwidget-build.log`).
+- 단위 `-only-testing:TaptionPlanTests`(시뮬레이터 `99AC6F35…`, `-parallel-testing-enabled NO`): **2,967 통과·실패 0·건너뜀 25**(`unit-tests-4.xcresult`). 예외 시험(`testImmediateSensorAnalysisKeepsEveryPendingDay`)도 이번엔 통과.
+  - 앞선 시도: `unit-tests-hung`·`unit-tests-3`은 「test runner hung before establishing connection」으로 0건 실행. `unit-tests-2`는 6건이 「signal kill」(약 45초마다 시험 앱이 죽음) — 같은 시각 다른 세션 두 곳(PRF1117A02·REV1117A01)이 잠금 없이 같은 시뮬레이터에서 `xcodebuild test`를 돌림. 그 6건은 따로 다시 돌려 모두 통과(`unit-tests-rerun`·`unit-tests-rerun2`). 4차 전체 실행 동안 다른 시뮬레이터 사용자는 감시에 잡히지 않음.
+- UI `TaptionPlanUITests/TaptionPlanSmokeUITests`: **11 통과·실패 0**(`smoke-ui.xcresult`, `testUploadDiagnosticsLogs`·`testLaunchShowsHomeWithoutChangingData` 포함).
+- 구조 점검 `architecture-metrics.py --check`·import 경계 통과(합친 뒤 다시, `architecture-check-2.log`·`import-boundary-2.log`), 번역 `check.py` 실패 0·generate 뒤 카탈로그 변화 없음.
+- 지난 빌드 오류 2건(프로브 파일 `#endif`, `PlanItem`의 `PlanCategory`)은 고친 뒤 위 빌드로 확인. 7차 빌드 로그의 오류 수 0.
+- main 합침 충돌: `WidgetPreviewView.swift`(main의 수정은 옛 위젯 미리보기 안의 「종료」 단추라 지운 채 둠), `temp.md`·`test.md`(양쪽 살림).
+- 하지 않은 것: 실기기, 새 「내 데이터」 칸(내보내기·전체 삭제)과 지도 출처 시트의 날씨 표기를 눈으로 확인하는 UI 시험(현재 UI 시험에 없음).
 
 ## REV1117A04 · 가계부·결제 문자·설정·목표·메모·일정·첫 실행·위젯·Watch 리뷰 (2026-11-17, 시뮬레이터)
 
