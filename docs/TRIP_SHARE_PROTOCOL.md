@@ -577,6 +577,8 @@ AAD = UTF8("taption-share-v1|" + roomId + "|loc-" + 참여자 번호 + "|loc|" +
 
 항목 종류 `meet`, id는 **`meet-point` 하나**. 누구나 만들고 고칠 수 있고(충돌은 `baseRev`로 6.6과 같이), **지우지 못합니다**(지운 id는 다시 못 쓰므로 「해제」 내용으로 덮어씀). 위치 기간 창 안에서만 올릴 수 있습니다(403 `loc_closed`). 평문: `{ "v": 1, "on": true, "name": "…", "lat", "lon", "at": 모이는 시각(ms, 선택) }`. 잠금은 보지 않습니다.
 
+**기간이 끝나면 서버가 거둡니다**(REV1117A01, 대표 결정 2026-11-17). 위치 기간 창의 끝(`locWindow.until`)이 지나면 서버가 `meet-point`를 묘비(`deleted`)로 바꾸고 암호문을 지웁니다. 기간마다 한 번이고, 알람을 창 끝에 맞춰 두어 아무도 접속하지 않아도 거두며(`nextAlarm`), 알람보다 요청이 먼저 오면 그 요청이 거둡니다. 묘비는 `items` 방송과 `changes`(`since` > 0)로 동행에게 가고, 동행 앱은 평소 삭제처럼 지도에서 지웁니다. 지운 `meet-point`는 **새 기간 창 안에서 `baseRev: 0`으로 다시 만들 수 있습니다**(다른 id와 달리 이 id만 허용, id 개수는 다시 세지 않음). 앱의 「해제」(`on: false`)는 좌표·이름·시각을 비운 내용(`ShareMeetContent.cleared`)으로 덮어씁니다.
+
 ### 21.7 시험 벡터
 
 `server/trip-relay/test/fixtures/share-loc-vector.json`(Swift `ShareLocationTests.testSealedLocationMatchesTheFixedVector`가 만든 값을 Node `share-loc-vector.test.mjs`가 같은 AAD로 풀어 견줌). 서버는 암호문을 풀지 않으므로 서버 시험은 모양·한도·기간 창·보관·삭제를 봅니다.

@@ -979,6 +979,37 @@ test("share meet: one gathering point per room, anyone sets it, only inside the 
   assert.equal(second.status, 200);
   assert.equal((await write(room, guest, { id: "meet-point", baseRev: second.body.items[0].rev, delete: true })).status, 422);
   assert.equal((await write(room, guest, { id: itemId(), kind: "meet", baseRev: 0, cipher: cipher(120) })).status, 422); // id는 고정
-  room.clock.now += 3 * DAY; // 창이 끝난 뒤에는 고치지 못한다.
-  assert.equal((await make(guest, second.body.items[0].rev)).status, 403);
+  room.clock.now += 3 * DAY; // 창이 끝나면 서버가 거둔다(묘비): 옛 판으로 고치려 하면 충돌이고, 새로 정하려 해도 창 밖이다.
+  assert.equal((await make(guest, second.body.items[0].rev)).status, 409);
+  assert.equal((await make(guest, 0)).status, 403);
+});
+
+test("share meet: the server clears the gathering point when the location window ends, by alarm or on the next request (REV1117A01)", async () => {
+  const room = await makeRoom();
+  const guest = await join(room);
+  const storage = room.instance.ctx.storage;
+  const make = (member, baseRev) => write(room, member, { id: "meet-point", kind: "meet", baseRev, cipher: cipher(120) });
+  const end = room.clock.now + 2 * DAY;
+  assert.equal((await openWindow(room, room.clock.now - DAY, end)).status, 200);
+  assert.equal(storage.alarm, end, "알람은 위치 기간 끝에 맞춘다");
+  const first = await make(guest, 0);
+  assert.equal(first.status, 200);
+  const ownerSocket = await connect(room, room.owner);
+  ownerSocket.take();
+
+  // 아무도 접속하지 않아도 알람이 거둔다.
+  room.clock.now = end;
+  await room.instance.room.alarm();
+  assert.equal(storage.alarm, room.expiresAt, "거둔 뒤에는 방 기한으로 돌아간다");
+  const shown = (await changes(room, guest, first.body.rev)).body.items.find((i) => i.id === "meet-point"); // since=0은 묘비를 건너뛴다
+  assert.equal(shown.deleted, true);
+  assert.equal(shown.cipher, undefined, "좌표가 든 암호문도 남지 않는다");
+  assert.deepEqual(ownerSocket.take("items").flatMap((m) => m.items).map((i) => [i.id, i.deleted]), [["meet-point", true]]);
+
+  // 새 기간을 열면 모이는 곳을 다시 정할 수 있고, 그 기간이 끝나면 또 거둔다.
+  assert.equal((await openWindow(room, end, end + DAY)).status, 200);
+  const again = await make(guest, 0);
+  assert.equal(again.status, 200, JSON.stringify(again.body));
+  room.clock.now = end + DAY + 1; // 알람 없이 다음 요청이 거둔다.
+  assert.equal((await changes(room, guest, again.body.rev)).body.items.find((i) => i.id === "meet-point").deleted, true);
 });

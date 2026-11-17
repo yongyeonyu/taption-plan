@@ -218,7 +218,37 @@ export class ShareRoom {
     const room = await this.storage.get("room");
     if (!room) return null;
     if (now >= room.expiresAt) { await this.purge("expired"); return null; }
+    await this.sweepMeet(room, now);
     return room;
+  }
+
+  // 위치 기간이 끝나면 좌표가 든 「모이는 곳」을 묘비로 바꾼다(여행 기간 밖에는 좌표가 남지 않게). 기간마다 한 번만 한다.
+  async sweepMeet(room, now) {
+    const window = room.locWindow;
+    if (!window || now < window.until || room.meetSwept === window.until) return;
+    room.meetSwept = window.until;
+    const item = await this.storage.get("i:meet-point");
+    if (item && !item.del) {
+      const batch = new Batch(this.storage);
+      const rev = ++room.rev;
+      batch.delete("r:" + pad(item.seq));
+      const tomb = { id: item.id, kind: item.kind, rev, seq: rev, at: now, by: item.by, cb: item.cb, del: true };
+      batch.put("i:" + item.id, tomb);
+      batch.put("r:" + pad(rev), item.id);
+      room.live = Math.max(0, room.live - 1);
+      room.bytes = Math.max(0, room.bytes - cipherBytes(item.cipher));
+      batch.put("room", room);
+      await batch.commit();
+      this.broadcast({ t: "items", rev: room.rev, items: [wire(tomb)] });
+      return;
+    }
+    await this.storage.put("room", room);
+  }
+
+  // 다음 알람: 방 기한, 위치 기간이 아직 안 끝났으면 그 끝(모이는 곳을 거두려고).
+  nextAlarm(room, now) {
+    const end = room.locWindow?.until;
+    return end && end > now && room.meetSwept !== end ? Math.min(room.expiresAt, end) : room.expiresAt;
   }
 
   async authenticate(room, request) {
@@ -394,7 +424,7 @@ export class ShareRoom {
     for (const [index, w] of writes.entries()) {
       const old = current.get("i:" + w.id) ?? null;
       const creating = w.baseRev === 0;
-      if (creating ? old : !old || old.del || old.rev !== w.baseRev) { conflicts.push({ index, id: w.id, current: old ? wire(old) : null }); continue; }
+      if (creating ? old && !(old.del && w.id === "meet-point") : !old || old.del || old.rev !== w.baseRev) { conflicts.push({ index, id: w.id, current: old ? wire(old) : null }); continue; }
       if (!creating && !w.delete && w.kind !== old.kind) return fail(422, "kind_immutable", { index });
       const kind = creating ? w.kind : old.kind;
       const no = denied(kind, me, old, w, room, now);
@@ -406,9 +436,9 @@ export class ShareRoom {
         if (held.length) blocked.push(...held.map((name) => lockInfo(room, name)));
         else if (!creating && !mine("i:" + w.id) && !(old.group && mine("g:" + old.group))) needed.push("i:" + w.id);
       }
-      if (creating) { live++; ids++; }
+      if (creating) { live++; if (!old) ids++; } // 지운 모이는 곳을 다시 정할 때는 id 수를 다시 세지 않는다
       if (w.delete) live--;
-      bytes += (w.delete ? 0 : cipherBytes(w.cipher)) - (old ? cipherBytes(old.cipher) : 0);
+      bytes += (w.delete ? 0 : cipherBytes(w.cipher)) - (old && !old.del ? cipherBytes(old.cipher) : 0);
     }
     if (blocked.length) return fail(423, "locked", { locks: blocked, now });
     if (needed.length) return fail(423, "lock_required", { names: needed });
@@ -502,7 +532,7 @@ export class ShareRoom {
     if (!isInt(body.expiresAt) || body.expiresAt < now + SHARE.minLifeMs || body.expiresAt > room.createdAt + SHARE.maxLifeMs) return fail(422, "bad_expiry", { max: room.createdAt + SHARE.maxLifeMs });
     room.expiresAt = body.expiresAt;
     await this.storage.put("room", room);
-    await this.storage.setAlarm(room.expiresAt);
+    await this.storage.setAlarm(this.nextAlarm(room, now));
     this.roomEvent(room, now);
     return reply(200, { expiresAt: room.expiresAt });
   }
@@ -568,6 +598,7 @@ export class ShareRoom {
     if (!isInt(from) || !isInt(until) || until <= from || until - from > SHARE.locWindowMaxMs || until <= now) return fail(422, "bad_request", { max: SHARE.locWindowMaxMs });
     room.locWindow = { from, until };
     await this.storage.put("room", room);
+    await this.storage.setAlarm(this.nextAlarm(room, now));
     if (now < from || now >= until) {
       for (const key of (await this.storage.list({ prefix: "l:" })).keys()) await this.storage.delete(key);
       this.broadcast({ t: "loc", off: true, all: true });
@@ -626,8 +657,10 @@ export class ShareRoom {
   async alarm() {
     await this.serial(async () => {
       const room = await this.storage.get("room");
-      if (!room || this.now() >= room.expiresAt) return this.purge("expired");
-      return this.storage.setAlarm(room.expiresAt); // 주인이 기한을 늘린 뒤에 온 예전 알람
+      const now = this.now();
+      if (!room || now >= room.expiresAt) return this.purge("expired");
+      await this.sweepMeet(room, now);
+      return this.storage.setAlarm(this.nextAlarm(room, now)); // 주인이 기한을 늘린 뒤에 온 예전 알람이거나 위치 기간 끝
     });
   }
 
