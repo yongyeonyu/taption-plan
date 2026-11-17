@@ -255,6 +255,75 @@ final class FirstRunTutorialTests: XCTestCase {
     }
 }
 
+// MARK: - FRT1117A01
+
+@MainActor
+private final class SavedPlaces {
+    var names: [String] = []
+    var resumeOld: CheckedContinuation<Void, Never>?
+}
+
+extension FirstRunTutorialTests {
+    /// 검색 결과를 누른 뒤 다른 위치를 고르면, 늦게 끝난 옛 검색이 그 위치를 덮지 않는다.
+    @MainActor
+    func testLateSearchDoesNotOverwriteLaterChoice() async {
+        let selection = FirstRunPlaceSelection()
+        let saved = SavedPlaces()
+        let old = Task { @MainActor in
+            await selection.search({ () async -> String? in
+                await withCheckedContinuation { saved.resumeOld = $0 }
+                return "옛 검색"
+            }, save: { saved.names.append($0 ?? "실패") })
+        }
+        while saved.resumeOld == nil { await Task.yield() }
+
+        let fresh = await selection.search({ () async -> String? in "새 검색" }, save: { saved.names.append($0 ?? "실패") })
+        selection.choose { saved.names.append("지도 핀") }
+        saved.resumeOld?.resume()
+
+        let lateApplied = await old.value
+        XCTAssertTrue(fresh)
+        XCTAssertFalse(lateApplied)
+        XCTAssertEqual(saved.names, ["새 검색", "지도 핀"])
+    }
+
+    /// 찾지 못한 검색도 마지막 고르기일 때만 알린다.
+    @MainActor
+    func testOnlyLatestSearchReportsFailure() async {
+        let selection = FirstRunPlaceSelection()
+        let saved = SavedPlaces()
+        let applied = await selection.search({ () async -> String? in nil }, save: { saved.names.append($0 ?? "실패") })
+        XCTAssertTrue(applied)
+        XCTAssertEqual(saved.names, ["실패"])
+    }
+
+    /// 튜토리얼 「내 차」 줄을 다시 누르면 등록 전으로 돌아가고, 줄이 남아 또 누를 수 있다.
+    @MainActor
+    func testCarRowSecondTapUndoesInsteadOfDismissing() async {
+        var source = TaptionDataSnapshot.empty
+        source.settings.recentCarAudioNames = ["Audi MMI"]
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: source), cloudSyncService: nil)
+        await model.bootstrap()
+
+        await model.toggleTutorialCarAudio("Audi MMI")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["Audi MMI"])
+
+        await model.toggleTutorialCarAudio("Audi MMI")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, [])
+        XCTAssertEqual(model.settings.dismissedCarAudioNames, [])
+        XCTAssertEqual(model.settings.recentCarAudioNames, ["Audi MMI"])
+        XCTAssertEqual(model.pendingCarAudioSuggestion, "Audi MMI")
+
+        await model.toggleTutorialCarAudio("Audi MMI")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["Audi MMI"])
+
+        // 튜토리얼에서 뺀 CarPlay 차도 다음 연결 때 다시 등록된다.
+        await model.toggleTutorialCarAudio("Audi MMI")
+        await model.registerCarPlay("Audi MMI")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["Audi MMI"])
+    }
+}
+
 private final class InMemoryCredentialStore: PlanCredentialStore {
     private var data: Data?
     func read() throws -> Data? { data }

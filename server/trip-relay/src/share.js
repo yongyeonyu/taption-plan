@@ -245,10 +245,18 @@ export class ShareRoom {
     await this.storage.put("room", room);
   }
 
-  // 다음 알람: 방 기한, 위치 기간이 아직 안 끝났으면 그 끝(모이는 곳을 거두려고).
-  nextAlarm(room, now) {
+  // 다음 알람: 방 기한, 위치 기간이 아직 안 끝났으면 그 끝(모이는 곳을 거두려고), 저장된 위치 중 가장 이른 기한.
+  nextAlarm(room, now, locUntil = Infinity) {
     const end = room.locWindow?.until;
-    return end && end > now && room.meetSwept !== end ? Math.min(room.expiresAt, end) : room.expiresAt;
+    const meet = end && end > now && room.meetSwept !== end ? end : Infinity;
+    return Math.min(room.expiresAt, meet, locUntil > now ? locUntil : Infinity);
+  }
+
+  // 저장된 위치 행은 읽을 때만이 아니라 기한에 알람으로도 지운다(아무도 접속하지 않아도 남지 않게, TSR1117A01).
+  async scheduleAlarm(room, now) {
+    let locUntil = Infinity;
+    for (const row of (await this.storage.list({ prefix: "l:" })).values()) locUntil = Math.min(locUntil, row.until);
+    await this.storage.setAlarm(this.nextAlarm(room, now, locUntil));
   }
 
   async authenticate(room, request) {
@@ -532,7 +540,7 @@ export class ShareRoom {
     if (!isInt(body.expiresAt) || body.expiresAt < now + SHARE.minLifeMs || body.expiresAt > room.createdAt + SHARE.maxLifeMs) return fail(422, "bad_expiry", { max: room.createdAt + SHARE.maxLifeMs });
     room.expiresAt = body.expiresAt;
     await this.storage.put("room", room);
-    await this.storage.setAlarm(this.nextAlarm(room, now));
+    await this.scheduleAlarm(room, now);
     this.roomEvent(room, now);
     return reply(200, { expiresAt: room.expiresAt });
   }
@@ -579,6 +587,7 @@ export class ShareRoom {
         // 보관은 위치 기간 창이 끝나는 때를 넘기지 않는다(「여행 기간에만」).
         const until = Math.min(now + (help ? SHARE.locHelpKeepMs : SHARE.locKeepMs), window.until);
         await this.storage.put("l:" + me.no, { no: me.no, cipher: body.cipher, epoch: room.epoch, at: now, storedAt: now, help, until });
+        await this.scheduleAlarm(room, now);
       }
     }
     return reply(200, { now });
@@ -598,11 +607,11 @@ export class ShareRoom {
     if (!isInt(from) || !isInt(until) || until <= from || until - from > SHARE.locWindowMaxMs || until <= now) return fail(422, "bad_request", { max: SHARE.locWindowMaxMs });
     room.locWindow = { from, until };
     await this.storage.put("room", room);
-    await this.storage.setAlarm(this.nextAlarm(room, now));
     if (now < from || now >= until) {
       for (const key of (await this.storage.list({ prefix: "l:" })).keys()) await this.storage.delete(key);
       this.broadcast({ t: "loc", off: true, all: true });
     }
+    await this.scheduleAlarm(room, now);
     this.roomEvent(room, now);
     return reply(200, { from, until });
   }
@@ -614,12 +623,15 @@ export class ShareRoom {
     if (body.rev !== room.rev) return fail(409, "conflict", { rev: room.rev });
     const join = await digest("join", room.id, body.proof);
     if (sameText(join, room.join)) return fail(422, "same_proof");
-    const fresh = new Map();
+    const fresh = new Map(), regrouped = new Map();
     let bytes = 0;
     for (const [index, entry] of list.entries()) {
-      const bad = !ITEM_ID.test(entry?.id ?? "") || fresh.has(entry.id) ? [422, "bad_request"] : cipherError(entry.cipher);
+      const badGroup = entry?.group !== undefined && (typeof entry.group !== "string" || !GROUP.test(entry.group));
+      const bad = typeof entry?.id !== "string" || !ITEM_ID.test(entry.id) || fresh.has(entry.id) || badGroup ? [422, "bad_request"] : cipherError(entry.cipher);
       if (bad) return fail(bad[0], bad[1], { index });
       fresh.set(entry.id, entry.cipher);
+      // 묶음 이름은 기기가 키로 만든 HMAC이라 키가 바뀌면 바뀐다. 새 이름이 오면 바꾸고, 없으면 그대로 둔다(TSR1117A01).
+      if (entry.group !== undefined) regrouped.set(entry.id, entry.group);
       bytes += cipherBytes(entry.cipher);
     }
     const live = [...(await this.storage.list({ prefix: "i:" })).values()].filter((i) => !i.del).sort((a, b) => a.seq - b.seq);
@@ -632,7 +644,7 @@ export class ShareRoom {
     for (const item of live) {
       batch.delete("r:" + pad(item.seq));
       const rev = ++room.rev;
-      batch.put("i:" + item.id, { ...item, cipher: fresh.get(item.id), epoch: room.epoch, rev, seq: rev });
+      batch.put("i:" + item.id, { ...item, cipher: fresh.get(item.id), epoch: room.epoch, rev, seq: rev, ...(regrouped.has(item.id) ? { group: regrouped.get(item.id) } : {}) });
       batch.put("r:" + pad(rev), item.id);
     }
     Object.assign(room, { join, bytes, locks: {}, fails: {} });
@@ -641,7 +653,7 @@ export class ShareRoom {
     for (const key of (await this.storage.list({ prefix: "l:" })).keys()) batch.delete(key); // 옛 키로 잠근 위치는 버린다.
     await batch.commit();
     for (const ws of this.ctx.getWebSockets()) {
-      if (ws.deserializeAttachment()?.no === 1) this.send(ws, { t: "room", closed: room.closed, expiresAt: room.expiresAt, epoch: room.epoch, rekeyed: true, now });
+      if (ws.deserializeAttachment()?.no === 1) this.send(ws, { t: "room", closed: room.closed, expiresAt: room.expiresAt, epoch: room.epoch, rekeyed: true, locWindow: room.locWindow ?? null, now });
       else this.bye(ws, "rekey", CLOSE.rekey);
     }
     return reply(200, { epoch: room.epoch, rev: room.rev });
@@ -660,7 +672,8 @@ export class ShareRoom {
       const now = this.now();
       if (!room || now >= room.expiresAt) return this.purge("expired");
       await this.sweepMeet(room, now);
-      return this.storage.setAlarm(this.nextAlarm(room, now)); // 주인이 기한을 늘린 뒤에 온 예전 알람이거나 위치 기간 끝
+      await this.readLocs(now); // 기한이 지난 위치 행을 지운다
+      return this.scheduleAlarm(room, now); // 주인이 기한을 늘린 뒤에 온 예전 알람이거나 위치 기간 끝·위치 기한
     });
   }
 

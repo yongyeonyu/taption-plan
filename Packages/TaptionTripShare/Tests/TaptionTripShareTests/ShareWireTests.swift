@@ -208,6 +208,10 @@ final class ShareWireTests: XCTestCase {
             try object(ShareRotateBody(rev: 3, proof: "p", items: [ShareRotateItem(id: "abcdefgh", cipher: "A")])),
             ["rev": 3, "proof": "p", "items": [["id": "abcdefgh", "cipher": "A"]]]
         )
+        XCTAssertEqual(
+            try object(ShareRotateBody(rev: 3, proof: "p", items: [ShareRotateItem(id: "abcdefgh", cipher: "A", group: "g1")])),
+            ["rev": 3, "proof": "p", "items": [["id": "abcdefgh", "cipher": "A", "group": "g1"]]]
+        )
     }
 
     func testBackoffDoublesToACap() {

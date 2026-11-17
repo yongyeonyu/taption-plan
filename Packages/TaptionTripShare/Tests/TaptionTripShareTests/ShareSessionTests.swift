@@ -227,6 +227,58 @@ final class ShareSessionTests: XCTestCase {
         XCTAssertEqual(clock.pending(.lockRenewal), 0)
     }
 
+    /// HTTP 요청 하나가 망 끊김으로 실패해 상태가 잠깐 offline이 되어도, 소켓으로 소식이 오면 다시 live이고
+    /// 잡아 둔 잠금의 연장도 이어진다(TSR1117A01). 전에는 연장 차례가 그 사이에 오면 고리가 끝나 2분 뒤 잠금이 풀렸다.
+    func testLockRenewalSurvivesABriefOfflineBlip() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        let id = try await created(owner, "고치는 중인 일정")
+        try await owner.lock(items: [id])
+        try await eventually { clock.pending(.lockRenewal) == 1 }
+
+        await room.server.failNextHTTP()
+        await assertThrows(.offline) { try await owner.setSettlementClosed(true) }
+        let blipped = await owner.view().status
+        XCTAssertEqual(blipped, .offline)
+        clock.release(.lockRenewal)
+        try await eventually("상태가 흔들린 때 온 연장 차례에도 고리는 남는다") { clock.pending(.lockRenewal) == 1 }
+
+        try await eventually { clock.pending(.ping) == 1 }
+        clock.release(.ping)
+        try await eventually("소켓으로 pong이 오면 서버에 닿는 것이다") { await owner.view().status == .live }
+
+        await room.server.advance(milliseconds: 120_000)
+        clock.advance(milliseconds: 120_000)
+        await room.server.clearCalls()
+        clock.release(.lockRenewal)
+        try await eventually { await room.server.calls.filter { $0.op == "lock" }.count == 1 }
+        let now = await room.server.now
+        try await eventually { await owner.lockState(item: id) == .mine(until: now + 120_000) }
+    }
+
+    /// 소켓이 안 되는 망(HTTP만)에서 HTTP로 잡은 잠금은 다시 붙기를 시도할 때마다 지워지지 않는다(TSR1117A01).
+    /// 서버는 마지막 소켓이 닫힐 때만 잠금을 푼다. 소켓을 열지 못한 시도는 아무것도 닫지 않았다.
+    func testFailedSocketAttemptsKeepLocksTakenOverHTTP() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        await room.server.setSocketsRefused(true)
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        let id = try await created(owner, "소켓 없이 고치는 일정")
+        try await owner.lock(items: [id])
+        try await eventually { clock.pending(.reconnect) == 1 && clock.pending(.lockRenewal) == 1 }
+        clock.release(.reconnect)
+        try await eventually { clock.requested(.reconnect).count == 2 && clock.pending(.reconnect) == 1 }
+        let state = await owner.lockState(item: id)
+        guard case .mine = state else { return XCTFail("다시 붙기 시도 뒤에도 내 잠금이어야 한다: \(state)") }
+
+        await room.server.advance(milliseconds: 60_000)
+        clock.advance(milliseconds: 60_000)
+        await room.server.clearCalls()
+        clock.release(.lockRenewal)
+        try await eventually { await room.server.calls.filter { $0.path.hasSuffix("/locks") }.count == 1 }
+    }
+
     func testOfflineIsReadOnlyAndReconnectsWithBackoff() async throws {
         let room = try await TestRoom.make()
         let clock = TestClock()
@@ -397,6 +449,103 @@ final class ShareSessionTests: XCTestCase {
 
         // 옛 비밀번호로는 더 들어오지 못한다.
         await assertServerError(.wrongPassword) { try await room.join() }
+    }
+
+    /// 서버가 새 키를 받아 준 뒤의 따라잡기가 끊겨도 키 교체는 된 것이다(TSR1117A01): 새 세대를 돌려줘 앱이 새 뿌리 키를
+    /// 키체인에 적을 수 있고, 인터넷이 돌아오면 연결 고리가 처음부터 받는다. 전에는 오류를 던져 새 키를 적지 못했다.
+    func testRotationSucceedsEvenIfTheFollowingCatchUpDrops() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        await room.server.setSocketsRefused(true)
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        _ = try await created(owner, "바꾸기 전 일정")
+        let newKeys = try TestRoom.derive(room.invite, "새 비밀번호 2031")
+
+        await room.server.goOffline(afterResponseTo: "/rotate")
+        let rotated = try await owner.rotate(to: newKeys)
+        XCTAssertEqual(rotated.epoch, 2)
+        let after = await owner.view()
+        XCTAssertEqual(after.epoch, 2)
+        XCTAssertEqual(after.status, .offline)
+        XCTAssertEqual(after.titles, ["바꾸기 전 일정"], "로컬 사본은 그대로 보인다")
+
+        await room.server.setOffline(false)
+        await room.server.setSocketsRefused(false)
+        try await eventually { clock.pending(.reconnect) == 1 }
+        clock.release(.reconnect)
+        try await eventually { await owner.view().status == .live }
+        try await eventually { await owner.view().items.map(\.epoch) == [2] }
+        let outcome = try await owner.write([.create(plan("바꾼 뒤 일정"))])
+        XCTAssertEqual(outcome, .done)
+    }
+
+    /// 응답을 잃은 키 교체를 `confirmRotation`으로 확인한 뒤의 따라잡기가 끊겨도 true다(TSR1117A01). 전에는 오류를 던져
+    /// 앱이 「됐는지 모름」으로 끝내고 새 뿌리 키를 적지 않았다.
+    func testConfirmedRotationHoldsEvenIfTheFollowingCatchUpDrops() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        await room.server.setSocketsRefused(true)
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        _ = try await created(owner, "바꾸기 전 일정")
+        let newKeys = try TestRoom.derive(room.invite, "새 비밀번호 2031")
+
+        await room.server.failNextHTTP(pathSuffix: "/rotate", afterHandling: true)
+        await assertThrows(.offline) { try await owner.rotate(to: newKeys) }
+        await room.server.goOffline(afterResponseTo: room.roomID) // 상태 확인(GET <방>)에 답한 직후 끊긴다.
+        let confirmed = try await owner.confirmRotation(with: newKeys)
+        XCTAssertTrue(confirmed)
+        let epoch = await owner.view().epoch
+        XCTAssertEqual(epoch, 2)
+    }
+
+    /// 응답을 잃은 사이 소켓이 4001(또는 다른 세대의 `room`)을 받아 세션이 새 비밀번호를 기다리며 연결 고리를 멈췄어도,
+    /// `confirmRotation`이 새 키로 넘어가면 고리를 다시 붙여 방송을 받는다(TSR1117A01).
+    func testConfirmRotationRestartsTheConnectionLoop() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        _ = try await created(owner, "바꾸기 전 일정")
+        let newKeys = try TestRoom.derive(room.invite, "새 비밀번호 2031")
+
+        await room.server.failNextHTTP(pathSuffix: "/rotate", afterHandling: true)
+        await assertThrows(.offline) { try await owner.rotate(to: newKeys) }
+        await room.server.dropSockets(code: 4001)
+        try await eventually { await owner.view().status == .needsRekey }
+        try await eventually { await room.server.socketCount(roomID: room.roomID) == 0 }
+
+        let confirmed = try await owner.confirmRotation(with: newKeys)
+        XCTAssertTrue(confirmed)
+        try await eventually("고리가 다시 소켓을 붙인다") { await room.server.socketCount(roomID: room.roomID) == 1 }
+        try await eventually { await owner.view().status == .live }
+        try await eventually { await owner.view().items.map(\.epoch) == [2] }
+
+        // 방송도 다시 받는다(새 비밀번호로 들어온 사람의 입장 소식).
+        _ = try await ShareRoomClient.join(transport: room.server.transport, roomID: room.roomID, proof: newKeys.proof)
+        try await eventually { await owner.view().members.map(\.no) == [1, 2] }
+    }
+
+    /// 날 묶음 이름은 암호화 키로 만든 HMAC이라 키가 바뀌면 이름도 바뀐다. 키 교체가 암호문만 바꾸면 서버의 항목은
+    /// 옛 이름에 남아, 새 키로 만든 날 묶음 잠금이 그날 항목을 덮지 못했다(TSR1117A01). 교체 때 이름도 새 키로 옮긴다.
+    func testRotationMovesDayGroupsToTheNewKey() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        let owner = try await room.liveSession(room.owner, clock: clock)
+        let oldGroup = room.keys.groupName(day: "2031-05-06")
+        let first = try await created(owner, "하나", group: oldGroup)
+        let second = try await created(owner, "둘", group: oldGroup)
+        let loose = try await created(owner, "묶음 밖")
+        let custom = try await created(owner, "다른 규칙", group: "custom-group")
+
+        let newKeys = try TestRoom.derive(room.invite, "새 비밀번호 2031")
+        _ = try await owner.rotate(to: newKeys)
+        let newGroup = newKeys.groupName(day: "2031-05-06")
+        let groups = [await owner.item(first)?.group, await owner.item(second)?.group, await owner.item(loose)?.group, await owner.item(custom)?.group]
+        XCTAssertEqual(groups, [newGroup, newGroup, nil, "custom-group"], "알아보는 이름만 옮기고 나머지는 그대로 둔다")
+
+        // 새 키로 만든 날 묶음 잠금 하나로 그날 항목을 함께 고친다.
+        try await owner.lock(groups: [newGroup])
+        let outcome = try await owner.write([.update(id: first, content: plan("하나'")), .update(id: second, content: plan("둘'"))])
+        XCTAssertEqual(outcome, .done)
     }
 
     func testRekeyRequiredOverHTTPAlsoPausesTheSession() async throws {

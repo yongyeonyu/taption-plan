@@ -367,6 +367,27 @@ final class TripShareRoomTests: XCTestCase {
         }
     }
 
+    /// 서버가 새 키를 받아 준 직후 인터넷이 끊겨도 새 뿌리 키·세대를 키체인에 적는다(TSR1117A01).
+    /// 전에는 뒤따른 따라잡기의 끊김이 「됐는지 모름」으로 이어져 옛 키가 남았다.
+    func testPasswordChangeKeepsTheNewKeyWhenTheNetworkDropsRightAfter() async throws {
+        let server = ShareFakeServer()
+        let model = await makeModel()
+        await seed(model, count: 2)
+        let (owner, invite) = try await shared(server, model: model)
+        await server.goOffline(afterResponseTo: "/rotate")
+        let change = try await TripShareOwnerActions.changePassword(store: owner, tripID: "t1", password: "겨울여행-2032", iterations: rounds)
+        XCTAssertEqual(change, .done)
+        let secrets = try XCTUnwrap(try owner.environment.secrets.secrets(roomID: invite.roomID))
+        let expected = try ShareKeys.derive(roomID: invite.roomID, linkSecret: invite.linkSecret, password: "겨울여행-2032", iterations: rounds)
+        XCTAssertEqual(secrets.root, expected.root)
+        XCTAssertEqual(secrets.epoch, 2)
+
+        await server.setOffline(false)
+        await waitUntil("다시 붙어 새 키로 처음부터 받음") {
+            owner.canEdit("t1") && owner.view(tripID: "t1")?.items(of: .plan).count == 2 && owner.view(tripID: "t1")?.epoch == 2
+        }
+    }
+
     func testMemberLeavesAndOwnerDeletesTheRoom() async throws {
         let server = ShareFakeServer()
         let model = await makeModel()

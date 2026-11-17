@@ -244,10 +244,13 @@ public struct ShareWrite: Encodable, Sendable, Equatable {
 public struct ShareRotateItem: Codable, Sendable, Equatable {
     public var id: String
     public var cipher: String
+    /// 새 키로 다시 만든 묶음 이름. 없으면(nil) 서버가 그대로 둔다.
+    public var group: String?
 
-    public init(id: String, cipher: String) {
+    public init(id: String, cipher: String, group: String? = nil) {
         self.id = id
         self.cipher = cipher
+        self.group = group
     }
 }
 

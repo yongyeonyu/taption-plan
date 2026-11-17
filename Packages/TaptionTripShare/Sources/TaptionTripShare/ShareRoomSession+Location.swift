@@ -22,7 +22,7 @@ extension ShareRoomSession {
         do {
             try await client.sendLocation(epoch: epoch, cipher: cipher, help: payload.s == .help)
         } catch let error as ShareError {
-            if case .server(let failure) = error, failure.detail.error == "loc_closed" { locWindow = failure.detail.locWindow; emitLocations() }
+            if case .server(let failure) = error, failure.code == .locClosed { locWindow = failure.detail.locWindow; emitLocations() }
             throw error
         }
     }
@@ -57,10 +57,18 @@ extension ShareRoomSession {
     }
 
     func receiveLocationWindow(_ event: ShareRoomEvent) {
-        if event.epoch != epoch { peerLocations = [:] }
-        guard locWindow != event.locWindow else { return emitLocationsIfChanged() }
-        locWindow = event.locWindow
-        emitLocations()
+        var changed = false
+        if event.epoch != epoch, !peerLocations.isEmpty {
+            peerLocations = [:]
+            changed = true
+        }
+        // 키 교체 직후의 `room`에 창을 싣지 않던 서버(TSR1117A01 전)도 있다. 거기서 빠진 창은 「닫힘」이 아니다.
+        let window = event.rekeyed == true && event.locWindow == nil ? locWindow : event.locWindow
+        if locWindow != window {
+            locWindow = window
+            changed = true
+        }
+        if changed { emitLocations() }
     }
 
     func receiveLocation(_ event: ShareWireLocation) {
@@ -93,8 +101,6 @@ extension ShareRoomSession {
         // 숨김·끔은 좌표가 없으니 지도에는 올리지 않는다(화면이 「위치 숨김」만 보이려면 아래에서 따로 쓴다).
         return ShareReceivedLocation(by: by, payload: payload, receivedAt: at)
     }
-
-    private func emitLocationsIfChanged() {}
 
     func emitLocations() { locationContinuation.yield() }
 }

@@ -29,7 +29,7 @@ struct FirstRunCarPage: View {
                 ForEach(candidates, id: \.self) { name in
                     let isCar = registered.contains(name)
                     Button {
-                        Task { await model.setCarAudio(name, isMyCar: !isCar) }
+                        Task { await model.toggleTutorialCarAudio(name) }
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: isCar ? "car.fill" : "headphones")

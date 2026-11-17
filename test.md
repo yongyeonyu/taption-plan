@@ -2,6 +2,27 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TSR1117A01 · 여행 공유 패키지·서버 방 결함 아홉 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: main `460635a6` 위 브랜치 `worktree-agent-a15e6707b6aa4c993`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/TSR1117A01`. 로그 `build/validation/TSR1117A01/`. 설계는 `docs/reviews/REV1117A01.md` 「TSR1117A01 설계」.
+- 메인 합침(`413a3a0d`, 2026-11-17 밤): 합친 main에서 서버 `npm test` 218건 통과·실패 0, `TaptionTripShare` `swift test` 82건 실패 0. 대표 결정(TSR까지 합친 뒤 한 번에)대로 서버 배포 — `wrangler deploy` 종료 0, 버전 ID `1153a89e`. REV1117A02·REV1117A03(정류장 본문·502)·REV1117A01 2차 Q2(모이는 곳 묘비)·TSR(묶음 이름·`locWindow`·위치 알람)이 함께 나감. 운영에서 알람 발화·실제 방 확인은 아직.
+- 고친 것(결함마다 시험 먼저·커밋 하나):
+  1. 키 교체 직후 따라잡기가 끊기면 `rotate`·`confirmRotation`이 오류를 던져 앱이 새 뿌리 키·세대를 적지 못함 → 서버가 받아 준 것을 성공으로 보고 따라잡기는 연결 고리에 맡김(`58cdf2cd`). 키체인·스냅샷 형식과 적는 값은 그대로.
+  2. `confirmRotation`이 `needsRekey`로 멈춘 연결 고리를 다시 시작하지 않음 → 다시 붙임(`17480dc6`).
+  3. 키 교체 뒤 날 묶음 이름이 옛 키 HMAC에 남아 새 이름의 묶음 잠금이 `lock_required` → `rotate` 항목에 선택 칸 `group`, 서버는 있으면 바꾸고 없으면 그대로(`b70e36b7`).
+  4. 키 교체 뒤 주인에게 가는 `room`에 `locWindow` 없음 → 서버·가짜 서버가 싣고, 세션은 창이 빠진 교체 알림(예전 서버)에 창을 지우지 않음(`577285f7`).
+  5. 위치 행을 읽을 때만 지움 → 위치 기한에 맞춘 알람으로 지움(`b07d2462`).
+  6. 도움 요청 메모가 40자여도 이모지면 잠근 뒤 1,181바이트(한도 512) → 메모 끝을 덜어 맞춤(`c576631e`).
+  7. `ShareErrorCode`에 `loc_closed`·`loc_rate` 없음 → 더함(`7f0d1fa6`).
+  8. 잠금 연장이 상태가 잠깐 흔들리면 끝남 + 소켓이 안 되는 망에서 열지도 못한 재연결 시도마다 HTTP 잠금을 지움 + 소켓이 살아도 offline이 안 풀림 → 연장은 차례만 건너뛰고, pong 등 소켓 소식이 오면 live, 연 적 있는 소켓만 끊김으로 봄(`60d5607b`).
+  9. 가짜 서버가 실제와 다름(모이는 곳 창 검사·재생성·거두기, 위치 크기·간격·보관, 내보내기·교체·창 변경 때 지움, 창 검사) → `share.js`와 같게(`f7ffe130`).
+- 시험(앞선 실패 확인): 새 시험은 고치기 전 실패를 먼저 봄(`swift-c*-before.log`, 서버는 새 시험 실패 후 통과).
+- 패키지 `TaptionTripShare` `swift test`: 82건 실패 0, 세 번 연속(`swift-test-all-1..3.log`).
+- 서버 `npm test`: 218건 실패 0(`npm-test.log`).
+- 앱 `-only-testing:TaptionPlanTests` 전체: 2,982건, 건너뜀 25, **실패 0**(`unit-r1.log`). 그 안의 관련 묶음 `TripShareRoomTests` 13(새 `testPasswordChangeKeepsTheNewKeyWhenTheNetworkDropsRightAfter` 포함)·`TripSharePlanTests` 7·`TripShareLedgerTests` 12·`TripShareFoundationTests` 16·`TripLiveLocationTests` 9 통과. 관련 묶음만 따로 돌린 첫 실행(`related-r1.log`)은 「test runner hung before establishing connection」으로 시험 전에 멈춤(시뮬레이터 연결 문제, 결과 없음) — 같은 시험을 전체 실행이 통과시킴.
+- 구조 지표 기준선 통과, import 경계 통과.
+- 제한: 서버는 **배포하지 않음**(대표 지시 대기). 운영 Workers 런타임의 알람·`getAlarm` 없는 `setAlarm` 덮어쓰기는 가짜 저장소로만 봄. 예전 서버에서는 3(묶음 이름 옮김)이 무시되어 이름이 옛 키에 남음 — 배포 뒤에야 고쳐짐. 실기기·실제 `URLSessionWebSocketTask` 확인 없음. 일정 메모(500자)가 이모지로 4KB를 넘는 경우는 앱 변환(`TripShareMapping`) 쪽이라 손대지 않음.
+
 ## WSY1117A01 · Watch 동기화 결함 넷 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `0551fecb` 위 브랜치 `worktree-agent-a433e19835cbb9b8d`, 끝 커밋 `b1ad953b`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/WSY1117A01`. 로그 `build/validation/WSY1117A01/`.
@@ -14,6 +35,18 @@
 - 빌드: `TaptionPlanWatch`(watchOS 시뮬레이터)·`TaptionPlanWatchWidget`(iOS 시뮬레이터) 성공. 구조 지표 기준선 통과(처음 `@unchecked Sendable` 하나 늘어 `Mutex`로 바꿈), import 경계 통과.
 - 앞선 시도: r1 단위 시험은 `WatchDayDatabase`가 앱 시험 대상에 없어 컴파일 실패 → 시험을 패키지로 옮김.
 - 제한: 실기기·실제 WatchConnectivity 전달·watchOS 백그라운드 예산(10초, 창 1개가 그 안에 끝나는지)은 확인 못 함. 옛 판 재생성 시간은 재지 않음(2시간이면 창 5,625 × 표본 36,000 비교). 하루에 누적 요약이 많으면 요약마다 표본 정렬 O(N log N)은 남음. ack를 안 주는 iPhone이면 운동 항목도 주변 기록처럼 outbox(4,096건 상한)에 쌓이고 넘치면 예전 직접 전송으로 돌아감.
+
+## FRT1117A01 · 첫 실행 안내 결함 둘: 장소 검색 경쟁·「내 차」 재탭 영구 제외 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 출발: REV1117A04 「안 고친 것」 Medium(첫 실행), main `0551fecb`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data는 외장 볼륨. 로그 `build/validation/FRT1117A01/`.
+- ① 장소 검색: `FirstRunPlacePicker`가 검색 결과를 누르면 `MKLocalSearch`를 기다린 뒤 무조건 저장해, 그 사이 고른 다른 결과·다녀온 곳·지도 핀·현재 위치를 늦게 온 옛 결과가 덮음. 고침: `FirstRunPlaceSelection`(고르기마다 차례를 올리고, 검색은 끝났을 때 자기 차례가 마지막일 때만 저장·실패 표시). 커밋 `17283d65`.
+- ② 「내 차」: 튜토리얼 줄은 체크 토글인데 다시 누르면 `setCarAudio(isMyCar: false)`로 거절 목록에 넣고 최근 목록에서도 빼서, 지금 연결 중이 아니면 줄이 사라지고 CarPlay 자동 등록·묻기도 막힘. 「아니요」·「삭제」의 영구 제외는 의도(`setCarAudio` 주석, `testCarPlayRegistersEveryCarAndRemembersNo`)라 그대로 두고, 튜토리얼 끄기만 `toggleTutorialCarAudio`로 등록만 풀고 최근 목록 앞에 돌려 둠. 커밋 `dae56005`.
+- 먼저 실패: 새 시험 3개를 고치기 전 동작(차례 확인 없음, 끄기 = `setCarAudio(false)`)에 돌려 `testLateSearchDoesNotOverwriteLaterChoice`·`testCarRowSecondTapUndoesInsteadOfDismissing` 실패 6건(`red-2.log`) → 고친 뒤 `FirstRunTutorialTests` 26·`CarAudioTravelConfirmationTests` 12 통과(`green-1.log`).
+- 단위 `-only-testing:TaptionPlanTests`: 2,974건 **실패 0**, 건너뜀 25(`unit-all-2.log`, 시험 빌드 = 앱 Debug 빌드). 첫 실행(`unit-all.log`)은 시뮬레이터가 앱을 띄우지 못해(`launchApplicationWithID … No such process`) 시험 없이 끝나 다시 돌림.
+- UI `TaptionPlanFirstRunTutorialUITests` 5건 통과(`ui-firstrun.log`). 튜토리얼을 지나는 `TaptionPlanLanguagePackUITests.testWalkMainScreens`는 언어 지정 환경값이 없어 건너뜀(`ui-langpack.log`) — 통과로 치지 않음.
+- 구조 지표 기준선 통과, import 경계 통과(`arch-metrics-final.log`·`import-boundary-final.log`). 새 문구 없음 → 번역 작업 없음.
+- 지킨 것: 기본 앱 비밀번호 등록 흐름·권한 창·홈 배치·저장 형식 그대로, 위젯·Live Activity·Watch 파일 안 건드림.
+- 하지 않은 것: 실기기 확인(이번 범위 밖), 지도 위 실제 MapKit 검색 지연 재현은 단위 시험의 기다리는 검색으로 대신함.
 
 ## MRG1117A02 · 리뷰 4개·옛 화면 정리·성능 고침을 합친 main 전체 확인 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 

@@ -224,16 +224,27 @@ extension ShareRoomSession {
             try await catchUp()
             guard discardingUnreadable || unreadable.isEmpty else { throw ShareError.unreadableItems(unreadable.keys.sorted()) }
             let entries = try resealed(with: newKeys)
+            let result: ShareRekeyResult
             do {
-                let result = try await guarded { try await client.rotate(rev: rev, proof: newKeys.proof, items: entries) }
-                adopt(newKeys, epoch: result.epoch)
-                try await catchUp()
-                return result
+                result = try await guarded { try await client.rotate(rev: rev, proof: newKeys.proof, items: entries) }
             } catch let error as ShareError where error.serverCode == .conflict {
                 failure = error
+                continue
             }
+            adopt(newKeys, epoch: result.epoch)
+            await resumeWithNewKeys()
+            return result
         }
         throw failure
+    }
+
+    /// 서버가 새 키를 받아 준 뒤: 그것으로 키 교체는 끝났다. 따라잡기는 한 번 해 보고, 안 되면 연결 고리에 맡긴다
+    /// (`needsFullSync`가 남아 다음 `hello`·상태 확인이 처음부터 받는다). 앱은 돌려받은 세대와 새 뿌리 키를 적는다.
+    /// 그 사이 4001이나 다른 세대의 `room`으로 고리가 멈췄으면(`needsRekey`) 다시 붙인다.
+    private func resumeWithNewKeys() async {
+        if status == .needsRekey { setStatus(.connecting) }
+        start()
+        try? await catchUp()
     }
 
     /// `rotate`가 응답 없이 끊긴 뒤: 서버의 세대가 올랐으면 새 키로 넘어가고 true.
@@ -245,7 +256,7 @@ extension ShareRoomSession {
         adopt(newKeys, epoch: state.epoch)
         absorb(state)
         setStatus(.live)
-        try await catchUp()
+        await resumeWithNewKeys()
         return true
     }
 
@@ -254,13 +265,20 @@ extension ShareRoomSession {
             let plain = Data(item.json.utf8)
             let padded = ShareCipher.padded(plain)
             let body = ShareCipher.sealedBytes(plaintextBytes: padded.count) <= limits.itemBytes ? padded : plain
-            return ShareRotateItem(id: item.id, cipher: try ShareCipher.seal(body, key: newKeys.encKey, context: context(item.id, item.kind, epoch: epoch + 1)))
+            let cipher = try ShareCipher.seal(body, key: newKeys.encKey, context: context(item.id, item.kind, epoch: epoch + 1))
+            return ShareRotateItem(id: item.id, cipher: cipher, group: movedGroup(item, to: newKeys))
         }
         for bad in unreadable.values.sorted(by: { $0.id < $1.id }) {
             guard let cipher = bad.cipher else { throw ShareError.unreadableItems([bad.id]) }
             entries.append(ShareRotateItem(id: bad.id, cipher: cipher))
         }
         return entries
+    }
+
+    /// 날 묶음 이름은 키로 만든 HMAC이라 키가 바뀌면 바뀐다. 지금 키의 `groupName(day:)`와 같은 일정만 새 키의 이름으로 옮긴다.
+    private func movedGroup(_ item: ShareLocalItem, to newKeys: ShareKeys) -> String? {
+        guard let name = item.group, case .plan(let plan) = item.content, keys.groupName(day: plan.day) == name else { return nil }
+        return newKeys.groupName(day: plan.day)
     }
 
     /// 내보내기. 내보낸 사람은 링크와 비밀번호를 알므로, `rekeyRecommended`면 비밀번호 바꾸기를 권한다.

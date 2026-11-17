@@ -60,7 +60,7 @@ actor ShareSocketChannel {
         }
     }
 
-    /// 글자 `ping`. 서버가 `pong`으로 답한다(읽기 고리가 삼킨다).
+    /// 글자 `ping`. 서버가 `pong`으로 답한다(세션은 닿는다는 표시로만 본다).
     func ping() async {
         guard isOpen else { return }
         do { try await socket.send("ping") } catch { finish(code: 1006) }
@@ -75,8 +75,6 @@ actor ShareSocketChannel {
     private func accept(_ text: String) {
         guard isOpen, let message = try? ShareSocketMessage.parse(text) else { return }
         switch message {
-        case .pong:
-            break
         case .response(let response):
             guard let id = response.id, let waiter = pending.removeValue(forKey: id) else { return }
             timers.removeValue(forKey: id)?.cancel()

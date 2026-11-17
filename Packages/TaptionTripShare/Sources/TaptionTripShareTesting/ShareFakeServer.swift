@@ -3,7 +3,8 @@ import Synchronization
 import TaptionTripShare
 
 /// 시험용 가짜 서버: 메모리 안의 방들. 규약(`docs/TRIP_SHARE_PROTOCOL.md`)의 요청·방송·잠금·권한·충돌을 흉내 낸다.
-/// 실제 서버(`server/trip-relay/src/share.js`)를 줄여 옮긴 것이라 횟수 제한·크기 한도·입장 잠금은 없다.
+/// 실제 서버(`server/trip-relay/src/share.js`)를 줄여 옮긴 것이라 방 안 요청 횟수·방 크기 한도·입장 잠금은 없다.
+/// 동행 위치·모이는 곳의 규칙(기간 창·크기·간격·보관·지움)은 실제와 같다.
 /// 세션 여러 개를 `transport`로 붙여 서로의 방송을 받는 것까지 볼 수 있다.
 public actor ShareFakeServer {
     public struct Call: Sendable, Equatable {
@@ -24,6 +25,8 @@ public actor ShareFakeServer {
     private var offline = false
     private var socketsRefused = false
     private var changesPage = 200
+    private var httpFailures: [(pathSuffix: String?, afterHandling: Bool)] = []
+    private var offlineAfter: String?
     private var rooms: [String: Room] = [:]
     private var tokenCount = 0
 
@@ -51,6 +54,15 @@ public actor ShareFakeServer {
 
     public func setChangesPage(_ value: Int) { changesPage = value }
 
+    /// 다음 HTTP 요청 하나(경로가 `pathSuffix`로 끝나는 것, nil이면 아무것)를 망이 끊긴 것처럼 실패시킨다. 소켓은 그대로다.
+    /// `afterHandling`이면 서버는 처리하고(방송까지) 응답만 잃는다.
+    public func failNextHTTP(pathSuffix: String? = nil, afterHandling: Bool = false) {
+        httpFailures.append((pathSuffix, afterHandling))
+    }
+
+    /// 경로가 `pathSuffix`로 끝나는 HTTP 요청에 응답한 직후 인터넷이 끊긴 것처럼 둔다(`setOffline(true)`).
+    public func goOffline(afterResponseTo pathSuffix: String) { offlineAfter = pathSuffix }
+
     /// 모든 소켓을 이 코드로 닫는다(서버가 끊은 것처럼).
     public func dropSockets(code: Int) {
         for room in rooms.values {
@@ -65,7 +77,7 @@ public actor ShareFakeServer {
     public func rev(roomID: String) -> Int { rooms[roomID]?.rev ?? 0 }
     /// 주인이 기간 창을 올린 것처럼 둔다(시험용).
     public func openLocationWindow(roomID: String, from: Int, until: Int) { rooms[roomID]?.locWindow = (from, until) }
-    public func storedLocationMembers(roomID: String) -> [Int] { (rooms[roomID]?.locs.keys.sorted()) ?? [] }
+    public func storedLocationMembers(roomID: String) -> [Int] { rooms[roomID].map { storedLocs($0).compactMap { $0["by"] as? Int } } ?? [] }
     public func clearCalls() { calls = [] }
 
     /// 서버만 할 수 있는 장난: 항목의 암호문을 바꿔 놓는다(풀리지 않는 항목 시험).
@@ -132,9 +144,13 @@ public actor ShareFakeServer {
         var locks: [String: (by: Int, until: Int)] = [:]
         var items: [String: Item] = [:]
         var sockets: [ShareFakeSocket] = []
-        /// 동행 위치(LOC1116S01): 참여자 번호 → 마지막 암호문 한 건.
+        /// 동행 위치(LOC1116S01): 참여자 번호 → 마지막 암호문 한 건(`until`·`storedAt`·`help`는 서버만 본다).
         var locs: [Int: [String: Any]] = [:]
         var locWindow: (from: Int, until: Int)?
+        /// 참여자 번호 → 이번 분의 위치 수·마지막 시각.
+        var locRates: [Int: (minute: Int, count: Int, last: Int)] = [:]
+        /// 모이는 곳을 거둔 기간 창의 끝.
+        var meetSwept: Int?
 
         init(id: String, proof: String, ownerKey: String, createdAt: Int, expiresAt: Int) {
             self.id = id
@@ -171,7 +187,14 @@ public actor ShareFakeServer {
     func handle(_ request: ShareHTTPRequest) throws -> ShareHTTPResponse {
         calls.append(Call(method: request.method, path: request.path, query: request.query, headers: request.headers, op: nil, body: request.body))
         guard !offline else { throw ShareError.offline }
+        let failure = httpFailures.firstIndex { rule in rule.pathSuffix.map { request.path.hasSuffix($0) } ?? true }.map { httpFailures.remove(at: $0) }
+        if let failure, !failure.afterHandling { throw ShareError.offline }
         let reply = route(request)
+        if failure != nil { throw ShareError.offline }
+        if let suffix = offlineAfter, request.path.hasSuffix(suffix) {
+            offlineAfter = nil
+            setOffline(true)
+        }
         let body = try reply.body.map { try JSONSerialization.data(withJSONObject: $0) } ?? Data()
         return ShareHTTPResponse(status: reply.status, headers: ["content-type": "application/json"], body: body)
     }
@@ -230,8 +253,14 @@ public actor ShareFakeServer {
             roomEvent(room)
             return Reply(status: 200, body: ["expiresAt": value])
         case "POST locwindow":
-            guard let from = body["from"] as? Int, let until = body["until"] as? Int, until > from else { return fail(422, "bad_request") }
+            guard let from = body["from"] as? Int, let until = body["until"] as? Int, until > from, until - from <= Self.locWindowMaxMs, until > now else {
+                return fail(422, "bad_request", ["max": Self.locWindowMaxMs])
+            }
             room.locWindow = (from, until)
+            if now < from || now >= until {
+                room.locs = [:]
+                broadcast(room, ["t": "loc", "off": true, "all": true])
+            }
             roomEvent(room)
             return Reply(status: 200, body: ["from": from, "until": until])
         default:
@@ -245,7 +274,20 @@ public actor ShareFakeServer {
             purge(room, reason: "expired")
             return nil
         }
+        sweepMeet(room)
         return room
+    }
+
+    /// 위치 기간이 끝나면 모이는 곳을 묘비로 바꾼다(기간마다 한 번).
+    private func sweepMeet(_ room: Room) {
+        guard let window = room.locWindow, now >= window.until, room.meetSwept != window.until else { return }
+        room.meetSwept = window.until
+        guard let item = room.items[ShareMeetContent.itemID], !item.deleted else { return }
+        room.rev += 1
+        let tomb = Item(id: item.id, kind: item.kind, rev: room.rev, seq: room.rev, epoch: item.epoch, cipher: nil, group: nil, at: now,
+                        by: item.by, createdBy: item.createdBy, deleted: true)
+        room.items[item.id] = tomb
+        broadcast(room, ["t": "items", "rev": room.rev, "items": [tomb.wire]])
     }
 
     private func authenticate(_ room: Room, _ headers: [String: String]) -> (member: Member?, reply: Reply?) {
@@ -299,17 +341,52 @@ public actor ShareFakeServer {
     }
 
     private func windowJSON(_ room: Room) -> Any { room.locWindow.map { ["from": $0.from, "until": $0.until] as [String: Any] } ?? NSNull() }
-    private func storedLocs(_ room: Room) -> [[String: Any]] { room.locs.keys.sorted().compactMap { room.locs[$0] } }
+
+    /// 기한이 남은 위치만(지난 것은 지운다). 서버만 보는 칸은 빼고 준다.
+    private func storedLocs(_ room: Room) -> [[String: Any]] {
+        room.locs = room.locs.filter { ($0.value["until"] as? Int ?? 0) > now }
+        return room.locs.keys.sorted().compactMap { room.locs[$0]?.filter { !["until", "storedAt"].contains($0.key) } }
+    }
+
+    private static let locBytes = 512
+    private static let locGapMs = 5_000
+    private static let locPerMinute = 20
+    private static let locStoreGapMs = 90_000
+    private static let locHelpStoreGapMs = 10_000
+    private static let locKeepMs = 10 * 60_000
+    private static let locHelpKeepMs = 24 * 60 * 60_000
+    private static let locWindowMaxMs = 40 * 86_400_000
 
     private func loc(_ room: Room, _ me: Member, _ body: [String: Any], origin: ShareFakeSocket?) -> Reply {
-        guard let cipher = body["cipher"] as? String, body["epoch"] as? Int == room.epoch else { return fail(409, "epoch_mismatch", ["epoch": room.epoch]) }
+        guard let cipher = body["cipher"] as? String, cipher.hasPrefix("A"), cipher.count >= 39 else { return fail(422, "bad_cipher") }
+        guard cipher.count * 3 / 4 <= Self.locBytes else { return fail(413, "item_too_large") }
+        guard let epoch = body["epoch"] as? Int, epoch >= 1 else { return fail(422, "bad_request") }
+        guard epoch == room.epoch else { return fail(409, "epoch_mismatch", ["epoch": room.epoch]) }
         guard let window = room.locWindow, now >= window.from, now < window.until else { return fail(403, "loc_closed", ["locWindow": windowJSON(room)]) }
+        let help = body["help"] as? Bool == true
+        let minute = now / 60_000
+        var rate = room.locRates[me.no] ?? (minute: -1, count: 0, last: Int.min / 2)
+        if rate.minute != minute { rate = (minute, 0, rate.last) }
+        if rate.count >= Self.locPerMinute { return busy("loc_rate", (minute + 1) * 60_000 - now) }
+        if !help, now - rate.last < Self.locGapMs { return busy("loc_rate", rate.last + Self.locGapMs - now) }
+        rate.count += 1
+        rate.last = now
+        room.locRates[me.no] = rate
         var message: [String: Any] = ["by": me.no, "cipher": cipher, "epoch": room.epoch, "at": now]
-        if body["help"] as? Bool == true { message["help"] = true }
-        room.locs[me.no] = message
+        if help { message["help"] = true }
         broadcast(room, message.merging(["t": "loc"]) { $1 }, except: origin)
+        // 저장은 드물게, 보관은 기간 창 끝을 넘기지 않는다(실제 서버와 같은 규칙).
+        let old = room.locs[me.no]
+        let oldHelp = old?["help"] as? Bool == true
+        let gap = help && oldHelp ? Self.locHelpStoreGapMs : Self.locStoreGapMs
+        if old == nil || (old?["until"] as? Int ?? 0) <= now || help != oldHelp || now - (old?["storedAt"] as? Int ?? 0) >= gap {
+            let until = min(now + (help ? Self.locHelpKeepMs : Self.locKeepMs), window.until)
+            room.locs[me.no] = message.merging(["until": until, "storedAt": now]) { $1 }
+        }
         return Reply(status: 200, body: ["now": now])
     }
+
+    private func busy(_ error: String, _ ms: Int) -> Reply { fail(429, error, ["retryAfter": max(1, (ms + 999) / 1000)]) }
 
     private func describe(_ room: Room, _ me: Member) -> [String: Any] {
         let online = Set(room.sockets.map(\.member))
@@ -402,7 +479,10 @@ public actor ShareFakeServer {
         case "notice": return mine || (deleting && me.no == 1) ? nil : fail(403, "forbidden", extra)
         case "member": return id == "member-\(me.no)" && !deleting ? nil : fail(403, "forbidden", extra)
         case "meta": return me.no == 1 ? nil : fail(403, "forbidden", extra)
-        case "meet": return id == "meet-point" && !deleting ? nil : fail(422, "bad_request", extra)
+        case "meet":
+            guard id == "meet-point", !deleting else { return fail(422, "bad_request", extra) }
+            guard let window = room.locWindow, now >= window.from, now < window.until else { return fail(403, "loc_closed", extra) }
+            return nil
         default: return fail(422, "bad_request")
         }
     }
@@ -438,7 +518,9 @@ public actor ShareFakeServer {
             let deleting = write["delete"] != nil
             let old = room.items[id]
             let creating = baseRev == 0
-            if creating ? old != nil : (old == nil || old?.deleted == true || old?.rev != baseRev) {
+            // 거둔 모이는 곳만은 같은 id로 다시 만들 수 있다.
+            let reopening = old?.deleted == true && id == ShareMeetContent.itemID
+            if creating ? old != nil && !reopening : (old == nil || old?.deleted == true || old?.rev != baseRev) {
                 conflicts.append(["index": index, "id": id, "current": old.map { $0.wire as Any } ?? NSNull()])
                 groups.append(nil)
                 continue
@@ -514,6 +596,8 @@ public actor ShareFakeServer {
             room.items[cardID] = tomb
             broadcast(room, ["t": "items", "rev": room.rev, "items": [tomb.wire]])
         }
+        room.locs[member.no] = nil
+        broadcast(room, ["t": "loc", "by": member.no, "off": true])
         for socket in room.sockets where socket.member == member.no {
             bye(room, socket, reason: reason, code: reason == "kicked" ? 4000 : 1000)
         }
@@ -531,8 +615,13 @@ public actor ShareFakeServer {
         guard rev == room.rev else { return fail(409, "conflict", ["rev": room.rev]) }
         guard proof != room.proof else { return fail(422, "same_proof") }
         var fresh: [String: String] = [:]
+        var regrouped: [String: String] = [:]
         for entry in list {
             guard let id = entry["id"] as? String, let cipher = entry["cipher"] as? String, fresh[id] == nil else { return fail(422, "bad_request") }
+            if let group = entry["group"] {
+                guard let name = group as? String, ShareIdentifiers.isGroupName(name) else { return fail(422, "bad_request") }
+                regrouped[id] = name
+            }
             fresh[id] = cipher
         }
         let live = room.items.values.filter { !$0.deleted }.sorted { $0.seq < $1.seq }
@@ -544,6 +633,7 @@ public actor ShareFakeServer {
         for var item in live {
             room.rev += 1
             item.cipher = fresh[item.id]
+            if let group = regrouped[item.id] { item.group = group }
             item.epoch = room.epoch
             item.rev = room.rev
             item.seq = room.rev
@@ -551,10 +641,11 @@ public actor ShareFakeServer {
         }
         room.proof = proof
         room.locks = [:]
+        room.locs = [:] // 옛 키로 잠근 위치는 버린다.
         me.epoch = room.epoch
         for socket in room.sockets {
             if socket.member == 1 {
-                send(socket, ["t": "room", "closed": room.closed, "expiresAt": room.expiresAt, "epoch": room.epoch, "rekeyed": true, "now": now])
+                send(socket, ["t": "room", "closed": room.closed, "expiresAt": room.expiresAt, "epoch": room.epoch, "rekeyed": true, "locWindow": windowJSON(room), "now": now])
             } else {
                 bye(room, socket, reason: "rekey", code: 4001)
             }
