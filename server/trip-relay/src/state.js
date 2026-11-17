@@ -248,11 +248,12 @@ const OPS = {
   },
 
   // 앱이 끝난 것을 지운다. 지운 id는 기억해 같은 id가 다시 와도 되살리지 않는다(AIU1114A01).
-  async taskRemoveFinished(s) {
+  // REV1117A02: all이면 열린 일도 지운다(앱이 공유를 끄거나 잠갔을 때).
+  async taskRemoveFinished(s, { all = false } = {}) {
     const meta = (await s.get("tasksMeta")) ?? { gone: [] };
     let removed = 0;
     for (const [name, t] of await values(s, "task:")) {
-      if (TASK_OPEN.has(t.status)) continue;
+      if (!all && TASK_OPEN.has(t.status)) continue;
       await s.delete(name);
       meta.gone.push(t.id);
       removed++;

@@ -301,3 +301,13 @@ test("tasks: get_ai_tasks tells the AI what a replan task is", async () => {
   assert.match(tool.description, /replan \(PVR1114A13\)/);
   assert.match(tool.description, /ask_user before changing anything/);
 });
+
+test("tasks: DELETE ?all=1 also removes open tasks when the app stops sharing (REV1117A02)", async () => {
+  const { env, master, ai } = await setup();
+  assert.equal((await send(env, "/tasks", "POST", upload([{ id: A, kind: "payment_text", text: "shop 1,000" }, { id: B, kind: "payment_text", text: "shop 2,000" }]), master)).status, 201);
+  assert.equal((await send(env, "/tasks", "DELETE", undefined, master)).status, 204);
+  assert.equal((await (await send(env, "/tasks", "GET", undefined, master)).json()).tasks.length, 2, "without all only finished ones go");
+  assert.equal((await send(env, "/tasks?all=1", "DELETE", undefined, ai)).status, 403);
+  assert.equal((await send(env, "/tasks?all=1", "DELETE", undefined, master)).status, 204);
+  assert.equal((await send(env, "/tasks", "GET", undefined, master)).status, 204, "nothing left");
+});
