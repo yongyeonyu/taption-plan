@@ -332,7 +332,7 @@ enum TripShareLedger {
     /// 값이 그대로면 쓰지 않는다. **방에 없는 로컬 기록(비공개·자동 기록)은 지우지도 올리지도 않는다.**
     static func project(tripID: String, roomID: String, view: ShareRoomView, removed: [String] = []) async {
         await book.load()
-        let names = TripShareNames(me: view.me, cards: view.cards, guests: view.meta?.guests ?? [])
+        let names = store.names(view, roomID: roomID)
         var touched = false
         for item in view.items where projects(item, me: view.me) {
             guard let id = TripShareMapping.entryID(roomItemID: item.id), !moving.contains(id) else { continue }

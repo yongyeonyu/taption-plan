@@ -300,6 +300,42 @@ final class TripShareLedgerTests: XCTestCase {
         XCTAssertTrue(automatic.allSatisfy { TripShareLedger.scope(of: $0) == .ownHidden })
     }
 
+    /// 나간 사람은 카드가 지워져도 이름이 남고, 그 사람이 낀 공동 지출을 고칠 수 있다(TSA1117A01).
+    func testAMemberWhoLeftKeepsTheirNameAndTheirExpensesStayEditable() async throws {
+        try await openRoom()
+        let friend = try await join("봄")
+        let dinner = expense("저녁", 30_000)
+        let saved = await TripShareLedger.save(dinner, scope: .shared)
+        XCTAssertNil(saved)
+
+        try await friend.leave()
+        await waitUntil("나간 사람의 카드가 사라짐") { self.store.view(tripID: self.tripID)?.cards[2] == nil }
+        let view = try XCTUnwrap(store.view(tripID: tripID))
+        await TripShareLedger.project(tripID: tripID, roomID: roomID, view: view)
+        let local = try XCTUnwrap(book.entries.first { $0.id == dinner.id })
+        XCTAssertEqual(Set(local.shareNames ?? []), [LedgerTrip.me, "봄", "겨울"], "나간 사람도 `m2`가 아니라 이름으로 보인다")
+        XCTAssertEqual(store.names(tripID: tripID)?.name(.member(2)), "봄")
+        XCTAssertFalse(store.names(tripID: tripID)?.others.contains("봄") ?? true, "새 지출에서 고를 사람에는 없다")
+
+        var edited = local
+        edited.amount = 36_000
+        edited.amountKRW = 36_000
+        let failure = await TripShareLedger.save(edited, scope: .shared)
+        XCTAssertNil(failure, "나간 사람이 낀 지출도 고칠 수 있다")
+        let content = try XCTUnwrap(shared(in: try XCTUnwrap(store.view(tripID: tripID))).first?.content)
+        XCTAssertEqual(content.split, [.member(1), .member(2), .guest(1)], "몫은 그대로")
+        XCTAssertEqual(content.amount, 36_000)
+
+        // 앱을 다시 켜도(창구를 새로 만들어도) 지난 이름을 곁 파일에서 읽는다.
+        await store.close(tripID: tripID)
+        let reopened = TripShareStore(environment: store.environment)
+        TripShareStore.shared = reopened
+        store = reopened
+        let again = await reopened.open(tripID: tripID)
+        XCTAssertNotNil(again)
+        XCTAssertEqual(reopened.names(tripID: tripID)?.name(.member(2)), "봄")
+    }
+
     func testOfflineSharedSaveIsRefusedAndNothingIsWritten() async throws {
         try await openRoom()
         await server.setOffline(true)

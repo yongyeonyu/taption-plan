@@ -5,15 +5,20 @@ import TaptionTripShare
 
 /// 방 사람들의 이름표(TSH1114A26): 참여자 번호·앱 없는 일행 ⇄ 가계부가 쓰는 이름 글자.
 /// 같은 닉네임은 번호 순으로 「가을」「가을 (2)」처럼 가른다. 나는 가계부에서 `LedgerTrip.me`다.
+/// 나간 사람은 서버가 카드를 지우므로 `former`(방에서 본 지난 이름)로 찾는다. 새로 고를 사람(`parties`)에는 넣지 않는다.
 struct TripShareNames: Equatable, Sendable {
     let me: Int
     private(set) var names: [ShareParty: String] = [:]
+    /// 지금 방에 있는 사람(카드가 있는 참여자와 앱 없는 일행).
+    private var present: Set<ShareParty> = []
 
-    init(me: Int, cards: [Int: ShareMemberCard], guests: [ShareGuest] = []) {
+    init(me: Int, cards: [Int: ShareMemberCard], guests: [ShareGuest] = [], former: [Int: String] = [:]) {
         self.me = me
         var seen: [String: Int] = [:]
         let people = cards.map { (ShareParty.member($0.key), $0.value.name) } + guests.map { (ShareParty.guest($0.id), $0.name) }
-        for (party, raw) in people.sorted(by: { $0.0 < $1.0 }) {
+        present = Set(people.map(\.0))
+        let gone = former.filter { cards[$0.key] == nil }.map { (ShareParty.member($0.key), $0.value) }
+        for (party, raw) in (people + gone).sorted(by: { $0.0 < $1.0 }) {
             let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             let name = trimmed.isEmpty || trimmed == LedgerTrip.me ? party.code : trimmed
             seen[name, default: 0] += 1
@@ -21,8 +26,8 @@ struct TripShareNames: Equatable, Sendable {
         }
     }
 
-    /// 참여자 번호 순, 그다음 앱 없는 일행.
-    var parties: [ShareParty] { names.keys.sorted() }
+    /// 지금 방에 있는 사람: 참여자 번호 순, 그다음 앱 없는 일행.
+    var parties: [ShareParty] { present.sorted() }
 
     /// 화면에 보일 이름(나도 내 닉네임).
     func name(_ party: ShareParty) -> String { names[party] ?? party.code }
@@ -30,10 +35,10 @@ struct TripShareNames: Equatable, Sendable {
     /// 가계부에 적는 이름: 나는 `@me`.
     func ledgerName(_ party: ShareParty) -> String { party == .member(me) ? LedgerTrip.me : name(party) }
 
-    /// 가계부의 이름에서 사람을 찾는다. 비었거나 `@me`면 나.
+    /// 가계부의 이름에서 사람을 찾는다. 비었거나 `@me`면 나. 이름이 없던 때 적힌 번호(`m3`)도 읽는다.
     func party(ledgerName: String?) -> ShareParty? {
         guard let ledgerName, !ledgerName.isEmpty, ledgerName != LedgerTrip.me else { return .member(me) }
-        return names.first { $0.value == ledgerName }?.key
+        return names.first { $0.value == ledgerName }?.key ?? ShareParty(code: ledgerName)
     }
 
     /// `LedgerTrip.members`에 투영할 이름들(나 빼고).

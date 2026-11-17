@@ -61,6 +61,8 @@ final class TripShareStore {
     @ObservationIgnored private var storedMembers: [String: Int] = [:]
     /// 묶음 이름을 만드는 키(키체인에서 한 번 읽어 둔다). 키가 바뀌면 `saveSecrets`가 비운다.
     @ObservationIgnored private var keys: [String: ShareKeys] = [:]
+    /// 방에서 본 닉네임(방 번호 → 참여자 번호 → 이름). 곁 파일에서 한 번 읽어 둔다.
+    @ObservationIgnored private var seenNames: [String: [Int: String]] = [:]
     /// 방의 변화를 로컬 정본에 투영할 때 쓰는 앱 모델. 여행 화면이 뜰 때 붙는다.
     @ObservationIgnored private(set) weak var model: AppModel?
 
@@ -97,7 +99,29 @@ final class TripShareStore {
 
     /// 방 사람들의 이름표. 방을 열기 전이면 nil.
     func names(tripID: String) -> TripShareNames? {
-        view(tripID: tripID).map { TripShareNames(me: $0.me, cards: $0.cards, guests: $0.meta?.guests ?? []) }
+        guard let link = link(tripID: tripID), let view = rooms[link.roomID] else { return nil }
+        return names(view, roomID: link.roomID)
+    }
+
+    /// 그 방의 화면 값으로 만든 이름표. 나간 사람(카드가 지워진 사람)은 지난 이름으로 찾는다.
+    func names(_ view: ShareRoomView, roomID: String) -> TripShareNames {
+        TripShareNames(me: view.me, cards: view.cards, guests: view.meta?.guests ?? [], former: formerNames(roomID))
+    }
+
+    private func formerNames(_ roomID: String) -> [Int: String] {
+        if let names = seenNames[roomID] { return names }
+        let names = environment.sidecar.formerNames(roomID: roomID)
+        seenNames[roomID] = names
+        return names
+    }
+
+    /// 방에서 본 닉네임을 적어 둔다(바뀐 것이 있을 때만 곁 파일에 쓴다).
+    private func remember(_ view: ShareRoomView, roomID: String) {
+        var names = formerNames(roomID)
+        for (member, card) in view.cards where !card.name.isEmpty { names[member] = card.name }
+        guard names != seenNames[roomID] else { return }
+        seenNames[roomID] = names
+        try? environment.sidecar.saveFormerNames(names, roomID: roomID)
     }
 
     /// 로컬 일정 하나의 잠금 상태(그 일정의 잠금과 그날 묶음의 잠금). 기한은 기기 시계로 본다.
@@ -155,6 +179,7 @@ final class TripShareStore {
         links.removeAll { $0.roomID == link.roomID }
         storedMembers[link.roomID] = nil
         keys[link.roomID] = nil
+        seenNames[link.roomID] = nil
         TripLiveLocationService.shared.forget(tripID: tripID)
     }
 
@@ -169,7 +194,9 @@ final class TripShareStore {
             roomID: link.roomID, transport: transport, secrets: environment.secrets, snapshots: environment.sidecar, environment: environment.session
         ) else { return nil }
         sessions[link.roomID] = session
-        rooms[link.roomID] = await session.view()
+        let view = await session.view()
+        rooms[link.roomID] = view
+        remember(view, roomID: link.roomID)
         listeners[link.roomID] = Task { [weak self] in
             for await event in session.events {
                 guard let self, !Task.isCancelled else { return }
@@ -200,6 +227,7 @@ final class TripShareStore {
         guard sessions[roomID] === session, var link = link(roomID: roomID) else { return }
         let view = await session.view()
         rooms[roomID] = view
+        remember(view, roomID: roomID)
         if case .status(.ended) = event, link.phase != .ended {
             // 내보내졌거나 방이 사라졌다. 로컬 사본은 보통 여행으로 남는다.
             link.phase = .ended
