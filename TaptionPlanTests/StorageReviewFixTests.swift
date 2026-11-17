@@ -305,3 +305,46 @@ extension StorageReviewFixTests {
                        "저장 형식은 그대로(경로 문자열만 바뀜)")
     }
 }
+
+// MARK: 확정한 날의 다시 판정 (REV1117A03, 대표 결정 2026-11-17: 원본이 바뀐 날만 봉인을 풀고 다시 판정)
+
+extension StorageReviewFixTests {
+    private func sealedDigest(day: Date, fingerprint: String?) -> TaptionSealedDay {
+        TaptionSealedDayBuilder.make(
+            day: day, sealedAt: day.addingTimeInterval(86_400), sourceFingerprint: fingerprint,
+            categories: ["work": 3_600], metrics: [:], steps: 0, distanceMeters: 0, readings: [],
+            weather: nil, memoCount: 0, actualCount: 1, travelCount: 0, placeCount: 0
+        )
+    }
+
+    @MainActor
+    func testNewRawReadingForSealedPastDayReleasesTheSealAndQueuesAnalysis() {
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: .now)
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+        model.sealedDays[yesterday] = sealedDigest(day: yesterday, fingerprint: "old")
+        model.sealedDays[today] = sealedDigest(day: today, fingerprint: "today")
+
+        model.scheduleSensorAnalysis(containing: yesterday.addingTimeInterval(3 * 3_600), immediately: false)
+
+        XCTAssertNil(model.sealedDay(for: yesterday), "새 원본이 들어온 지난날은 확정을 푼다")
+        XCTAssertNotNil(model.pendingSensorAnalysisRevisions[yesterday], "그날을 다시 판정한다")
+        XCTAssertNotNil(model.sealedDay(for: today), "다른 날 확정은 그대로")
+        model.sensorAnalysisDebounceTask?.cancel()
+    }
+
+    func testSealIsRefreshedOnlyWhenTheDaysRecordsChanged() {
+        let day = Date(timeIntervalSince1970: 1_700_000_000)
+        let sealed = sealedDigest(day: day, fingerprint: "A")
+        XCTAssertFalse(PlanDayRecalculationPolicy.sourceChanged(sealed: sealed, fingerprint: "A", isComplete: true))
+        XCTAssertTrue(PlanDayRecalculationPolicy.sourceChanged(sealed: sealed, fingerprint: "B", isComplete: true),
+                      "그날 기록(실제·장소·이동)이 바뀌면 확정 요약을 다시 만든다")
+        XCTAssertFalse(PlanDayRecalculationPolicy.sourceChanged(sealed: sealed, fingerprint: "B", isComplete: false),
+                       "덜 읽힌 날로는 확정을 바꾸지 않는다")
+        XCTAssertFalse(PlanDayRecalculationPolicy.sourceChanged(sealed: sealed, fingerprint: nil, isComplete: true))
+        XCTAssertFalse(PlanDayRecalculationPolicy.sourceChanged(
+            sealed: sealedDigest(day: day, fingerprint: nil), fingerprint: "B", isComplete: true),
+            "지문이 없던 예전 확정은 그대로 둔다")
+    }
+}

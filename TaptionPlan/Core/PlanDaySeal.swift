@@ -34,6 +34,13 @@ enum PlanDayRecalculationPolicy {
     ) -> Bool {
         isComplete && isSettled(day, now: now, calendar: calendar)
     }
+
+    /// 확정한 날의 기록(실제·장소·이동)이 확정 뒤에 바뀌었는지. 끝까지 읽힌 날의 지문으로만 판단하고,
+    /// 지문이 없는 예전 확정은 그대로 둔다.
+    static func sourceChanged(sealed: TaptionSealedDay, fingerprint: String?, isComplete: Bool) -> Bool {
+        guard isComplete, sealed.sourceFingerprint != nil, fingerprint != nil else { return false }
+        return !sealed.matches(sourceFingerprint: fingerprint)
+    }
 }
 
 // `TaptionSealedWeather`·`TaptionSealedDay`는 저장 형식이라 `TaptionPlanStore/TaptionSealedDay.swift`에 있다.

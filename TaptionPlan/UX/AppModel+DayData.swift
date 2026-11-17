@@ -303,7 +303,15 @@ extension AppModel {
         for offset in 1...max(1, limit) {
             guard !Task.isCancelled, acceptsDataMutation() else { return }
             guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
-            if sealedDays[day] != nil { continue }
+            if let sealed = sealedDays[day] {
+                // 확정 뒤 그날 기록이 바뀌었으면(다른 기기 편집 동기화 등) 요약을 다시 만든다. 읽기는 늘리지 않는다.
+                guard let cached = await cachedPlanDayDataSnapshot(for: day),
+                      PlanDayRecalculationPolicy.sourceChanged(
+                        sealed: sealed, fingerprint: cached.sourceFingerprint, isComplete: cached.isComplete)
+                else { continue }
+                await sealDay(day)
+                continue
+            }
             // 캐시에 없는 날은 건너뛴다. 확정은 하루치 원본을 읽으므로, 앱을 열 때마다 여러 날을
             // 읽으면 시작이 느려진다. 어제는 늘 확정하고, 그 이전은 지도가 미리 읽어 둔 날만 확정한다.
             if offset > 1, await cachedPlanDayDataSnapshot(for: day) == nil { continue }
