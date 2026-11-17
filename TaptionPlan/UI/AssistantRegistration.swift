@@ -4,11 +4,13 @@ import Security
 extension AssistantEnvironment {
     /// 지금 앱의 환경: 키체인·기기 설정·실서버, 헤더에는 지금 공유 수준과 잠금 여부.
     @MainActor static var live: AssistantEnvironment {
-        AssistantEnvironment(
+        var env = AssistantEnvironment(
             secrets: AssistantKeychainSecrets.shared, defaults: .standard, session: .shared, host: TripRelay.host,
             clearConnections: { AssistantKeyStore.removeAll() }, saveConnection: { AssistantKeyStore.save($0) },
             client: { .live }
         )
+        env.moveRules = { old, fresh, env in await AssistantRuleStore.move(from: old, to: fresh, env: env) }
+        return env
     }
 }
 

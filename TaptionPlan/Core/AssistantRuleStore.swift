@@ -176,6 +176,36 @@ enum AssistantRuleStore {
         return true
     }
 
+    /// 주 키 바꾸기(AIF1118A01, 대표 결정 2026-11-18): 예전 자리의 규칙(아직 못 올린 내 편집을 얹어)을 새 키로 올리고,
+    /// 다 올린 뒤에만 예전 자리에서 지운다. 하나라도 실패하면 false — 예전 자리는 그대로이고 바꾸기는 다음에 다시 돈다.
+    static func move(from old: String, to fresh: String, env: AssistantRegistration.Environment) async -> Bool {
+        let defaults = env.defaults
+        guard let reply = await TripRelay.send(TripRelay.relayRequest("/rules", method: "GET", token: old, host: env.host, client: env.client()), session: env.session),
+              reply.status == 200, let listed = try? JSONDecoder().decode(RuleSet.self, from: reply.data) else { return false }
+        let rules = applying(outbox(defaults), to: listed).rules
+        guard !rules.isEmpty || !listed.rules.isEmpty else { return true }
+        var version = 0
+        for start in stride(from: 0, to: rules.count, by: opsPerRequest) {
+            let ops = rules[start..<min(start + opsPerRequest, rules.count)].map { Op(op: "put", id: $0.id, rule: $0) }
+            let body = try? JSONEncoder().encode(OpsBody(baseVersion: version, ops: Array(ops)))
+            guard let reply = await TripRelay.send(body.flatMap { TripRelay.relayRequest("/rules/ops", method: "POST", body: $0, token: fresh, host: env.host, client: env.client()) }, session: env.session),
+                  (200..<300).contains(reply.status) else { return false }
+            version = ((try? JSONSerialization.jsonObject(with: reply.data)) as? [String: Any])?["version"] as? Int ?? version
+        }
+        let oldIDs = listed.rules.map(\.id)
+        for start in stride(from: 0, to: oldIDs.count, by: opsPerRequest) {
+            let ids = oldIDs[start..<min(start + opsPerRequest, oldIDs.count)].joined(separator: ",")
+            let request = TripRelay.relayRequest("/rules", method: "DELETE", query: [URLQueryItem(name: "ids", value: ids)], token: old, host: env.host, client: env.client())
+            guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return false }
+        }
+        // 기기 사본은 새 자리 버전부터 센다. 올린 것이 곧 서버 것이라 다시 올릴 것은 없다.
+        if let data = try? JSONEncoder().encode(RuleSet(version: version, rules: rules)) { defaults.set(data, forKey: setKey) }
+        defaults.removeObject(forKey: outboxKey)
+        defaults.set(-1, forKey: ackedKey)
+        refreshSnapshot(defaults)
+        return true
+    }
+
     /// 처음 한 번: 기기에만 있던 결제 문자 규칙·넣지 않을 낱말·내 계좌 이름을 서버에 올릴 것으로 둔다.
     /// 올리기가 성공한 뒤에야 끝난 것으로 적는다(`sync`).
     static func migrateIfNeeded(_ defaults: UserDefaults = .standard) {
