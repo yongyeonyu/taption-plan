@@ -668,7 +668,8 @@ struct TravelModeView: View {
         // 길게 누르기를 모르는 사람도 고치기·지우기를 찾게 ⋯ 단추로도 같은 메뉴를 연다(TVX1116A01).
         .overlay(alignment: .topTrailing) {
             Menu { cardMenu(entry) } label: {
-                Image(systemName: "ellipsis").font(.system(size: 14, weight: .semibold)).frame(width: 34, height: 26).contentShape(Rectangle())
+                Image(systemName: "ellipsis").font(.system(size: 14, weight: .semibold)).frame(width: 34, height: 26)
+                    .taptionTouchTarget(visualWidth: 34, visualHeight: 26)
                     .foregroundStyle(entry.state == .someday ? TravelInk.plan : TravelInk.land)
             }
             .accessibilityLabel(language.text("여행 메뉴", "Trip menu"))

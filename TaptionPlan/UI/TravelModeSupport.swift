@@ -224,7 +224,8 @@ struct TravelPlanHandleBar: View {
     var body: some View {
         Capsule().fill(TravelInk.border).frame(width: 44, height: 5).padding(.top, 7).padding(.bottom, 3)
             .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+            // 막대는 15pt라 누르는 영역만 위아래로 넓힌다(TVM1117A02).
+            .taptionTouchTarget(visualWidth: TaptionControl.primary, visualHeight: 15)
             .onTapGesture(perform: onLower)
             .highPriorityGesture(DragGesture(minimumDistance: 6)
                 .onChanged { onDrag($0.translation.height, false) }
@@ -237,6 +238,7 @@ struct TravelPlanHandleBar: View {
                     Button(action: onToggleMap) {
                         Image(systemName: isMapFolded ? "rectangle.split.1x2" : "rectangle.expand.vertical")
                             .font(.system(size: 13, weight: .medium)).foregroundStyle(TravelInk.plan).frame(width: 44, height: 22)
+                            .taptionTouchTarget(visualWidth: 44, visualHeight: 22)
                     }
                     .buttonStyle(.plain)
                     .padding(.trailing, 8)
@@ -446,7 +448,10 @@ struct TravelPlanHistoryBar: View {
     }
 
     private func button(_ symbol: String, _ label: String, isOn: Bool, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 14, weight: .medium)).frame(width: TaptionControl.round, height: TaptionControl.chip) }
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 14, weight: .medium)).frame(width: TaptionControl.round, height: TaptionControl.chip)
+                .taptionTouchTarget(visualWidth: TaptionControl.round, visualHeight: TaptionControl.chip)
+        }
             .buttonStyle(.plain)
             .opacity(isOn ? 1 : 0.3)
             .disabled(!isOn)

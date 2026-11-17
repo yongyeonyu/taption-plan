@@ -48,7 +48,9 @@ struct TripClipboardBanner: View {
             .labelStyle(.iconOnly)
             .buttonBorderShape(.capsule)
             Button(action: onDismiss) {
+                // 왼쪽은 붙여넣기 단추라 오른쪽으로만 넓혀 44pt를 만든다(TVM1117A02).
                 Image(systemName: "xmark").frame(width: 32, height: 44)
+                    .padding(.trailing, 12).contentShape(Rectangle()).padding(.trailing, -12)
             }
             .buttonStyle(.plain)
             .foregroundStyle(Color.tpSecondary)

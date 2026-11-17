@@ -1215,6 +1215,40 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         XCTAssertTrue(app.buttons["취소"].waitForExistence(timeout: 5), "여행 이름을 누르면 여행 고치기 시트가 열린다")
         shot(app, "7-trip-properties")
     }
+
+    /// TVM1117A02: 작은 단추는 보이는 그림 몇 pt 밖을 눌러도 눌린다(누르는 영역 44pt). 지도 접기(44×22)와 여행 카드 ⋯(34×26)로 본다.
+    func testSmallTravelButtonsAnswerOutsideTheirPicture() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launchWithoutPrompts()
+        let travel = app.buttons["여행으로 가기"]
+        XCTAssertTrue(travel.waitForExistence(timeout: 40))
+        let later = app.buttons["나중에 확인"]
+        if later.waitForExistence(timeout: 3) { later.tap() }
+        travel.tap()
+        let raise = app.buttons["계획표 올리기"].firstMatch
+        try XCTSkipUnless(raise.waitForExistence(timeout: 20), "열 여행이 없는 기기")
+        raise.tap()
+        let fold = app.buttons["지도 접기"].firstMatch, unfold = app.buttons["지도 펼치기"].firstMatch
+        XCTAssertTrue(fold.waitForExistence(timeout: 5) || unfold.exists, "계획표 막대에 지도 접기 단추가 있다")
+        let wasFolded = unfold.exists
+        let toggle = wasFolded ? unfold : fold, flipped = wasFolded ? fold : unfold
+        let frame = toggle.frame
+        // 그림 위 8pt(예전에는 막대의 「계획표 내리기」에 눌렸다).
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.minY - 8)).tap()
+        XCTAssertTrue(flipped.waitForExistence(timeout: 3), "그림 8pt 위를 눌러도 지도 접기가 눌린다")
+        XCTAssertTrue(app.descendants(matching: .any)["계획표 내리기"].exists, "계획표는 그대로 올라와 있다")
+        flipped.tap() // 높이를 돌려놓는다.
+        XCTAssertTrue(toggle.waitForExistence(timeout: 3))
+
+        app.buttons["여행 목록으로"].firstMatch.tap()
+        let menu = app.buttons["여행 메뉴"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 8), "지구본에 여행 카드가 있다")
+        let spot = menu.frame
+        // ⋯ 그림 아래 7pt는 카드 몸통이다(예전에는 그 여행으로 날아갔다).
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: spot.midX, dy: spot.maxY + 7)).tap()
+        XCTAssertTrue(app.buttons["여행 고치기"].waitForExistence(timeout: 3), "⋯ 그림 7pt 아래를 눌러도 여행 메뉴가 열린다")
+    }
 }
 
 /// 할 일 판은 늘 왼쪽 위에 펼쳐져 있고(TDW1114A01, 여는 단추는 없어졌다), 「확인」 탭의 「내가 확인」이 그 질문을 띄운다(TDL1112A01).
