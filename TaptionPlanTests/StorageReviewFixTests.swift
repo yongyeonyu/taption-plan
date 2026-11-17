@@ -348,3 +348,24 @@ extension StorageReviewFixTests {
             "지문이 없던 예전 확정은 그대로 둔다")
     }
 }
+
+// MARK: 버스 정류장 조회 좌표 (REV1117A03, 대표 결정 2026-11-17: 보내되 서버는 저장·기록하지 않는다)
+
+extension StorageReviewFixTests {
+    func testStopLookupSendsCoordinatesInTheBodyNotTheAddress() throws {
+        let query = ["lat": "37.5", "lng": "127.0"]
+        let request = try XCTUnwrap(BusRouteLookupRunner.request(
+            host: "relay.example.com", path: "/tago/stops", query: query, token: "t", inBody: true))
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertNil(request.url?.query, "주소에는 좌표를 넣지 않는다")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+        let body = try XCTUnwrap(request.httpBody)
+        XCTAssertEqual(try JSONSerialization.jsonObject(with: body) as? [String: Double], ["lat": 37.5, "lng": 127.0])
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer t")
+
+        let old = try XCTUnwrap(BusRouteLookupRunner.request(
+            host: "relay.example.com", path: "/tago/stops", query: query, token: "t", inBody: false))
+        XCTAssertEqual(old.httpMethod, "GET", "본문을 모르는 예전 서버(405)에는 쿼리로 다시 묻는다")
+        XCTAssertNotNil(old.url?.query)
+    }
+}
