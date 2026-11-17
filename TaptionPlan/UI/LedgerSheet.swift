@@ -522,7 +522,7 @@ struct LedgerBudgetForm: View {
             .font(.taptionStyle(.subheadline))
             .navigationTitle(language.text("예산", "Budget"))
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear { amountText = book.budget(for: period).map { String(Int($0.amountKRW)) } ?? "" }
+            .onAppear { amountText = book.budget(for: period).map { LedgerSplit.won($0.amountKRW).description } ?? "" }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(language.text("취소", "Cancel")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

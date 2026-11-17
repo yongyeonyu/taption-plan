@@ -498,6 +498,7 @@ private struct TaptionWatchNextPlanView: View {
                     Text(detail(next))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .privacySensitive()
                 }
                 .lineLimit(1)
             }

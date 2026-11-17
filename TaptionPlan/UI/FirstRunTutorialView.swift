@@ -333,7 +333,11 @@ struct FirstRunTutorialView: View {
     private func confirmStep() {
         if step == .aiConnect, !isAIConnected {
             // 서버를 쓸 수 없는 빌드는 연결할 길이 없어 그대로 지나간다.
-            if TripRelay.isAvailable { isAIChooserPresented = true } else { advance() }
+            if TripRelay.isAvailable {
+                // 연결 승인에 앱 비밀번호가 필요하다. 비밀번호 단계는 이 뒤라, 없으면 기본값을 먼저 등록한다(REV1117A04).
+                registerDefaultPINIfNeeded()
+                isAIChooserPresented = true
+            } else { advance() }
             return
         }
         if step == .password, !savePasswordEntry() { return }

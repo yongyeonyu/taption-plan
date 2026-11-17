@@ -64,7 +64,6 @@ struct TaptionWidgetActionIntent: AppIntent {
                 await activity.end(ActivityContent(state: state, staleDate: nil), dismissalPolicy: .default)
             }
         }
-        WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }

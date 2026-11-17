@@ -96,7 +96,8 @@ enum WatchLaunchDiagnostics {
         let trimmed = data.count > maximumBytes
             ? data.suffix(maximumBytes)
             : data
-        return String(data: trimmed, encoding: .utf8)
+        // 글자 중간에서 잘린 바이트가 있어도 읽히게 한다(REV1117A04).
+        return String(decoding: trimmed, as: UTF8.self)
     }
 
     static func clear() {
