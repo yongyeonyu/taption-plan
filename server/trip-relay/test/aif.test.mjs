@@ -99,6 +99,16 @@ test("AIF1118A01: trip ledger companions cannot include the user's own \"@me\" (
   assert.equal(isCommand(cmd("updateLedgerTrip", { tripId: "t1", members: [] })), true);
 });
 
+test("AIF1118A01: photo links the app refuses (upper-case scheme, explicit port) are refused here too", async () => {
+  const { isCommand } = await import("../src/validate.js");
+  const photo = (photoUrl) => isCommand({ format: "bokki-command", version: 1, id: "c1", action: "setTripItemPhoto", itemId: "i1", photoUrl });
+  assert.equal(photo("https://upload.wikimedia.org/a.jpg"), true);
+  assert.equal(photo("HTTPS://upload.wikimedia.org/a.jpg"), false);
+  assert.equal(photo("https://upload.wikimedia.org:443/a.jpg"), false);
+  assert.equal(photo("https://user@upload.wikimedia.org/a.jpg"), false);
+  assert.equal(photo("https://UPLOAD.wikimedia.org/a.jpg"), true, "the app lower-cases the host");
+});
+
 test("AIF1118A01: tool descriptions state the real daily edit limit", async () => {
   const { toolList } = await import("../src/mcp.js");
   const { LIMITS } = await import("../src/state.js");

@@ -110,6 +110,8 @@ const SINCE = 341;
 export const PHOTO_HOSTS = ["upload.wikimedia.org", "images.unsplash.com", "images.pexels.com"];
 const photoLink = (v) => {
   if (typeof v !== "string" || v.length > 500) return false;
+  // 앱은 소문자 https와 포트·사용자 없는 주소만 받는다(URL이 HTTPS·:443을 고쳐 읽으므로 원문으로 본다, AIF1118A01).
+  if (!/^https:\/\/[^/?#:@]+(?:[/?#]|$)/.test(v)) return false;
   try {
     const url = new URL(v);
     return url.protocol === "https:" && !url.username && !url.password && !url.port && PHOTO_HOSTS.includes(url.hostname.toLowerCase());
