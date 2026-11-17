@@ -27,7 +27,8 @@ public enum TaptionWatchBackgroundBudget {
             }
             let timer = Task {
                 try? await Task.sleep(for: budget)
-                if race.finish(false) { worker.cancel() }
+                // 돌아가기 전에 취소를 알린다.
+                race.finish(false) { worker.cancel() }
             }
             race.onFinish { timer.cancel() }
         }
@@ -55,9 +56,8 @@ public enum TaptionWatchBackgroundBudget {
             if runNow { action() }
         }
 
-        /// 먼저 부른 쪽만 결과를 정한다. 정했으면 `true`.
-        @discardableResult
-        func finish(_ value: Bool) -> Bool {
+        /// 먼저 부른 쪽만 결과를 정한다.
+        func finish(_ value: Bool, beforeResuming: () -> Void = {}) {
             let taken = state.withLock { state -> (CheckedContinuation<Bool, Never>?, (@Sendable () -> Void)?)? in
                 guard !state.finished else { return nil }
                 state.finished = true
@@ -67,10 +67,10 @@ public enum TaptionWatchBackgroundBudget {
                 }
                 return (state.continuation, state.cleanup)
             }
-            guard let taken else { return false }
+            guard let taken else { return }
+            beforeResuming()
             taken.1?()
             taken.0?.resume(returning: value)
-            return true
         }
     }
 }
