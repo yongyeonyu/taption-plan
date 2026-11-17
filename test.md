@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## LOG1118A01 · 중계 서버 Workers Logs 끔 (2026-11-18)
+
+- 대표 결정: Workers Logs는 꺼짐 고정. `server/trip-relay/wrangler.toml`·`wrangler.local.toml`에 `[observability] enabled = false`(`56be8257`), PRIVACY.md에 버스 정류장 좌표 한 줄.
+- 모의 배포(`--dry-run`) 종료 0. 실제 배포는 에이전트 명령이 안전 검사에 막혀 대표가 터미널에서 실행: 업로드·트리거 배포 성공, 버전 ID `65de4279`. 코드는 버전 `1153a89e`와 같고 로그 설정만 바뀜.
+- 대시보드 화면은 확인하지 않음(설정 파일이 배포마다 끔을 적용).
+
 ## REV1117A03 · 서울도 TAGO로 (2026-11-18, 시뮬레이터 `99AC6F35…`)
 
 - 대표 결정(2026-11-17): 정류장 찾기를 https인 `/tago/stops`로 먼저, TAGO가 응답했는데 가까운 정류장이 없을 때만 평문 `/seoul/stops`(좌표는 POST 본문). 동작 변경: TAGO가 응답하지 않으면 서울시로 넘어가지 않고 nil(다음 판정 때 다시).
