@@ -2612,6 +2612,7 @@ extension AssistantPhase3Tests {
         let text = String(decoding: body, as: UTF8.self)
         XCTAssertTrue(text.contains("빵집"))
         XCTAssertFalse(text.contains("꽃가게"))
+        XCTAssertEqual(store.stringArray(forKey: SharedRuleStore.sentKey)?.count, 1)
         AssistantRuleSnapshot.set([])
     }
 }

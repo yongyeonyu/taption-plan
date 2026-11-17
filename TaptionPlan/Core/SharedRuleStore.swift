@@ -166,7 +166,7 @@ enum SharedRuleStore {
         guard !batch.isEmpty, let body = try? JSONEncoder().encode(UploadBody(rules: batch.map(\.upload))),
               let reply = await TripRelay.send(TripRelay.relayRequest("/shared/candidates", method: "POST", body: body, token: master, host: env.host, client: env.client()), session: env.session),
               (200..<300).contains(reply.status) else { return 0 }
-        defaults.set(Array((defaults.stringArray(forKey: sentKey) ?? []) + batch.map(\.mark)).suffix(sentLimit), forKey: sentKey)
+        defaults.set(Array(((defaults.stringArray(forKey: sentKey) ?? []) + batch.map(\.mark)).suffix(sentLimit)), forKey: sentKey)
         return batch.count
     }
 }
