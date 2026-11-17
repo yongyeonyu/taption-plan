@@ -167,7 +167,9 @@ actor SensorCollectionLiveActivityController {
         } else {
             sensorHUDUntil = nil
         }
-        let salary = SalaryLiveSnapshot.read()
+        let salary = SalaryLiveSnapshot.forLiveActivity(
+            hidesSensitiveContent: TaptionExternalPrivacyStore.isLocked
+        )
         let activityFrame: Int = hasNewSample
             ? ((previousState?.currentActivityFrame ?? -1) % 6 + 1) % 6
             : (previousState?.currentActivityFrame ?? 0)
@@ -534,6 +536,17 @@ actor TaptionLiveActivityController {
     }
 }
 
+/// 계획을 고친 뒤 Live Activity를 다시 그릴 계획. 실행 중이고 활동에 보이는 값이 바뀐 것만 고른다.
+enum LiveActivityPlanEditPolicy {
+    static func changedRunningPlans(before: [PlanRecord], after: [PlanRecord]) -> [PlanRecord] {
+        let previous = Dictionary(before.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return after.filter { plan in
+            guard plan.status == .running, let old = previous[plan.id] else { return false }
+            return old.title != plan.title || old.categoryID != plan.categoryID || old.span != plan.span
+        }
+    }
+}
+
 enum LiveActivityLiveness {
     static func isLive(_ state: ActivityState) -> Bool {
         switch state {
@@ -572,6 +585,14 @@ struct SalaryLiveSnapshot: Equatable {
             isWorking: measured ? defaults.bool(forKey: workingKey) : nil,
             tickSeconds: measured ? defaults.integer(forKey: tickKey) : nil
         )
+    }
+
+    /// 개인정보 잠금 중에는 잠금 화면에 금액을 싣지 않는다(WLA1117A01).
+    static func forLiveActivity(
+        _ defaults: UserDefaults = .standard,
+        hidesSensitiveContent: Bool
+    ) -> SalaryLiveSnapshot {
+        hidesSensitiveContent ? SalaryLiveSnapshot() : read(defaults)
     }
 
     /// nil이면 모든 키를 지운다.

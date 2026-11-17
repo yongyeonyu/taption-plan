@@ -69,7 +69,10 @@ extension AppModel {
 
     @discardableResult
     func persistOrRollBack(_ rollback: UserEditRollback, actualEdit: PlanActualEdit? = nil) async -> Bool {
-        if await persist(actualEdit: actualEdit) { return true }
+        if await persist(actualEdit: actualEdit) {
+            await refreshRunningPlanLiveActivity(before: rollback.before.plans)
+            return true
+        }
         rollBackUnsavedEdit(rollback)
         return false
     }

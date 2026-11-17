@@ -287,6 +287,21 @@ extension AppModel {
         await persist()
     }
 
+    /// 사용자 편집 저장이 끝난 뒤, 실행 중 계획의 표시 값이 바뀌었으면 그 Live Activity만 고친다(WLA1117A01).
+    func refreshRunningPlanLiveActivity(before: [PlanRecord]) async {
+        guard !TaptionExternalPrivacyStore.isLocked else { return }
+        for plan in LiveActivityPlanEditPolicy.changedRunningPlans(before: before, after: snapshot.plans) {
+            let majorCategory = currentMajorCategory(for: plan)
+            try? await liveActivityController.update(
+                plan: plan,
+                catStyle: snapshot.settings.catStyle,
+                majorCategoryID: majorCategory.id,
+                majorCategoryTitle: majorCategory.title,
+                majorCategorySystemImage: majorCategory.systemImage
+            )
+        }
+    }
+
     func skipPlan(_ planID: UUID) async {
         guard let index = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
             userFacingError = AppLanguagePreference.text(
@@ -505,6 +520,8 @@ extension AppModel {
     func concealExternalSurfaces() async {
         setExternalPrivacyLocked(true)
         await liveActivityController.concealAll()
+        // 센서 수집 활동의 연봉 카운터·오늘 요약도 잠근 즉시 걷는다(WLA1117A01).
+        await reconcileSensorCollectionLiveActivity(isForeground: isSceneActive)
     }
 
     /// The iPhone snapshot is the only Watch settings source. This method is

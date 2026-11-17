@@ -110,6 +110,16 @@
 - 지킨 것: 기본 앱 비밀번호 등록 흐름·권한 창·홈 배치·저장 형식 그대로, 위젯·Live Activity·Watch 파일 안 건드림.
 - 하지 않은 것: 실기기 확인(이번 범위 밖), 지도 위 실제 MapKit 검색 지연 재현은 단위 시험의 기다리는 검색으로 대신함.
 
+## WLA1117A01 · 위젯·Live Activity 보류 결함 넷 (2026-11-17~18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: `0551fecb` 위 커밋 넷(결함마다 하나). Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data는 외장 볼륨. 로그 `build/validation/WLA1117A01/`.
+- 고침: ① 개인정보 잠금 중 센서 수집 Live Activity에 연봉 카운터를 싣지 않음(`SalaryLiveSnapshot.forLiveActivity`), 잠글 때 그 활동을 바로 다시 맞춤, 위젯 줄 `privacySensitive`. ② 「종료」를 앱·위젯 두 대상의 `TaptionLiveActivityStopIntent: LiveActivityIntent`로(떠 있는 앱 모델이면 `performQuickAction`, 아니면 공유 저장소 길). ③ 위젯 payload 항목에 선택 값 `isOpenEnded`(옛 payload 그대로 읽힘)를 두고 타임라인 칸마다 끝을 그 시각 +1초로 늘림. ④ 사용자 편집 저장 성공 뒤 실행 중 계획의 제목·분류·시간이 바뀌면 `update(plan:)`.
+- 단위(관련): 17건 통과(`focused-4.log`). 새 시험 5건 — 잠금 중 연봉 빈 값, 「종료」가 `LiveActivityIntent`·앱 안 열림, 떠 있는 모델에서 의도가 계획을 끝냄, 열린 기록 막대가 자람(③은 원본에서 열림을 고르기 전 실패를 `focused-2.log`에서 확인), 고친 실행 계획만 갱신 대상. `focused-1·3`은 시뮬레이터 연결 오류(코드 무관)로 다시 돌림.
+- 단위 `-only-testing:TaptionPlanTests`: 1차 2,976건 중 실패 1(`TaptionStoreColumnCodingTests.testColumnCodecIsFasterThanTheLegacyJSONPath`, 시간 비교 0.90×, `unit-1.log`) — 혼자 3회 통과(`single-codec1~3.log`). 2차 2,976건 **실패 0**, 건너뜀 25(`unit-2.log`).
+- 빌드: `TaptionPlanWidget`·`TaptionPlanWatchWidget` 모두 `generic/platform=iOS Simulator`로 성공(`widget-1.log`·`watchwidget-1.log`).
+- 구조 지표 기준선 통과, import 경계 통과. 번역: 새 `text()` 문구 없음(의도 제목은 `isDiscoverable = false`로 사용자에게 안 보임), extract 후 check 실패 0 — 줄 위치만 바뀌어 `source.json`은 되돌림(생성은 메인).
+- 못 한 것: 실기기에서 잠금 화면 「종료」·막대 흐름·잠금 가림 확인 없음. UI 시험 없음.
+
 ## MRG1117A02 · 리뷰 4개·옛 화면 정리·성능 고침을 합친 main 전체 확인 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: `d72ac89e`(REV1117A01~04, LGC1117A01, PRF1117A02 합침 + 번역 재생성). Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data는 외장 볼륨. 로그 `build/validation/MRG1117A02/`.

@@ -47,7 +47,7 @@ struct TaptionScheduleProvider: TimelineProvider {
                 date: .now,
                 payload: context.isPreview
                     ? .placeholder
-                    : groundTruthPayload()
+                    : groundTruthPayload().extendingOpenEndedItems(to: .now)
             )
         )
     }
@@ -93,7 +93,7 @@ struct TaptionScheduleProvider: TimelineProvider {
             .map {
                 TaptionScheduleEntry(
                     date: $0,
-                    payload: payload
+                    payload: payload.extendingOpenEndedItems(to: $0)
                 )
             }
         completion(Timeline(entries: entries, policy: .after(horizon)))
