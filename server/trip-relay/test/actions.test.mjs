@@ -4,7 +4,7 @@ import test from "node:test";
 import { f, makeRegistry, registry } from "../src/actions.js";
 import { readFileSync } from "node:fs";
 import { toolList } from "../src/mcp.js";
-import { ACTIONS, COMMAND_FIELDS, cleanAppState, cleanCommand, isAppState, isCommand } from "../src/validate.js";
+import { ACTIONS, COMMAND_FIELDS, cleanAppState, cleanCommand, isAppState, isCommand, isDate } from "../src/validate.js";
 
 const sample = () => makeRegistry().add("setFxRate", {
   tool: "set_fx_rate", title: "Set an exchange rate", description: "KRW per one unit of a currency.", destructive: false, since: 340,
@@ -29,6 +29,13 @@ test("registry: validates required and optional fields and the extra check", () 
 test("registry: field kinds", () => {
   assert.equal(f.date().check("2026-11-14"), true);
   assert.equal(f.date().check("2026-13-01"), false);
+  // REV1117A02: 없는 날은 다음 달로 넘기지 않고 거절한다(앱도 거절한다).
+  for (const day of ["2026-02-30", "2026-02-31", "2027-02-29", "2026-04-31"]) {
+    assert.equal(f.date().check(day), false, day);
+    assert.equal(isDate(day), false, day);
+  }
+  assert.equal(f.date().check("2028-02-29"), true);
+  assert.equal(isDate("2028-02-29"), true);
   assert.equal(f.time().check("23:59"), true);
   assert.equal(f.time().check("24:00"), false);
   assert.equal(f.id().check("abc-1.2:3_x"), true);

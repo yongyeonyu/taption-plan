@@ -5,6 +5,12 @@
 
 const stripInvisible = (text) => text.replace(/[​-‏‪-‮⁠-⁤﻿]/g, "");
 const codePoints = (text) => [...text].length;
+/** 2026-02-31처럼 달력에 없는 날은 거짓(Date.parse는 다음 달로 넘긴다). */
+export const realDay = (v) => {
+  const [y, m, d] = v.split("-").map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d));
+  return day.getUTCFullYear() === y && day.getUTCMonth() === m - 1 && day.getUTCDate() === d;
+};
 const field = (check, schema) => ({ check, schema, required: false, required_() { return { ...this, required: true }; } });
 const described = (schema, description) => (description ? { ...schema, description } : schema);
 
@@ -17,7 +23,7 @@ export const f = {
   ref: (description) => field((v) => typeof v === "string" && v.trim().length > 0 && v.length <= 100, described({ type: "string", maxLength: 100 }, description)),
   id: (description) => field((v) => typeof v === "string" && /^[\w.:-]{1,100}$/.test(v), described({ type: "string", maxLength: 100 }, description)),
   date: (description = "Day in the user's time zone, YYYY-MM-DD") => field(
-    (v) => typeof v === "string" && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(v),
+    (v) => typeof v === "string" && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(v) && realDay(v),
     described({ type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" }, description)),
   time: (description = "HH:mm (24h)") => field(
     (v) => typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
