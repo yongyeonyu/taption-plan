@@ -7,9 +7,6 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
     static var onRefresh: (@Sendable @MainActor () async -> Void)?
 
     private static let refreshInterval: TimeInterval = 30 * 60
-    /// 백그라운드 실행 예산 안에서 끝낸다. 전송 확인이 못 오면 다음 실행 때 다시 보낸다.
-    private static let refreshBudget: Duration = .seconds(25)
-    private static let connectivityWaitLimit = 20
 
     func applicationDidFinishLaunching() {
         scheduleRefresh()
@@ -38,10 +35,9 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
             case let connectivity as WKWatchConnectivityRefreshBackgroundTask:
                 Task { @MainActor in
                     // 전달할 내용이 남아 있는 동안 끝내면 수신이 다음 실행으로 밀린다.
-                    var waited = 0
-                    while WCSession.default.hasContentPending, waited < Self.connectivityWaitLimit {
-                        try? await Task.sleep(for: .seconds(1))
-                        waited += 1
+                    let deadline = ContinuousClock.now + TaptionWatchBackgroundBudget.connectivityWait
+                    while WCSession.default.hasContentPending, ContinuousClock.now < deadline {
+                        try? await Task.sleep(for: .milliseconds(500))
                     }
                     connectivity.setTaskCompletedWithSnapshot(false)
                 }
@@ -51,13 +47,17 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
         }
     }
 
+    /// 백그라운드 실행 예산 안에서 돌아온다. 넘기면 동기화를 취소하고 기다리지 않는다.
+    /// 커밋하지 못한 창과 ack를 못 받은 outbox는 다음 실행이 잇는다(WSY1117A01).
     private func runRefresh() async {
         guard let onRefresh = Self.onRefresh else { return }
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await onRefresh() }
-            group.addTask { try? await Task.sleep(for: Self.refreshBudget) }
-            await group.next()
-            group.cancelAll()
+        let finished = await TaptionWatchBackgroundBudget.run(
+            within: TaptionWatchBackgroundBudget.refresh
+        ) {
+            await onRefresh()
+        }
+        if !finished {
+            WatchLaunchDiagnostics.mark("background refresh budget exceeded")
         }
     }
 
