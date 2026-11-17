@@ -182,8 +182,10 @@ enum TripShareMapping {
     /// 「다 같이」(`shareNames == nil`)는 **지금의 사람들**을 그대로 적는다(나중에 들어온 사람에게 몫이 생기지 않게).
     static func sharedExpense(_ entry: LedgerEntry, names: TripShareNames, by: Int? = nil) -> ShareExpenseContent? {
         guard entry.kind == .expense, entry.transfer == nil, entry.canceledAt == nil, let payer = names.party(ledgerName: entry.payer) else { return nil }
-        let split = entry.shareNames.map { $0.compactMap(names.party(ledgerName:)) } ?? names.parties
-        guard split.count == (entry.shareNames?.count ?? names.parties.count), !split.isEmpty else { return nil }
+        // 폼에 보인 몫 그대로 올린다(표지 없는 자동 기록은 나만).
+        let wanted = entry.effectiveShareNames
+        let split = wanted.map { $0.compactMap(names.party(ledgerName:)) } ?? names.parties
+        guard split.count == (wanted?.count ?? names.parties.count), !split.isEmpty else { return nil }
         return ShareExpenseContent(
             title: entry.title, amount: minorUnits(entry.amount, currency: entry.currency), currency: entry.currency,
             amountKRW: entry.amountKRW.map(clampedWhole), payer: payer, split: split.sorted(),
