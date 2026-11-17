@@ -393,6 +393,48 @@ final class AssistantReviewFixTests: XCTestCase {
         XCTAssertEqual(AssistantPINDerivation.pin(appPassword: "246801", store: store), first.map { AssistantPINDerivation.pin(appPassword: "246801", salt: $0) })
     }
 
+    /// HOF1118A01: 앱 비밀번호를 바꿀 때 서버 PIN이 따라가지 못하면, 「예전」 칸에 넣은 바꾸기 전 비밀번호에서 만든 값을 보낸다.
+    /// 그 값이 틀리면 예전에 따로 정한 PIN으로 한 번 더 본다.
+    func testOldPINFieldSendsTheValueDerivedFromThePreviousAppPassword() async throws {
+        let derive: (String) -> String? = { AssistantPINDerivation.pin(appPassword: $0, salt: Data(repeating: 7, count: 32)) }
+        let next = try XCTUnwrap(derive("246801")), previous = try XCTUnwrap(derive("135790"))
+        func posts() throws -> [[String: String]] {
+            try Phase3RelayStub.requests.filter { $0.summary == "POST /pin" }.map {
+                try XCTUnwrap(JSONSerialization.jsonObject(with: $0.body) as? [String: String])
+            }
+        }
+        func run(_ answers: [Int]) async -> AssistantPINSheet.AlignFailure? {
+            let store = defaults()
+            let queue = AnswerQueue(answers)
+            let env = readyEnvironment(store) { request in request.httpMethod == "POST" ? queue.next() : 200 }
+            Phase3RelayStub.body = #"{"set":true,"locked":false}"#
+            return await AssistantPINSheet.align(next, old: "135790", language: .korean, env: env, derive: derive)
+        }
+
+        // 서버에 바꾸기 전 앱 비밀번호에서 만든 값이 있다.
+        let followed = await run([200])
+        XCTAssertNil(followed)
+        XCTAssertEqual(try posts(), [["pin": next, "currentPin": previous]], "the old field is an app password, so its derived value is sent, never the digits")
+
+        // 예전에 따로 정한 PIN이면 두 번째에 맞는다.
+        let legacy = await run([403, 200])
+        XCTAssertNil(legacy)
+        XCTAssertEqual(try posts(), [["pin": next, "currentPin": previous], ["pin": next, "currentPin": "135790"]])
+
+        // 둘 다 틀리면 틀렸다고 알린다(더 보내지 않는다).
+        let wrong = await run([403, 403])
+        guard case let .refused(refusal) = wrong else { return XCTFail("\(String(describing: wrong))") }
+        XCTAssertEqual(refusal.kind, .wrongPIN)
+        XCTAssertEqual(try posts().count, 2)
+    }
+
+    private final class AnswerQueue: @unchecked Sendable {
+        private let lock = NSLock()
+        private var answers: [Int]
+        init(_ answers: [Int]) { self.answers = answers }
+        func next() -> Int { lock.withLock { answers.isEmpty ? 500 : answers.removeFirst() } }
+    }
+
     func testForgottenPINResetCutsConnectionsOnlyAfterOwnerAuthentication() async throws {
         let store = defaults()
         store.set(true, forKey: AssistantPINStore.setKey)
