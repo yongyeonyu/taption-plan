@@ -105,7 +105,7 @@ struct LedgerTripRow: View {
         guard entry.transfer == nil, entry.kind == .expense else { return time }
         let payer = LedgerName.display(entry.payer ?? LedgerTrip.me, language)
         let share: String = {
-            guard let names = entry.shareNames else { return language.text("다 같이", "Everyone") }
+            guard let names = entry.effectiveShareNames else { return language.text("다 같이", "Everyone") }
             if names == [LedgerTrip.me] { return language.text("나만", "Only me") }
             return names.map { LedgerName.display($0, language) }.joined(separator: "·")
         }()

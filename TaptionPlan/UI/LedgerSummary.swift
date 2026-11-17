@@ -152,7 +152,7 @@ struct LedgerSummary: Equatable {
             return entry.payer.map { language.text("\($0)에게 받음", "from \($0)") } ?? ""
         }
         let payer = LedgerName.display(entry.payer ?? LedgerTrip.me, language)
-        guard let names = entry.shareNames else { return language.text("\(payer) · 다 같이", "\(payer) · everyone") }
+        guard let names = entry.effectiveShareNames else { return language.text("\(payer) · 다 같이", "\(payer) · everyone") }
         return "\(payer) · " + names.map { LedgerName.display($0, language) }.joined(separator: "·")
     }
 

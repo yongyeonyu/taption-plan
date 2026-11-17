@@ -126,7 +126,7 @@ public struct LedgerTripSheet: Equatable, Sendable {
 }
 
 public enum LedgerTripMath {
-    /// 공금은 따로 두지 않는다(대표 결정): 「다 같이」는 n분의 1, 낸 사람은 비면 나, 몫은 비면 다 같이.
+    /// 공금은 따로 두지 않는다(대표 결정): 「다 같이」는 n분의 1, 낸 사람은 비면 나, 몫은 비면 다 같이(표지 없는 자동 기록은 나만, `effectiveShareNames`).
     /// 여행 수입에 낸 사람(A)이 있으면 「A에게 미리 받은 돈」이다(총무): A가 낸 돈으로 치고 내 쪽에서 뺀다.
     public static func sheet(_ trip: LedgerTrip, entries: [LedgerEntry]) -> LedgerTripSheet {
         let mine = entries.filter { $0.tripID == trip.id }
@@ -134,7 +134,7 @@ public enum LedgerTripMath {
         // 동행 목록에서 빠지거나 이름이 바뀐 사람도 자기 줄로 남긴다(리뷰: 그 사람이 낸 돈이 「내가 낸 돈」이 되던 것).
         var people = everyone
         for entry in mine {
-            for name in [entry.payer].compactMap({ $0 }) + (entry.shareNames ?? []) where !people.contains(name) { people.append(name) }
+            for name in [entry.payer].compactMap({ $0 }) + (entry.effectiveShareNames ?? []) where !people.contains(name) { people.append(name) }
         }
         // 모두 원 단위 정수로 센다: 지출마다 몫의 합이 그 지출과 같아 잔액 합이 늘 0이다(STL1111A01).
         var balances = Dictionary(uniqueKeysWithValues: people.map { ($0, 0) })
@@ -153,7 +153,7 @@ public enum LedgerTripMath {
                 continue
             }
             let payer = entry.payer ?? LedgerTrip.me
-            let sharers = entry.shareNames ?? everyone
+            let sharers = entry.effectiveShareNames ?? everyone
             let split = sharers.isEmpty ? [payer] : sharers
             balances[payer, default: 0] += won
             for (name, share) in zip(split, LedgerSplit.even(won, among: split, payer: payer)) {

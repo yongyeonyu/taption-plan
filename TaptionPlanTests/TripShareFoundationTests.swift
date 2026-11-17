@@ -53,6 +53,17 @@ final class TripShareFoundationTests: XCTestCase {
 
     // MARK: 변환
 
+    /// 표지 없는 자동 기록을 「공동」으로 올리면 몫은 폼에 보인 그대로 나만이다(TSA1117A01, 대표 결정 2026-11-18).
+    func testSharedExpenseUsesTheSplitTheFormShows() throws {
+        let names = TripShareNames(me: 1, cards: [1: ShareMemberCard(name: "가을", color: "#112233"), 2: ShareMemberCard(name: "봄", color: "#445566")])
+        var taxi = LedgerEntry(occurredAt: stamp("2031-10-02T01:00:00Z"), amount: 30_000, amountKRW: 30_000, title: "택시", tripID: "t1", source: .message)
+        XCTAssertEqual(TripShareMapping.sharedExpense(taxi, names: names)?.split, [.member(1)], "손대지 않은 자동 기록은 나만")
+        taxi.shareChosen = true
+        XCTAssertEqual(TripShareMapping.sharedExpense(taxi, names: names)?.split, [.member(1), .member(2)], "「다 같이」를 고르면 모두")
+        let manual = LedgerEntry(occurredAt: stamp("2031-10-02T01:00:00Z"), amount: 3_000, amountKRW: 3_000, title: "물", tripID: "t1")
+        XCTAssertEqual(TripShareMapping.sharedExpense(manual, names: names)?.split, [.member(1), .member(2)])
+    }
+
     /// 메모 500자를 이모지로 채워도 방 한 칸(4KB)에 들어가게 바이트 한도 안에서 글자 단위로 줄인다(TSA1117A01).
     func testALongEmojiMemoStillFitsOneRoomItem() throws {
         var long = item("m-1a2b3c4d", "성", "2031-10-02T01:00:00Z", "2031-10-02T03:30:00Z")

@@ -661,6 +661,31 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(Set(sheet.mine.map(\.from)), ["A", "B"])
     }
 
+    /// 대표 결정(2026-11-18): 표지 없는 자동 기록(문자·영수증·AI)의 「다 같이」(nil)는 나만으로 센다. 사용자가 몫을 고른 것과
+    /// 손으로 넣은 것은 그대로다. 화면에 보이는 몫(`effectiveShareNames`)과 정산이 같은 값을 쓴다(TSA1117A01).
+    func testAutomaticEntriesCountAsMineUntilTheUserPicksTheSplit() {
+        var taxi = spend(30_000, "택시")
+        taxi.source = .message
+        taxi.shareChosen = true
+        var store = spend(4_000, "편의점")
+        store.source = .message
+        var assistant = spend(9_000, "AI가 넣은 점심")
+        assistant.source = .assistant
+        let water = spend(3_000, "물")
+        XCTAssertNil(taxi.effectiveShareNames, "사용자가 고른 「다 같이」")
+        XCTAssertEqual(store.effectiveShareNames, [LedgerTrip.me], "손대지 않은 자동 기록은 나만")
+        XCTAssertEqual(assistant.effectiveShareNames, [LedgerTrip.me])
+        XCTAssertNil(water.effectiveShareNames, "손으로 넣은 「다 같이」는 그대로")
+        var picked = store
+        picked.shareNames = [LedgerTrip.me, "A"]
+        XCTAssertEqual(picked.effectiveShareNames, [LedgerTrip.me, "A"], "몫이 적혀 있으면 그것")
+
+        let sheet = LedgerTripMath.sheet(trip(budget: nil), entries: [taxi, store, assistant, water])
+        XCTAssertEqual(sheet.myCost, 24_000, "10k + 4k + 9k + 1k")
+        XCTAssertEqual(sheet.sharedTotal, 33_000)
+        XCTAssertEqual(sheet.balances["A"] ?? 0, -11_000, accuracy: 0.5)
+    }
+
     /// 대표 결정: 공금 없이 n분의 1. 총무로 A에게 미리 받은 돈은 A가 낸 돈으로 친다.
     func testMoneyCollectedFromAFriendCountsForThem() {
         var collected = LedgerEntry(occurredAt: at(9, day: 7), amount: 100_000, amountKRW: 100_000, kind: .income, title: "A 경비", payer: "A", tripID: "t1")

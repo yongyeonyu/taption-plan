@@ -335,8 +335,9 @@ struct LedgerEntryForm: View {
     @State private var shareFailure: TripShareLedger.Failure?
     private var book: LedgerBook { .shared }
     /// 「누구 몫」을 사용자가 직접 고르면 표지를 남긴다(자동 기록의 「다 같이」와 가르기, TSA1117A01).
+    /// 보이는 값은 실제로 쓰는 몫이다: 표지 없는 자동 기록은 「나만」으로 보이고, 「다 같이」를 누르면 표지가 남는다.
     private var chosenShareNames: Binding<[String]?> {
-        Binding(get: { entry.shareNames }, set: { names in
+        Binding(get: { entry.effectiveShareNames }, set: { names in
             entry.shareNames = names
             entry.shareChosen = true
         })

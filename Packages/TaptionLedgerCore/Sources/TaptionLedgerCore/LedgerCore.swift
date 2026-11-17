@@ -81,6 +81,13 @@ public struct LedgerEntry: Codable, Identifiable, Equatable, Sendable {
         self.canceledAt = canceledAt
     }
 
+    /// 실제로 몫을 나누는 사람(nil이면 「다 같이」). 화면·정산·공유가 모두 이 값을 쓴다.
+    /// 표지 없는 자동 기록(문자·영수증·AI)의 「다 같이」(nil)는 나만이다: 사용자가 몫을 고르기 전에는 나눠 세지 않는다(대표 결정 2026-11-18).
+    public var effectiveShareNames: [String]? {
+        if shareNames == nil, source != .manual, shareChosen != true { return [LedgerTrip.me] }
+        return shareNames
+    }
+
     /// 합계에 더하는 원화 금액. 취소된 결제는 0이다.
     public var countedKRW: Double { canceledAt == nil ? (amountKRW ?? 0) : 0 }
     public var signedKRW: Double { countedKRW * (kind == .expense ? -1 : 1) }
