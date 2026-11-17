@@ -6080,9 +6080,10 @@
 "내 데이터|My data": "I miei dati",
 "모든 BOKKI Plan 데이터를 삭제할까요?|Delete all BOKKI Plan data?": "Eliminare tutti i dati di BOKKI Plan?",
 "모든 데이터 삭제|Delete all data": "Elimina tutti i dati",
-"AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호(또는 예전 AI PIN)를 한 번만 넣어 주세요.|The AI server still has an old value. Enter your previous app password (or old AI PIN) once.": "Sul server IA c'è ancora un vecchio valore. Inserisci una volta la password dell'app precedente (o il vecchio PIN IA).",
-"바꾸기 전 앱 비밀번호 또는 예전 AI PIN 6자리|Previous app password or old AI PIN (6 digits)": "Password dell'app precedente o vecchio PIN IA (6 cifre)",
-"바꾸기 전 앱 비밀번호(또는 예전에 따로 정한 AI PIN)를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.|Enter your previous app password (or the AI PIN you set before) once, and it switches to your current app password.": "Inserisci una volta la password dell'app precedente (o il PIN IA impostato prima) per passare alla password dell'app attuale.",
-"자주 가는 곳|Frequent place": "Luogo frequente"
+"자주 가는 곳|Frequent place": "Luogo frequente",
+"AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호를 한 번만 넣어 주세요.|The AI server still has an old value. Enter your previous app password once.": "Sul server IA c'è ancora un vecchio valore. Inserisci una volta la password dell'app precedente.",
+"바꾸기 전 앱 비밀번호 6자리|Previous app password (6 digits)": "Password dell'app precedente (6 cifre)",
+"바꾸기 전 앱 비밀번호를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.|Enter your previous app password once, and it switches to your current app password.": "Inserisci una volta la password dell'app precedente per passare alla password dell'app attuale.",
+"바꾸기 전 비밀번호를 잊었어요|I forgot the previous password": "Ho dimenticato la password precedente"
 }
 }

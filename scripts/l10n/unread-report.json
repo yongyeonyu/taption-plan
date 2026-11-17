@@ -358,13 +358,13 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 576,
+   "line": 584,
    "ko": "transfer.amountKRW",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 580,
+   "line": 588,
    "ko": "LedgerBook.total(entries, .expense)",
    "en": "language"
   },

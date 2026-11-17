@@ -2,7 +2,7 @@ import SwiftUI
 
 /// AI 연결 승인(SEC1110A02). PIN은 앱 비밀번호 6자리로 묻는다(대표 결정 2026-11-10, PIN1110A01).
 /// 기기에서 앱 비밀번호를 먼저 확인하고, 서버에는 `AssistantPINDerivation`이 만든 다른 6자리만 보낸다.
-/// 서버 PIN이 맞지 않으면(앱 비밀번호를 바꿀 때 따라가지 못했거나 예전에 따로 정한 PIN) 예전 값을 한 번만 받아 옮긴다.
+/// 서버 PIN이 맞지 않으면(앱 비밀번호를 바꿀 때 따라가지 못함) 바꾸기 전 앱 비밀번호를 한 번만 받아 옮긴다.
 /// 글자는 이 화면 상태에만 있고 닫으면 지운다.
 struct AssistantPINSheet: View {
     enum Mode { case enter, migrate }
@@ -35,7 +35,7 @@ struct AssistantPINSheet: View {
                 Section {
                     if AssistantAppPassword.isSet() {
                         field(language.text("앱 비밀번호 6자리", "6-digit app password"), $password)
-                        if mode == .migrate { field(language.text("바꾸기 전 앱 비밀번호 또는 예전 AI PIN 6자리", "Previous app password or old AI PIN (6 digits)"), $oldPIN) }
+                        if mode == .migrate { field(language.text("바꾸기 전 앱 비밀번호 6자리", "Previous app password (6 digits)"), $oldPIN) }
                     } else {
                         Text(language.text("먼저 메뉴에서 앱 비밀번호(6자리)를 만들어 주세요.", "Create an app password (6 digits) in the menu first."))
                     }
@@ -45,7 +45,7 @@ struct AssistantPINSheet: View {
                 }
                 if mode == .migrate {
                     Section {
-                        Button(language.text("예전 PIN을 잊었어요", "I forgot the old PIN"), role: .destructive) { isAskingReset = true }
+                        Button(language.text("바꾸기 전 비밀번호를 잊었어요", "I forgot the previous password"), role: .destructive) { isAskingReset = true }
                     }
                 }
             }
@@ -75,7 +75,7 @@ struct AssistantPINSheet: View {
 
     private var footnote: String {
         mode == .migrate
-            ? language.text("바꾸기 전 앱 비밀번호(또는 예전에 따로 정한 AI PIN)를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.", "Enter your previous app password (or the AI PIN you set before) once, and it switches to your current app password.")
+            ? language.text("바꾸기 전 앱 비밀번호를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.", "Enter your previous app password once, and it switches to your current app password.")
             : language.text("메뉴의 앱 비밀번호와 같아요. AI 서버에는 비밀번호 대신 따로 만든 값만 보내요.", "Same as your app password in the menu. The AI server only gets a separate value, never the password.")
     }
 
@@ -143,7 +143,7 @@ struct AssistantPINSheet: View {
         func text(_ language: MapHomeLanguage) -> String {
             switch self {
             case .needsOldPIN:
-                language.text("AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호(또는 예전 AI PIN)를 한 번만 넣어 주세요.", "The AI server still has an old value. Enter your previous app password (or old AI PIN) once.")
+                language.text("AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호를 한 번만 넣어 주세요.", "The AI server still has an old value. Enter your previous app password once.")
             case let .refused(refusal): refusal.text(language)
             case .failed: language.text("AI 서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.", "Couldn't reach the AI server. Try again in a moment.")
             }
@@ -151,8 +151,8 @@ struct AssistantPINSheet: View {
     }
 
     /// 서버 PIN을 앱 비밀번호에서 만든 값으로 맞춘다. 없으면 만들고, 있으면 같은 값을 다시 넣어 맞는지 본다.
-    /// 다르면 예전 값을 받아 바꾼다. 서버에는 바꾸기 전 앱 비밀번호에서 만든 값이 있을 때가 많아(따라가기 실패, HOF1118A01)
-    /// 그 값을 먼저 보내고, 틀리면 예전에 따로 정한 PIN으로 한 번 더 본다.
+    /// 다르면(앱 비밀번호를 바꿀 때 따라가지 못함, HOF1118A01) 바꾸기 전 앱 비밀번호에서 만든 값을 한 번만 보내 바꾼다.
+    /// 입력한 숫자를 그대로 다시 보내지 않아 틀려도 잠금 횟수가 1번만 오른다(대표 결정 2026-11-18).
     static func align(
         _ derived: String, old: String?, language: MapHomeLanguage, env: AssistantRegistration.Environment = .live,
         derive: (String) -> String? = { AssistantPINDerivation.pin(appPassword: $0) }
@@ -160,14 +160,8 @@ struct AssistantPINSheet: View {
         guard await AssistantRegistration.prepare(env), let status = await AssistantPINStore.status(env: env) else { return .failed }
         guard status.isSet else { return outcome(await AssistantPINStore.set(pin: derived, current: nil, env: env), old: old) }
         guard let old else { return outcome(await AssistantPINStore.set(pin: derived, current: derived, env: env), old: nil) }
-        let tries = [derive(old), old].compactMap { $0 }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
-        var last: AlignFailure = .failed
-        for current in tries {
-            guard let failure = outcome(await AssistantPINStore.set(pin: derived, current: current, env: env), old: old) else { return nil }
-            last = failure
-            guard case let .refused(refusal) = failure, refusal.kind == .wrongPIN else { return failure }
-        }
-        return last
+        guard let previous = derive(old) else { return .failed }
+        return outcome(await AssistantPINStore.set(pin: derived, current: previous, env: env), old: old)
     }
 
     private static func outcome(_ change: AssistantPINStore.Change, old: String?) -> AlignFailure? {

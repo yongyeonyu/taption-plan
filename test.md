@@ -40,6 +40,7 @@
 - 구조 점검: `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과.
 - 번역: 새 문구 넷(PIN 셋·「자주 가는 곳」) 12개 언어, `extract.py` 뒤 `check.py` 실패 0(긴 문구 3은 예전 그대로). `generate.py`는 메인 몫.
 - 로그 `build/validation/HOF1118A01/`. 실기기·UI 시험은 하지 않음.
+- 덧붙임(2026-11-18, 대표 결정: PIN 옮기기는 바꾸기 전 비밀번호에서 만든 값만 1번): `AssistantPINSheet.align`에서 입력한 숫자를 그대로 다시 보내던 두 번째 시도를 없앰. 틀려도 서버 잠금 횟수가 1번만 오름. 시트 문구 넷에서 「예전 AI PIN」을 뺌(12개 언어 번역 바꿈, `extract.py`·`check.py` 실패 0, 쓰지 않게 된 앞 번역 셋은 지움, `generate.py`는 메인 몫). 시험 `testOldPINFieldSendsTheValueDerivedFromThePreviousAppPassword`를 먼저 고침(맞으면 1번, 틀려도 1번만 보내고 `wrongPIN`) — 고치기 전 코드로 따로 돌리지는 않음. 관련 시험(`targeted-2.log`, `AssistantReviewFixTests` 전체+PIN TLS 시험) 32개 실패 0. `-only-testing:TaptionPlanTests` 전체 1회(`full-2.log`): XCTest 3007개 실패 0·건너뜀 25, Swift Testing 52개 통과, `TEST SUCCEEDED`. 구조 점검 둘 통과(`architecture-metrics-2.log`·`import-boundary-2.log`). 커밋 `f7297156`.
 
 
 ## TSA1117A01 · 앱 여행 공유 결함 아홉 (2026-11-17~18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
