@@ -344,7 +344,10 @@ final class TripShareLedgerTests: XCTestCase {
         let before = expense("숙소", 90_000)
         let mine = { var entry = self.expense("기념품", 10_000); entry.shareNames = [LedgerTrip.me]; return entry }()
         let automatic = expense("문자 결제", 5_000, source: .message)
-        for entry in [before, mine, automatic] { await book.save(entry) }
+        // 대표 결정(2026-11-18): 자동 기록이라도 사용자가 폼에서 「다 같이」를 고른 것은 올린다.
+        var taxi = expense("택시", 30_000, source: .message)
+        taxi.shareChosen = true
+        for entry in [before, mine, automatic, taxi] { await book.save(entry) }
 
         let invite = ShareInvite.make()
         roomID = invite.roomID
@@ -361,17 +364,18 @@ final class TripShareLedgerTests: XCTestCase {
         try await TripShareCreation.upload(model: model, store: store, tripID: tripID)
         XCTAssertEqual(store.link(tripID: tripID)?.phase, .sharing)
         let uploaded = shared(in: try XCTUnwrap(store.view(tripID: tripID)))
-        XCTAssertEqual(uploaded.map(\.id), [TripShareMapping.roomItemID(entryID: before.id)], "직접 넣은 「다 같이」 지출만 공동 지출로 올라간다")
+        XCTAssertEqual(Set(uploaded.map(\.id)), Set([before.id, taxi.id].map(TripShareMapping.roomItemID(entryID:))),
+                       "직접 넣었거나 사용자가 「다 같이」로 고른 지출만 공동 지출로 올라간다")
         XCTAssertEqual(book.entries.first { $0.id == mine.id }?.shareNames, [LedgerTrip.me])
 
         // 동행이 들어오면 그 사람도 몫에 들어가고 정산에 바로 잡힌다.
         let friend = try await join("봄")
         await waitUntil("들어온 사람이 몫에 들어감") {
-            self.shared(in: self.store.view(tripID: self.tripID)!).first?.content.split == [.member(1), .member(2)]
+            self.shared(in: self.store.view(tripID: self.tripID)!).allSatisfy { $0.content.split == [.member(1), .member(2)] }
         }
         try await friend.catchUp()
         let friendView = await friend.view()
-        XCTAssertEqual(shared(in: friendView).first?.content.split, [.member(1), .member(2)])
+        XCTAssertEqual(shared(in: friendView).map(\.content.split), [[.member(1), .member(2)], [.member(1), .member(2)]])
         await waitUntil("가계부에도 둘로") { Set(self.book.entries.first { $0.id == before.id }?.shareNames ?? []) == [LedgerTrip.me, "봄"] }
         // 자동 기록은 올리지 않고, 공유 중의 다음 맞춤에서 나만으로 고정된다(예전과 같다).
         XCTAssertEqual(book.entries.first { $0.id == automatic.id }?.shareNames, TripShareMapping.privateShare, "자동 기록은 올리지 않는다")

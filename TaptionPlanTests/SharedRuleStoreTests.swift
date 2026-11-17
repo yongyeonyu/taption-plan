@@ -95,4 +95,28 @@ final class SharedRuleStoreTests: XCTestCase {
         XCTAssertNil(first[0].upload.result["title"], "the shop title is dropped")
         XCTAssertTrue(SharedRuleStore.pending(rules: rules, sent: Set(first.map(\.mark))).isEmpty)
     }
+
+    /// HOF1118A01: 공통 규칙의 「결제가 아닌 글」이 내 결제 문자 정규식보다 먼저 적용되지 않는다.
+    func testMyPaymentRegexComesBeforeASharedTextIgnore() throws {
+        let store = defaults()
+        let text = "[OO카드] 승인 12,300원 동네카페"
+        guard case let .success(mine) = LedgerMessageRules.validated(name: "OO카드", pattern: #"\[OO카드\] 승인 (?<amount>[\d,]+)원 (?<merchant>.+)"#, sample: text, kind: .expense)
+        else { return XCTFail("rule") }
+        LedgerMessageRules.add(mine, defaults: store)
+        let sharedIgnore = Rule(id: "s_ignore", type: "text_ignore", match: ["contains": .list(["승인"])], source: .init(by: "shared"))
+        let now = Date(timeIntervalSince1970: 1_790_000_000)
+        func verdict(_ text: String, _ rules: [Rule]) -> PaymentTextCapture.RuleVerdict {
+            PaymentTextCapture.ruleVerdict(text, source: nil, rules: rules, now: now, defaults: store, sharedPayment: [])
+        }
+
+        guard case let .matched(.draft(draft, income)) = verdict(text, [sharedIgnore]) else { return XCTFail("\(verdict(text, [sharedIgnore]))") }
+        XCTAssertEqual(draft.amount, 12_300)
+        XCTAssertFalse(income)
+        // 내 규칙의 「결제가 아닌 글」은 여전히 먼저다.
+        let myIgnore = Rule(id: "u_ignore", type: "text_ignore", match: ["contains": .list(["승인"])], source: .init(by: "user"))
+        XCTAssertEqual(verdict(text, [myIgnore]), .ignored)
+        // 내 정규식이 읽지 못하는 글에는 공통 규칙이 그대로 적용된다.
+        XCTAssertEqual(verdict("[다른카드] 승인 안내", [sharedIgnore]), .ignored)
+        XCTAssertEqual(verdict("[다른카드] 안내", [sharedIgnore]), .unmatched)
+    }
 }

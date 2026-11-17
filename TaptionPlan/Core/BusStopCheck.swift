@@ -459,14 +459,26 @@ enum BusRouteLookupRunner {
         }
     }
 
-    /// 가장 가까운 정류소. 전국(TAGO)에서 못 찾으면 서울시 정류소정보로 본다. 응답이 없으면 nil, 정류소가 없으면 .some(nil).
     private static func nearestStop(host: String, center: GeoPoint, points: [GeoPoint], token: String) async -> BusRouteCheck.Stop?? {
+        await nearestStop(center: center, points: points) { path, query in
+            await fetch(host: host, path: path, query: query, token: token)
+        }
+    }
+
+    /// 가장 가까운 정류소. 응답이 없으면 nil, 정류소가 없으면 .some(nil).
+    /// 서울도 https인 전국(TAGO)으로 먼저 찾는다. 서울시 정류소정보(`ws.bus.go.kr`)는 https가 없어 중계 서버 → 서울시 구간이
+    /// 평문이므로, TAGO가 응답했는데 가까운 정류소가 없을 때만 쓴다. TAGO가 응답하지 않으면 평문으로 넘기지 않고 다음에 다시 본다
+    /// (대표 결정 2026-11-17 「서울도 TAGO로」).
+    static func nearestStop(
+        center: GeoPoint, points: [GeoPoint], fetch: (String, [String: String]) async -> Data?
+    ) async -> BusRouteCheck.Stop?? {
         let query = ["lat": String(center.latitude), "lng": String(center.longitude)]
-        let national = await fetch(host: host, path: "/tago/stops", query: query, token: token).flatMap { BusRouteCheck.isValid($0, seoul: false) ? $0 : nil }
-        if let national, let stop = BusRouteCheck.nearest(BusRouteCheck.stops(national), to: points) { return .some(stop) }
-        let seoul = await fetch(host: host, path: "/seoul/stops", query: query, token: token).flatMap { BusRouteCheck.isValid($0, seoul: true) ? $0 : nil }
+        guard let national = await fetch("/tago/stops", query).flatMap({ BusRouteCheck.isValid($0, seoul: false) ? $0 : nil })
+        else { return nil }
+        if let stop = BusRouteCheck.nearest(BusRouteCheck.stops(national), to: points) { return .some(stop) }
+        let seoul = await fetch("/seoul/stops", query).flatMap { BusRouteCheck.isValid($0, seoul: true) ? $0 : nil }
         if let seoul, let stop = BusRouteCheck.nearest(BusRouteCheck.seoulStops(seoul), to: points) { return .some(stop) }
-        return national == nil && seoul == nil ? nil : .some(nil)
+        return .some(nil)
     }
 
     private static func routes(host: String, stop: BusRouteCheck.Stop, token: String) async -> [BusRouteCheck.Route]? {

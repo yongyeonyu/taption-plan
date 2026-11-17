@@ -5699,6 +5699,83 @@
         }
       }
     },
+    "AI 서버에 예전 값이 남아 있어요. 바꾸기 전 앱 비밀번호(또는 예전 AI PIN)를 한 번만 넣어 주세요.|The AI server still has an old value. Enter your previous app password (or old AI PIN) once." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIサーバーに以前の値が残っています。変更前のアプリのパスワード(または以前のAI PIN)を一度だけ入力してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 服务器上还留着旧值。请输入一次更改前的应用密码(或旧的 AI PIN)。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 伺服器上還留著舊值。請輸入一次變更前的 App 密碼(或舊的 AI PIN)。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf dem KI-Server ist noch ein alter Wert. Gib einmal dein bisheriges App-Passwort (oder die alte KI-PIN) ein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur IA garde encore une ancienne valeur. Saisissez une fois votre ancien mot de passe d'app (ou l'ancien code PIN IA)."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sul server IA c'è ancora un vecchio valore. Inserisci una volta la password dell'app precedente (o il vecchio PIN IA)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El servidor de IA aún tiene un valor antiguo. Introduce una vez tu contraseña de la app anterior (o el PIN de IA antiguo)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O servidor de IA ainda tem um valor antigo. Digite uma vez a senha do app anterior (ou o PIN de IA antigo)."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máy chủ AI vẫn còn giá trị cũ. Hãy nhập một lần mật khẩu ứng dụng trước đây (hoặc mã PIN AI cũ)."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server AI masih menyimpan nilai lama. Masukkan sekali kata sandi aplikasi sebelumnya (atau PIN AI lama)."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เซิร์ฟเวอร์ AI ยังมีค่าเก่าอยู่ ใส่รหัสผ่านแอปก่อนเปลี่ยน (หรือ PIN AI เดิม) เพียงครั้งเดียว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI सर्वर पर अभी भी पुराना मान है। बदलने से पहले का ऐप पासवर्ड (या पुराना AI PIN) एक बार डालें।"
+          }
+        }
+      }
+    },
     "AI 승인 요청|AI approval request" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -268654,6 +268731,160 @@
         }
       }
     },
+    "바꾸기 전 앱 비밀번호 또는 예전 AI PIN 6자리|Previous app password or old AI PIN (6 digits)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変更前のアプリのパスワードまたは以前のAI PIN(6桁)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改前的应用密码或旧的 AI PIN(6 位)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "變更前的 App 密碼或舊的 AI PIN(6 位數)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bisheriges App-Passwort oder alte KI-PIN (6 Ziffern)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ancien mot de passe d'app ou ancien code PIN IA (6 chiffres)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password dell'app precedente o vecchio PIN IA (6 cifre)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contraseña de la app anterior o PIN de IA antiguo (6 dígitos)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senha do app anterior ou PIN de IA antigo (6 dígitos)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mật khẩu ứng dụng trước đây hoặc mã PIN AI cũ (6 chữ số)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kata sandi aplikasi sebelumnya atau PIN AI lama (6 digit)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รหัสผ่านแอปก่อนเปลี่ยนหรือ PIN AI เดิม (6 หลัก)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बदलने से पहले का ऐप पासवर्ड या पुराना AI PIN (6 अंक)"
+          }
+        }
+      }
+    },
+    "바꾸기 전 앱 비밀번호(또는 예전에 따로 정한 AI PIN)를 한 번만 넣으면 지금 앱 비밀번호로 맞춰요.|Enter your previous app password (or the AI PIN you set before) once, and it switches to your current app password." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変更前のアプリのパスワード(または以前に設定したAI PIN)を一度だけ入力すると、今のアプリのパスワードに合わせます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入一次更改前的应用密码(或之前设置的 AI PIN),即可切换为当前的应用密码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "輸入一次變更前的 App 密碼(或之前設定的 AI PIN),即可切換為目前的 App 密碼。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib einmal dein bisheriges App-Passwort (oder die früher festgelegte KI-PIN) ein, dann wird auf dein aktuelles App-Passwort umgestellt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez une fois votre ancien mot de passe d'app (ou le code PIN IA défini avant) pour passer à votre mot de passe d'app actuel."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inserisci una volta la password dell'app precedente (o il PIN IA impostato prima) per passare alla password dell'app attuale."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduce una vez tu contraseña de la app anterior (o el PIN de IA que configuraste antes) y se cambiará a tu contraseña de la app actual."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digite uma vez a senha do app anterior (ou o PIN de IA definido antes) para mudar para a senha do app atual."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhập một lần mật khẩu ứng dụng trước đây (hoặc mã PIN AI đã đặt trước) để chuyển sang mật khẩu ứng dụng hiện tại."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masukkan sekali kata sandi aplikasi sebelumnya (atau PIN AI yang dibuat sebelumnya) untuk beralih ke kata sandi aplikasi saat ini."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใส่รหัสผ่านแอปก่อนเปลี่ยน (หรือ PIN AI ที่ตั้งไว้ก่อน) เพียงครั้งเดียว แล้วจะเปลี่ยนเป็นรหัสผ่านแอปปัจจุบัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बदलने से पहले का ऐप पासवर्ड (या पहले सेट किया AI PIN) एक बार डालें, फिर यह आपके मौजूदा ऐप पासवर्ड पर आ जाएगा।"
+          }
+        }
+      }
+    },
     "바꾸기|Change" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -327097,83 +327328,6 @@
         }
       }
     },
-    "예전 AI 연결 PIN 6자리|Old 6-digit AI PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以前のAI接続PIN(6桁)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "旧的 6 位 AI 连接 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "舊的 6 位數 AI 連線 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alte 6-stellige KI-PIN"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ancien PIN IA à 6 chiffres"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vecchio PIN IA di 6 cifre"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN de IA anterior de 6 dígitos"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN de IA antigo de 6 dígitos"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN AI cũ 6 chữ số"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN AI lama 6 digit"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN AI เดิม 6 หลัก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पुराना 6 अंकों का AI PIN"
-          }
-        }
-      }
-    },
     "예전 PIN을 잊었어요|I forgot the old PIN" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -327247,160 +327401,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मैं पुराना PIN भूल गया"
-          }
-        }
-      }
-    },
-    "예전에 따로 정한 AI PIN을 한 번만 넣으면 앱 비밀번호로 바꿔요.|Enter the AI PIN you set before once, and it switches to your app password." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以前に設定したAI PINを一度だけ入力すると、アプリのパスワードに切り替わります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "输入一次之前设置的 AI PIN，即可改为使用 App 密码。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "輸入一次先前設定的 AI PIN，即可改用 App 密碼。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gib die zuvor festgelegte KI-PIN einmal ein, dann wird auf dein App-Passwort umgestellt."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saisissez une fois le PIN IA défini auparavant pour passer au mot de passe d’app."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inserisci una volta il PIN IA impostato in precedenza per passare alla password dell’app."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduce una vez el PIN de IA que definiste antes y pasará a ser la contraseña de la app."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Digite uma vez o PIN de IA definido antes para passar a usar a senha do app."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nhập PIN AI đã đặt trước đây một lần để chuyển sang mật khẩu ứng dụng."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Masukkan sekali PIN AI yang pernah Anda atur untuk beralih ke kata sandi aplikasi."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ป้อน PIN AI ที่ตั้งไว้ก่อนหน้านี้หนึ่งครั้งเพื่อเปลี่ยนไปใช้รหัสผ่านแอป"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पहले सेट किया AI PIN एक बार डालें, फिर यह ऐप पासवर्ड पर बदल जाएगा।"
-          }
-        }
-      }
-    },
-    "예전에 따로 정한 AI PIN이 있어요. 그 PIN을 한 번만 넣어 주세요.|An AI PIN you set before is on the server. Enter it once." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以前に設定したAI PINがあります。そのPINを一度だけ入力してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "服务器上有您之前设置的 AI PIN。请输入一次该 PIN。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "伺服器上有您先前設定的 AI PIN。請輸入一次該 PIN。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auf dem Server liegt eine zuvor festgelegte KI-PIN. Gib sie einmal ein."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un PIN IA défini auparavant est sur le serveur. Saisissez-le une fois."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sul server c’è un PIN IA impostato in precedenza. Inseriscilo una volta."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hay un PIN de IA que definiste antes en el servidor. Introdúcelo una vez."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Há um PIN de IA definido antes no servidor. Digite-o uma vez."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trên máy chủ có PIN AI bạn đã đặt trước đây. Hãy nhập nó một lần."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ada PIN AI yang pernah Anda atur di server. Masukkan sekali."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "มี PIN AI ที่คุณตั้งไว้ก่อนหน้านี้อยู่บนเซิร์ฟเวอร์ ป้อนหนึ่งครั้ง"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सर्वर पर पहले सेट किया AI PIN है। उसे एक बार डालें।"
           }
         }
       }
@@ -356045,6 +356045,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "क्या आपने साइकिल चलाई?"
+          }
+        }
+      }
+    },
+    "자주 가는 곳|Frequent place" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よく行く場所"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常去的地方"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常去的地方"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Häufiger Ort"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lieu fréquent"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luogo frequente"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lugar frecuente"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lugar frequente"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nơi hay đến"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempat yang sering dikunjungi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สถานที่ที่ไปบ่อย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अक्सर जाने की जगह"
           }
         }
       }

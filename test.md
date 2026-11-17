@@ -2,6 +2,40 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## REV1117A03 · 서울도 TAGO로 (2026-11-18, 시뮬레이터 `99AC6F35…`)
+
+- 대표 결정(2026-11-17): 정류장 찾기를 https인 `/tago/stops`로 먼저, TAGO가 응답했는데 가까운 정류장이 없을 때만 평문 `/seoul/stops`(좌표는 POST 본문). 동작 변경: TAGO가 응답하지 않으면 서울시로 넘어가지 않고 nil(다음 판정 때 다시).
+- 곁 세션 결과(브랜치 `claude/rev-data-b8acb4`, `2362dc65`): `StorageReviewFixTests` 17건 실패 0(순서 시험 추가), 구조 점검 둘 통과, diff 공개 정보 grep 걸린 것 없음. 로그 `build/validation/REV1117A03/seoul.log`.
+- 메인 합침(2026-11-18). 곁 세션이 대기열에 넣은 `TaptionPlanTests` 전체는 세션 보관으로 돌지 않음 — 남은 합침 뒤 main 전체 실행(FUL1118A01 앞)으로 대신함. 서버 POST 정류장(`5393714a`)은 2026-11-17 밤 배포(버전 `1153a89e`)에 포함. Cloudflare Workers Logs: 저장소 wrangler 설정에 `observability` 없음(기본 꺼짐), 대시보드는 확인 안 함.
+
+## FRT1117A02 · 한 번도 돌지 않던 Watch 단계 시험 (2026-11-18, 시뮬레이터 `99AC6F35…`)
+
+- 원인: `testWatchStageFollowsAnswerAndRealInstallState`가 `FirstRunTutorialTests`가 아니라 `private final class InMemoryCredentialStore` 안에 있어 XCTest가 찾지 않음(FRT1117A01 보고).
+- 고침: 시험 클래스 extension으로 옮김(시험 내용 그대로).
+- 결과: `-only-testing:TaptionPlanTests/FirstRunTutorialTests` 27건 실패 0(26 → 27), 옮긴 시험 통과. 로그 `build/validation/FRT1117A02/unit.log`.
+
+## UIT1117A01 · main 전체 UI 시험 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: main `6a84c788`(REV1117A01~04·LGC1117A01·PRF1117A02·WSY1117A01 합친 뒤)을 고정 작업 폴더로 꺼내 실행. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안. 로그 `build/validation/UIT1117A01/r2/`.
+- 첫 실행(`build/validation/UIT1117A01/ui.log`)은 빌드 도중 main에 WSY1117A01을 합쳐 판이 섞여 시험 대상 컴파일 실패(`forEachWindow` 없음) — 시험 결과 아님. r2 첫 시도는 스크립트 경로 따옴표 빠짐으로 실행 안 됨.
+- 결과: `-only-testing:TaptionPlanUITests` 51건 실행, 통과 42, 건너뜀 9, 실패 0(`** TEST SUCCEEDED **`, 1,880초). 여행 UI(`TaptionPlanTravelPlanUITests` 1·`TaptionPlanTravelScreensUITests` 3) 모두 통과.
+- 건너뜀 9: 넓은 화면 6(`TaptionPlanWideLayoutUITests`, 아이폰 시뮬레이터라 조건 미충족), 언어 팩 걷기 1(언어 지정 환경값 없음), 수당 입력 1, 재생 HUD 1 — 통과로 치지 않음.
+- 이 판 뒤에 합친 FRT1117A01·TSR1117A01·TSA1117A01은 이 결과에 들어 있지 않음.
+
+## HOF1118A01 · 영역 리뷰가 넘긴 결함 여섯 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 범위: REV1117A01·A02가 넘긴 항목. `moveTripItem` 부분 저장은 TVM1117A02 몫이라 하지 않음. `PRIVACY.md`·`LedgerEntry` 구조·위젯·Live Activity·여행 공유·AI 명령 실행기는 손대지 않음.
+- 고침(커밋 하나씩): (1) PIN 옮기기 — 승인 시트의 예전 칸 글자로 `AssistantPINDerivation.pin` 값을 먼저, 틀리면 예전 PIN 그대로 한 번 더(`AssistantPINSheet.align`). (2) 결제 문자 — `PaymentTextCapture.ruleVerdict`로 내 규칙(낱말·안내 글·내 이체·내 정규식) 다음 공통 규칙. (3) 제안 id는 좌표 해시(AI로 나가던 값과 같음), 이름 없는 등록은 종류 이름, `launchPromptsHandedToAI`의 옛 좌표 id는 읽을 때 안정 id로 바꿔 다시 적음, 같은 순위 제안은 자리로 정함. (4) `DailyCardBubblePrompt.run`이 넣었으면 `AITaskQueue.upload()`를 기다림(백그라운드 작업 안). (5) `AppModel.deleteMemo`·초안 버리기에서 다듬기 대기열·AI 표시 지움. (6) `LedgerEntry.newestFirst`(시각→만든 때→id) 정렬, `LedgerNumber.parse`는 유한한 값만.
+- 저장 호환: 바뀐 저장 값은 기기 UserDefaults의 「오늘 AI에게 넘긴 질문」 목록뿐이며 옛 좌표 id를 읽어 같은 질문으로 맞춤을 시험으로 확인. SQLite·백업 형식은 그대로, 이미 좌표 이름으로 등록된 장소 이름은 사용자 자료라 바꾸지 않음(AI로는 이미 가려 보냄). 6자리 PIN·키 유도·서버 계약 불변, 좌표 새 전송·새 권한·홈 배치 변경 없음.
+- 새 시험: `AssistantReviewFixTests.testOldPINFieldSendsTheValueDerivedFromThePreviousAppPassword`, `SharedRuleStoreTests.testMyPaymentRegexComesBeforeASharedTextIgnore`, `AssistantAppControlTests.testSuggestionIDAndUnnamedPlaceKeepNoCoordinatesAndOldIDsStillMatch`, `DailyCardBubblePromptTests.testRunWaitsForTheUploadAfterEnqueueing`, `AssistantPhase3Tests.testDeletingAMemoTakesItOutOfThePolishQueue`, `LedgerTests.testSameTimeEntriesKeepOneOrderAndAmountsAreFinite`. 새 시험은 고친 뒤의 시험 길(주입 인자·새 함수)을 써서 고치기 전 코드에서는 컴파일되지 않음 — 고치기 전 실패 실행은 따로 하지 않았다.
+- 관련 시험(`targeted.log`): 58개 중 1 실패 — 제안 id를 해시로 바꾸자 같은 순위 제안을 id로 고르던 `testUnregisteredPlaceSuggestionTieUsesStableIDRegardlessOfInputOrder`가 다른 자리를 골랐다. 자리(위도·경도)로 고르게 고침.
+- `-only-testing:TaptionPlanTests` 전체 1회(`full.log`, 고친 뒤): XCTest 3000개 실패 0·건너뜀 25(환경 변수로 켜는 재생·그림 시험), Swift Testing 52개 통과, `TEST SUCCEEDED`(Debug 빌드 포함). 그 뒤 새 결제 시험 견본의 가게 이름만 가짜 이름으로 바꿈(동작 무관).
+- 패키지: 바꾼 패키지 없음(앱 target만) — `swift test` 해당 없음.
+- 구조 점검: `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과.
+- 번역: 새 문구 넷(PIN 셋·「자주 가는 곳」) 12개 언어, `extract.py` 뒤 `check.py` 실패 0(긴 문구 3은 예전 그대로). `generate.py`는 메인 몫.
+- 로그 `build/validation/HOF1118A01/`. 실기기·UI 시험은 하지 않음.
+
+
 ## TSA1117A01 · 앱 여행 공유 결함 아홉 (2026-11-17~18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `460635a6` 위 브랜치 `worktree-agent-a7e31a9a986039563`, 도중에 main `b3c520ea`(TSR1117A01 합침)를 합침. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안, derived data `/Volumes/TaptionPlanBuild/dd/TSA1117A01`(끝나고 지움). 로그 `build/validation/TSA1117A01/`.
@@ -16,6 +50,12 @@
   8. 이모지 메모 500자가 4KB를 넘어 일정이 늘 못 올라감(TSR1117A01이 넘김) → 방에 싣는 메모를 UTF-8 2,000바이트 안으로 문자소 단위로 줄임(`b00190f8`, 시험 고침 `31fb5af2`).
   9. 대표 결정(2026-11-17): 공유 시작 전 「다 같이」 지출을 나만으로 바꾸던 것 → 올리기 끝에 직접 넣은 「다 같이」 지출을 공동 지출로 올리고, 주인 기기가 들어온 동행을 몫에 더함(곁 파일 `allTogether` 칸, `8a0f7488`, 시험 고침 `263ddba3`). 자동 기록은 올리지 않음.
 - 시험: 새 단위 시험 9건(곁 파일 1·키체인 1·순서 1·판 닫기 1·메모 1·카드 1·나간 사람 1·「다 같이」 1·잠금 한도 1, 기존 파일에 추가) 모두 통과. 시험은 구현 전에 썼으나 빌드 잠금이 몇 시간 붐벼 **고치기 전 실패 확인은 돌리지 못함**. `-only-testing:TaptionPlanTests` 전체: r3 2,994건 중 실패 1(「다 같이」 시험이 자동 기록 고정을 너무 일찍 봄 → 시험 순서 고침), 끝 판 r4 **2,994 통과·실패 0·건너뜀 25**(`unit-all-r4.xcresult`). `TripShareLedgerTests` 14건과 `TaptionPlanTravelPlanUITests` 3·`TaptionPlanTravelScreensUITests` 4건 통과(`ledger-and-travel-ui.xcresult`). 구조 점검 `architecture-metrics.py --check`·`check-app-engine-import-boundary.sh` 통과.
+- 덧붙임(2026-11-18, 대표 결정): 자동으로 들어온 기록(문자·영수증·AI)도 사용자가 폼에서 몫(다 같이·나만·골라서)을 직접 고른 것은 공유 시작 때 올린다. 손대지 않은 자동 기록은 그대로 안 올린다. 가를 근거가 없어 `LedgerEntry`에 없어도 되는 칸 `shareChosen: Bool?`을 더하고, 지출 폼의 「누구 몫」 바인딩이 고를 때 표지를 적는다. 비어 있으면 키가 생기지 않아 예전 모양 그대로이고, 모양이 이상하면 표지만 버린다. 예전 기록 되돌리기 코드는 넣지 않음(출시 전). main `5f2d3dbb` 위.
+  - 시험: `LedgerDecodeSafetyTests` 빌드 316 모양 읽기에 표지 없음 확인·새 시험(키 없음·true 읽기·이상한 값)·모든 칸 왕복에 표지 추가, 새 `LedgerShareChosenStorageTests`(SQLite 정본 다시 읽기 + TAPTBK02·03 백업·복원에서 표지 보존, 표지 없는 예전 행은 바이트 그대로), `TripShareLedgerTests` 「다 같이」 시험에 표지 있는 자동 「택시」는 올라가고 손대지 않은 자동 기록은 안 올라감을 더함. `-only-testing:TaptionPlanTests` 전체 **2,996 통과·실패 0·건너뜀 25**(`unit-all-r6.xcresult`). `TaptionLedgerCore`는 시험 대상이 없어 `swift build`만 통과(`swift test`는 「no tests found」). 구조 점검 둘 통과(`arch-r2.log`·`boundary-r2.log`).
+  - 제한: 폼은 처음부터 「다 같이」로 보이므로, 자동 기록을 「다 같이」로 두려면 다른 칸을 눌렀다 다시 골라야 표지가 생긴다(이미 고른 칸을 다시 누르면 바뀜이 없어 표지가 안 생긴다). 화면 시험 없음.
+- 덧붙임 2(2026-11-18, 대표 결정 「자동 기록은 처음 값을 나만으로」): 공유하지 않는 여행의 정산(`LedgerTripMath.sheet`)이 표지 없는 자동 기록의 nil을 「다 같이」로 세고 있어 화면만 바꾸면 어긋났다. 저장 형식은 바꾸지 않고 계산 값 `LedgerEntry.effectiveShareNames`(표지 없는 자동 기록의 nil → 나만)를 두어 정산·목록 표시(`LedgerTripView`·`LedgerSummary`)·폼의 「누구 몫」·방 올리기(`TripShareMapping.sharedExpense`)가 모두 같은 값을 쓴다. 손으로 넣은 지출과 표지 있는 지출은 그대로. main `72b9cbd5` 위.
+  - 시험: `LedgerTests.testAutomaticEntriesCountAsMineUntilTheUserPicksTheSplit`(정산에서 자동 4천 원은 나만, 표지 있는 3만 원은 나눔)·`TripShareFoundationTests.testSharedExpenseUsesTheSplitTheFormShows` 새로 통과. `-only-testing:TaptionPlanTests` 전체 **2,998 통과·실패 0·건너뜀 25**(`unit-all-r7.xcresult`). `TaptionPlanTravelPlanUITests` 3·`TaptionPlanTravelScreensUITests` 4 통과(`travel-ui-r2.xcresult`, 가계부 전용 화면 시험은 없음). `TaptionLedgerCore` `swift build` 통과, 구조 점검 둘 통과(`arch-r3.log`·`boundary-r3.log`).
+  - 제한: 이미 들어 있는 표지 없는 자동 기록은 공유하지 않는 여행 정산에서도 「나만」으로 다시 계산된다(출시 전, 되돌리기 없음). AI 명령 설명(`AssistantRelay`)은 「shareNames를 빼거나 []면 다 같이」라고 하지만 AI가 넣은 기록(assistant)도 표지가 없으면 나만으로 센다.
 - 제한: 실기기·실서버 확인 없음. 새 사용자 문구 없음(번역 팩 손대지 않음). 공유 판을 지구본에서 열고 바로 공유를 만들면 올리기가 끝난 뒤 그 방은 열린 채 남음(다음 장면 전환·뒤로 가기에 닫힘).
 
 ## TSR1117A01 · 여행 공유 패키지·서버 방 결함 아홉 (2026-11-17, 시뮬레이터 `99AC6F35…`, 실기기 없음)

@@ -56,6 +56,9 @@ public struct LedgerEntry: Codable, Identifiable, Equatable, Sendable {
     public var transfer: LedgerTransfer?
     /// 취소된 결제면 그 시각(LCN1111A01, 대표 결정). 기록은 남기고 합계에서만 뺀다. 예전 기록에는 없다.
     public var canceledAt: Date?
+    /// 사용자가 지출 폼에서 몫(다 같이·나만·골라서)을 직접 골랐으면 true(TSA1117A01, 대표 결정 2026-11-18).
+    /// 자동으로 들어온 기록의 「다 같이」(nil)와 사용자가 고른 「다 같이」를 가른다. 예전 기록에는 없다.
+    public var shareChosen: Bool?
 
     public init(id: UUID = UUID(), occurredAt: Date, amount: Double, currency: String = "KRW", amountKRW: Double? = nil, kind: Kind = .expense, category: LedgerCategory = .other, title: String, place: String? = nil, payer: String? = nil, tripID: String? = nil, memoID: UUID? = nil, note: String? = nil, source: Source = .manual, createdAt: Date = Date(), shareNames: [String]? = nil, transfer: LedgerTransfer? = nil, canceledAt: Date? = nil) {
         self.id = id
@@ -76,6 +79,13 @@ public struct LedgerEntry: Codable, Identifiable, Equatable, Sendable {
         self.shareNames = shareNames
         self.transfer = transfer
         self.canceledAt = canceledAt
+    }
+
+    /// 실제로 몫을 나누는 사람(nil이면 「다 같이」). 화면·정산·공유가 모두 이 값을 쓴다.
+    /// 표지 없는 자동 기록(문자·영수증·AI)의 「다 같이」(nil)는 나만이다: 사용자가 몫을 고르기 전에는 나눠 세지 않는다(대표 결정 2026-11-18).
+    public var effectiveShareNames: [String]? {
+        if shareNames == nil, source != .manual, shareChosen != true { return [LedgerTrip.me] }
+        return shareNames
     }
 
     /// 합계에 더하는 원화 금액. 취소된 결제는 0이다.
@@ -122,6 +132,8 @@ extension LedgerEntry {
         shareNames = try values.decodeIfPresent([String].self, forKey: .shareNames)
         transfer = try values.decodeIfPresent(LedgerTransfer.self, forKey: .transfer)
         canceledAt = try values.decodeIfPresent(Date.self, forKey: .canceledAt)
+        // 표지가 이상하면 표지만 버린다(기록은 읽는다).
+        shareChosen = (try? values.decodeIfPresent(Bool.self, forKey: .shareChosen)) ?? nil
     }
 }
 

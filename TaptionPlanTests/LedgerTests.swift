@@ -1,6 +1,7 @@
 import XCTest
 @testable import TaptionPlan
 import TaptionPlanEngine
+import TaptionPlanStore
 
 /// 가계부(LED1110A01): AI 명령 읽기, 환율, 단체 정산, 오늘 손익, 메모리 장부.
 @MainActor
@@ -395,6 +396,30 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(late.occurredAt.map { calendar.component(.year, from: $0) }, 2026)
     }
 
+    /// HOF1118A01: 같은 시각의 기록은 나중에 만든 것이 위로, 넣은 차례와 상관없이 늘 같은 순서다.
+    /// 금액 칸은 「inf」·「nan」을 숫자로 받지 않는다.
+    func testSameTimeEntriesKeepOneOrderAndAmountsAreFinite() async {
+        let older = LedgerEntry(occurredAt: at(9), amount: 1_000, title: "먼저", createdAt: at(10))
+        let newer = LedgerEntry(occurredAt: at(9), amount: 2_000, title: "나중", createdAt: at(11))
+        for order in [[older, newer], [newer, older]] {
+            let book = LedgerBook(store: { nil })
+            for entry in order { await book.save(entry) }
+            XCTAssertEqual(book.entries.map(\.title), ["나중", "먼저"])
+            var edited = order[0]
+            edited.amount += 1
+            await book.save(edited)
+            XCTAssertEqual(book.entries.map(\.title), ["나중", "먼저"], "an edit does not move a same-time entry")
+        }
+        let twin = LedgerEntry(occurredAt: at(9), amount: 1, title: "쌍", createdAt: at(10))
+        XCTAssertNotEqual(LedgerEntry.newestFirst(older, twin), LedgerEntry.newestFirst(twin, older), "even full ties have one order")
+
+        for text in ["inf", "-inf", "nan", "infinity", "1e400"] {
+            XCTAssertNil(LedgerNumber.parse(text, locale: Locale(identifier: "en_US")), text)
+            XCTAssertNil(LedgerNumber.parse(text, locale: Locale(identifier: "ko_KR")), text)
+        }
+        XCTAssertEqual(LedgerNumber.parse("12.5", locale: Locale(identifier: "en_US")), 12.5)
+    }
+
     /// 리뷰 지적: 청구 예정·한도·광고 문자는 기록 후보가 아니고, 쉼표 소수점 지역에서 금액이 100배가 되지 않는다.
     func testReviewFixes() async {
         let now = at(20)
@@ -634,6 +659,31 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(sheet.receivable, 155_000)
         XCTAssertEqual(sheet.payable, 0)
         XCTAssertEqual(Set(sheet.mine.map(\.from)), ["A", "B"])
+    }
+
+    /// 대표 결정(2026-11-18): 표지 없는 자동 기록(문자·영수증·AI)의 「다 같이」(nil)는 나만으로 센다. 사용자가 몫을 고른 것과
+    /// 손으로 넣은 것은 그대로다. 화면에 보이는 몫(`effectiveShareNames`)과 정산이 같은 값을 쓴다(TSA1117A01).
+    func testAutomaticEntriesCountAsMineUntilTheUserPicksTheSplit() {
+        var taxi = spend(30_000, "택시")
+        taxi.source = .message
+        taxi.shareChosen = true
+        var store = spend(4_000, "편의점")
+        store.source = .message
+        var assistant = spend(9_000, "AI가 넣은 점심")
+        assistant.source = .assistant
+        let water = spend(3_000, "물")
+        XCTAssertNil(taxi.effectiveShareNames, "사용자가 고른 「다 같이」")
+        XCTAssertEqual(store.effectiveShareNames, [LedgerTrip.me], "손대지 않은 자동 기록은 나만")
+        XCTAssertEqual(assistant.effectiveShareNames, [LedgerTrip.me])
+        XCTAssertNil(water.effectiveShareNames, "손으로 넣은 「다 같이」는 그대로")
+        var picked = store
+        picked.shareNames = [LedgerTrip.me, "A"]
+        XCTAssertEqual(picked.effectiveShareNames, [LedgerTrip.me, "A"], "몫이 적혀 있으면 그것")
+
+        let sheet = LedgerTripMath.sheet(trip(budget: nil), entries: [taxi, store, assistant, water])
+        XCTAssertEqual(sheet.myCost, 24_000, "10k + 4k + 9k + 1k")
+        XCTAssertEqual(sheet.sharedTotal, 33_000)
+        XCTAssertEqual(sheet.balances["A"] ?? 0, -11_000, accuracy: 0.5)
     }
 
     /// 대표 결정: 공금 없이 n분의 1. 총무로 A에게 미리 받은 돈은 A가 낸 돈으로 친다.
@@ -1407,6 +1457,20 @@ final class LedgerDecodeSafetyTests: XCTestCase {
         XCTAssertEqual(entry.shareNames, [LedgerTrip.me, "민수"])
         XCTAssertEqual(entry.transfer, LedgerTransfer(kind: .funding, tripID: "t1"))
         XCTAssertNil(entry.canceledAt)
+        XCTAssertNil(entry.shareChosen, "예전 기록에는 「사용자가 몫을 정함」 표지가 없다")
+    }
+
+    /// 「사용자가 몫을 정함」 표지(TSA1117A01)는 없어도 되는 칸이다: 비어 있으면 저장 모양에 키가 생기지 않는다(예전 모양 그대로).
+    func testShareChosenIsAnOptionalFieldThatOldShapesDoNotNeed() throws {
+        let plain = LedgerEntry(id: try XCTUnwrap(UUID(uuidString: id)), occurredAt: Date(timeIntervalSinceReferenceDate: 800_000_000), amount: 5_000,
+                                title: "택시", source: .message, createdAt: Date(timeIntervalSinceReferenceDate: 800_000_000))
+        let json = try XCTUnwrap(String(data: JSONEncoder().encode(plain), encoding: .utf8))
+        XCTAssertFalse(json.contains("shareChosen"), "표지가 없으면 키도 없다")
+        let chosen = try XCTUnwrap(decode(#"{"id":"\#(id)","occurredAt":800000000,"amount":30000,"source":"message","shareChosen":true}"#, as: LedgerEntry.self))
+        XCTAssertEqual(chosen.shareChosen, true)
+        XCTAssertNil(chosen.shareNames, "표지와 「다 같이」(nil)는 따로 읽힌다")
+        let odd = try XCTUnwrap(decode(#"{"id":"\#(id)","occurredAt":800000000,"amount":30000,"shareChosen":"yes"}"#, as: LedgerEntry.self), "표지 모양이 이상해도 기록은 버리지 않는다")
+        XCTAssertNil(odd.shareChosen)
     }
 
     func testMissingKeysGetDefaultsInsteadOfDroppingTheEntry() throws {
@@ -1438,6 +1502,7 @@ final class LedgerDecodeSafetyTests: XCTestCase {
         entry.shareNames = [LedgerTrip.me, "A"]
         entry.transfer = LedgerTransfer(kind: .settlement, tripID: "t1")
         entry.canceledAt = Date(timeIntervalSinceReferenceDate: 800_000_200)
+        entry.shareChosen = true
         let data = try JSONEncoder().encode(entry)
         XCTAssertEqual(try keyCount(data), Mirror(reflecting: entry).children.count, "새 칸이 생겼으면 이 시험 기록에도 채우고 디코더에도 더한다")
         XCTAssertEqual(try JSONDecoder().decode(LedgerEntry.self, from: data), entry)
@@ -2137,5 +2202,79 @@ final class InternalTransferChoiceTests: XCTestCase {
         old.createdAt = received.addingTimeInterval(-3_600)
         XCTAssertEqual(PaymentInboxChoice.addedEntry(for: item, in: [manual, other, old, added])?.id, added.id)
         XCTAssertNil(PaymentInboxChoice.addedEntry(for: item, in: [manual, other, old]), "직접 넣은 것·다른 금액·오래된 것은 지우지 않는다")
+    }
+}
+
+/// TSA1117A01: 「사용자가 몫을 정함」 표지가 SQLite 정본과 월 백업(TAPTBK03·옛 TAPTBK02)을 지나도 남고, 표지 없는 예전 행은 그대로 읽힌다.
+@MainActor
+final class LedgerShareChosenStorageTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_792_300_000)
+    private var directories: [URL] = []
+    private var calendar: Calendar {
+        var value = Calendar(identifier: .gregorian)
+        value.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .gmt
+        return value
+    }
+
+    override func tearDown() {
+        for directory in directories { try? FileManager.default.removeItem(at: directory) }
+        directories = []
+        super.tearDown()
+    }
+
+    private func makeDirectory() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("ledger-share-chosen-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        directories.append(url)
+        return url
+    }
+
+    func testShareChosenSurvivesTheStoreAndBothBackupFormats() async throws {
+        let root = try makeDirectory()
+        let source = try TaptionStoreV2(url: root.appendingPathComponent("source.sqlite"), calendar: calendar)
+        let book = LedgerBook(store: { source })
+        var taxi = LedgerEntry(occurredAt: base, amount: 30_000, amountKRW: 30_000, title: "택시", tripID: "t1", source: .message)
+        taxi.shareChosen = true
+        let store = LedgerEntry(occurredAt: base, amount: 4_000, amountKRW: 4_000, title: "편의점", tripID: "t1", source: .message)
+        _ = await book.save(taxi)
+        _ = await book.save(store)
+        let legacyID = UUID()
+        let legacyBody = #"{"id":"\#(legacyID.uuidString)","occurredAt":\#(base.timeIntervalSinceReferenceDate),"amount":9000,"title":"예전","source":"message"}"#
+        try await source.upsertRecords([TaptionStoreRecord(
+            id: legacyID.uuidString, kind: LedgerBook.entryKind, start: base, end: base, updatedAt: base, origin: .imported, isDeleted: false, body: legacyBody
+        )])
+
+        let reread = LedgerBook(store: { source })
+        await reread.load()
+        XCTAssertEqual(reread.entries.first { $0.id == taxi.id }?.shareChosen, true, "SQLite 정본에서 표지가 남는다")
+        XCTAssertNil(reread.entries.first { $0.id == store.id }?.shareChosen)
+        XCTAssertNil(reread.entries.first { $0.id == legacyID }?.shareChosen, "표지 없는 예전 행도 읽힌다")
+
+        let components = calendar.dateComponents([.year, .month], from: base)
+        let month = TaptionBackupMonth(year: components.year ?? 0, month: components.month ?? 0)
+        let temporary = root.appendingPathComponent("tmp", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+        for version in [2, 3] {
+            let destination = TaptionLocalFolderBackupDestination(directory: root.appendingPathComponent("v\(version)", isDirectory: true))
+            var configuration = TaptionBackupEngine.Configuration()
+            configuration.iterations = 1_000
+            configuration.minimumIterations = 1
+            configuration.temporaryDirectory = temporary
+            var writing = configuration
+            writing.formatVersion = version
+            let written = try await TaptionBackupEngine(store: source, destination: destination, calendar: calendar, configuration: writing)
+                .backup(month: month, password: "482915", now: base.addingTimeInterval(86_400))
+            XCTAssertEqual(written.header?.version, version)
+            let target = try TaptionStoreV2(url: root.appendingPathComponent("target-\(version).sqlite"), calendar: calendar)
+            _ = try await TaptionBackupEngine(store: target, destination: destination, calendar: calendar, configuration: configuration)
+                .restore(month: month, password: "482915")
+            let rows = Dictionary(uniqueKeysWithValues: try await target.records(kind: LedgerBook.entryKind).map { ($0.id, $0.body) })
+            XCTAssertEqual(rows[legacyID.uuidString], legacyBody, "v\(version): 예전 행은 바이트 그대로")
+            let restored = LedgerBook(store: { target })
+            await restored.load()
+            XCTAssertEqual(restored.entries.first { $0.id == taxi.id }?.shareChosen, true, "v\(version): 표지가 돌아온다")
+            XCTAssertNil(restored.entries.first { $0.id == store.id }?.shareChosen)
+            XCTAssertEqual(restored.entries.count, 3)
+        }
     }
 }

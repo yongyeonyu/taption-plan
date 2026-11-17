@@ -334,6 +334,14 @@ struct LedgerEntryForm: View {
     @State private var shareScope = TripShareExpenseScope.ownHidden
     @State private var shareFailure: TripShareLedger.Failure?
     private var book: LedgerBook { .shared }
+    /// 「누구 몫」을 사용자가 직접 고르면 표지를 남긴다(자동 기록의 「다 같이」와 가르기, TSA1117A01).
+    /// 보이는 값은 실제로 쓰는 몫이다: 표지 없는 자동 기록은 「나만」으로 보이고, 「다 같이」를 누르면 표지가 남는다.
+    private var chosenShareNames: Binding<[String]?> {
+        Binding(get: { entry.effectiveShareNames }, set: { names in
+            entry.shareNames = names
+            entry.shareChosen = true
+        })
+    }
     static let currencies = ["KRW", "USD", "JPY", "EUR", "CNY", "TWD", "HKD", "THB", "VND", "SGD", "PHP", "IDR", "GBP", "AUD", "CAD"]
 
     init(language: MapHomeLanguage, entry: LedgerEntry, isNew: Bool = true, members: [String]? = nil) {
@@ -354,9 +362,9 @@ struct LedgerEntryForm: View {
                     entrySection
                 }
                 if let tripID = entry.tripID, entry.kind == .expense, TripShareLedger.handles(entry) {
-                    TripShareExpenseScopePicker(language: language, tripID: tripID, entry: entry, isNew: isNew, scope: $shareScope, payer: $entry.payer, shareNames: $entry.shareNames, failure: $shareFailure)
+                    TripShareExpenseScopePicker(language: language, tripID: tripID, entry: entry, isNew: isNew, scope: $shareScope, payer: $entry.payer, shareNames: chosenShareNames, failure: $shareFailure)
                 } else if let members, entry.kind == .expense, entry.transfer == nil {
-                    LedgerShareSection(language: language, members: members, payer: $entry.payer, shareNames: $entry.shareNames)
+                    LedgerShareSection(language: language, members: members, payer: $entry.payer, shareNames: chosenShareNames)
                 } else if let members, !members.isEmpty, entry.kind == .income, entry.transfer == nil {
                     LedgerIncomeFromSection(language: language, members: members, payer: $entry.payer)
                 }
@@ -599,10 +607,11 @@ enum LedgerNumber {
         let formatter = NumberFormatter()
         formatter.locale = locale
         formatter.numberStyle = .decimal
-        if let value = formatter.number(from: trimmed)?.doubleValue { return value }
+        // 「inf」·「nan」처럼 유한하지 않은 값은 숫자로 받지 않는다(HOF1118A01).
+        if let value = formatter.number(from: trimmed)?.doubleValue { return value.isFinite ? value : nil }
         let grouping = locale.groupingSeparator ?? ","
         let decimal = locale.decimalSeparator ?? "."
-        return Double(trimmed.replacingOccurrences(of: grouping, with: "").replacingOccurrences(of: decimal, with: "."))
+        return Double(trimmed.replacingOccurrences(of: grouping, with: "").replacingOccurrences(of: decimal, with: ".")).flatMap { $0.isFinite ? $0 : nil }
     }
 }
 

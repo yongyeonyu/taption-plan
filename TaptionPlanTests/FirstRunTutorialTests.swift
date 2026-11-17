@@ -328,7 +328,9 @@ private final class InMemoryCredentialStore: PlanCredentialStore {
     private var data: Data?
     func read() throws -> Data? { data }
     func write(_ data: Data) throws { self.data = data }
+}
 
+extension FirstRunTutorialTests {
     func testWatchStageFollowsAnswerAndRealInstallState() {
         func stage(_ state: AppleWatchConnectionState, _ answer: Bool?, install: Bool = false) -> FirstRunWatchStage {
             FirstRunWatchStage.make(state: state, hasWatchAnswer: answer, wantsInstall: install)

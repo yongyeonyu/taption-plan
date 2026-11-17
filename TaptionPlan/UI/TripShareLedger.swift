@@ -339,13 +339,14 @@ enum TripShareLedger {
     }
 
     /// 공유를 시작할 때(주인이 올리는 중) 직접 넣은 「다 같이」 지출을 공동 지출로 올린다. 몫은 그때 방에 있는 사람이고,
-    /// 동행이 들어오면 `widenAllTogether`가 더한다. 자동으로 들어온 지출은 대표 결정대로 올리지 않는다(나만으로 남는다).
+    /// 동행이 들어오면 `widenAllTogether`가 더한다. 자동으로 들어온 지출은 사용자가 폼에서 몫을 고른 것(`shareChosen`)만
+    /// 올리고, 손대지 않은 것은 대표 결정대로 올리지 않는다(나만으로 남는다).
     static func shareAllTogether(tripID: String, roomID: String, session: ShareRoomSession, store: TripShareStore = .shared) async throws {
         await book.load()
         var view = await session.view()
         let present = Set(view.items.map(\.id))
         let entries = book.tripEntries(tripID).filter {
-            $0.shareNames == nil && $0.source == .manual && canShare($0) && !present.contains(TripShareMapping.roomItemID(entryID: $0.id))
+            $0.shareNames == nil && ($0.source == .manual || $0.shareChosen == true) && canShare($0) && !present.contains(TripShareMapping.roomItemID(entryID: $0.id))
         }
         guard !entries.isEmpty else { return }
         let ids = Set(entries.map { TripShareMapping.roomItemID(entryID: $0.id) })

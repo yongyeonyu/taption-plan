@@ -4,6 +4,15 @@ import os
 @_exported import TaptionLedgerCore
 import TaptionPlanStore
 
+extension LedgerEntry {
+    /// 가계부 순서: 최신이 위. 같은 시각이면 나중에 만든 것, 그래도 같으면 id로 정해 읽을 때마다 같은 순서다(HOF1118A01).
+    static func newestFirst(_ a: LedgerEntry, _ b: LedgerEntry) -> Bool {
+        if a.occurredAt != b.occurredAt { return a.occurredAt > b.occurredAt }
+        if a.createdAt != b.createdAt { return a.createdAt > b.createdAt }
+        return a.id.uuidString < b.id.uuidString
+    }
+}
+
 /// 분류의 화면 이름과 글에서 짐작하기. 값 타입은 `TaptionLedgerCore`에 있다.
 extension LedgerCategory {
     func title(_ language: MapHomeLanguage) -> String {
@@ -119,11 +128,11 @@ final class LedgerBook {
         if !failed.isEmpty { Self.log.error("ledger rows left unread: \(failed.description, privacy: .public)") }
         trips = readTrips.values.sorted { $0.start > $1.start }
         let saved = entries
-        entries = readEntries.values.sorted { $0.occurredAt > $1.occurredAt }
+        entries = readEntries.values.sorted(by: LedgerEntry.newestFirst)
         budgets = readBudgets.values
         // 읽는 동안 메모리에만 들어온 기록(저장소가 없는 시험 포함)은 남긴다.
         for entry in saved where !entries.contains(where: { $0.id == entry.id }) { entries.append(entry) }
-        entries.sort { $0.occurredAt > $1.occurredAt }
+        entries.sort(by: LedgerEntry.newestFirst)
         isLoaded = true
         revision += 1
     }
@@ -176,7 +185,7 @@ final class LedgerBook {
            Date.now.timeIntervalSince(lastRateAttempt) > 600 { await refreshRates() }
         if value.amountKRW == nil { value.amountKRW = krw(value.amount, currency: value.currency) }
         if let index = entries.firstIndex(where: { $0.id == value.id }) { entries[index] = value } else { entries.append(value) }
-        entries.sort { $0.occurredAt > $1.occurredAt }
+        entries.sort(by: LedgerEntry.newestFirst)
         revision += 1
         await write(value, deleted: false)
         return value
