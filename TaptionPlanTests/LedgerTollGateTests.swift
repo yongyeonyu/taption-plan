@@ -178,3 +178,79 @@ final class LedgerTollGateTests: XCTestCase {
         XCTAssertEqual(TollUnitStore.decode(Data("{\"units\":[\(many)]}".utf8))?.count, TollUnitStore.maximumUnits)
     }
 }
+
+/// KDR1118A01: 도로공사로 모를 때만 카카오 길찾기. 좌표는 모두 가짜다.
+@MainActor
+final class LedgerTollKakaoTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_794_355_200)
+    private func at(_ hour: Double) -> Date { base.addingTimeInterval(hour * 3_600) }
+    private func points(_ count: Int, start: Double = 18) -> [LedgerTollKakao.Point] {
+        (0..<count).map { .init(at: at(start + Double($0) / 60), latitude: 10 + Double($0) * 0.01, longitude: 20) }
+    }
+    private func drive(cells: Int = 20, points count: Int = 30, from: String = "회사", to: String = "집") -> LedgerTollRepeat.Drive {
+        var drive = LedgerTollRepeat.Drive(from: from, to: to, start: at(18), end: at(18.5))
+        drive.cells = Set((0..<cells).map { "1000_\($0)" })
+        drive.points = LedgerTollKakao.sampled(points(count))
+        return drive
+    }
+
+    func testSamplesStartEndAndFiveBetween() throws {
+        let all = points(40)
+        let picked = LedgerTollKakao.sampled(all.shuffled())
+        XCTAssertEqual(picked.count, 7)
+        XCTAssertEqual(picked.first, all.first)
+        XCTAssertEqual(picked.last, all.last)
+        XCTAssertEqual(LedgerTollKakao.sampled(Array(all.prefix(4))).count, 4, "적으면 그대로")
+        let body = try XCTUnwrap(LedgerTollKakao.body(all))
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual((object["waypoints"] as? [Any])?.count, 5, "경유지는 최대 5개")
+        XCTAssertEqual(Set(object.keys), ["origin", "destination", "waypoints"], "점 말고는 보내지 않는다")
+        XCTAssertNil(LedgerTollKakao.body(Array(all.prefix(1))))
+    }
+
+    func testOnlyUnhandledLongDrivesWithoutTollAreAsked() {
+        let long = drive()
+        let now = at(20)
+        XCTAssertEqual(LedgerTollKakao.candidates(drives: [long], existing: [], handled: [], asked: [], now: now).count, 1)
+        XCTAssertTrue(LedgerTollKakao.candidates(drives: [long], existing: [], handled: [long.key], asked: [], now: now).isEmpty, "다른 방식으로 넣었다")
+        XCTAssertTrue(LedgerTollKakao.candidates(drives: [long], existing: [], handled: [], asked: [long.key], now: now).isEmpty, "이미 물었다")
+        XCTAssertTrue(LedgerTollKakao.candidates(drives: [drive(cells: 3)], existing: [], handled: [], asked: [], now: now).isEmpty, "동네 길")
+        XCTAssertTrue(LedgerTollKakao.candidates(drives: [drive(points: 1)], existing: [], handled: [], asked: [], now: now).isEmpty, "위치가 모자람")
+        XCTAssertTrue(LedgerTollKakao.candidates(drives: [long], existing: [], handled: [], asked: [], now: at(18.55)).isEmpty, "도착 10분 전")
+        var paid = LedgerEntry(occurredAt: at(18.4), amount: 3_000, title: "통행료")
+        paid.category = .transport
+        XCTAssertTrue(LedgerTollKakao.candidates(drives: [long], existing: [paid], handled: [], asked: [], now: now).isEmpty, "그 무렵 통행료가 있다")
+    }
+
+    func testEntryNamesHighwayAndIsAutoButNotLearned() throws {
+        let route = try XCTUnwrap(LedgerTollKakao.decode(Data(#"{"found":true,"toll":6600,"distance":40000,"duration":2400,"roads":["가짜대로","가짜공항고속도로","가짜로"]}"#.utf8)))
+        let entry = try XCTUnwrap(LedgerTollKakao.entry(drive: drive(), route: route, language: .korean))
+        XCTAssertEqual(entry.title, "가짜공항고속도로 통행료")
+        XCTAssertEqual(entry.amount, 6_600)
+        XCTAssertEqual(entry.note, "카카오 길찾기로 자동 추가 · 회사 → 집 · 카카오 예상 통행료")
+        XCTAssertTrue(LedgerTollRepeat.isToll(entry))
+        XCTAssertTrue(LedgerTollRepeat.isAuto(entry), "할인 든 예상 금액이라 같은 길 규칙이 배우지 않는다")
+        XCTAssertNil(LedgerTollKakao.entry(drive: drive(), route: .init(found: true, toll: 0, roads: []), language: .korean), "통행료 없는 길")
+        XCTAssertNil(LedgerTollKakao.entry(drive: drive(), route: .init(found: false, toll: 0, roads: []), language: .korean))
+        XCTAssertEqual(LedgerTollKakao.entry(drive: drive(), route: .init(found: true, toll: 900, roads: ["가짜로"]), language: .korean)?.title, "고속도로 통행료")
+        XCTAssertNil(LedgerTollKakao.decode(Data(#"{"error":"unavailable"}"#.utf8)))
+
+        // 확인해 남긴 카카오 통행료로 같은 길 규칙의 길 모양을 배우지 않는다(다른 길일 수 있다).
+        let rules = ["회사→집": LedgerTollRepeat.Rule(amount: 900, currency: "KRW", title: "통행료 (퇴근)", learnedAt: at(0), base: 900)]
+        var accepted = entry
+        accepted.occurredAt = at(18.5)
+        XCTAssertNil(LedgerTollRepeat.learn(drives: [drive()], entries: [accepted], into: rules)["회사→집"]?.route)
+    }
+
+    func testMergedFragmentsKeepSampledPoints() {
+        var first = LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(18), end: at(18.2))
+        first.points = LedgerTollKakao.sampled(points(10))
+        var second = LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(18.25), end: at(18.5))
+        second.points = LedgerTollKakao.sampled(points(10, start: 18.25))
+        let merged = LedgerTollRepeat.merged([first, second])
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].points.count, 7)
+        XCTAssertEqual(merged[0].points.first?.at, at(18))
+        XCTAssertEqual(merged[0].points.last, second.points.last)
+    }
+}

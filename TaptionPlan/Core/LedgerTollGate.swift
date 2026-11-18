@@ -359,3 +359,112 @@ enum LedgerTollGateRunner {
         return (done, unknownFare)
     }
 }
+
+/// 도로공사 자료로 통행료를 모를 때만 카카오 길찾기에 묻는다(KDR1118A01, 대표 결정 2026-11-18, `AGENTS.md` 좌표 예외 TGT1118A01).
+/// 보내는 것은 그 이동의 출발·도착과 경유지 최대 5개 좌표뿐이고, 서버는 저장하지 않는다.
+/// 실제 지난 길이 아니라 그 점들로 다시 그린 길의 예상이라 늘 「확인 필요」로 올린다.
+enum LedgerTollKakao {
+    struct Point: Equatable, Sendable {
+        var at: Date
+        var latitude: Double
+        var longitude: Double
+    }
+
+    struct Route: Equatable, Sendable {
+        var found: Bool
+        var toll: Double
+        var roads: [String]
+    }
+
+    static let notes = ["카카오 길찾기로 자동 추가", "Added from Kakao directions"]
+    static let maximumWaypoints = 5
+    /// 이만큼 칸(약 1km)을 지난 이동만 묻는다. 동네 길은 묻지 않는다.
+    static let minimumCells = 8
+    static let askedKey = "ledgerTollKakaoAsked"
+
+    /// 고르게 고른 점: 처음·끝과 그 사이 최대 5개.
+    static func sampled(_ points: [Point]) -> [Point] {
+        let sorted = points.sorted { $0.at < $1.at }
+        guard sorted.count > maximumWaypoints + 2 else { return sorted }
+        let last = sorted.count - 1
+        let inner = (1...maximumWaypoints).map { sorted[Int((Double($0) * Double(last) / Double(maximumWaypoints + 1)).rounded())] }
+        return [sorted[0]] + inner + [sorted[last]]
+    }
+
+    /// 서버에 보낼 본문. 점이 둘보다 적으면 묻지 않는다.
+    static func body(_ points: [Point]) -> Data? {
+        let picked = sampled(points)
+        guard picked.count >= 2, let first = picked.first, let last = picked.last else { return nil }
+        func value(_ point: Point) -> [String: Double] { ["lat": point.latitude, "lng": point.longitude] }
+        let object: [String: Any] = ["origin": value(first), "destination": value(last), "waypoints": picked.dropFirst().dropLast().map(value)]
+        return try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+    }
+
+    static func decode(_ data: Data) -> Route? {
+        struct Reply: Decodable { var found: Bool; var toll: Double?; var roads: [String]? }
+        guard let reply = try? JSONDecoder().decode(Reply.self, from: data) else { return nil }
+        return Route(found: reply.found, toll: max(0, reply.toll ?? 0), roads: reply.roads ?? [])
+    }
+
+    /// 물을 이동: 정착했고, 다른 방식(지난 톨게이트·같은 길)으로 처리하지 않았고, 그 무렵 통행료가 없고, 길게 달렸고, 아직 묻지 않은 것.
+    static func candidates(
+        drives: [LedgerTollRepeat.Drive], existing: [LedgerEntry], handled: Set<String>, asked: Set<String>, now: Date
+    ) -> [LedgerTollRepeat.Drive] {
+        let tolls = existing.filter(LedgerTollRepeat.isToll).map(\.occurredAt)
+        return LedgerTollRepeat.merged(drives).filter { drive in
+            !handled.contains(drive.key) && !asked.contains(drive.key)
+                && drive.end <= now.addingTimeInterval(-LedgerTollRepeat.settle)
+                && drive.cells.count >= minimumCells && drive.points.count >= 2
+                && !tolls.contains { LedgerTollRepeat.covers(drive, $0) }
+        }
+    }
+
+    /// 「확인 필요」에 올릴 기록. 통행료가 없으면 nil.
+    static func entry(drive: LedgerTollRepeat.Drive, route: Route, language: MapHomeLanguage) -> LedgerEntry? {
+        guard route.found, route.toll > 0 else { return nil }
+        let highways = route.roads.filter { $0.contains("고속도로") || $0.localizedCaseInsensitiveContains("expressway") }
+        let named = highways.isEmpty ? language.text("고속도로", "Expressway") : highways.prefix(2).joined(separator: "·")
+        var entry = LedgerEntry(occurredAt: drive.end, amount: route.toll, title: language.text("\(named) 통행료", "Toll: \(named)"))
+        entry.category = .transport
+        entry.note = [language.text("카카오 길찾기로 자동 추가", "Added from Kakao directions"), "\(drive.from) → \(drive.to)",
+                      language.text("카카오 예상 통행료", "Kakao estimated toll")].joined(separator: " · ")
+        return entry
+    }
+}
+
+/// 같은 길 통행료 다음에 돈다. 「확인 필요」에 올린 이동의 열쇠를 돌려준다.
+@MainActor
+enum LedgerTollKakaoRunner {
+    /// 묻지 못하면(키 없음·한도·네트워크) 1시간 쉰다.
+    private static var pausedUntil = Date.distantPast
+    /// 한 번 돌 때 묻는 이동 수.
+    static let perRun = 3
+
+    static func run(
+        drives: [LedgerTollRepeat.Drive], existing: [LedgerEntry], handled: Set<String>, now: Date,
+        defaults: UserDefaults = .standard, language: MapHomeLanguage, env: AssistantRegistration.Environment = .live
+    ) async -> [String] {
+        guard now >= pausedUntil else { return [] }
+        var asked = defaults.stringArray(forKey: LedgerTollKakao.askedKey) ?? []
+        var done: [String] = []
+        let candidates = LedgerTollKakao.candidates(drives: drives, existing: existing, handled: handled, asked: Set(asked), now: now)
+        for drive in candidates.prefix(perRun) {
+            guard let body = LedgerTollKakao.body(drive.points) else { continue }
+            guard let token = await AssistantRegistration.searchToken(),
+                  let reply = await TripRelay.send(TripRelay.relayRequest("/kakao/directions", method: "POST", body: body, token: token,
+                                                                          host: env.host, client: env.client()), session: env.session),
+                  reply.status == 200, let route = LedgerTollKakao.decode(reply.data) else {
+                pausedUntil = now.addingTimeInterval(60 * 60)
+                break
+            }
+            // 통행료가 없던 이동도 다시 묻지 않는다.
+            asked.append(drive.key)
+            guard let entry = LedgerTollKakao.entry(drive: drive, route: route, language: language) else { continue }
+            LedgerReviewStore.shared.add(entry, reason: .toll, now: now)
+            done.append(drive.key)
+            TaptionPlanDiagnosticsLogger.shared.record("ledger_toll_kakao_review", fields: ["amount": String(Int(entry.amount))])
+        }
+        defaults.set(Array(asked.suffix(200)), forKey: LedgerTollKakao.askedKey)
+        return done
+    }
+}

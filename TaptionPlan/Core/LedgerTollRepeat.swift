@@ -17,6 +17,8 @@ enum LedgerTollRepeat {
         var cells: Set<String> = []
         /// 이동 중 지난 영업소(TGT1118A01). 기기에만 둔다.
         var passes: [LedgerTollGate.Pass] = []
+        /// 카카오 길찾기에 물을 때 쓸 점(처음·끝과 사이 최대 5개, KDR1118A01). 기기 메모리에만 두고 저장하지 않는다.
+        var points: [LedgerTollKakao.Point] = []
 
         var key: String { "\(from)|\(to)|\(Int(start.timeIntervalSince1970 / 60))" }
         /// 요금소를 지났을 법한 때. 할인은 이 시각으로 본다.
@@ -87,9 +89,10 @@ enum LedgerTollRepeat {
             guard let drive = drives.first(where: { covers($0, entry.occurredAt) }) else { continue }
             let key = pair(drive.from, drive.to)
             let route = LedgerTollRoute.stored(drive.cells)
-            // 앱이 넣은 것(할인 든 금액)에서는 금액을 배우지 않고, 남겨 둔(확인한) 것이면 모르던 길 모양만 배운다.
+            // 앱이 넣은 것(할인 든 금액)에서는 금액을 배우지 않고, 남겨 둔(확인한) 같은 길 통행료면 모르던 길 모양만 배운다.
+            // 지난 톨게이트·카카오 길찾기로 넣은 것은 다른 길일 수 있어 같은 길 규칙의 길 모양으로 쓰지 않는다.
             if isAuto(entry) {
-                if let route, let target = [key, pair(drive.to, drive.from)].first(where: { result[$0] != nil }), result[target]?.route == nil {
+                if autoNotes.contains(where: { (entry.note ?? "").hasPrefix($0) }), let route, let target = [key, pair(drive.to, drive.from)].first(where: { result[$0] != nil }), result[target]?.route == nil {
                     result[target]?.route = route
                 }
                 continue
@@ -103,7 +106,9 @@ enum LedgerTollRepeat {
     }
 
     /// 앱이 넣은 통행료(같은 길·지난 톨게이트). 금액에 할인이 들어 있어 배우지 않는다.
-    static func isAuto(_ entry: LedgerEntry) -> Bool { (autoNotes + LedgerTollGate.notes).contains { (entry.note ?? "").hasPrefix($0) } }
+    static func isAuto(_ entry: LedgerEntry) -> Bool {
+        (autoNotes + LedgerTollGate.notes + LedgerTollKakao.notes).contains { (entry.note ?? "").hasPrefix($0) }
+    }
 
     /// 넣을 통행료. 같은 길이면 그대로, 되돌아오는 길이면 제목의 출근·퇴근을 바꾼다.
     static func entries(
@@ -162,6 +167,7 @@ enum LedgerTollRepeat {
                     }
                 }
                 result[index].passes.sort { $0.at < $1.at }
+                result[index].points = LedgerTollKakao.sampled(result[index].points + drive.points)
             } else {
                 result.append(drive)
             }
@@ -442,7 +448,10 @@ enum LedgerTollRepeatRunner {
             handled.append(addition.drive.key)
             TaptionPlanDiagnosticsLogger.shared.record("ledger_toll_repeat_added", fields: ["amount": String(Int(addition.entry.amount))])
         }
-        if !additions.isEmpty { defaults.set(Array(handled.suffix(200)), forKey: handledKey) }
+        // 지난 톨게이트도 같은 길도 아니면 카카오 길찾기에 묻는다(KDR1118A01). 결과는 늘 「확인 필요」로.
+        let kakao = await LedgerTollKakaoRunner.run(drives: drives, existing: entries, handled: Set(handled), now: now, defaults: defaults, language: language)
+        handled += kakao
+        if !additions.isEmpty || !kakao.isEmpty { defaults.set(Array(handled.suffix(200)), forKey: handledKey) }
     }
 
     /// 출발·도착 이름을 아는 자동차 이동만. 이름 모르는 「머문 곳」은 길로 보지 않는다.
@@ -469,6 +478,7 @@ enum LedgerTollRepeatRunner {
         var routed = drive
         routed.cells = LedgerTollRoute.cells(along: fixes.map { ($0.latitude, $0.longitude) })
         routed.passes = units.isEmpty ? [] : LedgerTollGate.passes(units: units, fixes: fixes)
+        routed.points = LedgerTollKakao.sampled(fixes.map { LedgerTollKakao.Point(at: $0.at, latitude: $0.latitude, longitude: $0.longitude) })
         return routed
     }
 

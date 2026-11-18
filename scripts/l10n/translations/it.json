@@ -6096,6 +6096,9 @@
 "{0} → {1} 통행료|Toll: {0} → {1}": "Pedaggio: {0} → {1}",
 "{0} 영업소|{0} toll plaza": "Casello {0}",
 "{0} 통행료|Toll: {0}": "Pedaggio: {0}",
+"고속도로|Expressway": "Autostrada",
+"카카오 길찾기로 자동 추가|Added from Kakao directions": "Aggiunto automaticamente dal percorso Kakao",
+"카카오 예상 통행료|Kakao estimated toll": "Pedaggio stimato da Kakao",
 "정상요금 {0}|Normal fare {0}": "Tariffa normale {0}",
 "지난 톨게이트로 자동 추가|Added from the toll plazas passed": "Aggiunto dai caselli attraversati"
 }

@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## KDR1118A01 · 도로공사로 모를 때만 카카오 길찾기로 통행료 묻기 (2026-11-18, 시뮬레이터·맥, 실기기·서버 배포 없음)
+
+- 대표 결정(2026-11-18 객관식): 「도로공사 먼저, 모를 때만 카카오」. 좌표 예외는 `AGENTS.md`(TGT1118A01)에 적음. 키는 기존 `KAKAO_REST_API_KEY`(새 비밀값 없음, 대표 확인).
+- 서버: `src/directions.js` 새 파일, `POST /kakao/directions`(본문 좌표만, GET은 405, 경유지 최대 5개, 좌표 범위 검사, `no-store`, 상류 원문·좌표를 돌려주지 않음). 카카오에는 「경도,위도」, `car_type=1`. 답은 `{found, toll, distance, duration, roads}`(길 좌표 vertexes는 넘기지 않음). 하루 한도는 카카오 검색과 같은 칸.
+- 앱(`LedgerTollGate.swift`에 `LedgerTollKakao`·`LedgerTollKakaoRunner`): 지난 톨게이트·같은 길로 처리하지 못한 이동 중 정착·그 무렵 통행료 없음·약 8km 넘게 달림·아직 안 물은 것만, 이동의 정확한 위치에서 처음·끝과 사이 5개를 골라 묻는다(점은 메모리에만, 한 번에 3개). 통행료가 있으면 「○○고속도로 통행료」(메모 「카카오 길찾기로 자동 추가 · 출발 → 도착 · 카카오 예상 통행료」)로 늘 「확인 필요」에 올림(다시 그린 길의 예상이라). 0원이면 넣지 않고, 실패(키 없음·한도·네트워크)면 1시간 쉼. 확인해 남긴 카카오·지난 톨게이트 통행료로는 같은 길 규칙의 길 모양을 배우지 않음.
+- 서버 `npm test`: 237건 실패 0(새 3건). 단위 `LedgerTollKakaoTests`(새 4)·`LedgerTollGateTests`·`LedgerTollRepeatTests` 27건 실패 0(`build/validation/KDR1118A01/toll-unit-0.log`). 전체 `-only-testing:TaptionPlanTests` 3,064건 실행·26 건너뜀·실패 0(`full-unit-1.log`, Debug 빌드 포함). 번역 새 3줄 12개 언어 `check.py` 실패 0·`generate.py`. 구조 지표·import 경계 통과. `PRIVACY.md`에 통행료 한 줄(도로공사엔 코드·차종만, 모를 때만 카카오에 좌표).
+- 제한: 실제 카카오 응답은 확인하지 않음(대표 확인 문서의 `routes[0].summary.fare.toll` 기준). 카카오 통행료에 출퇴근 할인이 들어 있는지 몰라 그대로 「예상」으로 적고 앱 할인을 다시 적용하지 않음. 민자 도로로 매일 다니면 매번 「확인 필요」에 올라옴(길별 규칙 여러 개는 아직 없음).
+
 ## TGT1118A01 · 지난 톨게이트로 통행료 알아내기 (2026-11-18, 시뮬레이터·맥, 실기기·서버 배포 없음)
 
 - 명세 확인(공식): 공공데이터포털 `15111644`(영업소간 통행요금)의 링크(`/tcs/dss/selectApiLinkUrl.do?publicDataPk=15111644`)가 `data.ex.co.kr/openapi/basicinfo/openApiInfoM?apiId=0620`을 가리킴. 그 페이지를 브라우저로 그려 요청 주소 `https://data.ex.co.kr/openapi/toll/bhoinstIntoTollList`(HTTPS GET)·요청 변수(`key`·`type` 필수, `dprtrTolofCd`·`arrvTolofCd`·`hoinstCd`·`pageNo`·`numOfRows`·이름 둘)·출력 변수(`nrmlKnd1~8Amt`·`odn1/odn2` 할인·`crgw2/4/6SumDstne` 등)를 읽음. 영업소 위치는 `apiId=0123`(`locationinfoUnit`). 응답 바깥 모양(`list`·`count`·`code: "SUCCESS"`)은 포털 예제의 공개 견본 키 `test`로 한 줄씩 확인(대표 키는 쓰지 않음). 메인이 전달한 대표 실측 명세(쪽당 99줄, User-Agent 차단, 좌표 빈 영업소 192곳, 0건 요금)와 같음.

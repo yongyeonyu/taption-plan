@@ -4239,7 +4239,8 @@
    "ko": "{0} 통행료",
    "en": "Toll: {0}",
    "files": [
-    "LedgerTollGate.swift:216"
+    "LedgerTollGate.swift:216",
+    "LedgerTollGate.swift:427"
    ],
    "args": [
     "route"
@@ -34527,7 +34528,7 @@
    "ko": "같은 길 통행료 자동 추가",
    "en": "Same-route toll, added automatically",
    "files": [
-    "LedgerTollRepeat.swift:436"
+    "LedgerTollRepeat.swift:442"
    ],
    "args": [],
    "targets": [
@@ -35763,7 +35764,7 @@
    "ko": "경차 할인 50%",
    "en": "Compact car discount 50%",
    "files": [
-    "LedgerTollRepeat.swift:351"
+    "LedgerTollRepeat.swift:357"
    ],
    "args": [],
    "targets": [
@@ -35775,7 +35776,7 @@
    "ko": "경차",
    "en": "Compact",
    "files": [
-    "LedgerTollRepeat.swift:360"
+    "LedgerTollRepeat.swift:366"
    ],
    "args": [],
    "targets": [
@@ -36292,6 +36293,18 @@
    "en": "Used for highway toll discounts when tolls are added automatically: compact cars 50%, EVs 30% this year, weekday commute hours 20–50%. Hybrids count as standard.",
    "files": [
     "FirstRunCarPage.swift:92"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "고속도로|Expressway",
+   "ko": "고속도로",
+   "en": "Expressway",
+   "files": [
+    "LedgerTollGate.swift:426"
    ],
    "args": [],
    "targets": [
@@ -42514,7 +42527,7 @@
    "ko": "머문 곳",
    "en": "Place",
    "files": [
-    "LedgerTollRepeat.swift:450",
+    "LedgerTollRepeat.swift:459",
     "AssistantActivity.swift:207",
     "AssistantActivity.swift:300"
    ],
@@ -57165,7 +57178,7 @@
    "ko": "일반",
    "en": "Standard",
    "files": [
-    "LedgerTollRepeat.swift:359"
+    "LedgerTollRepeat.swift:365"
    ],
    "args": [],
    "targets": [
@@ -58998,7 +59011,7 @@
    "ko": "전기·수소차 할인",
    "en": "EV discount",
    "files": [
-    "LedgerTollRepeat.swift:352"
+    "LedgerTollRepeat.swift:358"
    ],
    "args": [],
    "targets": [
@@ -59010,7 +59023,7 @@
    "ko": "전기·수소차",
    "en": "EV · hydrogen",
    "files": [
-    "LedgerTollRepeat.swift:361"
+    "LedgerTollRepeat.swift:367"
    ],
    "args": [],
    "targets": [
@@ -59789,7 +59802,7 @@
    "ko": "주말 할증 5%",
    "en": "Weekend surcharge 5%",
    "files": [
-    "LedgerTollRepeat.swift:353"
+    "LedgerTollRepeat.swift:359"
    ],
    "args": [],
    "targets": [
@@ -62309,7 +62322,7 @@
    "ko": "출퇴근 할인 20%",
    "en": "Commute discount 20%",
    "files": [
-    "LedgerTollRepeat.swift:350"
+    "LedgerTollRepeat.swift:356"
    ],
    "args": [],
    "targets": [
@@ -62321,7 +62334,7 @@
    "ko": "출퇴근 할인 50%",
    "en": "Commute discount 50%",
    "files": [
-    "LedgerTollRepeat.swift:349"
+    "LedgerTollRepeat.swift:355"
    ],
    "args": [],
    "targets": [
@@ -62693,6 +62706,30 @@
    "files": [
     "FirstRunTutorialView.swift:184",
     "MapHomeView+Menu2.swift:49"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "카카오 길찾기로 자동 추가|Added from Kakao directions",
+   "ko": "카카오 길찾기로 자동 추가",
+   "en": "Added from Kakao directions",
+   "files": [
+    "LedgerTollGate.swift:429"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "카카오 예상 통행료|Kakao estimated toll",
+   "ko": "카카오 예상 통행료",
+   "en": "Kakao estimated toll",
+   "files": [
+    "LedgerTollGate.swift:430"
    ],
    "args": [],
    "targets": [

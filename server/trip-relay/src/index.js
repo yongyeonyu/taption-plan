@@ -11,6 +11,7 @@ import * as share from "./share.js";
 import * as shared from "./shared.js";
 import { createSetup, readSetup } from "./setup.js";
 import { exFare, exUnits } from "./expressway.js";
+import { kakaoDirections } from "./directions.js";
 import { fxRoute } from "./fx.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
 import { bearer, json, limited, readBody, tooMany, writeAllowed } from "./http.js";
@@ -322,11 +323,14 @@ const query = (request, name) => new URL(request.url).searchParams.get(name);
 
 // 검색 키는 누구나 등록할 수 있으므로 IP마다 하루 수도 센다(finding 4).
 async function kakaoRoute(request, ctx) {
-  if (request.method === "GET" && ctx.env.KAKAO_REST_API_KEY) {
+  const path = new URL(request.url).pathname;
+  // 길찾기(KDR1118A01)는 좌표를 본문으로 받으려고 POST다. 하루 한도는 같은 칸을 센다.
+  const counted = request.method === "GET" || (request.method === "POST" && path === "/kakao/directions");
+  if (counted && ctx.env.KAKAO_REST_API_KEY) {
     const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
     if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
   }
-  const path = new URL(request.url).pathname;
+  if (path === "/kakao/directions") return kakaoDirections(request, ctx.env, ctx.env.FETCH);
   if (path === "/kakao/image") return kakaoImage(request, ctx.env, ctx.env.FETCH);
   return kakaoKeyword(request, ctx.env, ctx.env.FETCH, path === "/kakao/category"); // FETCH: 시험용 바꿔치기
 }
@@ -436,6 +440,9 @@ const ROUTES = {
   },
   "/kakao/category": {
     GET: ["search", kakaoRoute],
+  },
+  "/kakao/directions": {
+    POST: ["search", kakaoRoute],
   },
   "/kakao/image": {
     GET: ["search", kakaoRoute],

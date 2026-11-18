@@ -6096,6 +6096,9 @@
 "{0} → {1} 통행료|Toll: {0} → {1}": "{0} → {1} 通行費",
 "{0} 영업소|{0} toll plaza": "{0} 收費站",
 "{0} 통행료|Toll: {0}": "{0} 通行費",
+"고속도로|Expressway": "高速公路",
+"카카오 길찾기로 자동 추가|Added from Kakao directions": "根據 Kakao 路線自動新增",
+"카카오 예상 통행료|Kakao estimated toll": "Kakao 預估通行費",
 "정상요금 {0}|Normal fare {0}": "正常費用 {0}",
 "지난 톨게이트로 자동 추가|Added from the toll plazas passed": "依經過的收費站自動新增"
 }
