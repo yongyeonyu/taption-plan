@@ -416,7 +416,9 @@ struct MapHomePlaybackRangePicker: View {
                 .frame(maxWidth: .infinity, minHeight: 40)
                 .foregroundStyle(Color.tpInk)
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+                .taptionMenuHitFrame(visualHeight: 40)
             }
+            .taptionMenuHitLayout(visualHeight: 40)
             .accessibilityIdentifier("playbackRangeMenu")
             if preset == .custom {
                 DatePicker(

@@ -220,7 +220,6 @@ struct MapHomeSectionEditSheet: View {
                 .opacity(cutMinute != nil || insertedDetail != nil ? 0.62 : 1)
                 categorySelectionMenu
                 .frame(maxWidth: .infinity)
-                .padding(.horizontal, 10)
                 .frame(height: 44)
                 .background(Color.tpSurface, in: Capsule())
             }
@@ -459,7 +458,8 @@ struct MapHomeSectionEditSheet: View {
                     .foregroundStyle(.secondary)
             }
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
-            .frame(maxWidth: .infinity)
+            // 메뉴는 라벨 틀만 누르는 자리로 써서, 바깥 캡슐(44pt)의 여백까지 라벨 틀로 채운다(MNU1118A01).
+            .frame(maxWidth: .infinity).padding(.horizontal, 10).frame(maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .accessibilityLabel(

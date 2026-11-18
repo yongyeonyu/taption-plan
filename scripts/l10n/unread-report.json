@@ -172,13 +172,13 @@
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 737,
+   "line": 741,
    "ko": "stop.kind.title",
    "en": "stop.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 156,
+   "line": 160,
    "ko": "before.amount",
    "en": "before.currency"
   },
@@ -772,13 +772,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1074,
+   "line": 1079,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1082,
+   "line": 1087,
    "ko": "fogStrength.koreanLabel",
    "en": "fogStrength.englishLabel"
   },
