@@ -2,6 +2,10 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1118A01 · TestFlight 350 (2026-11-18)
+
+- `scripts/testflight/release.sh --yes`(main `0ef100cb` 뒤 판, 빌드 잠금 안에서) 종료 코드 0. 빌드 350 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출 확인. 보고서 `build/validation/TFB1118A01/testflight-report.json`. 기기 확인은 대표가 아이폰 18에서(점검표 `build/validation/FUL1118A01/checklist.md`) — 결과 전.
+
 ## DEP1118A01 · AIF1118A01 서버 변경 배포 (2026-11-18)
 
 - 대표가 터미널에서 `npx wrangler deploy --config wrangler.local.toml` 실행. `wrangler deployments list`로 확인: 2026-11-18 12:43(KST) 새 버전 `6b3ff5b8` 100%(이전 `65de4279`). 배포 전 서버 `npm test` 228/228 통과(FUL1118A01).
