@@ -8,6 +8,6 @@ SwiftUI 앱으로 계획과 실제 활동을 시간표·지도에서 함께 확�
 2. 현재 사용 가능한 target·scheme은 `xcodebuild -list -project TaptionPlan.xcodeproj`로 확인합니다.
 3. 빌드·테스트 명령과 소스 위치는 [개발 안내](DEVELOPMENT.md)에서 확인합니다.
 
-작업 전 [개발 규칙](AGENTS.md)을 따르고, 현재 요청만 `temp.md`와 `test.md`에서 찾아 실제 코드·Git 상태와 대조하세요. 두 기록을 처음부터 끝까지 읽을 필요는 없습니다.
+작업 전 [개발 규칙](AGENTS.md)을 따르고, 현재 요청만 `test.md`에서 요청 ID로 찾아 실제 코드·Git 상태와 대조하세요. 처음부터 끝까지 읽을 필요는 없습니다.
 
-[미완료 요청](temp.md) · [남은 일의 순서](docs/NEXT_PLAN.md) · [AI 연결 계획과 진행 상태](docs/AI_RELAY_PLAN.md) · [검증 근거](test.md) · [이전 검증 기록](test_ARCHIVE.md) · [TestFlight 배포](docs/TESTFLIGHT.md) · [지원](SUPPORT.md) · [개인정보처리방침](PRIVACY.md)
+[남은 작업·실기기 확인·검증 기록](test.md) · [지금 상태와 다음 순서](docs/NEXT_PLAN.md) · [AI 연결 계획과 진행 상태](docs/AI_RELAY_PLAN.md) · [이전 검증 기록](test_ARCHIVE.md) · [TestFlight 배포](docs/TESTFLIGHT.md) · [지원](SUPPORT.md) · [개인정보처리방침](PRIVACY.md)

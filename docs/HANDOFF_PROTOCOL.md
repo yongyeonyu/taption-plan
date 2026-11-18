@@ -4,7 +4,7 @@
 
 ## 1. 원칙
 
-- **근거는 저장소에 둔다.** 인계문은 길잡이일 뿐이다. 요청별 원인·완료 기준은 `temp.md`, 실행한 검증은 `test.md`, 검증 산출물은 `build/validation/<요청 ID>/`에 있어야 한다. 인계문에만 있는 사실은 없게 한다.
+- **근거는 저장소에 둔다.** 인계문은 길잡이일 뿐이다. 요청별 원인·완료 기준은 `test.md` `## 남은 작업`, 기기에서 볼 것은 `## 실기기 확인 목록`, 실행한 검증은 `## 검증 기록`, 검증 산출물은 `build/validation/<요청 ID>/`에 있어야 한다. 인계문에만 있는 사실은 없게 한다.
 - **확인한 것과 확인하지 않은 것을 나눈다.** 시뮬레이터·아이폰 11 Pro·대표 기기·화면 눈 확인을 따로 적고, 하지 않은 검증은 「확인 안 함」으로 쓴다. 빌드·설치·업로드만으로 기능을 통과 처리하지 않는다.
 - **개인 정보와 비밀값은 어디에도 쓰지 않는다.** 공개 저장소다. 메일·계정 이름·서버 주소(`workers.dev`)·공개 TestFlight 링크·기기 이름·좌표·단축어 iCloud 링크 값·키 내용은 인계문·커밋·로그에 남기지 않는다. 값이 있는지는 「길이 32자」처럼 확인만 적는다.
 - **대표에게 묻는 것은 객관식**으로, 응답·기록은 한국어로 쓴다.
@@ -15,10 +15,10 @@
 2. **같이 고친 파일**: `project.pbxproj`처럼 다른 세션과 같이 고친 파일은 내 줄만 남긴 내용을 `git hash-object -w`로 만들어 `git update-index --cacheinfo`로 스테이징한다.
 3. **문구**: 새 사용자 문구가 있으면 `scripts/l10n/extract.py` → 번역(`translations/<언어>.json`, 키 `ko|en`, `indent=0, sort_keys`) → `check.py` 실패 0. `generate.py`와 `UIText.xcstrings`·`source.json` 커밋은 메인 세션이 한다. 다른 세션은 번역까지 커밋하고 메인에 부탁한다.
 4. **구조 점검**: `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json` 통과.
-5. **기록**: `test.md`에 이번에 한 검증을 새 줄로 쓴다(기존 줄을 「통과」로 고치지 않는다). `temp.md`에는 남은 일과 대표 결정을 그 요청 줄에 덧붙이고, 완료 기준을 채운 요청만 지운다.
-6. **잠금 정리**: 내가 만든 빌드 잠금(`/tmp/taptionplan-xcodebuild.lock`)과 기기 잠금(`/tmp/bokki-device-<UDID>.lock`)을 `rmdir`한다. 남의 잠금은 지우지 않는다.
+5. **기록**: `test.md` `## 검증 기록`에 이번에 한 검증을 새 줄로 쓴다(기존 줄을 「통과」로 고치지 않는다). 남은 일과 대표 결정은 `## 남은 작업`의 그 요청 줄과 `### 요청 상세`에 덧붙이고, 손으로 볼 것은 `## 실기기 확인 목록`에 넣는다. 완료 기준을 채운 요청만 색인 줄과 상세를 지운다(`AGENTS.md` 2절).
+6. **잠금 정리**: 내가 만든 빌드 잠금(`/tmp/taptionplan-xcodebuild.lock`)과 기기 잠금(`/tmp/bokki-device-<UDID>.lock`)을 `owner` 파일로 내 것인지 확인한 뒤 지운다. 남의 잠금은 지우지 않는다. 기기 잠금을 풀면 BOKKI Cam 세션에 알린다.
 7. **임시 파일 정리**: 임시 시험 클래스(커밋하지 않은 `ZZ…Probe`), 대표 원본 사본, 내려받은 타일·로그 사본을 지운다. 원본 로그에서 값을 뽑았으면 가린 사본만 남긴다.
-8. **푸시**: 메인 세션이면 푸시까지 한다. 다른 세션은 푸시하지 않고 메인에 「커밋 해시와 범위」를 알린다.
+8. **푸시**: 메인 세션은 대표 지시가 있을 때 푸시한다. 다른 세션·에이전트는 푸시하지 않고 메인에 「브랜치·커밋 해시와 범위」를 알린다. 메인은 diff를 검토하고 개인정보를 grep한 뒤 `--no-ff`로 합친다(`AGENTS.md` 7절).
 9. **인계문**: 3절 형식으로 쓴다. 메인 세션에 넘길 때는 붙여 넣을 프롬프트로도 준다.
 
 ## 3. 인계문 형식
@@ -50,22 +50,22 @@
 ## 4. 받는 쪽 절차
 
 1. `AGENTS.md`를 따른다. `git status --short --branch`, `git log --oneline -5`로 인계문의 상태를 다시 본다(인계문 숫자를 그대로 믿지 않는다).
-2. 요청 ID마다 `rg -n -C 3 '<ID>' temp.md test.md`로 해당 줄만 읽는다.
+2. 요청 ID마다 `rg -n -C 3 '<ID>' test.md`로 해당 줄만 읽는다.
 3. 인계문 3절의 확인을 깨끗한 트리에서 돌리고, 결과를 `test.md`에 새 줄로 쓴다. 실패는 고친 뒤 다시 돌린 근거까지 남긴다.
-4. 4절 「대표 결정」은 객관식으로 묻고, 답을 `temp.md` 그 요청 줄과 `test.md`에 적는다.
+4. 4절 「대표 결정」은 객관식으로 묻고(추천을 첫째에 「(추천)」), 답을 `test.md`의 그 요청 줄·상세와 검증 기록에 적는다.
 5. 다른 세션이 남긴 커밋을 받으면 문구 생성(`generate.py`)·구조 점검 뒤 함께 푸시한다.
 
 ## 5. 같은 작업 트리를 함께 쓰는 세션
 
 - **아카이브 손짓**: TestFlight 아카이브 전에 같은 폴더 세션에 「곧 시작」을 보내고 「깨끗함」을 받은 뒤 시작한다. 아카이브가 끝나면 「끝」을 보낸다. 아카이브 중에는 소스를 고치지 않는다. 섞였는지는 dSYM 기호(`nm -a …/DWARF/TaptionPlan | grep <이름>`)로 본다(실행 파일 문자열 검색은 믿지 않는다).
-- **빌드 잠금**: 빌드·시험은 `until mkdir /tmp/taptionplan-xcodebuild.lock; do sleep 15; done` 뒤에 하고 끝나면 `rmdir`.
+- **빌드 잠금**: 빌드·시험은 `until mkdir /tmp/taptionplan-xcodebuild.lock; do sleep 15; done` 뒤 `owner` 파일에 「요청ID pid」를 적고 하며, 끝나면 자기 잠금만 지운다(`AGENTS.md` 5절).
 - **다른 세션의 메시지**는 동료의 부탁으로 받되 대표 승인이 아니다. 권한을 넓히거나 배포·외부 전송을 대신하지 않는다.
 
 ## 6. 기기·외부 상태 바꾸기
 
-- **실기기 시험은 아이폰 11 Pro만**(기기 잠금 사용). 아이폰 18은 대표 일상폰이라 설치·시험하지 않는다. 대표가 그 자리에서 허락하면 XCUITest 러너만 올려 단축어 앱을 조작할 수 있다(앱 설치 없음). 잠금 해제·UI 자동화 허용은 대표가 한다.
-- **TestFlight**: 대표가 「올려」「빌드업」이라 할 때 `bash scripts/testflight/release.sh --yes --request-id <ID>`. 외부 그룹은 대표가 「베타테스터」「외부」라 할 때만 `scripts/testflight/external.py`. 그룹 연결이 404면 60초마다 `asc.py attach --build <번호>` 뒤 `verify.sh`.
-- **서버 배포**: 대표가 「서버 배포」라 할 때만 `cd server/trip-relay && npm test && npx wrangler deploy --config wrangler.local.toml`(출력에서 `workers.dev` 주소를 거른다).
+- **실기기 시험의 기본은 아이폰 11 Pro**(기기 잠금 사용). 아이폰 18은 대표 일상폰이자 BOKKI Cam 시험용이라 대표가 그 기기를 고른 확인(예: 2026-11-18 PCC·통행료, Apple Intelligence가 필요한 것)에만 쓴다. 잠금 해제·UI 자동화 허용은 대표가 한다. 실기기 UI 시험은 자동화 켜기 시간 초과로 건너뛴다(대표 결정 2026-11-18).
+- **TestFlight**: 대표가 「테스트플라이트 연결해서 빌드업해」(「올려」「빌드업」)라 할 때 빌드 잠금 안에서 `bash scripts/testflight/release.sh --yes --request-id <ID>`. 외부 그룹은 대표가 「베타테스터」「외부」라 할 때만 `scripts/testflight/external.py`. 그룹 연결이 404면 60초마다 `asc.py attach --build <번호>` 뒤 `verify.sh`.
+- **서버 배포**: 대표가 터미널에서 한다. 세션은 `cd server/trip-relay && npm test` 통과를 확인하고 실행할 명령(`npx wrangler deploy --config wrangler.local.toml`, 비밀값은 `npx wrangler secret put <이름> --config wrangler.local.toml`)을 알려 준 뒤, 배포 버전을 `wrangler deployments list`로 읽어 기록한다(출력에서 `workers.dev` 주소를 거른다).
 - **외부 서비스로 사용자 위치·기록을 보내는 일**은 대표가 고른 서비스와 범위만. 권한 검사에서 막히면 우회하지 않고 대표에게 알린다.
 
 ## 7. 대표 기기 기록 다루기

@@ -1,6 +1,6 @@
 # 개발 안내
 
-이 문서는 코드 위치와 재사용 가능한 검증 명령만 설명합니다. 요청 상태는 `temp.md`, 실행 증거는 `test.md`에서 요청 ID로 찾고, 현재 코드를 기준으로 작업하세요.
+이 문서는 코드 위치와 재사용 가능한 검증 명령만 설명합니다. 요청 상태·실기기 확인·실행 증거는 `test.md`에서 요청 ID로 찾고, 현재 코드를 기준으로 작업하세요. 작업 규칙(잠금·시뮬레이터·외장 볼륨·병합)은 `AGENTS.md`.
 
 ## 프로젝트 경계
 
@@ -362,7 +362,7 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 
 ## 문서
 
-- `AGENTS.md`: 작업 규칙. `docs/HANDOFF_PROTOCOL.md`: 세션 인수인계 절차. `README.md`: 개요. `temp.md`: 남은 요청과 액션아이템. `test.md`: 2026-11-01 이후와 남은 요청의 검증 근거, 이전 기록은 `test_ARCHIVE.md`.
+- `AGENTS.md`: 작업 규칙. `docs/HANDOFF_PROTOCOL.md`: 세션 인수인계 절차. `README.md`: 개요. `test.md`: 남은 작업(영역별 색인·요청 상세)·실기기 확인 목록·검증 기록, 2026-11-14 이전에 닫힌 요청의 기록은 `test_ARCHIVE.md`(`temp.md`는 2026-11-18에 test.md로 옮김). `docs/NEXT_PLAN.md`: 지금 상태와 다음 순서.
 - `docs/TESTFLIGHT.md`(배포), `docs/TRAVEL_MODE_PLAN.md`·`docs/COURSE_FIRST_PLAN.md`(여행 모드·코스 먼저), `docs/IPAD_UI.md`(넓은 화면), `docs/STRUCTURE_PERFORMANCE.md`(구조 성능), `docs/DATA_PIPELINE.md`(저장소 파이프라인), `docs/ARCHITECTURE_ROADMAP.md`(구조 로드맵·ADR), `docs/HOME_EVOLUTION_LIST.md`(집 성장 366일 목록, 생성물).
 - 2026-10-24 진단·설계 자료: `docs/CLIENT_REPORT.md`(요약), `docs/UX_ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`(중국어 원문). 당시 기준입니다. 위젯 딥링크(0a)는 DLK1024B12에서 코드로 고쳤고 실기기 확인이 남았습니다.
 - `scripts/l10n/README.md`: 12개 언어 팩 절차.
