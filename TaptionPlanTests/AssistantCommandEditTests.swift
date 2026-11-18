@@ -407,6 +407,9 @@ extension AssistantCommandEditTests {
 
     /// 서버 등록부에서 뽑은 견본(`npm run actions`)과 앱의 동작 표가 이름·칸까지 같다.
     func testOperationTableMatchesTheServerRegistry() throws {
+        #if !targetEnvironment(simulator)
+        throw XCTSkip("Mac 소스의 서버 견본을 읽는 시험이라 실기기에서는 건너뜀")
+        #endif
         let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("server/trip-relay/test/fixtures/actions.json")
         let server = try JSONDecoder().decode(AssistantActionManifest.self, from: Data(contentsOf: file)).actions
