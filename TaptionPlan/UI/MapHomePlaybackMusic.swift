@@ -405,7 +405,9 @@ struct MapHomePlaybackMusicPicker: View {
                 .frame(maxWidth: .infinity, minHeight: 40)
                 .foregroundStyle(Color.tpInk)
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+                .taptionMenuHitFrame(visualHeight: 40)
             }
+            .taptionMenuHitLayout(visualHeight: 40)
             Button { togglePreview() } label: {
                 Image(systemName: preview.playing == nil ? "play.fill" : "stop.fill")
                     .frame(width: 40, height: 40)

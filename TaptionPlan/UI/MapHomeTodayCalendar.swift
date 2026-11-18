@@ -84,7 +84,9 @@ struct MapHomeCalendarTitleMenu: View {
             }
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(Color.tpReferenceBlue)
+            .taptionMenuHitFrame(visualHeight: 13)
         }
+        .taptionMenuHitLayout(visualHeight: 13)
         .accessibilityLabel(Text("\(title) \(language.text("상세활동", "activity")): \(label)"))
     }
 }

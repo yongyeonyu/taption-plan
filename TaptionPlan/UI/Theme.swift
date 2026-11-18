@@ -420,6 +420,26 @@ extension View {
             .padding(.horizontal, -horizontal)
             .padding(.vertical, -vertical)
     }
+
+    /// `Menu`는 라벨의 배치 틀만 누르는 자리로 쓰고 `contentShape`로 넓힌 자리는 쓰지 않는다(MNU1118A01).
+    /// 라벨에 이것을, 메뉴에 같은 크기로 `taptionMenuHitLayout`을 붙이면 라벨 틀은 44pt, 배치 크기는 보이는 그대로다.
+    nonisolated func taptionMenuHitFrame(visualWidth: CGFloat = .infinity, visualHeight: CGFloat) -> some View {
+        let outset = TaptionMenuMetrics.hitOutset(visualWidth: visualWidth, visualHeight: visualHeight)
+        return padding(.horizontal, outset.width).padding(.vertical, outset.height).contentShape(Rectangle())
+    }
+
+    /// `taptionMenuHitFrame`으로 넓힌 틀을 바깥 배치에서는 보이는 크기로 되돌린다.
+    nonisolated func taptionMenuHitLayout(visualWidth: CGFloat = .infinity, visualHeight: CGFloat) -> some View {
+        let outset = TaptionMenuMetrics.hitOutset(visualWidth: visualWidth, visualHeight: visualHeight)
+        return padding(.horizontal, -outset.width).padding(.vertical, -outset.height)
+    }
+}
+
+extension TaptionMenuMetrics {
+    /// 보이는 크기를 최소 누르는 자리로 만들 때 한쪽에 더할 너비·높이.
+    nonisolated static func hitOutset(visualWidth: CGFloat, visualHeight: CGFloat) -> CGSize {
+        CGSize(width: max(0, (minimumHitSize - visualWidth) / 2), height: max(0, (minimumHitSize - visualHeight) / 2))
+    }
 }
 
 /// 지도 홈·기록·설정이 같은 색을 쓰도록 묶은 자동 기록의 대분류 팔레트다.

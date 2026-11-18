@@ -2,6 +2,29 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## MNU1118A01 · 메뉴 단추 누르는 자리 전수 점검 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 원인: SwiftUI `Menu`는 라벨의 배치 틀만 누르는 자리로 쓰고, 그림 밖 `contentShape`(`taptionTouchTarget`)로 넓힌 자리는 쓰지 않는다. 공용 도구 `taptionMenuHitFrame`(라벨 틀을 44pt로)·`taptionMenuHitLayout`(바깥 배치는 보이는 크기로)을 `Theme.swift`에 두었다.
+- 점검 범위: 앱 `TaptionPlan`의 `Menu {}`·`Menu(...)` 25곳, 기본·`.menu` 스타일 `Picker`(세그먼트 20곳 제외), UIKit `showsMenuAsPrimaryAction` 1곳. Watch·위젯·Watch 위젯에는 메뉴 단추가 없다. `contextMenu`와 메뉴 안 하위 메뉴(`TravelDayBoard` 다른 날로, 오늘 일정 대분류, 구간 편집 이동 수단)는 화면 단추가 아니라 뺐다.
+- 고친 것(파일:줄은 고친 뒤, 보이는 크기 → 누르는 자리):
+  - `TravelQuickEntrySheet.swift:253` 일정 속성 ⋯: 40×32 → 44×44(시험에서 틀 44×44 확인)
+  - `TravelMapTripEditorSheet.swift:87` 이동 수단: 32×32 → 44×44
+  - `MapHomeView+Menu.swift` 표시의 시간 표시(:577)·지도 스타일(:1073)·안개 탐험(:1090) 줄: 폭×34 → 폭×44(시험에서 안개 탐험 44, 지도 스타일은 앞 줄과 틈 5pt를 나눠 42.3)
+  - `MapHomeTodayCalendar.swift:87` 일정 상세활동 글자 메뉴: 글자 폭×약13 → 글자 폭×44
+  - `MapHomePlaybackMusic.swift:408` 음악·`MapHomePlaybackVideoSheet.swift:419` 기간: 폭×40 → 폭×44
+  - `MapHomeScreenRecording.swift:591` 녹화 지도 줄: 폭×약18 → 폭×44
+  - `MapHomeSectionEditSheet.swift` 대분류 메뉴: 44pt 캡슐 안 글자 높이(약17)·좌우 10pt 빈 곳 → 캡슐 전체(폭×44). 보이는 모양 같음.
+- 이미 44pt 이상(그대로): `MapHomeNLEDetailLane` 상세(44), `MapHomeNLEClipEditor` 분류(52×44), `MapHomeNLERawDetail` 알약 분류(46×44), `MapHomeSettingsSheets` 고양이(폭×44), 구간 편집 시각(70×44), `TravelModeView` 여행 카드 ⋯(44×44, TVM1117A02), `TravelModeSupport` 추가(44×44), `MapHomeCalendarSheet` 지표 추가(폭×44), `MapHomeStickerEditor` AI 다듬기(글자 폭×44), `HwarangCoat` 고양이 바꾸기(58), `TaptionFont` 글꼴·`MapHomeLanguageMenuItem` 언어 줄(32pt 칩+위아래 18, 좁은 화면 12 → 44 이상).
+- 못 고친 것·보고:
+  - 가계부 「…」 `LedgerMoreMenuButton`(UIKit): 시험에서 45×36(도구 막대). 지시대로 건드리지 않음. 같은 막대의 닫기 58×36·기록 더하기 42×36도 시스템 도구 막대 단추.
+  - `LedgerSheet.swift:247` `swiftUIMoreMenu`: 성능 비교용(`-benchBefore=lmenu`), PRF1117A02가 지우는 중이라 건드리지 않음.
+  - 시스템 `Picker`(메뉴 스타일): 가계부 기록 더하기 목록 칸의 화폐 66×35·분류 338×35(시험에서 잼), 홈 메뉴 Apple Watch 「건강 데이터 보내기」, 시급 설정 `.pickerStyle(.menu)`, 스티커 「추가 위치」, 목록(Form) 칸의 고르기들. 시스템이 그리는 단추라 라벨 틀을 바꿀 수 없고, 바꾸려면 `Menu`로 다시 그려야 해서 모양이 달라진다. 이번에는 두고 보고만 함.
+  - 메뉴가 아닌 펼침 단추(홈 메뉴 「카운터 메뉴 열기」 254×34, 「사이드바」·「지도」 머리 줄 254×33)는 범위 밖이라 두었다.
+  - 녹화 지도 줄·상세활동 메뉴·음악·기간·이동 수단·구간 편집은 화면 시험으로 누르지 않음(코드로 잰 크기). 실기기 확인 없음.
+- 화면 시험 `TaptionPlanMenuHitUITests` 3건 통과(`build/validation/MNU1118A01/ui3.log`): 홈 지도 스타일·안개 탐험 줄 3pt 위 누름 → 메뉴 뜸, 여행 일정 ⋯ 그림 4pt 아래 누름 → 메뉴 뜸, 가계부 단추 틀 기록. 고치기 전 판(`ui1-before.log`)에서는 여행 ⋯만 고친 상태로 통과했고 홈 시험은 화면 이동 문제로 실패해 고치기 전 실패는 못 남김(TVM1117A02에서 메뉴가 넓힌 contentShape를 안 씀은 확인됨).
+- 구조 점검: `architecture-metrics.py --check` 통과(구간 편집 1,200줄 예산 안), `check-app-engine-import-boundary.sh` 통과.
+- 단위 전체 `-only-testing:TaptionPlanTests`: 3,027건 실패 0·건너뜀 25(`unit2.log`). 첫 시도(`unit.log`)는 시험 실행기가 연결 전에 멈춤(「test runner hung」)으로 실행 0건이라 다시 돌렸다.
+
 ## LOG1118A01 · 중계 서버 Workers Logs 끔 (2026-11-18)
 
 - 대표 결정: Workers Logs는 꺼짐 고정. `server/trip-relay/wrangler.toml`·`wrangler.local.toml`에 `[observability] enabled = false`(`56be8257`), PRIVACY.md에 버스 정류장 좌표 한 줄.

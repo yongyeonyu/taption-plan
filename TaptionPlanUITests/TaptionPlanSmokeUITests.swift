@@ -1571,3 +1571,113 @@ final class TaptionPlanPolishScreensUITests: XCTestCase {
         }
     }
 }
+
+/// MNU1118A01: 누르면 메뉴가 뜨는 단추는 보이는 그림 몇 pt 밖을 눌러도 메뉴가 뜬다(`Menu`는 라벨 틀만 누르는 자리로 쓴다).
+/// 보이는 크기는 고치기 전에 잰 값이다. 화면의 작은 단추 틀도 `MNU1118A01 small` 줄로 남긴다. 데이터는 바꾸지 않는다.
+final class TaptionPlanMenuHitUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    private func launch() -> XCUIApplication {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
+        app.launchWithoutPrompts()
+        // 「미확인 시간이 있어요」 창이 메뉴를 덮으면 「나중에 확인」으로 닫는다.
+        let later = app.buttons["나중에 확인"]
+        let reached = UITestWait.until(90) {
+            if later.exists, later.isHittable { later.tap() }
+            return UITestWait.reachMapHome(app, menu: menu, timeout: 3)
+        }
+        XCTAssertTrue(reached, "지도 홈이 뜬다")
+        return app
+    }
+
+    /// 화면에 보이는 단추 중 44pt보다 작은 것을 적는다(점검 목록 근거).
+    private func dumpSmall(_ app: XCUIApplication, _ screen: String) {
+        let small = app.buttons.allElementsBoundByIndex.filter { $0.exists && $0.isHittable && ($0.frame.width < 44 || $0.frame.height < 44) }
+        for button in small { print("MNU1118A01 small \(screen) | \(button.label) | \(button.identifier) | \(button.frame.integral)") }
+    }
+
+    private func tap(_ app: XCUIApplication, _ x: CGFloat, _ y: CGFloat) {
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: x, dy: y)).tap()
+    }
+
+    /// 홈 메뉴 「표시」의 지도 스타일·안개 탐험 줄(보이는 높이 약 34pt).
+    func testHomeDisplayMenusAnswerOutsideTheirRow() throws {
+        let app = launch()
+        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch.tap()
+        let display = app.buttons["표시"].firstMatch
+        XCTAssertTrue(display.waitForExistence(timeout: 8), "홈 메뉴에 「표시」가 있다")
+        sleep(1)
+        // 메뉴 판이 올라오는 동안에는 눌릴 자리를 못 읽어, 틀이 화면 가운데쯤 올 때까지 넘긴다.
+        var tries = 0
+        while !(display.frame.minY > 150 && display.frame.maxY < app.frame.height * 0.55) && tries < 12 {
+            if display.frame.minY <= 150 { app.swipeDown(velocity: .slow) } else { app.swipeUp(velocity: .slow) }
+            sleep(1); tries += 1
+        }
+        let style = app.buttons["지도 스타일 선택"].firstMatch
+        if !style.exists { display.tap() }
+        XCTAssertTrue(style.waitForExistence(timeout: 5), "「표시」를 펼치면 지도 스타일 줄이 있다")
+        let fog = app.buttons["안개 탐험 선택"].firstMatch
+        if fog.frame.maxY > app.frame.height - 160 { app.swipeUp(); sleep(1) }
+        print("MNU1118A01 frame map-style \(style.frame) fog \(fog.frame)")
+        dumpSmall(app, "home-display")
+        // 지도 스타일 그림 위 3pt(「표시」 머리 줄과의 틈).
+        tap(app, style.frame.midX, style.frame.midY - 17 - 3)
+        let satellite = app.buttons["위성"].firstMatch
+        XCTAssertTrue(satellite.waitForExistence(timeout: 3), "지도 스타일 줄 3pt 위를 눌러도 지도 스타일 메뉴가 뜬다")
+        tap(app, 30, 120)
+        XCTAssertTrue(UITestWait.until(3) { !satellite.exists }, "메뉴가 닫힌다")
+        // 안개 탐험 그림 위 3pt(지도 스타일 줄과의 틈).
+        tap(app, fog.frame.midX, fog.frame.midY - 17 - 3)
+        XCTAssertTrue(app.buttons["진하게"].firstMatch.waitForExistence(timeout: 3), "안개 탐험 줄 3pt 위를 눌러도 안개 탐험 메뉴가 뜬다")
+    }
+
+    /// 여행 일정 속성의 ⋯(그림 40×32).
+    func testTravelEntryMoreAnswersOutsideItsPicture() throws {
+        let app = launch()
+        let travel = app.buttons["여행으로 가기"]
+        XCTAssertTrue(travel.waitForExistence(timeout: 20))
+        travel.tap()
+        let raise = app.buttons["계획표 올리기"].firstMatch
+        try XCTSkipUnless(raise.waitForExistence(timeout: 20), "열 여행이 없는 기기")
+        raise.tap()
+        let tableTab = app.buttons["계획표"].firstMatch
+        if tableTab.waitForExistence(timeout: 3) { tableTab.tap() }
+        dumpSmall(app, "travel-table")
+        let block = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "다자이후 텐만구")).firstMatch
+        try XCTSkipUnless(block.waitForExistence(timeout: 5), "고칠 일정이 없는 여행")
+        block.tap()
+        let details = app.buttons["속성"].firstMatch
+        XCTAssertTrue(details.waitForExistence(timeout: 3), "선택 막대에 속성이 있다")
+        details.tap()
+        let more = app.descendants(matching: .any).matching(identifier: "travelEntryMore").firstMatch
+        XCTAssertTrue(more.waitForExistence(timeout: 5), "속성 편집에 ⋯ 단추가 있다")
+        sleep(1)
+        print("MNU1118A01 frame travel-entry-more \(more.frame)")
+        dumpSmall(app, "travel-entry")
+        // ⋯ 그림(40×32) 아래 4pt.
+        tap(app, more.frame.midX, more.frame.midY + 16 + 4)
+        XCTAssertTrue(app.buttons["바로 뒤에 복제"].firstMatch.waitForExistence(timeout: 3), "⋯ 그림 4pt 아래를 눌러도 더 보기 메뉴가 뜬다")
+    }
+
+    /// 가계부와 기록 더하기의 작은 단추·시스템 고르기 단추 틀을 잰다(목록 근거).
+    func testLedgerButtonsForTheRecord() throws {
+        let app = launch()
+        let open = app.buttons["memo-ledger-open"].firstMatch
+        let bar = app.navigationBars["가계부"]
+        let opened = (0..<3).contains { _ in
+            if open.waitForExistence(timeout: 10), open.isHittable { open.tap() }
+            return bar.waitForExistence(timeout: 10)
+        }
+        XCTAssertTrue(opened, "가계부가 열린다")
+        sleep(1)
+        dumpSmall(app, "ledger")
+        bar.buttons["기록 더하기"].firstMatch.tap()
+        sleep(2)
+        let all = app.buttons.allElementsBoundByIndex.filter { $0.exists }.map { "\($0.label)|\($0.identifier)|\($0.frame.integral)" }
+        print("MNU1118A01 ledger-entry buttons\n" + all.joined(separator: "\n"))
+    }
+}

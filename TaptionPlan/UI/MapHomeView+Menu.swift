@@ -574,10 +574,14 @@ extension MapHomeView {
                         (MapHomeSidebarTimeFormat(rawValue: sidebarTimeFormatRaw) ?? .twentyFourHour).title(language)
                     )
                 }
+                .taptionMenuHitLayout(visualHeight: Self.displayDropdownRowHeight)
                 .padding(.vertical, 3)
             }
         }
     }
+
+    /// 드롭다운 줄의 보이는 높이. 메뉴 라벨 틀은 44pt로 넓히고 배치는 이 높이로 둔다(MNU1118A01).
+    static let displayDropdownRowHeight: CGFloat = 34
 
     func displayDropdownRow(_ systemImage: String, _ title: String, _ value: String) -> some View {
         HStack(spacing: 8) {
@@ -596,7 +600,7 @@ extension MapHomeView {
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(Color.tpAccent.opacity(0.08), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
-        .contentShape(Rectangle())
+        .taptionMenuHitFrame(visualHeight: Self.displayDropdownRowHeight)
     }
 
     func displaySubRow(_ systemImage: String, _ title: String) -> some View {
@@ -1066,6 +1070,7 @@ extension MapHomeView {
                         mapStyleTitle(model.settings.mapDisplayStyle)
                     )
                 }
+                .taptionMenuHitLayout(visualHeight: Self.displayDropdownRowHeight)
                 .accessibilityLabel(language.text("지도 스타일 선택", "Choose map style"))
 
                 // 안개 탐험은 지도 스타일 바로 아래에 둔다(대표 지시, ARC1030A11).
@@ -1082,6 +1087,7 @@ extension MapHomeView {
                         language.runtimeText(fogStrength.koreanLabel, fogStrength.englishLabel)
                     )
                 }
+                .taptionMenuHitLayout(visualHeight: Self.displayDropdownRowHeight)
                 .accessibilityLabel(language.text("안개 탐험 선택", "Choose fog of exploration"))
 
                 counterMenuItem

@@ -84,8 +84,9 @@ struct TravelMapTripEditorSheet: View {
                             .frame(width: TaptionControl.chip, height: TaptionControl.chip)
                             .foregroundStyle(Color.tpAccent)
                             .background(Color.tpSurface, in: Circle())
-                            .taptionTouchTarget(visualWidth: TaptionControl.chip, visualHeight: TaptionControl.chip)
+                            .taptionMenuHitFrame(visualWidth: TaptionControl.chip, visualHeight: TaptionControl.chip)
                     }
+                    .taptionMenuHitLayout(visualWidth: TaptionControl.chip, visualHeight: TaptionControl.chip)
                     .accessibilityLabel(stop.wrappedValue.arrivalMode.title(language))
                 }
                 Text(stop.wrappedValue.name)

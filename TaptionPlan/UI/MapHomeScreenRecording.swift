@@ -588,7 +588,9 @@ struct MapHomeRecordingOptionsSheet: View {
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
+                .taptionMenuHitFrame(visualHeight: 18)
             }
+            .taptionMenuHitLayout(visualHeight: 18)
             toggle(language.text("시간 사이드바", "Time sidebar"), $layers.timeSidebar)
             toggle(language.text("날씨 사이드바", "Weather sidebar"), $layers.weatherSidebar)
             toggle(language.text("사이드바 메모", "Sidebar memos"), $layers.sidebarMemos)
