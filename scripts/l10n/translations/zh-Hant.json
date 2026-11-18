@@ -6092,6 +6092,11 @@
 "캘린더 일정 {0}개도 함께 옮길까요?|Move {0} calendar event(s) too?": "也要一起移動 {0} 個行事曆行程嗎？",
 "캘린더 앱의 일정은 그대로예요|The events in the Calendar app stay as they are.": "行事曆 App 中的行程維持不變",
 "옮기기|Move": "移動",
-"겹친 일정이 있어 그 구간은 그대로 둡니다|Some plans overlap, so that part stays as it is.": "有重疊的行程，該時段維持不變"
+"겹친 일정이 있어 그 구간은 그대로 둡니다|Some plans overlap, so that part stays as it is.": "有重疊的行程，該時段維持不變",
+"{0} → {1} 통행료|Toll: {0} → {1}": "{0} → {1} 通行費",
+"{0} 영업소|{0} toll plaza": "{0} 收費站",
+"{0} 통행료|Toll: {0}": "{0} 通行費",
+"정상요금 {0}|Normal fare {0}": "正常費用 {0}",
+"지난 톨게이트로 자동 추가|Added from the toll plazas passed": "依經過的收費站自動新增"
 }
 }

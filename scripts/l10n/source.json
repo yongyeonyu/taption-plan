@@ -3600,6 +3600,21 @@
    ]
   },
   {
+   "key": "{0} → {1} 통행료|Toll: {0} → {1}",
+   "ko": "{0} → {1} 통행료",
+   "en": "Toll: {0} → {1}",
+   "files": [
+    "LedgerTollGate.swift:211"
+   ],
+   "args": [
+    "from",
+    "to"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0} 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.|{0} is waiting in Needs review. Add or discard it in Memo › Spending.",
    "ko": "{0} 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.",
    "en": "{0} is waiting in Needs review. Add or discard it in Memo › Spending.",
@@ -3975,6 +3990,20 @@
    ]
   },
   {
+   "key": "{0} 영업소|{0} toll plaza",
+   "ko": "{0} 영업소",
+   "en": "{0} toll plaza",
+   "files": [
+    "LedgerTollGate.swift:229"
+   ],
+   "args": [
+    "name"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0} 위치 보기|Show {0} location",
    "ko": "{0} 위치 보기",
    "en": "Show {0} location",
@@ -4200,6 +4229,20 @@
    ],
    "args": [
     "MovementPresentation.englishTitle(for: item.mode)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0} 통행료|Toll: {0}",
+   "ko": "{0} 통행료",
+   "en": "Toll: {0}",
+   "files": [
+    "LedgerTollGate.swift:216"
+   ],
+   "args": [
+    "route"
    ],
    "targets": [
     "TaptionPlan"
@@ -34484,7 +34527,7 @@
    "ko": "같은 길 통행료 자동 추가",
    "en": "Same-route toll, added automatically",
    "files": [
-    "LedgerTollRepeat.swift:282"
+    "LedgerTollRepeat.swift:436"
    ],
    "args": [],
    "targets": [
@@ -35720,7 +35763,7 @@
    "ko": "경차 할인 50%",
    "en": "Compact car discount 50%",
    "files": [
-    "LedgerTollRepeat.swift:214"
+    "LedgerTollRepeat.swift:351"
    ],
    "args": [],
    "targets": [
@@ -35732,7 +35775,7 @@
    "ko": "경차",
    "en": "Compact",
    "files": [
-    "LedgerTollRepeat.swift:223"
+    "LedgerTollRepeat.swift:360"
    ],
    "args": [],
    "targets": [
@@ -42471,7 +42514,7 @@
    "ko": "머문 곳",
    "en": "Place",
    "files": [
-    "LedgerTollRepeat.swift:295",
+    "LedgerTollRepeat.swift:450",
     "AssistantActivity.swift:207",
     "AssistantActivity.swift:300"
    ],
@@ -57122,7 +57165,7 @@
    "ko": "일반",
    "en": "Standard",
    "files": [
-    "LedgerTollRepeat.swift:222"
+    "LedgerTollRepeat.swift:359"
    ],
    "args": [],
    "targets": [
@@ -58955,7 +58998,7 @@
    "ko": "전기·수소차 할인",
    "en": "EV discount",
    "files": [
-    "LedgerTollRepeat.swift:215"
+    "LedgerTollRepeat.swift:352"
    ],
    "args": [],
    "targets": [
@@ -58967,7 +59010,7 @@
    "ko": "전기·수소차",
    "en": "EV · hydrogen",
    "files": [
-    "LedgerTollRepeat.swift:224"
+    "LedgerTollRepeat.swift:361"
    ],
    "args": [],
    "targets": [
@@ -59324,6 +59367,20 @@
     "TripShareSettlementSection.swift:111"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "정상요금 {0}|Normal fare {0}",
+   "ko": "정상요금 {0}",
+   "en": "Normal fare {0}",
+   "files": [
+    "LedgerTollGate.swift:223"
+   ],
+   "args": [
+    "money"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -59732,7 +59789,7 @@
    "ko": "주말 할증 5%",
    "en": "Weekend surcharge 5%",
    "files": [
-    "LedgerTollRepeat.swift:216"
+    "LedgerTollRepeat.swift:353"
    ],
    "args": [],
    "targets": [
@@ -60297,6 +60354,18 @@
    "files": [
     "TravelModeView.swift:577",
     "TravelModeView.swift:800"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지난 톨게이트로 자동 추가|Added from the toll plazas passed",
+   "ko": "지난 톨게이트로 자동 추가",
+   "en": "Added from the toll plazas passed",
+   "files": [
+    "LedgerTollGate.swift:222"
    ],
    "args": [],
    "targets": [
@@ -62240,7 +62309,7 @@
    "ko": "출퇴근 할인 20%",
    "en": "Commute discount 20%",
    "files": [
-    "LedgerTollRepeat.swift:213"
+    "LedgerTollRepeat.swift:350"
    ],
    "args": [],
    "targets": [
@@ -62252,7 +62321,7 @@
    "ko": "출퇴근 할인 50%",
    "en": "Commute discount 50%",
    "files": [
-    "LedgerTollRepeat.swift:212"
+    "LedgerTollRepeat.swift:349"
    ],
    "args": [],
    "targets": [

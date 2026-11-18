@@ -15,6 +15,8 @@ enum LedgerTollRepeat {
         var end: Date
         /// 이동 중 정확한 위치를 지난 칸(`LedgerTollRoute.cells`). 기기에만 둔다. 비면 길을 모른다.
         var cells: Set<String> = []
+        /// 이동 중 지난 영업소(TGT1118A01). 기기에만 둔다.
+        var passes: [LedgerTollGate.Pass] = []
 
         var key: String { "\(from)|\(to)|\(Int(start.timeIntervalSince1970 / 60))" }
         /// 요금소를 지났을 법한 때. 할인은 이 시각으로 본다.
@@ -100,7 +102,8 @@ enum LedgerTollRepeat {
         return result
     }
 
-    static func isAuto(_ entry: LedgerEntry) -> Bool { autoNotes.contains { (entry.note ?? "").hasPrefix($0) } }
+    /// 앱이 넣은 통행료(같은 길·지난 톨게이트). 금액에 할인이 들어 있어 배우지 않는다.
+    static func isAuto(_ entry: LedgerEntry) -> Bool { (autoNotes + LedgerTollGate.notes).contains { (entry.note ?? "").hasPrefix($0) } }
 
     /// 넣을 통행료. 같은 길이면 그대로, 되돌아오는 길이면 제목의 출근·퇴근을 바꾼다.
     static func entries(
@@ -150,6 +153,15 @@ enum LedgerTollRepeat {
                drive.start <= result[index].end.addingTimeInterval(before) {
                 result[index].end = max(result[index].end, drive.end)
                 result[index].cells.formUnion(drive.cells)
+                // 조각마다 같은 영업소가 잡히면 더 가까웠던 하나만 둔다.
+                for pass in drive.passes {
+                    if let same = result[index].passes.firstIndex(where: { $0.code == pass.code }) {
+                        if pass.meters < result[index].passes[same].meters { result[index].passes[same] = pass }
+                    } else {
+                        result[index].passes.append(pass)
+                    }
+                }
+                result[index].passes.sort { $0.at < $1.at }
             } else {
                 result.append(drive)
             }
@@ -217,7 +229,7 @@ enum LedgerTollRepeat {
             .replacingOccurrences(of: marker, with: "퇴근")
     }
 
-    private static func covers(_ drive: Drive, _ date: Date) -> Bool {
+    static func covers(_ drive: Drive, _ date: Date) -> Bool {
         date >= drive.start.addingTimeInterval(-before) && date <= drive.end.addingTimeInterval(after)
     }
 }
@@ -365,14 +377,17 @@ enum LedgerTollRepeatRunner {
         lastRunAt = now
         defer { isRunning = false }
         let calendar = Calendar.autoupdatingCurrent
-        var drives: [LedgerTollRepeat.Drive] = []
+        var days: [(drives: [LedgerTollRepeat.Drive], readings: [SensorReading])] = []
         for offset in 0..<2 {
             guard let day = calendar.date(byAdding: .day, value: -offset, to: calendar.startOfDay(for: now)),
                   let input = await model.assistantActivityInput(for: day, now: now, calendar: calendar),
                   let built = AssistantActivityBuilder.make(input, level: .visits) else { continue }
             let readings = await model.planDayDataSnapshot(for: day, forceReload: false).readings
-            drives += carDrives(built, language: input.language).map { withRoute($0, readings: readings) }
+            days.append((carDrives(built, language: input.language), readings))
         }
+        // 영업소 목록은 자동차 이동이 있을 때만 받는다(TGT1118A01). 목록을 통째로 받아 기기에서 견주고, 위치는 보내지 않는다.
+        let units = days.contains { !$0.drives.isEmpty } ? await TollUnitStore.units(now: now) : []
+        let drives = days.flatMap { day in day.drives.map { withRoute($0, readings: day.readings, units: units) } }
         await LedgerBook.shared.load()
         // 가계부를 못 읽었으면 이미 있는 통행료를 알 수 없으니 넣지 않는다.
         guard LedgerBook.shared.isLoaded else { return }
@@ -405,6 +420,13 @@ enum LedgerTollRepeatRunner {
             await LedgerBook.shared.save(fixed)
         }
         guard !drives.isEmpty else { return }
+        // 지난 톨게이트로 먼저 알아내고, 못 알아낸 이동만 같은 길 방식으로 본다(TGT1118A01).
+        let gate = await LedgerTollGateRunner.run(
+            drives: drives, existing: entries, handled: Set(handled), now: now,
+            vehicle: vehicle, isOffDay: isOffDay, calendar: calendar, language: language
+        )
+        handled += gate.done
+        if !gate.done.isEmpty { defaults.set(Array(handled.suffix(200)), forKey: handledKey) }
         let additions = LedgerTollRepeat.entries(
             drives: drives, existing: entries, rules: rules, handled: Set(handled), now: now,
             vehicle: vehicle, isOffDay: isOffDay, calendar: calendar
@@ -415,7 +437,8 @@ enum LedgerTollRepeatRunner {
                            "\(addition.drive.from) → \(addition.drive.to)"]
                 + [LedgerTollDiscount.label(addition.applied, language: language)].compactMap { $0 }).joined(separator: " · ")
             // 의심스러우면 넣지 않고 「확인 필요」에 올린다(대표 지시: 앱이 먼저 넣고, 의심스러우면 확인 요청).
-            if addition.suspicious { LedgerReviewStore.shared.add(entry, reason: .toll, now: now) } else { await LedgerBook.shared.save(entry) }
+            // 영업소는 알지만 요금이 0건이면 배운 금액이 맞는지 몰라 확인을 받는다(TGT1118A01).
+            if addition.suspicious || gate.unknownFare.contains(addition.drive.key) { LedgerReviewStore.shared.add(entry, reason: .toll, now: now) } else { await LedgerBook.shared.save(entry) }
             handled.append(addition.drive.key)
             TaptionPlanDiagnosticsLogger.shared.record("ledger_toll_repeat_added", fields: ["amount": String(Int(addition.entry.amount))])
         }
@@ -434,16 +457,18 @@ enum LedgerTollRepeatRunner {
     }
 
     /// 이동 동안의 정확한 위치(대략 위치·오차 100m 넘는 것은 뺌)로 길 모양을 붙인다. 위치는 기기 밖으로 나가지 않는다.
-    static func withRoute(_ drive: LedgerTollRepeat.Drive, readings: [SensorReading]) -> LedgerTollRepeat.Drive {
-        let points = readings
+    /// 지난 영업소도 같은 위치로 본다(TGT1118A01).
+    static func withRoute(_ drive: LedgerTollRepeat.Drive, readings: [SensorReading], units: [TollUnit] = []) -> LedgerTollRepeat.Drive {
+        let fixes = readings
             .filter { $0.timestamp >= drive.start && $0.timestamp <= drive.end && $0.locationFixQuality != .approximate }
             .sorted { $0.timestamp < $1.timestamp }
-            .compactMap { reading -> (latitude: Double, longitude: Double)? in
+            .compactMap { reading -> LedgerTollGate.Fix? in
                 guard let point = reading.point, point.horizontalAccuracy >= 0, point.horizontalAccuracy <= 100 else { return nil }
-                return (point.latitude, point.longitude)
+                return LedgerTollGate.Fix(at: reading.timestamp, latitude: point.latitude, longitude: point.longitude, accuracy: point.horizontalAccuracy)
             }
         var routed = drive
-        routed.cells = LedgerTollRoute.cells(along: points)
+        routed.cells = LedgerTollRoute.cells(along: fixes.map { ($0.latitude, $0.longitude) })
+        routed.passes = units.isEmpty ? [] : LedgerTollGate.passes(units: units, fixes: fixes)
         return routed
     }
 

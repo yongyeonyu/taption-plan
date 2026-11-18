@@ -2,6 +2,16 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TGT1118A01 · 지난 톨게이트로 통행료 알아내기 (2026-11-18, 시뮬레이터·맥, 실기기·서버 배포 없음)
+
+- 명세 확인(공식): 공공데이터포털 `15111644`(영업소간 통행요금)의 링크(`/tcs/dss/selectApiLinkUrl.do?publicDataPk=15111644`)가 `data.ex.co.kr/openapi/basicinfo/openApiInfoM?apiId=0620`을 가리킴. 그 페이지를 브라우저로 그려 요청 주소 `https://data.ex.co.kr/openapi/toll/bhoinstIntoTollList`(HTTPS GET)·요청 변수(`key`·`type` 필수, `dprtrTolofCd`·`arrvTolofCd`·`hoinstCd`·`pageNo`·`numOfRows`·이름 둘)·출력 변수(`nrmlKnd1~8Amt`·`odn1/odn2` 할인·`crgw2/4/6SumDstne` 등)를 읽음. 영업소 위치는 `apiId=0123`(`locationinfoUnit`). 응답 바깥 모양(`list`·`count`·`code: "SUCCESS"`)은 포털 예제의 공개 견본 키 `test`로 한 줄씩 확인(대표 키는 쓰지 않음). 메인이 전달한 대표 실측 명세(쪽당 99줄, User-Agent 차단, 좌표 빈 영업소 192곳, 0건 요금)와 같음.
+- 서버(덧붙이기만, `src/expressway.js`·`index.js` 경로 두 줄): `GET /ex/units`(모든 쪽 99줄씩 모아 정리·코드 trim·좌표 빈 것·같은 코드 거름, 한 쪽이라도 실패하면 502·캐시 안 함, 7일 캐시), `GET /ex/fare?from&to&car`(코드로만 조회, 정상요금 `nrmlKnd<car>Amt`·거리 합, 다른 영업소 줄 버림, 0건은 빈 목록, 1일 캐시). 키 `EX_API_KEY` 없으면 503 `ex_key_missing`. 좌표는 받지 않음. 상류 실패·예외 원문은 돌려주지 않음. 검색 범위·카카오 하루 한도. `npm test` 3회: 234건 실행, 실패 0, 건너뜀 0(새 6건). 로그 `build/validation/TGT1118A01/server-npm-test-{1,2,3}.log`.
+- 앱(`TaptionPlan/Core/LedgerTollGate.swift` 361줄, `LedgerTollRepeat.swift` 연결): 영업소 목록 기기 캐시(`Caches/toll-units.json`, 3,000곳·1MB 한도, 7일, 실패 1시간 뒤 다시, 자동차 이동이 있을 때만 받음), 지남 판정 순수 함수(150m, 2분·3km 안 두 위치는 선으로), 폐쇄식(처음=입구·끝=출구)/본선 하나 구분, 요금 30일(0건 1일) 기기 캐시, 1종 정상요금에 `LedgerTollDiscount` 한 번(경차는 1종에 50%, 포털 시간대 할인 칸 안 씀, 출퇴근 할인은 20km 이상이면 뺌, 출구 지난 시각).
+- 확실함 기준(바로 넣음): 입구·출구(본선은 그 하나)가 모두 80m 안·위치 오차 50m 이하, 사이에 80m 안으로 지난 영업소 없음, 요금 한 값(0원 초과), 입구·출구 시각 할인 같음. 아니면 「확인 필요」(`toll`). 요금 0건이면 같은 길 배운 금액을 늘 「확인 필요」로. 영업소 못 찾음·서버에 못 물음은 같은 길 방식 그대로. 한 이동 한 번·지운 것 안 넣음은 같은 `handled`.
+- 표시: 제목 「가 영업소 → 나 영업소 통행료」, 메모 「지난 톨게이트로 자동 추가 · 가 영업소 → 나 영업소 · 정상요금 900원 · 출퇴근 할인 20%」(금액 720원). 새 문구 5개 12개 언어, `extract.py`→`check.py` 실패 0(`generate.py`는 메인 몫). 로그 `l10n-*.log`.
+- 단위(시뮬레이터 99AC6F35): `LedgerTollGateTests` 11건·`LedgerTollRepeatTests` 12건 실패 0(`unit-toll-3.log`). 전체 `-only-testing:TaptionPlanTests`: 3,060건 실행, 26건 건너뜀, 실패 0(`unit-all-2.log`; 첫 실행은 시험 실행기가 연결 전에 멈춰 시험 0건 — `unit-all.log`). Debug 빌드 성공(`debug-build.log`). 구조 지표 `--check`·import 경계 통과.
+- 제한: 실기기·실제 고속도로 기록으로 확인하지 않음(150·80m는 영업소 좌표가 요금소 가운데라는 가정, 기기 기록으로 다시 맞춰야 함). 영어·한국어 밖 언어로 넣은 제목은 통행료 낱말 판별(`isToll`)에 안 걸려, 겹침은 `handled`로만 막음. 서버 배포·키 넣기 전에는 503이라 지금의 같은 길 방식만 돎.
+
 ## TOL1118A01 · 같은 길 통행료 할인 금액·다른 길 오인 (2026-11-18, 시뮬레이터, 실기기 없음)
 
 - 원인 확정: 정가를 배운 시각(`learnedAt`)의 출퇴근 할인으로 되돌려, 20% 시간대에 손으로 넣은 900원이 정가 1,130원이 됨(→ 20% 900원·50% 570원). 이미 넣은 것을 다시 맞출 때는 도착 시각, 새로 넣을 때는 이동 가운데 시각으로 할인을 봐 서로 어긋남. 길은 출발·도착 이름 쌍만 봄.

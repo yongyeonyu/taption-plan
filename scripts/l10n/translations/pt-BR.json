@@ -6092,6 +6092,11 @@
 "캘린더 일정 {0}개도 함께 옮길까요?|Move {0} calendar event(s) too?": "Mover também {0} evento(s) do calendário?",
 "캘린더 앱의 일정은 그대로예요|The events in the Calendar app stay as they are.": "Os eventos no app Calendário continuam como estão.",
 "옮기기|Move": "Mover",
-"겹친 일정이 있어 그 구간은 그대로 둡니다|Some plans overlap, so that part stays as it is.": "Alguns planos se sobrepõem, então essa parte fica como está."
+"겹친 일정이 있어 그 구간은 그대로 둡니다|Some plans overlap, so that part stays as it is.": "Alguns planos se sobrepõem, então essa parte fica como está.",
+"{0} → {1} 통행료|Toll: {0} → {1}": "Pedágio: {0} → {1}",
+"{0} 영업소|{0} toll plaza": "Praça de pedágio {0}",
+"{0} 통행료|Toll: {0}": "Pedágio: {0}",
+"정상요금 {0}|Normal fare {0}": "Tarifa normal {0}",
+"지난 톨게이트로 자동 추가|Added from the toll plazas passed": "Adicionado pelas praças de pedágio percorridas"
 }
 }
