@@ -6,11 +6,14 @@ import FoundationModels
 /// Apple 모델 3단계 길(PCC1118A01)에 넣을 지금 조건을 iOS에서 읽는다. 판단은 `AppleModelRouter`가 한다.
 /// `PrivateCloudComputeLanguageModel`은 iOS 27 SDK(Swift 6.4)에만 있어 CI의 Xcode 26에서는 빠진다.
 enum AppleModelEnvironment {
+    /// PCC entitlement 승인 전에는 PCC를 부르지 않는다(대표 결정 2026-11-18). 승인 뒤 entitlement를 넣는 커밋에서 켠다.
+    static let isPrivateCloudComputeEnabled = false
+
     @MainActor
-    static func conditions(_ task: AppleModelTask, text: String) -> AppleModelConditions {
+    static func conditions(_ task: AppleModelTask, text: String, cloudEnabled: Bool = isPrivateCloudComputeEnabled) -> AppleModelConditions {
         AppleModelConditions(
             task: task,
-            cloud: cloudState(),
+            cloud: cloudState(enabled: cloudEnabled),
             device: deviceState(),
             isOnline: OfflineVectorNetworkStatus.shared.current.isOnline,
             inputLength: text.count,
@@ -18,12 +21,14 @@ enum AppleModelEnvironment {
         )
     }
 
-    /// AI 공유 수준이 「끔」이거나 글에 좌표가 있으면 기기 밖(Apple 서버)으로 보내지 않는다.
-    static func allowsCloud(for text: String, defaults: UserDefaults = .standard) -> Bool {
-        AssistantShareLevel.current(defaults) != .off && !AppleModelRouter.containsCoordinates(text)
+    /// 글에 좌표가 있으면 기기 밖(Apple 서버)으로 보내지 않는다. AI 공유 수준과는 상관없다(대표 결정 2026-11-18).
+    static func allowsCloud(for text: String) -> Bool {
+        !AppleModelRouter.containsCoordinates(text)
     }
 
-    static func cloudState() -> AppleCloudModelState {
+    /// 스위치가 꺼져 있으면 PCC를 묻지도 않고 「쓸 수 없음」으로 둔다.
+    static func cloudState(enabled: Bool = isPrivateCloudComputeEnabled) -> AppleCloudModelState {
+        guard enabled else { return .unavailable }
         #if canImport(FoundationModels) && compiler(>=6.4)
         if #available(iOS 27.0, *) { return AppleCloudModel.state(PrivateCloudComputeLanguageModel()) }
         #endif

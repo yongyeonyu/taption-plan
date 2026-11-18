@@ -51,7 +51,7 @@ public struct AppleModelConditions: Equatable, Sendable {
     public var device: AppleDeviceModelState
     public var isOnline: Bool
     public var inputLength: Int
-    /// 기기 밖(Apple 서버)으로 보내도 되는가. AI 공유 수준 「끔」이거나 글에 좌표가 있으면 false.
+    /// 기기 밖(Apple 서버)으로 보내도 되는가. 글에 좌표가 있으면 false. AI 공유 수준과는 상관없다(대표 결정 2026-11-18).
     public var allowsCloud: Bool
 
     public init(task: AppleModelTask, cloud: AppleCloudModelState, device: AppleDeviceModelState,

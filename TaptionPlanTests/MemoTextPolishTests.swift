@@ -221,20 +221,26 @@ final class MemoTextPolishTests: XCTestCase {
         XCTAssertNil(MemoPolishNotice(nil))
     }
 
-    func testCloudNeedsShareLevelAndNoCoordinates() throws {
-        let name = "MemoTextPolishTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
-        XCTAssertTrue(AppleModelEnvironment.allowsCloud(for: "점심 12,000원", defaults: defaults))
-        XCTAssertFalse(AppleModelEnvironment.allowsCloud(for: "12.34560, 123.45670 앞", defaults: defaults))
-        defaults.set(AssistantShareLevel.off.rawValue, forKey: AssistantShareLevel.defaultsKey)
-        XCTAssertFalse(AppleModelEnvironment.allowsCloud(for: "점심", defaults: defaults))
+    /// AI 공유 수준과 상관없이 좌표가 든 글만 PCC로 보내지 않는다(대표 결정 2026-11-18).
+    func testCloudSkipsOnlyCoordinates() {
+        XCTAssertTrue(AppleModelEnvironment.allowsCloud(for: "점심 12,000원"))
+        XCTAssertFalse(AppleModelEnvironment.allowsCloud(for: "12.34560, 123.45670 앞"))
+    }
+
+    /// 승인 전 스위치가 꺼져 있으면 PCC를 묻지 않고 고르지도 않는다.
+    @MainActor
+    func testDisabledSwitchNeverPicksCloud() {
+        XCTAssertFalse(AppleModelEnvironment.isPrivateCloudComputeEnabled)
+        XCTAssertEqual(AppleModelEnvironment.cloudState(enabled: false), .unavailable)
+        let conditions = AppleModelEnvironment.conditions(.memoPolish, text: "메모", cloudEnabled: false)
+        XCTAssertEqual(conditions.cloud, .unavailable)
+        XCTAssertNotEqual(AppleModelRouter.decide(conditions).route, .privateCloud)
     }
 
     /// entitlement 없이도 iOS가 준 상태를 읽기만 하고 멈추지 않는다. 실제 값은 기록으로 남긴다.
     @MainActor
     func testLiveConditionsReadWithoutCrash() {
-        let conditions = AppleModelEnvironment.conditions(.memoPolish, text: "메모")
+        let conditions = AppleModelEnvironment.conditions(.memoPolish, text: "메모", cloudEnabled: true)
         print("PCC1118A01 live cloud=\(conditions.cloud) device=\(conditions.device) online=\(conditions.isOnline) route=\(AppleModelRouter.decide(conditions).route)")
         if #unavailable(iOS 27.0) { XCTAssertEqual(conditions.cloud, .unsupported) }
     }

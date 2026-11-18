@@ -245,12 +245,12 @@ final class MemoPolishController {
 }
 
 /// Apple 모델 3단계 길(PCC1118A01): Private Cloud Compute → 기기 안 모델 → 연결된 AI 중계.
-/// PCC는 Apple 서버에서 돌고, 좌표가 든 글과 AI 공유 「끔」이면 쓰지 않는다(`AppleModelEnvironment`).
+/// PCC는 Apple 서버에서 돌고, 좌표가 든 글은 보내지 않는다. 승인 전에는 스위치로 꺼 둔다(`AppleModelEnvironment`).
 enum MemoTextPolisher {
     /// PCC를 쓸 수 있으면 기기 모델이 꺼져 있어도 다듬을 수 있다.
     @MainActor
     static var availability: MemoPolishAvailability {
-        if case .available = AppleModelEnvironment.cloudState(), AppleModelEnvironment.allowsCloud(for: "") { return .available }
+        if case .available = AppleModelEnvironment.cloudState() { return .available }
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
             return FoundationMemoPolisher.mapped(SystemLanguageModel.default.availability)

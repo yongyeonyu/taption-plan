@@ -10,6 +10,7 @@
 - 시뮬레이터 실제 값(entitlement 없음): `PrivateCloudComputeLanguageModel().availability`는 `.available`, `quotaUsage`는 한도 아래로 읽힘(멈추지 않음). 실제 호출(`TAPTION_PCC_PROBE=1`, 고정 시험 글 하나)은 거절되어 `Failure(.service)`로 분류 → 기기 모델로 넘어감. 시뮬레이터에는 기기 모델 자산이 없어 그것도 실패(`.failed`). 즉 「entitlement 없음 → unavailable」이 아니라 「available인데 호출 거절 → 다음 길」로 동작함을 확인. 실기기 값은 모름.
 - 구조 지표 `--check` 통과, import 경계 통과, 번역 `extract.py` → 12개 언어 2문구 → `check.py` 실패 0(`l10n-check.log`). `generate.py`는 돌리지 않음(메인 몫).
 - 못 한 것: `-only-testing:TaptionPlanTests` 전체(맥 부하 260), 실기기, iOS 18 기기 실행(약한 연결은 기존 AIM 기록대로), PCC 실제 성공 응답(entitlement 승인 전).
+- 덧붙임(대표 결정 2026-11-18 객관식 4가지 반영): ① 스위치 `AppleModelEnvironment.isPrivateCloudComputeEnabled = false` — 꺼지면 PCC를 묻지도 부르지도 않고 「쓸 수 없음」으로 넣어 기기 모델 → 중계 큐(호출 코드와 요청할 때만 도는 탐침은 그대로) ② `PRIVACY.md`는 고치지 않음, 스위치 켜는 커밋에 함께(문서 「승인 뒤 할 일」) ③ AI 공유 「끔」을 PCC 건너뛰는 조건에서 뺌, 좌표가 든 글만 건너뜀(중계 큐 쪽은 그대로) ④ 하루 요약은 기기 모델 안 씀 그대로. 결과: 패키지 `swift test` 40개 실패 0(`package-swift-test-2.log`), 앱 Debug 빌드 성공, `MemoTextPolishTests` 30개 실패 0·건너뜀 1(탐침, 새 시험 `testDisabledSwitchNeverPicksCloud`·`testCloudSkipsOnlyCoordinates`, `unit-memo-switch`), 구조 지표·import 경계 통과. 전체 단위 시험은 메인이 합친 뒤.
 
 ## TFB1117A349 · TestFlight 349 (2026-11-17 새벽)
 
