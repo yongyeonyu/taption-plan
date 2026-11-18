@@ -1604,6 +1604,37 @@ final class TaptionPlanMenuHitUITests: XCTestCase {
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: x, dy: y)).tap()
     }
 
+    /// 홈 메뉴 「표시」의 지도 스타일·안개 탐험 줄(보이는 높이 약 34pt).
+    func testHomeDisplayMenusAnswerOutsideTheirRow() throws {
+        let app = launch()
+        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch.tap()
+        let display = app.buttons["표시"].firstMatch
+        XCTAssertTrue(display.waitForExistence(timeout: 8), "홈 메뉴에 「표시」가 있다")
+        sleep(1)
+        // 메뉴 판이 올라오는 동안에는 눌릴 자리를 못 읽어, 틀이 화면 가운데쯤 올 때까지 넘긴다.
+        var tries = 0
+        while !(display.frame.minY > 150 && display.frame.maxY < app.frame.height * 0.55) && tries < 12 {
+            if display.frame.minY <= 150 { app.swipeDown(velocity: .slow) } else { app.swipeUp(velocity: .slow) }
+            sleep(1); tries += 1
+        }
+        let style = app.buttons["지도 스타일 선택"].firstMatch
+        if !style.exists { display.tap() }
+        XCTAssertTrue(style.waitForExistence(timeout: 5), "「표시」를 펼치면 지도 스타일 줄이 있다")
+        let fog = app.buttons["안개 탐험 선택"].firstMatch
+        if fog.frame.maxY > app.frame.height - 160 { app.swipeUp(); sleep(1) }
+        print("MNU1118A01 frame map-style \(style.frame) fog \(fog.frame)")
+        dumpSmall(app, "home-display")
+        // 지도 스타일 그림 위 3pt(「표시」 머리 줄과의 틈).
+        tap(app, style.frame.midX, style.frame.midY - 17 - 3)
+        let satellite = app.buttons["위성"].firstMatch
+        XCTAssertTrue(satellite.waitForExistence(timeout: 3), "지도 스타일 줄 3pt 위를 눌러도 지도 스타일 메뉴가 뜬다")
+        tap(app, 30, 120)
+        XCTAssertTrue(UITestWait.until(3) { !satellite.exists }, "메뉴가 닫힌다")
+        // 안개 탐험 그림 위 3pt(지도 스타일 줄과의 틈).
+        tap(app, fog.frame.midX, fog.frame.midY - 17 - 3)
+        XCTAssertTrue(app.buttons["진하게"].firstMatch.waitForExistence(timeout: 3), "안개 탐험 줄 3pt 위를 눌러도 안개 탐험 메뉴가 뜬다")
+    }
+
     /// 여행 일정 속성의 ⋯(그림 40×32).
     func testTravelEntryMoreAnswersOutsideItsPicture() throws {
         let app = launch()
