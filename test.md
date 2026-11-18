@@ -8,7 +8,8 @@
 - Assistant 패키지 `swift test`: 실패 0(`AppleModelRouterTests` 15건, 새 2건 포함). 로그 `build/validation/CRV1118A01/assistant-swift-test.log`.
 - 앱 `MemoTextPolishTests`(시뮬레이터 99AC6F35, Debug 빌드 포함): 34건 실행, 1건 건너뜀(요청 때만 도는 PCC 탐침), 실패 0. 로그 `build/validation/CRV1118A01/memo-polish.log`.
 - 번역: 새 문구 2개 12개 언어, `extract.py`→`check.py`(실패 0)→`generate.py`. 구조 지표 `--check`·import 경계 통과.
-- 하지 않음: 전체 단위 시험, 실기기 확인(PCC 스위치 꺼짐, entitlement 승인 전).
+- 전체 단위(`-only-testing:TaptionPlanTests`, 시뮬레이터 99AC6F35, 고정 작업 공간 `2895c2bb`): 3,042건 실행, 26건 건너뜀, 실패 0. 첫 실행은 시험 실행기가 연결 전에 멈춰(시험 0건) 시뮬레이터를 다시 켠 뒤 재실행. 로그 `build/validation/CRV1118A01/full-unit-2895c2bb.log`(멈춘 것은 `hung-…`).
+- 하지 않음: 실기기 확인(PCC 스위치 꺼짐, entitlement 승인 전).
 
 ## PCC1118A01 · Apple Foundation Models 3단계 길 (2026-11-18, 시뮬레이터·맥, 실기기 없음)
 
