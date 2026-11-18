@@ -250,8 +250,9 @@ struct TravelQuickEntrySheet: View {
                 }
             } label: {
                 Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(TravelInk.plan).frame(width: TaptionControl.round, height: TaptionControl.chip)
-                    .taptionTouchTarget(visualWidth: TaptionControl.round, visualHeight: TaptionControl.chip)
+                    .taptionMenuHitFrame(visualWidth: TaptionControl.round, visualHeight: TaptionControl.chip)
             }
+            .taptionMenuHitLayout(visualWidth: TaptionControl.round, visualHeight: TaptionControl.chip)
             .accessibilityLabel(language.text("더 보기", "More"))
             .accessibilityIdentifier("travelEntryMore")
             Spacer()
