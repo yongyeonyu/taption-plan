@@ -19,6 +19,7 @@
 - **시뮬레이터** `99AC6F35…`, 판 `1b94ed70`:
   - 단위 `TaptionPlanTests`(`sim-Tests.log`): 3,029건, 건너뜀 25, 실패 0.
   - UI `TaptionPlanUITests`(`sim-UITests.log`): 56건, 건너뜀 8, **실패 12**. 전부 `TaptionPlanFirstRunTutorialUITests` 5개와 그 재시도. 튜토리얼 대신 홈이 바로 뜸. 단독 재실행에서도 재현(`probe-firstrun.log`). 원인 조사는 FUL1118A02.
+  - 고친 판 `c762fd37` UI 다시 실행(`sim2-UITests.log`): 56건, 건너뜀 8, **실패 0**.
   - 중간에 멈춘 첫 실행 로그는 `stopped-sim-*`.
 
 ## MNU1118A01 · 메뉴 단추 누르는 자리 전수 점검 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
