@@ -278,7 +278,7 @@
    "ko": "14일 무료 체험 · {0}일 남음",
    "en": "14-day free trial · {0} days left",
    "files": [
-    "AppShellView.swift:1114",
+    "AppShellView.swift:1116",
     "MapHomeView+Menu2.swift:250"
    ],
    "args": [
@@ -293,7 +293,7 @@
    "ko": "14일 무료 체험 시작",
    "en": "Start 14-day free trial",
    "files": [
-    "AppShellView.swift:1166"
+    "AppShellView.swift:1168"
    ],
    "args": [],
    "targets": [
@@ -305,7 +305,7 @@
    "ko": "14일 무료 체험",
    "en": "14-day free trial",
    "files": [
-    "AppShellView.swift:1112"
+    "AppShellView.swift:1114"
    ],
    "args": [],
    "targets": [
@@ -317,7 +317,7 @@
    "ko": "14일 무료 체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다.",
    "en": "The trial does not renew automatically. A single purchase unlocks Pro permanently.",
    "files": [
-    "AppShellView.swift:1138"
+    "AppShellView.swift:1140"
    ],
    "args": [],
    "targets": [
@@ -329,7 +329,7 @@
    "ko": "14일 무료 체험이 시작되었습니다.",
    "en": "Your 14-day free trial has started.",
    "files": [
-    "AppShellView.swift:1249"
+    "AppShellView.swift:1251"
    ],
    "args": [],
    "targets": [
@@ -341,7 +341,7 @@
    "ko": "14일 무료 체험이 종료되었습니다",
    "en": "Your 14-day free trial has ended",
    "files": [
-    "AppShellView.swift:1121"
+    "AppShellView.swift:1123"
    ],
    "args": [],
    "targets": [
@@ -783,8 +783,8 @@
    "ko": "AI 다듬기",
    "en": "AI polish",
    "files": [
-    "MapHomeStickerEditor.swift:413",
-    "MapHomeStickerEditor.swift:431"
+    "MapHomeStickerEditor.swift:419",
+    "MapHomeStickerEditor.swift:437"
    ],
    "args": [],
    "targets": [
@@ -1265,7 +1265,7 @@
    "ko": "AI로 문장 다듬기",
    "en": "Polish text with AI",
    "files": [
-    "MapHomeStickerEditor.swift:439"
+    "MapHomeStickerEditor.swift:445"
    ],
    "args": [],
    "targets": [
@@ -1482,7 +1482,7 @@
    "ko": "App Store에서 구매 항목을 아직 불러오지 못했습니다.",
    "en": "The purchase is not available from the App Store yet.",
    "files": [
-    "AppShellView.swift:1267"
+    "AppShellView.swift:1269"
    ],
    "args": [],
    "targets": [
@@ -1506,7 +1506,7 @@
    "ko": "Apple Intelligence 모델을 준비하는 중이에요.",
    "en": "The Apple Intelligence model is getting ready.",
    "files": [
-    "MapHomeStickerEditor.swift:449"
+    "MapHomeStickerEditor.swift:455"
    ],
    "args": [],
    "targets": [
@@ -1518,7 +1518,7 @@
    "ko": "Apple Intelligence로 다듬기",
    "en": "Polish with Apple Intelligence",
    "files": [
-    "MapHomeStickerEditor.swift:386"
+    "MapHomeStickerEditor.swift:392"
    ],
    "args": [],
    "targets": [
@@ -1669,6 +1669,30 @@
    "en": "Apple map",
    "files": [
     "MapHomeView+Map.swift:317"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Apple 클라우드 사용 한도에 가까워요.|You're close to the Apple cloud usage limit.",
+   "ko": "Apple 클라우드 사용 한도에 가까워요.",
+   "en": "You're close to the Apple cloud usage limit.",
+   "files": [
+    "MapHomeStickerEditor.swift:468"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Apple 클라우드 사용 한도에 닿았어요. 잠시 뒤 다시 쓸 수 있어요.|You've reached the Apple cloud usage limit. Try again later.",
+   "ko": "Apple 클라우드 사용 한도에 닿았어요. 잠시 뒤 다시 쓸 수 있어요.",
+   "en": "You've reached the Apple cloud usage limit. Try again later.",
+   "files": [
+    "MapHomeStickerEditor.swift:469"
    ],
    "args": [],
    "targets": [
@@ -2572,7 +2596,7 @@
    "ko": "Pro 상태 확인 중",
    "en": "Checking Pro status",
    "files": [
-    "AppShellView.swift:1077"
+    "AppShellView.swift:1079"
    ],
    "args": [],
    "targets": [
@@ -2584,7 +2608,7 @@
    "ko": "Pro 영구 구매",
    "en": "Buy Pro permanently",
    "files": [
-    "AppShellView.swift:1242"
+    "AppShellView.swift:1244"
    ],
    "args": [],
    "targets": [
@@ -2596,7 +2620,7 @@
    "ko": "Pro 영구 구매가 완료되었습니다.",
    "en": "Your permanent Pro purchase is complete.",
    "files": [
-    "AppShellView.swift:1263"
+    "AppShellView.swift:1265"
    ],
    "args": [],
    "targets": [
@@ -2608,7 +2632,7 @@
    "ko": "Pro를 영구 이용 중입니다",
    "en": "You own Pro permanently",
    "files": [
-    "AppShellView.swift:1119"
+    "AppShellView.swift:1121"
    ],
    "args": [],
    "targets": [
@@ -2998,7 +3022,7 @@
    "ko": "iCloud 백업과 기기 연동",
    "en": "iCloud backup and device sync",
    "files": [
-    "AppShellView.swift:1063"
+    "AppShellView.swift:1065"
    ],
    "args": [],
    "targets": [
@@ -4502,7 +4526,7 @@
    "ko": "{0}로 Pro 영구 구매",
    "en": "Buy Pro permanently for {0}",
    "files": [
-    "AppShellView.swift:1237"
+    "AppShellView.swift:1239"
    ],
    "args": [
     "displayPrice"
@@ -5165,7 +5189,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit PIN",
    "files": [
-    "AppShellView.swift:785"
+    "AppShellView.swift:787"
    ],
    "args": [
     "pinDigits"
@@ -13203,7 +13227,7 @@
    "ko": "앱 잠금 해제 필요",
    "en": "App unlock required",
    "files": [
-    "AppShellView.swift:694"
+    "AppShellView.swift:696"
    ],
    "args": [],
    "targets": [
@@ -33574,7 +33598,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit PIN",
    "files": [
-    "AppShellView.swift:786"
+    "AppShellView.swift:788"
    ],
    "args": [
     "pinDigits"
@@ -34585,7 +34609,7 @@
    "ko": "개발자 체험 14일 초기화",
    "en": "Reset developer trial for 14 days",
    "files": [
-    "AppShellView.swift:1180"
+    "AppShellView.swift:1182"
    ],
    "args": [],
    "targets": [
@@ -34597,7 +34621,7 @@
    "ko": "개발자 체험 기록을 초기화하지 못했습니다.",
    "en": "The developer trial record could not be reset.",
    "files": [
-    "AppShellView.swift:1257"
+    "AppShellView.swift:1259"
    ],
    "args": [],
    "targets": [
@@ -34782,7 +34806,7 @@
    "ko": "건강 데이터",
    "en": "Health Data",
    "files": [
-    "AppShellView.swift:975"
+    "AppShellView.swift:977"
    ],
    "args": [],
    "targets": [
@@ -35356,7 +35380,7 @@
    "ko": "결과가 원문과 달라 적용하지 않았어요.",
    "en": "The result differed from your text, so it wasn't applied.",
    "files": [
-    "MapHomeStickerEditor.swift:458"
+    "MapHomeStickerEditor.swift:464"
    ],
    "args": [],
    "targets": [
@@ -35732,7 +35756,7 @@
    "ko": "계속 사용",
    "en": "Continue",
    "files": [
-    "AppShellView.swift:1221"
+    "AppShellView.swift:1223"
    ],
    "args": [],
    "targets": [
@@ -35744,7 +35768,7 @@
    "ko": "계속 사용하려면 Pro를 한 번 구매하거나 기존 구매 내역을 복원해 주세요.",
    "en": "Purchase Pro once or restore an existing purchase to continue.",
    "files": [
-    "AppShellView.swift:1148"
+    "AppShellView.swift:1150"
    ],
    "args": [],
    "targets": [
@@ -36344,7 +36368,7 @@
    "ko": "고칠 곳을 찾지 못했어요.",
    "en": "Nothing to fix.",
    "files": [
-    "MapHomeStickerEditor.swift:455"
+    "MapHomeStickerEditor.swift:461"
    ],
    "args": [],
    "targets": [
@@ -37004,7 +37028,7 @@
    "ko": "구매 내역을 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
    "en": "Your purchase could not be restored. Please try again later.",
    "files": [
-    "AppShellView.swift:1283"
+    "AppShellView.swift:1285"
    ],
    "args": [],
    "targets": [
@@ -37016,7 +37040,7 @@
    "ko": "구매 내역을 복원했습니다.",
    "en": "Your purchase was restored.",
    "files": [
-    "AppShellView.swift:1279"
+    "AppShellView.swift:1281"
    ],
    "args": [],
    "targets": [
@@ -37028,7 +37052,7 @@
    "ko": "구매 및 체험 상태를 확인하고 있습니다.",
    "en": "Checking your purchase and trial status.",
    "files": [
-    "AppShellView.swift:1128"
+    "AppShellView.swift:1130"
    ],
    "args": [],
    "targets": [
@@ -37040,7 +37064,7 @@
    "ko": "구매 복원",
    "en": "Restore purchase",
    "files": [
-    "AppShellView.swift:1214"
+    "AppShellView.swift:1216"
    ],
    "args": [],
    "targets": [
@@ -37052,7 +37076,7 @@
    "ko": "구매 승인을 기다리고 있습니다.",
    "en": "Waiting for purchase approval.",
    "files": [
-    "AppShellView.swift:1265"
+    "AppShellView.swift:1267"
    ],
    "args": [],
    "targets": [
@@ -37064,7 +37088,7 @@
    "ko": "구매 영수증을 확인하지 못했습니다.",
    "en": "The purchase receipt could not be verified.",
    "files": [
-    "AppShellView.swift:1272"
+    "AppShellView.swift:1274"
    ],
    "args": [],
    "targets": [
@@ -37076,7 +37100,7 @@
    "ko": "구매를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",
    "en": "The purchase could not be completed. Please try again later.",
    "files": [
-    "AppShellView.swift:1274"
+    "AppShellView.swift:1276"
    ],
    "args": [],
    "targets": [
@@ -37536,7 +37560,7 @@
    "ko": "글이 길어 다듬지 못했어요. 1,500자 이하로 줄여 주세요.",
    "en": "This is too long to polish. Keep it under 1,500 characters.",
    "files": [
-    "MapHomeStickerEditor.swift:457"
+    "MapHomeStickerEditor.swift:463"
    ],
    "args": [],
    "targets": [
@@ -37548,7 +37572,7 @@
    "ko": "글이 바뀌어 다듬기를 멈췄어요.",
    "en": "The text changed, so polishing stopped.",
    "files": [
-    "MapHomeStickerEditor.swift:456"
+    "MapHomeStickerEditor.swift:462"
    ],
    "args": [],
    "targets": [
@@ -39959,7 +39983,7 @@
    "ko": "녹음 끝내기",
    "en": "Finish recording",
    "files": [
-    "MapHomeStickerEditor.swift:302"
+    "MapHomeStickerEditor.swift:308"
    ],
    "args": [],
    "targets": [
@@ -40194,8 +40218,8 @@
    "ko": "다듬는 중…",
    "en": "Polishing…",
    "files": [
-    "MapHomeStickerEditor.swift:413",
-    "MapHomeStickerEditor.swift:430"
+    "MapHomeStickerEditor.swift:419",
+    "MapHomeStickerEditor.swift:436"
    ],
    "args": [],
    "targets": [
@@ -40207,7 +40231,7 @@
    "ko": "다듬은 글로",
    "en": "Use polished",
    "files": [
-    "MapHomeStickerEditor.swift:331"
+    "MapHomeStickerEditor.swift:337"
    ],
    "args": [],
    "targets": [
@@ -40219,7 +40243,7 @@
    "ko": "다듬지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't polish this. Try again later.",
    "files": [
-    "MapHomeStickerEditor.swift:461"
+    "MapHomeStickerEditor.swift:467"
    ],
    "args": [],
    "targets": [
@@ -40626,7 +40650,7 @@
    "en": "Close",
    "files": [
     "AIConnectNudge.swift:40",
-    "AppShellView.swift:1019",
+    "AppShellView.swift:1021",
     "ArrivalCardView.swift:67"
    ],
    "args": [],
@@ -41525,7 +41549,7 @@
    "ko": "동작 및 피트니스",
    "en": "Motion & Fitness",
    "files": [
-    "AppShellView.swift:973",
+    "AppShellView.swift:975",
     "MapHomeView+Support2.swift:895"
    ],
    "args": [],
@@ -41614,7 +41638,7 @@
    "files": [
     "AssistantSafetyViews.swift:379",
     "MapHomeNLEClipEditor.swift:503",
-    "MapHomeStickerEditor.swift:332"
+    "MapHomeStickerEditor.swift:338"
    ],
    "args": [],
    "targets": [
@@ -42385,7 +42409,7 @@
    "ko": "맡기지 않기",
    "en": "Don't ask",
    "files": [
-    "MapHomeStickerEditor.swift:396"
+    "MapHomeStickerEditor.swift:402"
    ],
    "args": [],
    "targets": [
@@ -42829,7 +42853,7 @@
    "ko": "메모 내용",
    "en": "Memo text",
    "files": [
-    "MapHomeStickerEditor.swift:489"
+    "MapHomeStickerEditor.swift:497"
    ],
    "args": [],
    "targets": [
@@ -42901,7 +42925,7 @@
    "ko": "메모 스티커",
    "en": "Memo sticker",
    "files": [
-    "MapHomeStickerEditor.swift:565"
+    "MapHomeStickerEditor.swift:573"
    ],
    "args": [],
    "targets": [
@@ -42951,7 +42975,7 @@
    "en": "Memo",
    "files": [
     "FirstRunGuideStage.swift:650",
-    "MapHomeStickerEditor.swift:565",
+    "MapHomeStickerEditor.swift:573",
     "MapHomeView+Support2.swift:428"
    ],
    "args": [],
@@ -43014,7 +43038,7 @@
    "ko": "메모로 되돌리기",
    "en": "Turn back into a memo",
    "files": [
-    "MapHomeStickerEditor.swift:651"
+    "MapHomeStickerEditor.swift:659"
    ],
    "args": [],
    "targets": [
@@ -43174,7 +43198,7 @@
    "ko": "모든 권한이 확인되면 GPS와 센서 기록이 5분 간격으로 자동 시작됩니다.",
    "en": "GPS and sensor recording starts automatically every 5 minutes after all permissions are verified.",
    "files": [
-    "AppShellView.swift:847"
+    "AppShellView.swift:849"
    ],
    "args": [],
    "targets": [
@@ -44800,7 +44824,7 @@
    "ko": "버튼을 누르면 14일 무료 체험이 시작됩니다. 자동 결제는 없습니다.",
    "en": "Tap the button to start a 14-day free trial. You will not be charged automatically.",
    "files": [
-    "AppShellView.swift:1133"
+    "AppShellView.swift:1135"
    ],
    "args": [],
    "targets": [
@@ -45361,7 +45385,7 @@
    "ko": "복원할 Pro 구매 내역이 없습니다.",
    "en": "No Pro purchase was found to restore.",
    "files": [
-    "AppShellView.swift:1281"
+    "AppShellView.swift:1283"
    ],
    "args": [],
    "targets": [
@@ -46778,7 +46802,7 @@
    "ko": "새 메모",
    "en": "New memo",
    "files": [
-    "MapHomeStickerEditor.swift:569",
+    "MapHomeStickerEditor.swift:577",
     "MapHomeView+Memos.swift:424"
    ],
    "args": [],
@@ -47453,9 +47477,9 @@
    "ko": "설정 열기",
    "en": "Open Settings",
    "files": [
-    "AppShellView.swift:958",
+    "AppShellView.swift:960",
     "MapHomeScreenRecording.swift:671",
-    "MapHomeStickerEditor.swift:266"
+    "MapHomeStickerEditor.swift:272"
    ],
    "args": [],
    "targets": [
@@ -47481,7 +47505,7 @@
    "ko": "설정 필요",
    "en": "Required",
    "files": [
-    "AppShellView.swift:911"
+    "AppShellView.swift:913"
    ],
    "args": [],
    "targets": [
@@ -47531,7 +47555,7 @@
    "ko": "설정에서 Apple Intelligence를 켜면 쓸 수 있어요.",
    "en": "Turn on Apple Intelligence in Settings to use this.",
    "files": [
-    "MapHomeStickerEditor.swift:447"
+    "MapHomeStickerEditor.swift:453"
    ],
    "args": [],
    "targets": [
@@ -48500,7 +48524,7 @@
    "ko": "스티커 고르기",
    "en": "Choose a sticker",
    "files": [
-    "MapHomeStickerEditor.swift:720",
+    "MapHomeStickerEditor.swift:728",
     "MapHomeStickerPicker.swift:122"
    ],
    "args": [],
@@ -48513,7 +48537,7 @@
    "ko": "스티커 내용을 메모로 다시 만들고 스티커는 지워요.",
    "en": "Creates a memo with this text and removes the sticker.",
    "files": [
-    "MapHomeStickerEditor.swift:654"
+    "MapHomeStickerEditor.swift:662"
    ],
    "args": [],
    "targets": [
@@ -48731,7 +48755,7 @@
    "ko": "시간 지정",
    "en": "Set a time",
    "files": [
-    "MapHomeStickerEditor.swift:611"
+    "MapHomeStickerEditor.swift:619"
    ],
    "args": [],
    "targets": [
@@ -48755,9 +48779,9 @@
    "ko": "시간",
    "en": "Time",
    "files": [
-    "MapHomeStickerEditor.swift:592",
-    "MapHomeStickerEditor.swift:595",
-    "MapHomeStickerEditor.swift:603"
+    "MapHomeStickerEditor.swift:600",
+    "MapHomeStickerEditor.swift:603",
+    "MapHomeStickerEditor.swift:611"
    ],
    "args": [],
    "targets": [
@@ -48769,7 +48793,7 @@
    "ko": "시간대별 날씨 기록",
    "en": "Hourly weather records",
    "files": [
-    "AppShellView.swift:1051"
+    "AppShellView.swift:1053"
    ],
    "args": [],
    "targets": [
@@ -49147,7 +49171,7 @@
    "ko": "실시간 GPS와 이동 경로",
    "en": "Live GPS and travel routes",
    "files": [
-    "AppShellView.swift:1055"
+    "AppShellView.swift:1057"
    ],
    "args": [],
    "targets": [
@@ -49159,7 +49183,7 @@
    "ko": "실시간 현황",
    "en": "Live Activities",
    "files": [
-    "AppShellView.swift:981"
+    "AppShellView.swift:983"
    ],
    "args": [],
    "targets": [
@@ -49463,7 +49487,7 @@
    "ko": "아이콘 표시",
    "en": "Show an icon",
    "files": [
-    "MapHomeStickerEditor.swift:580"
+    "MapHomeStickerEditor.swift:588"
    ],
    "args": [],
    "targets": [
@@ -49931,7 +49955,7 @@
    "ko": "알림",
    "en": "Notifications",
    "files": [
-    "AppShellView.swift:979",
+    "AppShellView.swift:981",
     "AssistantDataCommands.swift:701",
     "PermissionOnboardingSheet.swift:80"
    ],
@@ -50376,7 +50400,7 @@
    "ko": "앱 잠금 해제 필요",
    "en": "App unlock required",
    "files": [
-    "AppShellView.swift:693"
+    "AppShellView.swift:695"
    ],
    "args": [],
    "targets": [
@@ -52256,7 +52280,7 @@
    "ko": "연결된 AI에게 맡겼어요. 다듬은 글이 오면 바뀌어요.",
    "en": "Handed to your connected AI. It changes when the polished text arrives.",
    "files": [
-    "MapHomeStickerEditor.swift:354"
+    "MapHomeStickerEditor.swift:360"
    ],
    "args": [],
    "targets": [
@@ -52268,8 +52292,8 @@
    "ko": "연결된 AI에게 맡기기",
    "en": "Ask my connected AI",
    "files": [
-    "MapHomeStickerEditor.swift:387",
-    "MapHomeStickerEditor.swift:396"
+    "MapHomeStickerEditor.swift:393",
+    "MapHomeStickerEditor.swift:402"
    ],
    "args": [],
    "targets": [
@@ -54701,7 +54725,7 @@
    "ko": "위치 다시 고르기",
    "en": "Choose again",
    "files": [
-    "MapHomeStickerEditor.swift:636"
+    "MapHomeStickerEditor.swift:644"
    ],
    "args": [],
    "targets": [
@@ -54887,7 +54911,7 @@
    "ko": "위치 지우기",
    "en": "Remove location",
    "files": [
-    "MapHomeStickerEditor.swift:637"
+    "MapHomeStickerEditor.swift:645"
    ],
    "args": [],
    "targets": [
@@ -54900,7 +54924,7 @@
    "en": "Add location",
    "files": [
     "MapHomeLocationSheets.swift:225",
-    "MapHomeStickerEditor.swift:645"
+    "MapHomeStickerEditor.swift:653"
    ],
    "args": [],
    "targets": [
@@ -54924,7 +54948,7 @@
    "ko": "위치 항상 허용",
    "en": "Always Location",
    "files": [
-    "AppShellView.swift:969",
+    "AppShellView.swift:971",
     "MapHomeView+Support2.swift:891"
    ],
    "args": [],
@@ -54963,7 +54987,7 @@
    "en": "Location",
    "files": [
     "WidgetShared.swift:72",
-    "MapHomeStickerEditor.swift:617",
+    "MapHomeStickerEditor.swift:625",
     "MapHomeView+Menu.swift:929"
    ],
    "args": [],
@@ -55174,7 +55198,7 @@
    "ko": "음성 첨부",
    "en": "Voice attachment",
    "files": [
-    "MapHomeStickerEditor.swift:302"
+    "MapHomeStickerEditor.swift:308"
    ],
    "args": [],
    "targets": [
@@ -55384,7 +55408,7 @@
    "ko": "이 기기 또는 iCloud에 저장된 기록에서 14일 무료 체험을 이미 사용했습니다.",
    "en": "The 14-day free trial has already been used on this device or in its synced iCloud record.",
    "files": [
-    "AppShellView.swift:1251"
+    "AppShellView.swift:1253"
    ],
    "args": [],
    "targets": [
@@ -55771,7 +55795,7 @@
    "ko": "이 내용은 Apple Intelligence가 다듬지 못해요.",
    "en": "Apple Intelligence can't polish this content.",
    "files": [
-    "MapHomeStickerEditor.swift:459"
+    "MapHomeStickerEditor.swift:465"
    ],
    "args": [],
    "targets": [
@@ -55980,7 +56004,7 @@
    "ko": "이 언어는 다듬지 못해요.",
    "en": "This language isn't supported.",
    "files": [
-    "MapHomeStickerEditor.swift:460"
+    "MapHomeStickerEditor.swift:466"
    ],
    "args": [],
    "targets": [
@@ -57464,7 +57488,7 @@
    "files": [
     "WidgetShared.swift:70",
     "AssistantDigest.swift:79",
-    "MapHomeStickerEditor.swift:669"
+    "MapHomeStickerEditor.swift:677"
    ],
    "args": [],
    "targets": [
@@ -57845,7 +57869,7 @@
    "ko": "자동 기록에 필요한 권한입니다. 빠진 권한이 있으면 기록 화면을 사용할 수 없습니다.",
    "en": "These permissions are required for automatic recording. The timeline remains locked until all are enabled.",
    "files": [
-    "AppShellView.swift:874"
+    "AppShellView.swift:876"
    ],
    "args": [],
    "targets": [
@@ -58748,7 +58772,7 @@
    "ko": "저장하면 연결된 AI에게 맡겨요. 다음에 AI와 대화할 때 다듬어 보내 줘요.",
    "en": "Saving hands it to your connected AI. It polishes it the next time you chat.",
    "files": [
-    "MapHomeStickerEditor.swift:353"
+    "MapHomeStickerEditor.swift:359"
    ],
    "args": [],
    "targets": [
@@ -59364,7 +59388,7 @@
    "ko": "정확한 위치",
    "en": "Precise Location",
    "files": [
-    "AppShellView.swift:971",
+    "AppShellView.swift:973",
     "MapHomeView+Support2.swift:893"
    ],
    "args": [],
@@ -59405,7 +59429,7 @@
    "ko": "제목",
    "en": "Title",
    "files": [
-    "MapHomeStickerEditor.swift:567"
+    "MapHomeStickerEditor.swift:575"
    ],
    "args": [],
    "targets": [
@@ -60581,7 +60605,7 @@
    "files": [
     "FirstRunAIConnectPage.swift:140",
     "MapHomeScreenRecording.swift:580",
-    "MapHomeStickerEditor.swift:668"
+    "MapHomeStickerEditor.swift:676"
    ],
    "args": [],
    "targets": [
@@ -60774,7 +60798,7 @@
    "ko": "지도와 사이드바에 이 아이콘으로 보여요.",
    "en": "This icon shows on the map and in the sidebar.",
    "files": [
-    "MapHomeStickerEditor.swift:586"
+    "MapHomeStickerEditor.swift:594"
    ],
    "args": [],
    "targets": [
@@ -61083,7 +61107,7 @@
    "ko": "지하철·버스 자동 판정",
    "en": "Automatic subway and bus detection",
    "files": [
-    "AppShellView.swift:1059"
+    "AppShellView.swift:1061"
    ],
    "args": [],
    "targets": [
@@ -62013,7 +62037,7 @@
    "ko": "추가 결제나 자동 갱신 없이 모든 기능을 계속 사용할 수 있습니다.",
    "en": "Keep using every feature with no additional payment or renewal.",
    "files": [
-    "AppShellView.swift:1143"
+    "AppShellView.swift:1145"
    ],
    "args": [],
    "targets": [
@@ -62037,7 +62061,7 @@
    "ko": "추가 위치",
    "en": "Placement",
    "files": [
-    "MapHomeStickerEditor.swift:665"
+    "MapHomeStickerEditor.swift:673"
    ],
    "args": [],
    "targets": [
@@ -62761,7 +62785,7 @@
    "ko": "캘린더 전체 접근",
    "en": "Full Calendar Access",
    "files": [
-    "AppShellView.swift:977"
+    "AppShellView.swift:979"
    ],
    "args": [],
    "targets": [
@@ -63890,7 +63914,7 @@
    "ko": "필수 권한 설정",
    "en": "Required permissions",
    "files": [
-    "AppShellView.swift:870"
+    "AppShellView.swift:872"
    ],
    "args": [],
    "targets": [
@@ -64374,7 +64398,7 @@
    "ko": "한 번 결제 · 자동 갱신 없음",
    "en": "One-time purchase · No auto-renewal",
    "files": [
-    "AppShellView.swift:1202"
+    "AppShellView.swift:1204"
    ],
    "args": [],
    "targets": [
@@ -64920,7 +64944,7 @@
    "ko": "허용됨",
    "en": "Allowed",
    "files": [
-    "AppShellView.swift:912",
+    "AppShellView.swift:914",
     "FirstRunTutorialPolicy.swift:198"
    ],
    "args": [],
@@ -64933,7 +64957,7 @@
    "ko": "허용됨",
    "en": "Granted",
    "files": [
-    "AppShellView.swift:937"
+    "AppShellView.swift:939"
    ],
    "args": [],
    "targets": [
@@ -64945,7 +64969,7 @@
    "ko": "허용하기",
    "en": "Allow",
    "files": [
-    "AppShellView.swift:960",
+    "AppShellView.swift:962",
     "FirstRunTutorialGuides.swift:548",
     "MapHomeView+Support2.swift:906"
    ],
@@ -65529,7 +65553,7 @@
    "ko": "확인",
    "en": "OK",
    "files": [
-    "AppShellView.swift:1101",
+    "AppShellView.swift:1103",
     "AssistantConnectView.swift:213",
     "AssistantPINSheet.swift:61"
    ],

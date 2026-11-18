@@ -3820,6 +3820,8 @@
 "다녀온 곳|Visited place": "Luogo visitato",
 "다듬는 중…|Polishing…": "Rifinitura in corso…",
 "다듬은 글로|Use polished": "Usa il testo rifinito",
+"Apple 클라우드 사용 한도에 가까워요.|You're close to the Apple cloud usage limit.": "Stai per raggiungere il limite di utilizzo del cloud Apple.",
+"Apple 클라우드 사용 한도에 닿았어요. 잠시 뒤 다시 쓸 수 있어요.|You've reached the Apple cloud usage limit. Try again later.": "Hai raggiunto il limite di utilizzo del cloud Apple. Riprova più tardi.",
 "다듬지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't polish this. Try again later.": "Impossibile rifinire il testo. Riprova più tardi.",
 "다른 날|Other days": "Altri giorni",
 "다른 방법으로 추가(공유 › 단축어)|Add another way (Share › Shortcuts)": "Aggiungi in altro modo (Condividi › Comandi rapidi)",

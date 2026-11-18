@@ -127,6 +127,7 @@
 		A10000000000000000000005 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* AppShellView.swift */; };
 		5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F1 /* PlanTextSuggestion.swift */; };
 		A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F1 /* MemoTextPolish.swift */; };
+		A1C11181A0100000000000A1 /* AppleModelEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C11181A0100000000000F1 /* AppleModelEnvironment.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
 		A1000000000000000B1102FC /* SUIT-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FC /* SUIT-Regular.otf */; };
 		A1000000000000000B1102FD /* SUIT-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FD /* SUIT-Bold.otf */; };
@@ -989,6 +990,7 @@
 		F10000000000000000000005 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F1 /* PlanTextSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTextSuggestion.swift; sourceTree = "<group>"; };
 		F1A11102A0100000000000F1 /* MemoTextPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolish.swift; sourceTree = "<group>"; };
+		F1C11181A0100000000000F1 /* AppleModelEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleModelEnvironment.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F1000000000000000000000C /* TimeScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeScaleTests.swift; sourceTree = "<group>"; };
 		B10809000000000000000F11 /* InkWashThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkWashThemeTests.swift; sourceTree = "<group>"; };
@@ -2176,6 +2178,7 @@
 				F1FA11013C73958F69782D38 /* TimelineSelection.swift */,
 				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
 				F1A11102A0100000000000F1 /* MemoTextPolish.swift */,
+				F1C11181A0100000000000F1 /* AppleModelEnvironment.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
 				F1000000000000000000000E /* DetailViews.swift */,
 				F10000000000000000000004 /* Theme.swift */,
@@ -3208,6 +3211,7 @@
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
 				A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */,
+				A1C11181A0100000000000A1 /* AppleModelEnvironment.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,

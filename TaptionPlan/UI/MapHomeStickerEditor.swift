@@ -245,6 +245,12 @@ struct MapHomeStickerEditorSheet: View {
                 if phase == .active { polish.refreshAvailability() }
             }
             .onChange(of: memoText) { polish.clearNotice() }
+            // Apple 모델로 못 하면(PCC1118A01 3순위) 연결된 AI에게 맡기는 상태로 둔다. 저장할 때 맡긴다.
+            .onChange(of: polish.handOffCount) {
+                guard canAskConnectedAI else { return }
+                wantsAIPolish = true
+                if polish.notice?.isFailure == true { polish.clearNotice() }
+            }
             .onDisappear {
                 polish.cancel()
                 if isNewMemo, !didSave, !keepsDraft {
@@ -459,6 +465,8 @@ struct MapHomeStickerEditorSheet: View {
         case .blockedContent: language.text("이 내용은 Apple Intelligence가 다듬지 못해요.", "Apple Intelligence can't polish this content.")
         case .unsupportedLanguage: language.text("이 언어는 다듬지 못해요.", "This language isn't supported.")
         case .failed: language.text("다듬지 못했어요. 잠시 뒤 다시 해 주세요.", "Couldn't polish this. Try again later.")
+        case .cloudQuotaApproaching: language.text("Apple 클라우드 사용 한도에 가까워요.", "You're close to the Apple cloud usage limit.")
+        case .cloudQuotaReached: language.text("Apple 클라우드 사용 한도에 닿았어요. 잠시 뒤 다시 쓸 수 있어요.", "You've reached the Apple cloud usage limit. Try again later.")
         }
         return (text, notice.isFailure)
     }

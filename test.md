@@ -2,6 +2,16 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## PCC1118A01 · Apple Foundation Models 3단계 길 (2026-11-18, 시뮬레이터·맥, 실기기 없음)
+
+- 범위: 판단 `AppleModelRouter`(패키지 `TaptionAssistantKit`), 조건 읽기·PCC 호출 `AppleModelEnvironment.swift`(앱), 연결은 메모 다듬기 하나(3순위면 「연결된 AI에게 맡기기」를 켬). 지출·일정 초안·하루 요약은 작업 종류만 있고 연결 안 함. 설계 `docs/APPLE_FOUNDATION_MODELS.md`.
+- 패키지 `swift test`(TaptionAssistant): 40개 실패 0(Rules 6·Protocol 11·Kit 23, 새 `AppleModelRouterTests` 13: PCC 가용→PCC, 한도 임박→PCC+안내, 한도 도달→기기+안내, 한도 도달+길이 초과→큐, 오프라인→기기, 기기 한도 경계→기기/큐, 하루 요약은 기기 안 씀, 미지원·iOS 26 미만→큐, entitlement 없음→기기, PCC 실패 뒤 다시 고름, 공유 끔→기기, 빈 입력, 좌표 알아보기). 로그 `build/validation/PCC1118A01/package-swift-test.log`.
+- 앱 Debug 빌드(시뮬레이터 `99AC6F35…` iOS 27.0, 시험 빌드로) 성공. `MemoTextPolishTests` 29개 실패 0, 1개는 요청할 때만(`unit-memo-3`, 탐침 포함 `unit-memo-probe`). 첫 회차는 맥 부하(74~260)로 시험 실행기가 연결 전에 멈춤·앱 실행 실패(`unit-memo`, `unit-memo-2`) — 시뮬레이터를 다시 켠 뒤 통과.
+- 시뮬레이터 실제 값(entitlement 없음): `PrivateCloudComputeLanguageModel().availability`는 `.available`, `quotaUsage`는 한도 아래로 읽힘(멈추지 않음). 실제 호출(`TAPTION_PCC_PROBE=1`, 고정 시험 글 하나)은 거절되어 `Failure(.service)`로 분류 → 기기 모델로 넘어감. 시뮬레이터에는 기기 모델 자산이 없어 그것도 실패(`.failed`). 즉 「entitlement 없음 → unavailable」이 아니라 「available인데 호출 거절 → 다음 길」로 동작함을 확인. 실기기 값은 모름.
+- 구조 지표 `--check` 통과, import 경계 통과, 번역 `extract.py` → 12개 언어 2문구 → `check.py` 실패 0(`l10n-check.log`). `generate.py`는 돌리지 않음(메인 몫).
+- 못 한 것: `-only-testing:TaptionPlanTests` 전체(맥 부하 260), 실기기, iOS 18 기기 실행(약한 연결은 기존 AIM 기록대로), PCC 실제 성공 응답(entitlement 승인 전).
+- 덧붙임(대표 결정 2026-11-18 객관식 4가지 반영): ① 스위치 `AppleModelEnvironment.isPrivateCloudComputeEnabled = false` — 꺼지면 PCC를 묻지도 부르지도 않고 「쓸 수 없음」으로 넣어 기기 모델 → 중계 큐(호출 코드와 요청할 때만 도는 탐침은 그대로) ② `PRIVACY.md`는 고치지 않음, 스위치 켜는 커밋에 함께(문서 「승인 뒤 할 일」) ③ AI 공유 「끔」을 PCC 건너뛰는 조건에서 뺌, 좌표가 든 글만 건너뜀(중계 큐 쪽은 그대로) ④ 하루 요약은 기기 모델 안 씀 그대로. 결과: 패키지 `swift test` 40개 실패 0(`package-swift-test-2.log`), 앱 Debug 빌드 성공, `MemoTextPolishTests` 30개 실패 0·건너뜀 1(탐침, 새 시험 `testDisabledSwitchNeverPicksCloud`·`testCloudSkipsOnlyCoordinates`, `unit-memo-switch`), 구조 지표·import 경계 통과. 전체 단위 시험은 메인이 합친 뒤.
+
 ## TFB1118A01 · TestFlight 350 (2026-11-18)
 
 - `scripts/testflight/release.sh --yes`(main `0ef100cb` 뒤 판, 빌드 잠금 안에서) 종료 코드 0. 빌드 350 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출 확인. 보고서 `build/validation/TFB1118A01/testflight-report.json`. 기기 확인은 대표가 아이폰 18에서(점검표 `build/validation/FUL1118A01/checklist.md`) — 결과 전.

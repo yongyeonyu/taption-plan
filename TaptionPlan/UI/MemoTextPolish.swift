@@ -24,8 +24,26 @@ enum MemoPolishNotice: Error, Equatable, Sendable {
     case blockedContent
     case unsupportedLanguage
     case failed
+    /// Apple 클라우드(PCC) 한도(PCC1118A01). 실패가 아니라 안내다.
+    case cloudQuotaApproaching
+    case cloudQuotaReached
 
-    var isFailure: Bool { self != .unchanged }
+    var isFailure: Bool { ![.unchanged, .cloudQuotaApproaching, .cloudQuotaReached].contains(self) }
+
+    init?(_ notice: AppleModelNotice?) {
+        switch notice {
+        case .cloudQuotaApproaching: self = .cloudQuotaApproaching
+        case .cloudQuotaReached: self = .cloudQuotaReached
+        case .inputTooLongForDevice: self = .tooLong
+        case nil: return nil
+        }
+    }
+}
+
+/// 고른 길의 결과. `text`가 nil이면 Apple 모델로 하지 못해 연결된 AI 중계로 넘길 차례다.
+struct MemoPolishReply: Equatable, Sendable {
+    var text: String?
+    var notice: AppleModelNotice?
 }
 
 enum MemoPolishResult: Equatable, Sendable {
@@ -111,17 +129,27 @@ final class MemoPolishController {
     private(set) var isPolishing = false
     private(set) var notice: MemoPolishNotice?
     private(set) var history = MemoPolishHistory()
+    /// Apple 모델로 못 해 중계로 넘길 때마다 하나 는다. 화면이 이 값의 변화를 보고 「연결된 AI에게 맡기기」를 켠다.
+    private(set) var handOffCount = 0
 
     @ObservationIgnored private let readAvailability: @MainActor () -> MemoPolishAvailability
-    @ObservationIgnored private let polisher: @Sendable (String) async throws -> String
+    @ObservationIgnored private let polisher: @Sendable (String) async throws -> MemoPolishReply
     @ObservationIgnored private var task: Task<Void, Never>?
 
     init(
         readAvailability: @escaping @MainActor () -> MemoPolishAvailability = { MemoTextPolisher.availability },
-        polisher: @escaping @Sendable (String) async throws -> String = { try await MemoTextPolisher.polish($0) }
+        reply: @escaping @Sendable (String) async throws -> MemoPolishReply = { try await MemoTextPolisher.polish($0) }
     ) {
         self.readAvailability = readAvailability
-        self.polisher = polisher
+        self.polisher = reply
+    }
+
+    /// 한 길(글만 돌려주는 모델)만 쓰는 경우.
+    convenience init(
+        readAvailability: @escaping @MainActor () -> MemoPolishAvailability,
+        polisher: @escaping @Sendable (String) async throws -> String
+    ) {
+        self.init(readAvailability: readAvailability, reply: { MemoPolishReply(text: try await polisher($0)) })
     }
 
     func refreshAvailability() {
@@ -151,7 +179,7 @@ final class MemoPolishController {
         isPolishing = true
         let polisher = polisher
         let running = Task { [weak self] in
-            let outcome: Result<String, Error>
+            let outcome: Result<MemoPolishReply, Error>
             do {
                 outcome = .success(try await polisher(source))
             } catch {
@@ -181,7 +209,7 @@ final class MemoPolishController {
     }
 
     private func finish(
-        _ outcome: Result<String, Error>,
+        _ outcome: Result<MemoPolishReply, Error>,
         source: String,
         currentText: String,
         apply: (String) -> Void
@@ -191,10 +219,17 @@ final class MemoPolishController {
             return
         }
         do {
-            switch try MemoPolishFormat.validated(output: try outcome.get(), original: source) {
+            let reply = try outcome.get()
+            guard let output = reply.text else {
+                handOffCount += 1
+                notice = MemoPolishNotice(reply.notice) ?? .failed
+                return
+            }
+            switch try MemoPolishFormat.validated(output: output, original: source) {
             case .polished(let polished):
                 history.recordPolish(from: source, to: polished)
                 apply(polished)
+                notice = MemoPolishNotice(reply.notice)
             case .unchanged:
                 notice = .unchanged
             }
@@ -209,10 +244,13 @@ final class MemoPolishController {
     }
 }
 
-/// 기기 안 Apple 모델만 쓴다. 메모는 기기 밖으로 나가지 않는다.
+/// Apple 모델 3단계 길(PCC1118A01): Private Cloud Compute → 기기 안 모델 → 연결된 AI 중계.
+/// PCC는 Apple 서버에서 돌고, 좌표가 든 글은 보내지 않는다. 승인 전에는 스위치로 꺼 둔다(`AppleModelEnvironment`).
 enum MemoTextPolisher {
+    /// PCC를 쓸 수 있으면 기기 모델이 꺼져 있어도 다듬을 수 있다.
     @MainActor
     static var availability: MemoPolishAvailability {
+        if case .available = AppleModelEnvironment.cloudState() { return .available }
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
             return FoundationMemoPolisher.mapped(SystemLanguageModel.default.availability)
@@ -221,13 +259,23 @@ enum MemoTextPolisher {
         return .unsupported
     }
 
-    static func polish(_ text: String) async throws -> String {
+    static func polish(_ text: String) async throws -> MemoPolishReply {
+        let conditions = await AppleModelEnvironment.conditions(.memoPolish, text: text)
+        var decision = AppleModelRouter.decide(conditions)
+        if decision.route == .privateCloud {
+            do {
+                return MemoPolishReply(text: try await AppleCloudModel.polishMemo(text), notice: decision.notice)
+            } catch let failure as AppleCloudModel.Failure {
+                decision = AppleModelRouter.decide(after: failure.reason, conditions)
+            }
+        }
+        guard decision.route == .onDevice else { return MemoPolishReply(text: nil, notice: decision.notice) }
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
-            return try await FoundationMemoPolisher.polish(text)
+            return MemoPolishReply(text: try await FoundationMemoPolisher.polish(text), notice: decision.notice)
         }
         #endif
-        throw MemoPolishNotice.failed
+        return MemoPolishReply(text: nil, notice: decision.notice)
     }
 }
 
@@ -251,17 +299,20 @@ enum FoundationMemoPolisher {
     }
 
     static func polish(_ text: String) async throws -> String {
-        let session = LanguageModelSession(instructions: MemoPolishFormat.instructions(for: text))
         do {
-            let response = try await session.respond(
-                to: MemoPolishFormat.prompt(for: text),
-                generating: MemoPolishDraft.self,
-                options: GenerationOptions(temperature: 0.2)
-            )
-            return response.content.text
+            return try await draft(text, in: LanguageModelSession(instructions: MemoPolishFormat.instructions(for: text)))
         } catch {
             throw notice(for: error)
         }
+    }
+
+    /// 기기 모델·PCC 모델이 같은 지시문과 같은 구조화 출력(`MemoPolishDraft`)을 쓴다. 오류는 그대로 던진다.
+    static func draft(_ text: String, in session: LanguageModelSession) async throws -> String {
+        try await session.respond(
+            to: MemoPolishFormat.prompt(for: text),
+            generating: MemoPolishDraft.self,
+            options: GenerationOptions(temperature: 0.2)
+        ).content.text
     }
 
     static func notice(for error: Error) -> Error {

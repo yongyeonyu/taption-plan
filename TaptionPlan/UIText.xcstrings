@@ -10396,6 +10396,160 @@
         }
       }
     },
+    "Apple 클라우드 사용 한도에 가까워요.|You're close to the Apple cloud usage limit." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appleクラウドの利用上限に近づいています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即将达到 Apple 云端使用上限。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即將達到 Apple 雲端使用上限。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast das Nutzungslimit der Apple-Cloud fast erreicht."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous approchez de la limite d’utilisation du cloud Apple."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stai per raggiungere il limite di utilizzo del cloud Apple."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Te estás acercando al límite de uso de la nube de Apple."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você está perto do limite de uso da nuvem da Apple."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn sắp đạt giới hạn sử dụng đám mây của Apple."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda hampir mencapai batas penggunaan cloud Apple."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใกล้ถึงขีดจำกัดการใช้งานคลาวด์ของ Apple แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आप Apple क्लाउड की उपयोग सीमा के करीब हैं।"
+          }
+        }
+      }
+    },
+    "Apple 클라우드 사용 한도에 닿았어요. 잠시 뒤 다시 쓸 수 있어요.|You've reached the Apple cloud usage limit. Try again later." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appleクラウドの利用上限に達しました。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已达到 Apple 云端使用上限。请稍后再试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已達到 Apple 雲端使用上限。請稍後再試。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast das Nutzungslimit der Apple-Cloud erreicht. Versuch es später noch einmal."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous avez atteint la limite d’utilisation du cloud Apple. Réessayez plus tard."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hai raggiunto il limite di utilizzo del cloud Apple. Riprova più tardi."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Has alcanzado el límite de uso de la nube de Apple. Inténtalo más tarde."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você atingiu o limite de uso da nuvem da Apple. Tente novamente mais tarde."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn đã đạt giới hạn sử dụng đám mây của Apple. Hãy thử lại sau."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda telah mencapai batas penggunaan cloud Apple. Coba lagi nanti."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ถึงขีดจำกัดการใช้งานคลาวด์ของ Apple แล้ว โปรดลองอีกครั้งภายหลัง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आप Apple क्लाउड की उपयोग सीमा तक पहुँच गए हैं। बाद में फिर से कोशिश करें।"
+          }
+        }
+      }
+    },
     "BOKKI Plan AI에게 맡겨|Ask BOKKI Plan AI" : {
       "extractionState" : "manual",
       "localizations" : {
