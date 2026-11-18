@@ -141,11 +141,21 @@ enum TravelCourseSort {
     }
 
     /// 새 순서에 맞춰 일정별로 옮길 분. 시각이 정해진 곳 사이 구간마다 첫 시작에서 차례로 놓는다.
+    /// 순서가 그대로인 구간은 건드리지 않는다(겹친 구간을 다시 잡으면 펴져서 뒤로 밀린다, TVM1117A02).
     static func moves(from old: [Stop], to new: [Stop]) -> [String: Int] {
         guard old.count == new.count else { return [:] }
+        var unchanged = Set<Int>(), segment: [Int] = []
+        for index in old.indices + [old.count] {
+            if index == old.count || old[index].isTimeFixed {
+                if segment.allSatisfy({ old[$0].id == new[$0].id }) { unchanged.formUnion(segment) }
+                segment = []
+            } else {
+                segment.append(index)
+            }
+        }
         var moves: [String: Int] = [:], cursor: Int?
         for index in old.indices {
-            guard !old[index].isTimeFixed else {
+            guard !old[index].isTimeFixed, !unchanged.contains(index) else {
                 cursor = nil
                 continue
             }
