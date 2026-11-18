@@ -2,6 +2,10 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1118A02 · TestFlight 351 (2026-11-18)
+
+- `bash scripts/testflight/release.sh --yes`(빌드 잠금 안, 대표 트리거 「테스트플라이트 연결해서 빌드업해」): 빌드 번호 350 → 351(pbxproj·앱·위젯·Watch·Watch 위젯 `CFBundleVersion`, 최종 아카이브 4개 번들 모두 351), 아카이브·익스포트·업로드, 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출 확인(`ok: true`). 판: main `eddf41d7`(PCC 끔, CRV·TOL·TGT·KDR 포함). 보고서 `build/validation/TFB1118A02/testflight-report.json`. 실기기 기능 확인은 아님.
+
 ## KDR1118A01 · 도로공사로 모를 때만 카카오 길찾기로 통행료 묻기 (2026-11-18, 시뮬레이터·맥, 실기기·서버 배포 없음)
 
 - 대표 결정(2026-11-18 객관식): 「도로공사 먼저, 모를 때만 카카오」. 좌표 예외는 `AGENTS.md`(TGT1118A01)에 적음. 키는 기존 `KAKAO_REST_API_KEY`(새 비밀값 없음, 대표 확인).
