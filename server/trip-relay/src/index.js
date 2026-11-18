@@ -10,6 +10,7 @@ import * as rules from "./rules.js";
 import * as share from "./share.js";
 import * as shared from "./shared.js";
 import { createSetup, readSetup } from "./setup.js";
+import { exFare, exUnits } from "./expressway.js";
 import { fxRoute } from "./fx.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
 import { bearer, json, limited, readBody, tooMany, writeAllowed } from "./http.js";
@@ -298,6 +299,17 @@ async function tagoRoute(request, ctx) {
     : tagoProxy(request, ctx.env, ctx.env.FETCH);
 }
 
+// 고속도로 영업소·통행료(TGT1118A01). 버스 중계와 같은 검색 범위·하루 한도를 쓴다. 좌표는 받지 않는다.
+async function expresswayRoute(request, ctx) {
+  if (request.method === "GET" && ctx.env.EX_API_KEY) {
+    const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
+    if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
+  }
+  return new URL(request.url).pathname === "/ex/units"
+    ? exUnits(request, ctx.env, ctx.env.FETCH)
+    : exFare(request, ctx.env, ctx.env.FETCH);
+}
+
 // 경로마다 메서드별로 필요한 범위(AIR1110A02). master > write > read. search는 카카오 중계만.
 // read: AI가 읽기만. write: 읽기 + 계획·명령 보내기. 앱 전용(올리기·지우기·큐 가져오기·키·PIN·연결 코드)은 master만.
 // 본문이 있는 쓰기는 IP마다 POST_LIMIT을 더 받는다(withBody). legacy: 이 요청 전에 마칠 예전 자료 옮기기.
@@ -445,6 +457,12 @@ const ROUTES = {
   "/seoul/routes": {
     GET: ["search", tagoRoute],
   },
+  "/ex/units": {
+    GET: ["search", expresswayRoute],
+  },
+  "/ex/fare": {
+    GET: ["search", expresswayRoute],
+  },
   "/fx": {
     GET: ["search", fxRoute],
   },
@@ -504,7 +522,7 @@ async function authorized(request, env, url, route, exec, pathKey = null) {
   const [need, run, part] = entry;
   const state = userState(env, auth.master);
   const admission = await state.call("admit", {
-    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/"),
+    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/") || url.pathname.startsWith("/ex/"),
     client: auth.kind === "master" ? clientInfo(request.headers.get("x-bokki-client")) : undefined,
   });
   if (!admission.ok) {
@@ -543,7 +561,7 @@ async function route(request, env, url, exec) {
   if (publicRoute) return request.method === "GET" ? publicRoute(request, env, url) : json({ error: "method_not_allowed" }, 405);
   if (!env.USER_STATE) return json({ error: "unavailable" }, 503);
   // 인증 전에 IP마다 요청 수를 제한한다(finding 3). 카카오는 자기 제한(KAKAO_LIMIT)을 쓴다(N2: 이것도 인증 전).
-  if (await limited(url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
+  if (await limited(url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/") || url.pathname.startsWith("/ex/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
   switch (url.pathname) {
     case "/register": return registerRoute(request, env, now);
     case "/oauth/register": return registerClient(request, env, now);

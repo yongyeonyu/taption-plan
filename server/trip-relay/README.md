@@ -89,6 +89,22 @@ npx wrangler secret put KAKAO_REST_API_KEY --config wrangler.local.toml
 
 비밀값이 없으면 `503`을 돌려주고, 앱은 Apple 검색만 씁니다.
 
+## 고속도로 영업소·통행료 중계(TGT1118A01)
+
+한국도로공사 고속도로 공공데이터 포털(data.ex.co.kr) OpenAPI를 대신 부릅니다. 사용자 좌표는 받지 않습니다. 앱이 영업소 목록을 통째로 받아 기기에서 지난 영업소를 알아내고, 요금은 영업소 코드와 차종만 보냅니다. 검색 키로 부르고 카카오와 같은 하루 한도를 씁니다.
+
+- `GET /ex/units` → 영업소 위치(`openapi/locationinfo/locationinfoUnit`)의 모든 쪽을 모아 `{ units: [{ code, name, route, routeNo, lat, lng }], count }`. 코드는 앞뒤 공백을 지우고 같은 코드는 하나만 둡니다. `xValue`가 경도, `yValue`가 위도입니다. 7일 캐시(한 쪽이라도 실패하면 502, 캐시 안 함).
+- `GET /ex/fare?from=<출발 영업소 코드>&to=<도착 영업소 코드>&car=<1~8, 기본 1>` → 영업소간 통행요금(`openapi/toll/bhoinstIntoTollList`, 요청 `dprtrTolofCd`·`arrvTolofCd`)의 `{ from, to, car, fares: [{ from, fromName, to, toName, operator, normal, distanceKm }] }`. `normal`은 `nrmlKnd<car>Amt`(정상요금), 거리는 2·4·6차로 합계 거리의 합입니다. 본선(개방식) 영업소는 출발과 도착을 같은 코드로 묻습니다. 1일 캐시.
+- 명세: data.ex.co.kr `openapi/basicinfo/openApiInfoM?apiId=0123`(영업소 위치)·`apiId=0620`(영업소간 통행요금). 공공데이터포털 `15111644`가 이 링크로 이어집니다.
+
+키는 data.ex.co.kr에 가입해 「OpenAPI 활용」에서 인증키를 받아 넣습니다(공공데이터포털 키와 다릅니다).
+
+```sh
+npx wrangler secret put EX_API_KEY --config wrangler.local.toml
+```
+
+비밀값이 없으면 두 경로 모두 `503 {"error":"ex_key_missing"}`을 돌려주고, 앱은 지금의 같은 길 통행료만 씁니다.
+
 ## 등록·PIN·Durable Object·OAuth (SEC1110A02·AIR1110A03)
 
 - `POST /register`: 앱이 만든 키만 등록(서로 다른 글자 20개 미만은 422). 등록하지 않은 키는 모든 경로에서 401.
