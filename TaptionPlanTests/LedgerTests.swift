@@ -1307,9 +1307,9 @@ final class LedgerTollRepeatTests: XCTestCase {
     func testReturnTollUsesDiscountAndAsksWhenBandsDiffer() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")! // base가 UTC 자정(수요일)이라 시각을 그대로 읽는다
-        let rules = ["집→회사": LedgerTollRepeat.Rule(amount: 900, currency: "KRW", title: "통행료 (출근)", learnedAt: at(9.66))]
+        let rules = ["집→회사": LedgerTollRepeat.Rule(amount: 900, currency: "KRW", title: "통행료 (출근)", learnedAt: at(9.66), route: Self.routeA.sorted())]
         let add = { (start: Double, end: Double, vehicle: LedgerTollDiscount.Vehicle) in
-            LedgerTollRepeat.entries(drives: [.init(from: "회사", to: "집", start: self.at(start), end: self.at(end))], existing: [], rules: rules,
+            LedgerTollRepeat.entries(drives: [.init(from: "회사", to: "집", start: self.at(start), end: self.at(end), cells: Self.routeA)], existing: [], rules: rules,
                                      handled: [], now: self.at(23.5), vehicle: vehicle, calendar: calendar).first
         }
         let evening = add(19.1, 19.78, .standard)
@@ -1333,6 +1333,143 @@ final class LedgerTollRepeatTests: XCTestCase {
         var manual = toll(19.78, title: "통행료 (퇴근)")
         manual.note = "내가 넣음"
         XCTAssertNil(LedgerTollRepeat.adjusted(manual, rules: rules, base: { $0.amount }, applied: applied, label: nil))
+    }
+
+    // MARK: TOL1118A01 할인 시간대 정가·다른 길
+
+    /// 가짜 좌표의 두 길: A는 동쪽으로 곧게, B는 같은 곳에서 출발·도착하지만 북쪽으로 6km 돌아간다.
+    static let routeA = LedgerTollRoute.cells(along: [(12.0, 100.0), (12.0, 100.3)])
+    static let routeB = LedgerTollRoute.cells(along: [(12.0, 100.0), (12.06, 100.03), (12.06, 100.27), (12.0, 100.3)])
+
+    private var utc: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")! // base가 UTC 자정(수요일)
+        return calendar
+    }
+
+    private func standardRate(_ calendar: Calendar) -> (Date) -> Double {
+        { LedgerTollDiscount.applied(at: $0, vehicle: .standard, isOffDay: false, calendar: calendar).rate }
+    }
+
+    /// 18~20시(20% 할인)에 손으로 넣은 900원은 정가다. 1,130원으로 부풀지 않아 시간대마다 450·720·900원.
+    func testManualTollInDiscountBandIsFullPrice() {
+        let calendar = utc
+        var manual = toll(19.62, title: "경인고속도로 통행료 (퇴근)")
+        manual.source = .manual
+        let learnedOn = LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(19.0), end: at(19.6), cells: Self.routeA)
+        let rules = LedgerTollRepeat.learn(drives: [learnedOn], entries: [manual], into: [:], rate: standardRate(calendar))
+        XCTAssertEqual(rules["회사→집"]?.base, 900)
+        let cases: [(middle: Double, amount: Double)] = [
+            (5.5, 450), (6.5, 450), (20.5, 450), (21.5, 450),
+            (7.5, 720), (8.5, 720), (18.5, 720), (19.5, 720),
+            (4.5, 900), (10, 900), (13, 900), (22.5, 900),
+        ]
+        for item in cases {
+            let drive = LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(item.middle - 0.1), end: at(item.middle + 0.1), cells: Self.routeA)
+            let added = LedgerTollRepeat.entries(drives: [drive], existing: [], rules: rules, handled: [], now: at(item.middle + 3), calendar: calendar)
+            XCTAssertEqual(added.first?.entry.amount, item.amount, "가운데 \(item.middle)시")
+        }
+    }
+
+    /// 결제 문자 금액은 실제로 낸(할인 든) 금액이라 그 시각 할인으로 정가를 되찾는다.
+    func testMessageTollIsChargedAmount() {
+        var paid = toll(19.62)
+        paid.amount = 720
+        paid.source = .message
+        XCTAssertEqual(LedgerTollRepeat.base(of: paid, rate: standardRate(utc)), 900)
+        paid.source = .assistant
+        XCTAssertEqual(LedgerTollRepeat.base(of: paid, rate: standardRate(utc)), 720, "AI가 넣은 금액은 손 입력처럼 그대로")
+    }
+
+    /// 예전 규칙(정가 칸 없음)은 배운 기록의 출처로 채우고, 기록이 없으면 금액을 정가로 본다.
+    func testOldRulesAreFilledOnce() throws {
+        let old = #"{"집→회사":{"amount":900,"currency":"KRW","title":"통행료 (출근)","learnedAt":0}}"#
+        let decoded = try JSONDecoder().decode([String: LedgerTollRepeat.Rule].self, from: Data(old.utf8))
+        XCTAssertNil(decoded["집→회사"]?.base)
+        XCTAssertNil(decoded["집→회사"]?.route)
+        XCTAssertEqual(LedgerTollRepeat.filled(decoded, entries: [], rate: standardRate(utc))["집→회사"]?.base, 900)
+
+        var rule = LedgerTollRepeat.Rule(amount: 720, currency: "KRW", title: "통행료", learnedAt: at(19.62))
+        var message = toll(19.62)
+        message.amount = 720
+        message.source = .message
+        XCTAssertEqual(LedgerTollRepeat.filled(["회사→집": rule], entries: [message], rate: standardRate(utc))["회사→집"]?.base, 900)
+        rule.base = 800
+        XCTAssertEqual(LedgerTollRepeat.filled(["회사→집": rule], entries: [message], rate: standardRate(utc))["회사→집"]?.base, 800, "이미 채운 것은 그대로")
+    }
+
+    /// 예전 계산(정가 1,130원)으로 넣은 900·570원을 정가 900원·이동 가운데 시각 할인으로 고친다.
+    func testWronglyDiscountedAutoTollsAreFixed() {
+        let calendar = utc
+        let rules = ["회사→집": LedgerTollRepeat.Rule(amount: 900, currency: "KRW", title: "통행료 (퇴근)", learnedAt: at(8.5), base: 900)]
+        let legacy = { (rule: LedgerTollRepeat.Rule) in LedgerTollRepeat.legacyBase(rule, isOffDay: { _ in false }, calendar: calendar) }
+        XCTAssertEqual(legacy(rules["회사→집"]!), 1_130, "20% 시간대에 배운 900원의 예전 정가")
+        func auto(_ hour: Double, _ amount: Double) -> LedgerEntry {
+            var entry = toll(hour, title: "통행료 (퇴근)")
+            entry.amount = amount
+            entry.note = "같은 길 통행료 자동 추가 · 회사 → 집"
+            return entry
+        }
+        func fix(_ entry: LedgerEntry, drives: [LedgerTollRepeat.Drive] = []) -> Double? {
+            let time = LedgerTollRepeat.tollTime(of: entry, drives: drives)
+            let applied = LedgerTollDiscount.applied(at: time, vehicle: .standard, isOffDay: false, calendar: calendar)
+            return LedgerTollRepeat.adjusted(entry, rules: rules, base: LedgerTollRepeat.fullPrice, legacyBase: legacy, applied: applied, label: nil)?.amount
+        }
+        XCTAssertEqual(fix(auto(19.62, 900)), 720, "19:37 퇴근 900 → 720")
+        XCTAssertEqual(fix(auto(18.82, 900)), 720, "18:49 퇴근 900 → 720")
+        let late = LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(20.3), end: at(22.05))
+        XCTAssertEqual(fix(auto(22.05, 570), drives: [late]), 450, "가운데가 21시대면 50%")
+        XCTAssertEqual(fix(auto(22.05, 570)), 900, "이동을 모르면 넣은 시각(22시)으로")
+        XCTAssertEqual(fix(auto(13, 1_130)), 900, "할인 없는 시각에 1,130원으로 들어간 것")
+        XCTAssertNil(fix(auto(19.62, 1_000)), "손으로 고친 금액은 두기")
+    }
+
+    /// 같은 이름 쌍이라도 다른 길로 가면 넣지 않고, 길을 모르면 확인을 받는다.
+    func testDifferentRoadIsNotChargedAndUnknownRoadAsks() {
+        let calendar = utc
+        XCTAssertEqual(LedgerTollRoute.match(Self.routeA, Self.routeA.sorted()), .same)
+        XCTAssertEqual(LedgerTollRoute.match(Self.routeB, Self.routeA.sorted()), .different)
+        XCTAssertEqual(LedgerTollRoute.match([], Self.routeA.sorted()), .unknown, "위치 기록이 없다")
+        XCTAssertEqual(LedgerTollRoute.match(Self.routeA, nil), .unknown, "예전 규칙")
+        // 위치가 1km 안쪽으로 흔들려도 같은 길이다.
+        XCTAssertEqual(LedgerTollRoute.match(LedgerTollRoute.cells(along: [(12.004, 100.0), (12.006, 100.3)]), Self.routeA.sorted()), .same)
+
+        let rule = LedgerTollRepeat.Rule(amount: 900, currency: "KRW", title: "경인고속도로 통행료 (퇴근)", learnedAt: at(13), base: 900, route: Self.routeA.sorted())
+        func add(_ cells: Set<String>, _ rule: LedgerTollRepeat.Rule) -> (entry: LedgerEntry, suspicious: Bool)? {
+            let drive = LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(13), end: at(13.6), cells: cells)
+            return LedgerTollRepeat.entries(drives: [drive], existing: [], rules: ["회사→집": rule], handled: [], now: at(15), calendar: calendar)
+                .first.map { ($0.entry, $0.suspicious) }
+        }
+        XCTAssertEqual(add(Self.routeA, rule)?.suspicious, false)
+        XCTAssertNil(add(Self.routeB, rule), "다른 고속도로로 갔다")
+        XCTAssertEqual(add([], rule)?.suspicious, true, "길을 모르면 확인 필요로")
+        var old = rule
+        old.route = nil
+        XCTAssertEqual(add(Self.routeA, old)?.suspicious, true, "길 모양을 모르는 예전 규칙")
+        XCTAssertEqual(LedgerTollRepeat.entries(drives: [.init(from: "집", to: "회사", start: at(13), end: at(13.6), cells: Self.routeB)], existing: [],
+                                                rules: ["회사→집": rule], handled: [], now: at(15), calendar: calendar).count, 0, "되돌아오는 길도 같다")
+    }
+
+    /// 확인해 남긴 자동 통행료에서 모르던 길 모양만 배우고, 금액은 배우지 않는다. 위치 없이 손으로 다시 넣으면 길 모양을 버린다.
+    func testRouteIsLearnedFromAcceptedAutoToll() {
+        let rules = ["회사→집": LedgerTollRepeat.Rule(amount: 900, currency: "KRW", title: "통행료 (퇴근)", learnedAt: at(0), base: 900)]
+        var accepted = toll(13.6, title: "통행료 (퇴근)")
+        accepted.amount = 720
+        accepted.note = "같은 길 통행료 자동 추가 · 집 → 회사"
+        let drive = LedgerTollRepeat.Drive(from: "집", to: "회사", start: at(13), end: at(13.6), cells: Self.routeA)
+        let learned = LedgerTollRepeat.learn(drives: [drive], entries: [accepted], into: rules)
+        XCTAssertEqual(learned["회사→집"]?.route, Self.routeA.sorted(), "반대 길 규칙에 길 모양을 붙인다")
+        XCTAssertEqual(learned["회사→집"]?.amount, 900)
+        let manual = toll(15.6, title: "통행료 (퇴근)")
+        let unknown = LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(15), end: at(15.6))
+        XCTAssertNil(LedgerTollRepeat.learn(drives: [unknown], entries: [manual], into: learned)["회사→집"]?.route)
+    }
+
+    /// 고속도로에서 위치가 띄엄띄엄(수 km) 잡혀도 사이 칸을 채운다. 크게 끊기면 잇지 않는다.
+    func testRouteCellsFillGapsButNotJumps() {
+        XCTAssertGreaterThanOrEqual(Self.routeA.count, 30)
+        XCTAssertEqual(LedgerTollRoute.cells(along: [(12.0, 100.0), (13.0, 101.0)]).count, 2)
+        XCTAssertNil(LedgerTollRoute.stored(LedgerTollRoute.cells(along: [(12.0, 100.0)])), "칸이 모자라면 길을 모른다")
     }
 }
 
