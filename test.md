@@ -2,6 +2,15 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## FUL1118A01 · 아이폰 11 프로 실기기 풀 테스트 (2026-11-18, 실기기 — 시뮬레이터 결과와 구분)
+
+- 판: main `b92e0dbb`(MNU1118A01·TVM1117A02까지 합친 판)을 고정 작업 공간 `/Volumes/TaptionPlanBuild/src-FUL1118A01`에서 Debug로. 기기 잠금·빌드 잠금 안에서. 로그 `build/validation/FUL1118A01/`.
+- **실기기 단위** `-only-testing:TaptionPlanTests`(`device-unit.log`): 3,029건, 건너뜀 26, **실패 1** — `AssistantCommandEditTests.testOperationTableMatchesTheServerRegistry`. 원인: Mac 소스의 `server/trip-relay/test/fixtures/actions.json`을 `#filePath`로 읽는 시험이라 기기에서는 파일이 없음(앱 결함 아님). 고침 `1b94ed70`: 실기기에서만 `XCTSkip`, 시뮬레이터에서는 그대로 돎. 고친 판의 실기기 재실행은 하지 않음.
+- **실기기 UI** `-only-testing:TaptionPlanUITests`(`device-ui.log`)와 재시도 `TaptionPlanSmokeUITests`(`device-ui-smoke.log`): 둘 다 실행 0건 — 「The test runner failed to initialize for UI testing (Timed out while enabling automation mode)」. 기기의 UI 자동화 설정은 켜져 있음(대표 확인). 대표 결정(2026-11-18 객관식): 실기기 UI는 건너뛰고 시뮬레이터 결과로만 남김.
+- 서버 `npm test` 228/228 통과. 패키지 `swift test`: Assistant 10·ClassifierEngine 38·TripShare 82·WatchSync 59·ActivityEngine 47·PlanCore 11·PlanStore 32·RouteEngine 105 통과(LedgerCore·PlanEngine은 시험 없음).
+- 설치: 시험 실행으로 기기에 BOKKI Plan 빌드 349(Debug)가 깔림. 눈 확인 점검표 17개는 `build/validation/FUL1118A01/checklist.md`, 결과는 대표 확인 뒤 적음.
+- 시뮬레이터 전체 단위·UI 재실행(`1b94ed70`)은 따로 적음. 중간에 멈춘 첫 시뮬레이터 실행 로그는 `stopped-sim-*`.
+
 ## MNU1118A01 · 메뉴 단추 누르는 자리 전수 점검 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 원인: SwiftUI `Menu`는 라벨의 배치 틀만 누르는 자리로 쓰고, 그림 밖 `contentShape`(`taptionTouchTarget`)로 넓힌 자리는 쓰지 않는다. 공용 도구 `taptionMenuHitFrame`(라벨 틀을 44pt로)·`taptionMenuHitLayout`(바깥 배치는 보이는 크기로)을 `Theme.swift`에 두었다.
