@@ -97,6 +97,7 @@
 
 - CI(app job) · 기존 `TravelModeView.swift` 978행 `cannot call value of non-function type 'TravelPlanTableModel'`(Xcode 26, actor 격리)로 실패 중 · 대표 지시로 건드리지 않음
 - CI(packages job) · `DayStoreV3Tests.testConcurrentColdOpensInitializeOneV3Schema`가 「database is locked」로 간헐 실패(로컬 15번 중 2번) · 코드
+- D1R1119A01 · 코드·단위 시험 끝. 남은 것: 대표가 터미널에서 D1 만들기·마이그레이션 적용·서버 배포, 이관 끝난 뒤 KV 바인딩 떼기 · 대표 몫(배포) · `server/trip-relay/README.md`
 - 출시 전 점검 · `TripLiveLocationService.isAvailable` 끄기(외부 시험·출시 전 반드시), 푸시 권한 항목, PCC 스위치·`PRIVACY.md` 짝 맞추기 · `## 실기기 확인 목록` 「출시 전 점검」
 - HST1114A01 · 커밋 기록의 가게·동네 이름을 완전히 지우려면 GitHub 지원 요청, 다른 복제본은 다시 받기 · 대표 몫
 - COM1016A01·IAP905G002·IAP907A001 · IAP·판매·심사 제출은 별도 재개 요청 전까지 보류. 개인정보 라벨·해외 대기질 제공자·Watch 동작 센서 iCloud 백업 포함 여부 · 대표 결정
@@ -123,6 +124,8 @@
 2026-11-18(DOC1118A01)에 `temp.md`에서 내용을 바꾸지 않고 옮겼습니다. 제목 단계만 낮췄고, 「대표 실기기 확인」 목록은 `## 실기기 확인 목록` 「2026-11-11 이전 목록」 표로 옮겼습니다. 요청을 닫을 때는 여기 절과 위 색인 줄을 함께 지우고 결과를 `## 검증 기록`에 남깁니다.
 
 #### 진행 중
+- D1R1119A01: 중계 서버 저장소를 KV(`env.PLANS`)에서 Cloudflare D1(`RELAY_DB`, `taption-trip-relay`)로 전환. 원인: KV 무료 한도(하루 쓰기 1,000)가 사용자 증가의 병목이라 `KV_DAILY_WRITE_BUDGET` 900에서 쓰기가 막힘(REV1110A06). 해결: `src/d1kv.js` KV 호환 어댑터(`handle`에서 `RELAY_DB`가 있으면 `env.PLANS`를 어댑터로 바꿈, 호출부 변경 없음), `migrations/0001_kv_entries.sql`, 쓰기·삭제는 D1만·읽기는 D1 먼저 → 옛 KV에서 남은 TTL로 복사(Dual-Read), 삭제는 옛 KV에 같은 키가 있을 때만 D1 삭제 표식, list는 두 쪽을 합쳐 「마지막 이름」 cursor, 쓰기 예산 서버 전체 80000·주인별 5000. 검증 기준: `npm test` 전부 통과(어댑터 TTL·이관·삭제 표식·list·옛 KV 없음·KV 쓰기 0건 시험 포함). 상태(2026-11-19): 코드·시험 끝. 대표 몫: `wrangler d1 create`·`d1 migrations apply --remote`·배포, 이관 뒤 KV 바인딩 제거(배포·마이그레이션은 에이전트가 하지 않음). 한계: 옛 KV가 붙어 있는 동안 list는 접두어 아래 옛 키를 끝까지 읽음, 읽힌 적 없는 만료 없는 옛 키는 이관 전에 KV를 떼면 사라짐, `metadata` 미지원(호출부 사용 없음), 실제 D1에서의 확인은 배포 뒤(시험은 `node:sqlite` 가짜).
+
 - TGT1118A01: 지난 톨게이트(영업소)를 기기에서 알아내 가계부 통행료에 「인천 영업소 → 서울 영업소 · 900원 · 출퇴근 할인 20%」처럼 남김(대표 결정 2026-11-18 객관식: 요금은 중계 서버가 한국도로공사 OpenAPI에 묻고 앱은 영업소 코드·차종만 보냄 / 확실하면 바로 넣음 / 불확실하면 「확인 필요」). 원인: 같은 길 통행료(TOL1111A01·TOL1118A01)는 어느 요금소를 지났는지 몰라 배운 금액만 되풀이하고, 처음 가는 길이나 다른 출구로 나간 날은 금액을 모름. 해결: 서버에 `GET /ex/units`(영업소 위치 `locationinfoUnit` 모든 쪽을 모아 정리, 오래 캐시)·`GET /ex/fare?from&to&car`(영업소간 통행요금 `bhoinstIntoTollList`, 정상요금만 정리)를 덧붙이고(키는 Worker 비밀값 `EX_API_KEY`, 없으면 503 `ex_key_missing`, 좌표는 받지 않음), 앱은 영업소 목록을 통째로 받아 기기에 캐시(크기 제한, 실패하면 다음에)한 뒤 이동의 정확한 위치(대략 위치·오차 100m 초과 제외)와 견줘 지난 영업소를 순수 함수로 판정. 두 곳 이상이면 처음=입구·끝=출구(폐쇄식), 하나면 본선 영업소(개방식, 같은 코드로 요금 조회). 금액은 정상 1종 요금에 기존 `LedgerTollDiscount`(통과 시각 기준). 확실하면 넣고 아니면 `LedgerReviewStore.add(…, reason: .toll)`, 영업소를 못 알아내거나 요금을 못 받으면 지금의 같은 길 방식. 한 이동 한 번·지운 것 다시 넣지 않음(`handled`)은 그대로. 검증 기준: 서버 `npm test` 3회 통과(새 시험: 쪽 모으기·정리·키 없음·잘못된 코드·상류 실패), 앱 새 단위 시험(판정·확실함·표시·넣기/확인 필요)과 `LedgerTollRepeatTests`, `-only-testing:TaptionPlanTests` 전체 실패 0, 앱 Debug 빌드, 구조 지표 `--check`·import 경계, 번역 `extract.py`·`check.py` 실패 0. 서버 배포·키 발급·실기기 확인은 대표 몫(로그 `build/validation/TGT1118A01/`). 상태(2026-11-18): 서버·앱·시험·번역 점검 끝(`test.md` TGT1118A01: 서버 234건·전체 단위 3,060건 실패 0). 남은 기준: 메인 `generate.py`, 대표가 `npx wrangler secret put EX_API_KEY`·서버 배포, 아이폰 11 실제 고속도로 기록으로 거리 기준(150·80m) 확인. 그 전까지 지우지 않음.
 - AIF1118A01: REV1117A02 남은 AI 연결 결함 고침(대표 지시 2026-11-18). 상태(2026-11-18): 높음·중간·낮음 대부분과 대표 결정(AI 몫 shareChosen) 끝, 전체 단위 3,010건 실패 0·서버 228건·Assistant `swift test` 실패 0(`test.md` AIF1118A01). 남은 기준: main 합침 뒤 재확인, 서버 배포(대표 지시 때), 남은 낮음 항목(`setTripItemPhoto` tripId·하루 카드 시간 창·DateFormatter 시간대·말풍선 파일 크기·올리기 Task)은 다음 묶음. 대표 결정 셋(규칙 옮기기·AI 새 지출 방에 올리기·오프라인 판단)도 끝(전체 3,027건 실패 0). 그 전까지 지우지 않음.
 
@@ -1102,6 +1105,12 @@
 | COM1016A01·IAP905G002 | 개인정보 라벨, IAP 보류 상태 | 대표 결정대로 | |
 
 ## 검증 기록
+
+### D1R1119A01 · 중계 서버 저장소 KV → D1 (2026-11-19, 맥 Node `node --test`, 서버 코드만, 앱 시험·빌드 없음)
+
+- `cd server/trip-relay && npm test`: 247건 실행, 통과 247, 실패 0, 건너뜀 0(새 `test/d1kv.test.mjs` 10건 포함). 로그 `build/validation/D1R1119A01/npm-test-1.log`(첫 실행 `npm-test.log`는 시험 코드의 키 이름 오타 1건 실패, 고친 뒤 재실행).
+- 새 시험이 확인한 것: TTL(ms 저장·만료 get null·list 제외·행 삭제), 옛 KV에서 읽으면 D1로 복사·남은 TTL 유지·다음엔 D1에서 읽힘, 옛 KV 없는 환경, 삭제 표식으로 옛 키 비부활(영구·TTL·덮어쓴 뒤 만료), list의 prefix·limit·cursor·list_complete와 양쪽 합치기·중복 제거, 서버 요청 전체에서 옛 KV 쓰기 0건.
+- 확인하지 못한 것: 실제 Cloudflare D1(시험 D1은 `node:sqlite` 위의 가짜), 배포·마이그레이션 적용(대표 몫).
 
 ### TFB1118A02 · TestFlight 351 (2026-11-18)
 

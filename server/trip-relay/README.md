@@ -144,6 +144,29 @@ curl -s -o /dev/null -w '%{http_code}\n' https://trip.bokkiyaw.com/plan -H "Auth
 
 `wrangler.toml`(공개용, KV id 자리표시)과 `wrangler.local.toml`(실제 KV id·도메인) 모두에 `USER_STATE` 바인딩과 migration, `REQUEST_LIMIT`이 들어 있습니다. 비밀값: `KAKAO_REST_API_KEY`(그대로), `PIN_PEPPER`(새로).
 
+## 저장소를 KV에서 D1로 (D1R1119A01)
+
+값 저장소가 Cloudflare KV(`PLANS`)에서 D1(`RELAY_DB`, 데이터베이스 `taption-trip-relay`)로 바뀝니다. 코드는 `env.PLANS.get/put/delete/list`를 그대로 부르고, `RELAY_DB`가 있으면 `src/d1kv.js`가 그 호출을 D1(표 `kv_entries`)로 처리합니다. 암호화(AES-GCM)는 그대로입니다. 위 「무료 한도」의 KV 하루 쓰기 1,000 설명은 D1 전환 뒤에는 D1 하루 10만 행 쓰기로 읽습니다.
+
+- **쓰기·삭제는 D1에만**: 옛 KV에는 쓰지 않습니다.
+- **읽기는 D1 먼저, 없으면 옛 KV**: 옛 KV 값을 읽으면 남은 TTL 그대로 D1로 복사합니다(Lazy Migration). 옛 KV 바인딩이 없어도 동작합니다.
+- **삭제 표식**: 옛 KV에 같은 키가 남아 있을 때만 D1에 「삭제됨」 행을 두어 되살아나지 않게 합니다(만료는 옛 항목과 같게).
+- **list**: D1 결과와 옛 KV의 아직 옮기지 않은 키를 합쳐 이름순으로 돌려주고, cursor는 「마지막으로 준 이름」입니다. 옛 KV는 접두어 아래를 끝까지 읽으므로 옛 KV에 키가 많으면 읽기가 늘어납니다(이관 뒤 바인딩을 떼면 사라짐).
+- **쓰기 예산**: D1 무료 하루 10만 행 쓰기에 맞춰 서버 전체 `KV_DAILY_WRITE_BUDGET` 80000, 주인별 하루 5000으로 올렸습니다(변수 이름의 KV는 옛 이름 그대로).
+
+### D1 배포 (대표님이 하는 일)
+
+`wrangler.toml`(공개)에는 `database_id = "REPLACE_WITH_D1_DATABASE_ID"` 자리표시만 있고, 실제 id는 git에 없는 `wrangler.local.toml`의 같은 `[[d1_databases]]` 블록에 넣습니다(KV id를 넣던 방식 그대로).
+
+```sh
+npx wrangler d1 create taption-trip-relay                # 출력되는 database_id를 wrangler.local.toml의 [[d1_databases]]에 넣는다
+npx wrangler d1 migrations apply taption-trip-relay --remote --config wrangler.local.toml
+npm test
+npx wrangler deploy --config wrangler.local.toml
+```
+
+옛 KV 바인딩(`[[kv_namespaces]] PLANS`)은 이관이 끝날 때까지 `wrangler.local.toml`에 그대로 둡니다. 가장 긴 만료(연결 클라이언트 365일)가 지나거나 옛 KV에 남은 키가 없음을 확인한 뒤 두 toml에서 그 블록을 지우고 다시 배포합니다. 그 전에 떼면 아직 옮기지 않은 값(예: 읽힌 적 없는 만료 없는 키)이 사라집니다.
+
 ## 여행 공유 방(TSH1114A26)
 
 `/share/rooms`(방 만들기, 앱 등록 키)와 `/share/rooms/<방 id>/…`(입장·따라잡기·쓰기·잠금·공지 확인·WebSocket, 방의 참여 토큰). 방마다 Durable Object `ShareRoom` 하나이고 기기가 암호화한 덩어리만 둡니다. 규약 전체는 [docs/TRIP_SHARE_PROTOCOL.md](../../docs/TRIP_SHARE_PROTOCOL.md).
