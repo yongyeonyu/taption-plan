@@ -2,6 +2,10 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## DEP1118A01 · AIF1118A01 서버 변경 배포 (2026-11-18)
+
+- 대표가 터미널에서 `npx wrangler deploy --config wrangler.local.toml` 실행. `wrangler deployments list`로 확인: 2026-11-18 12:43(KST) 새 버전 `6b3ff5b8` 100%(이전 `65de4279`). 배포 전 서버 `npm test` 228/228 통과(FUL1118A01).
+
 ## FUL1118A02 · 첫 실행 튜토리얼 대신 홈이 뜸 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
 
 - 판: main `1b94ed70`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안. 로그 `build/validation/FUL1118A02/`.
