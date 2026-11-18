@@ -64,6 +64,28 @@ final class TravelDayBoardTests: XCTestCase {
         XCTAssertEqual(TravelCourseSort.movableGroups(laterOverlap), [[1, 2]])
     }
 
+    /// TVM1117A02(대표 결정 2026-11-18): 겹친 일정이 있는 구간은 그대로 두고 한 줄로 알린다. 그 구간만 있어도 단추는 보이고, 누르면 안내만 뜬다.
+    func testSortTellsWhenAnOverlappingSegmentIsLeftAlone() {
+        let overlapping = [stop("a", 540, 660, 35.00), stop("b", 600, 660, 35.09), stop("c", 630, 660, 35.01), stop("x", 660, 720, 35.02, fixed: true)]
+        XCTAssertTrue(TravelCourseSort.canSort(overlapping), "겹친 구간만 있어도 단추는 보인다")
+        XCTAssertEqual(TravelCourseSort.outcome(overlapping), .overlapOnly)
+
+        let apart = [stop("a", 540, 600, 35.00), stop("b", 600, 630, 35.09), stop("c", 630, 660, 35.01), stop("x", 660, 720, 35.02, fixed: true)]
+        guard case .plan(let plan, let leftOverlap) = TravelCourseSort.outcome(apart) else { return XCTFail("정리할 것이 있다") }
+        XCTAssertEqual(plan.order, ["a", "c", "b", "x"])
+        XCTAssertFalse(leftOverlap)
+
+        // 앞 구간은 정리하고, 뒤의 겹친 구간은 그대로 두며 안내를 붙인다.
+        let mixed = apart + [stop("d", 720, 840, 35.03), stop("e", 780, 840, 35.09), stop("f", 800, 840, 35.04)]
+        guard case .plan(let mixedPlan, let mixedOverlap) = TravelCourseSort.outcome(mixed) else { return XCTFail("앞 구간은 정리한다") }
+        XCTAssertTrue(mixedOverlap)
+        XCTAssertNil(mixedPlan.moves["e"], "겹친 구간은 그대로")
+        XCTAssertNil(mixedPlan.moves["f"])
+
+        XCTAssertEqual(TravelCourseSort.outcome([stop("a", 540, 600, 35.00), stop("b", 600, 660, 35.01), stop("c", 660, 720, 35.02)]), .alreadySorted)
+        XCTAssertFalse(TravelCourseSort.canSort([stop("a", 540, 600, 35.00), stop("b", 600, 660, 35.01)]), "바꿀 자리가 하나뿐이면 단추가 없다")
+    }
+
     func testSortReturnsNilWhenAlreadyNearestOrTooFewPins() {
         XCTAssertNil(TravelCourseSort.plan([stop("a", 540, 600, 35.00), stop("b", 600, 660, 35.01), stop("c", 660, 720, 35.02)]), "이미 가까운 순서")
         XCTAssertNil(TravelCourseSort.plan([stop("a", 540, 600, 35.00), stop("b", 600, 660, nil), stop("c", 660, 720, nil)]), "핀이 없으면 바꾸지 않는다")
@@ -223,6 +245,41 @@ final class TravelDayBoardTests: XCTestCase {
         XCTAssertNil(same, "같은 날로는 옮기지 않는다")
         let missing = await TravelDayBoard.move(model: model, tripID: "t1", itemID: "없음", toDay: "2026-12-03", dayLabel: "")
         XCTAssertNil(missing)
+    }
+
+    /// TVM1117A02(대표 결정 2026-11-18): 곳에 캘린더 고정 세부가 있으면 먼저 묻고, 「옮기기」면 곳과 세부 모두 앱 안에서 한 번에 옮긴다.
+    /// 캘린더 앱의 일정(`calendarEvents`)은 건드리지 않고 고정 표시도 그대로다. 묻지 않은 옮기기는 아무것도 바꾸지 않는다. 되돌리기도 한 걸음.
+    func testMovingAStopWithACalendarFixedDetailAsksThenMovesEverythingInTheApp() async throws {
+        let model = await tripModel()
+        let parent = try await add(model, "강변 거리", day: "2026-12-03", minute: 960, length: 240)
+        let noodles = try await add(model, "라멘", day: "2026-12-03", minute: 980, length: 40, parent: parent)
+        let cruise = try await add(model, "야경 배", day: "2026-12-03", minute: 1_140, length: 50, parent: parent)
+        let cruisePlan = try XCTUnwrap(found(model, cruise)?.planID)
+        let planIndex = try XCTUnwrap(model.snapshot.plans.firstIndex { $0.id == cruisePlan })
+        model.snapshot.plans[planIndex].isFixed = true
+        let calendarEvents = model.snapshot.calendarEvents
+
+        XCTAssertEqual(TravelDayBoard.fixedCount(model: model, tripID: "t1", itemID: parent), 1, "물을 캘린더 일정 수")
+        XCTAssertEqual(TravelDayBoard.fixedCount(model: model, tripID: "t1", itemID: noodles), 0)
+        let items = model.settings.travelTripItems, plans = model.snapshot.plans
+        let refused = await TravelDayBoard.move(model: model, tripID: "t1", itemID: parent, toDay: "2026-12-04", dayLabel: "3일차 12/4")
+        XCTAssertNil(refused, "묻기 전(취소)에는 옮기지 않는다")
+        XCTAssertEqual(model.settings.travelTripItems, items)
+        XCTAssertEqual(model.snapshot.plans, plans)
+
+        let moved = await TravelDayBoard.move(model: model, tripID: "t1", itemID: parent, toDay: "2026-12-04", dayLabel: "3일차 12/4", includingFixed: true)
+        let step = try XCTUnwrap(moved)
+        XCTAssertTrue(step.includesFixed)
+        XCTAssertEqual([parent, noodles, cruise].map { wall(found(model, $0)) }, ["2026-12-04 09:00", "2026-12-04 09:20", "2026-12-04 12:00"], "곳과 세부 모두 같은 만큼")
+        let plan = try XCTUnwrap(model.snapshot.plans.first { $0.id == cruisePlan })
+        XCTAssertEqual(plan.span.start, found(model, cruise)?.start, "앱의 계획 기록도 따라온다")
+        XCTAssertTrue(plan.isFixed, "고정 표시는 그대로")
+        XCTAssertEqual(model.snapshot.calendarEvents, calendarEvents, "캘린더 앱의 일정은 그대로")
+
+        var history = TravelPlanHistory()
+        history.record(step)
+        await model.applyTravelHistory(try XCTUnwrap(history.undo()))
+        XCTAssertEqual([parent, noodles, cruise].map { wall(found(model, $0)) }, ["2026-12-03 16:00", "2026-12-03 16:20", "2026-12-03 19:00"], "되돌리기도 한 번에")
     }
 
     func testSortingADayAppliesAndUndoesInOneStep() async throws {

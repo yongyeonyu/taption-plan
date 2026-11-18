@@ -68,14 +68,29 @@ extension TravelDayBoard {
         return TravelPlanTableModel.make(items: model.settings.travelTripItems ?? [], tripID: tripID, day: day, actual: [], now: .now)
     }
 
+    /// 옮기기 전에 물을 캘린더 고정 일정 수(곳과 세부). 함께 쓰는 여행은 방이 옮기므로 묻지 않는다(0).
+    static func fixedCount(model: AppModel, tripID: String, itemID: String) -> Int {
+        model.isSharedTrip(tripID) ? 0 : model.tripItemFixedCount(tripID: tripID, itemID: itemID)
+    }
+
     /// 일정을 그 날 코스 끝으로 옮긴다(공유 여행이면 방에 먼저 쓴다). 옮겼으면 되돌릴 걸음을 돌려준다.
-    static func move(model: AppModel, tripID: String, itemID: String, toDay: String, dayLabel: String) async -> TravelPlanHistory.Step? {
+    /// `includingFixed`면 사용자가 「옮기기」를 고른 것이라 캘린더 고정 일정도 앱 안에서 함께 옮긴다(공유하지 않는 여행만).
+    static func move(
+        model: AppModel, tripID: String, itemID: String, toDay: String, dayLabel: String, includingFixed: Bool = false
+    ) async -> TravelPlanHistory.Step? {
         let items = model.settings.travelTripItems ?? []
         guard let item = items.first(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return nil }
         let family = Set([itemID] + TravelTripItem.details(of: itemID, tripID: tripID, in: items).map(\.itemID))
         let table = table(model: model, tripID: tripID, dayKey: toDay)
-        guard let step = step(item: item, toDay: toDay, dayLabel: dayLabel, blocks: table.blocks.filter { !family.contains($0.id) }, nowMinute: table.nowMinute),
-              await TripSharePlanEditor.moveItem(model: model, tripID: tripID, itemID: itemID, by: TimeInterval(step.move * 60)) else { return nil }
+        guard var step = step(item: item, toDay: toDay, dayLabel: dayLabel, blocks: table.blocks.filter { !family.contains($0.id) }, nowMinute: table.nowMinute)
+        else { return nil }
+        let delta = TimeInterval(step.move * 60)
+        if includingFixed, !model.isSharedTrip(tripID) {
+            guard await model.moveTripItem(tripID: tripID, itemID: itemID, by: delta, includingFixed: true) else { return nil }
+            step.includesFixed = true
+        } else {
+            guard await TripSharePlanEditor.moveItem(model: model, tripID: tripID, itemID: itemID, by: delta) else { return nil }
+        }
         return step
     }
 
@@ -96,7 +111,7 @@ extension TravelDayBoard {
 struct TravelDayBoardLinks {
     var days: [(key: String, label: String)]
     var currentDay: String
-    /// 정리할 수 있는 곳(핀이 있고 고정이 아닌 곳)이 한 구간에 둘 이상 있는가.
+    /// 정리할 수 있는 곳(핀이 있고 고정이 아닌 곳)이 한 구간에 둘 이상 있는가(겹쳐서 그대로 둔다고 알릴 구간도 포함).
     var canSort: Bool
     /// 일정 번호, 옮겨 갈 날.
     var move: (String, String) -> Void
@@ -109,7 +124,9 @@ extension EnvironmentValues {
 
 private struct TravelDayBoardHost: ViewModifier {
     enum Prompt {
-        case sort(TravelCourseSort.Plan)
+        case sort(TravelCourseSort.Plan, leftOverlap: Bool)
+        /// 겹친 일정이 있는 구간만 있어 그대로 둔다는 안내.
+        case overlapOnly
         case alreadySorted
     }
 
@@ -121,32 +138,53 @@ private struct TravelDayBoardHost: ViewModifier {
     let language: MapHomeLanguage
     @Binding var history: TravelPlanHistory
     @State private var prompt: Prompt?
+    @State private var fixedQuestion: TravelFixedMoveQuestion?
 
     func body(content: Content) -> some View {
         let days = TravelDayBoard.days(of: trip, language: language)
         let stops = TravelDayBoard.sortStops(model: model, tripID: tripID, dayKey: dayKey, blocks: blocks)
         content
             .environment(\.travelDayBoard, TravelDayBoardLinks(
-                days: days, currentDay: dayKey, canSort: TravelCourseSort.movableGroups(stops).contains { $0.count > 1 },
+                days: days, currentDay: dayKey, canSort: TravelCourseSort.canSort(stops),
                 move: { itemID, day in move(itemID, to: day, label: days.first { $0.key == day }?.label ?? "") },
-                sort: { prompt = TravelCourseSort.plan(stops).map(Prompt.sort) ?? .alreadySorted }
+                sort: { prompt = Self.prompt(TravelCourseSort.outcome(stops)) }
             ))
             .alert(title, isPresented: Binding(get: { prompt != nil }, set: { if !$0 { prompt = nil } }), presenting: prompt) { prompt in
-                if case .sort(let plan) = prompt {
+                if case .sort(let plan, _) = prompt {
                     Button(language.text("바꾸기", "Reorder")) { apply(plan) }
                     Button(language.text("취소", "Cancel"), role: .cancel) {}
                 } else {
                     Button(language.text("확인", "OK")) {}
                 }
             } message: { prompt in
-                if case .sort(let plan) = prompt {
+                switch prompt {
+                case .sort(let plan, let leftOverlap):
                     let before = TravelCourseSort.kilometers(plan.beforeMeters), after = TravelCourseSort.kilometers(plan.afterMeters)
-                    Text(language.runtimeText(
+                    let distance = language.runtimeText(
                         "이동 거리 약 \(before) km → \(after) km (직선 거리 기준). 예약·숙소·이동과 첫 곳은 그대로 둡니다.",
                         "Travel distance about \(before) km → \(after) km (straight line). Booked plans, lodging, transfers, and the first stop stay put."
-                    ))
+                    )
+                    Text(leftOverlap ? distance + "\n" + overlapNote : distance)
+                case .overlapOnly:
+                    Text(overlapNote)
+                case .alreadySorted:
+                    EmptyView()
                 }
             }
+            .travelFixedMoveQuestion($fixedQuestion, language: language)
+    }
+
+    /// 겹친 일정이 있는 구간을 그대로 둘 때의 한 줄(대표 결정 2026-11-18).
+    private var overlapNote: String {
+        language.text("겹친 일정이 있어 그 구간은 그대로 둡니다", "Some plans overlap, so that part stays as it is.")
+    }
+
+    static func prompt(_ outcome: TravelCourseSort.Outcome) -> Prompt {
+        switch outcome {
+        case .plan(let plan, let leftOverlap): .sort(plan, leftOverlap: leftOverlap)
+        case .overlapOnly: .overlapOnly
+        case .alreadySorted: .alreadySorted
+        }
     }
 
     private var title: String {
@@ -156,10 +194,17 @@ private struct TravelDayBoardHost: ViewModifier {
 
     private func move(_ itemID: String, to day: String, label: String) {
         TripSharePlanEditor.route(model: model, tripID: tripID, edit: .move(itemID: itemID, minutes: 0)) {
-            Task {
-                guard let step = await TravelDayBoard.move(model: model, tripID: tripID, itemID: itemID, toDay: day, dayLabel: label) else { return }
-                withAnimation(.snappy(duration: 0.2)) { history.record(step) }
+            @MainActor func run(includingFixed: Bool) {
+                Task { @MainActor in
+                    guard let step = await TravelDayBoard.move(
+                        model: model, tripID: tripID, itemID: itemID, toDay: day, dayLabel: label, includingFixed: includingFixed
+                    ) else { return }
+                    withAnimation(.snappy(duration: 0.2)) { history.record(step) }
+                }
             }
+            // 캘린더 고정 세부가 있으면 먼저 묻는다(대표 결정 2026-11-18).
+            let count = TravelDayBoard.fixedCount(model: model, tripID: tripID, itemID: itemID)
+            if count > 0 { fixedQuestion = .init(count: count) { run(includingFixed: true) } } else { run(includingFixed: false) }
         }
     }
 
@@ -238,12 +283,38 @@ struct TravelCourseSortButton: View {
     }
 }
 
+/// 곳을 옮길 때 캘린더 고정 일정이 끼어 있으면 묻는 창(대표 결정 2026-11-18): 「옮기기」면 앱 안에서 모두 옮기고, 「취소」면 아무것도 안 바꾼다.
+/// 캘린더 앱의 일정은 건드리지 않으므로 캘린더 쓰기 권한을 묻지 않는다.
+struct TravelFixedMoveQuestion: Identifiable {
+    let id = UUID()
+    let count: Int
+    let move: @MainActor () -> Void
+}
+
+extension View {
+    func travelFixedMoveQuestion(_ question: Binding<TravelFixedMoveQuestion?>, language: MapHomeLanguage) -> some View {
+        let count = question.wrappedValue?.count ?? 0
+        return alert(
+            language.runtimeText("캘린더 일정 \(count)개도 함께 옮길까요?", "Move \(count) calendar event(s) too?"),
+            isPresented: Binding(get: { question.wrappedValue != nil }, set: { if !$0 { question.wrappedValue = nil } }),
+            presenting: question.wrappedValue
+        ) { asked in
+            Button(language.text("옮기기", "Move")) { asked.move() }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        } message: { _ in
+            Text(language.text("캘린더 앱의 일정은 그대로예요", "The events in the Calendar app stay as they are."))
+        }
+    }
+}
+
 /// 일정 편집기의 「다른 날로…」: 날짜 목록에서 골라 그 날 코스 끝으로 옮긴다(끌기가 어려운 사람용).
 struct TravelDayMoveMenu: View {
     let model: AppModel
     let item: TravelTripItem
     let language: MapHomeLanguage
     /// 옮겼으면 되돌릴 걸음, 못 옮겼으면 nil.
+    /// 캘린더 고정 세부가 있을 때 물을 창. 메뉴 안에서는 창을 띄울 수 없어 편집기가 들고 있다.
+    @Binding var fixedQuestion: TravelFixedMoveQuestion?
     let onDone: (TravelPlanHistory.Step?) -> Void
 
     var body: some View {
@@ -252,11 +323,22 @@ struct TravelDayMoveMenu: View {
         if days.count > 1 {
             Menu(language.text("다른 날로…", "Move to another day…"), systemImage: "calendar") {
                 ForEach(days.filter { $0.key != current }, id: \.key) { day in
-                    Button(day.label) {
-                        Task { onDone(await TravelDayBoard.move(model: model, tripID: item.tripID, itemID: item.itemID, toDay: day.key, dayLabel: day.label)) }
-                    }
+                    Button(day.label) { move(to: day) }
                 }
             }
         }
+    }
+
+    /// 캘린더 고정 세부가 있으면 먼저 묻는다(대표 결정 2026-11-18).
+    private func move(to day: (key: String, label: String)) {
+        func run(includingFixed: Bool) {
+            Task { @MainActor in
+                onDone(await TravelDayBoard.move(
+                    model: model, tripID: item.tripID, itemID: item.itemID, toDay: day.key, dayLabel: day.label, includingFixed: includingFixed
+                ))
+            }
+        }
+        let count = TravelDayBoard.fixedCount(model: model, tripID: item.tripID, itemID: item.itemID)
+        if count > 0 { fixedQuestion = .init(count: count) { run(includingFixed: true) } } else { run(includingFixed: false) }
     }
 }
