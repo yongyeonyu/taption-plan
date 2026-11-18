@@ -2,6 +2,13 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## FUL1118A02 · 첫 실행 튜토리얼 대신 홈이 뜸 (2026-11-18, 시뮬레이터 `99AC6F35…`, 실기기 없음)
+
+- 판: main `1b94ed70`. Debug, `-parallel-testing-enabled NO`, 빌드 잠금 안. 로그 `build/validation/FUL1118A02/`.
+- 원인(앱 결함): 튜토리얼 판단 코드에 임시 `NSLog`를 넣고 `testStartNow`를 돌림(`probe2.log`·`probe-stream2.log`). 순서는 ① 장면이 active가 됨(그때는 시작 화면이 떠 있어 `handleScenePhaseChange`가 건너뜀) ② 시작 화면이 걷히고 `scheduleDeferredPermissionPreparation`이 `refreshPermissions()` 뒤 `scenePhase`를 `inactive`로 읽고 멈춤 ③ 그 뒤 장면 변화가 없어 다시 부를 곳이 없음. 시작 준비 Task가 잡아 둔 뷰 사본의 `scenePhase`가 실행 직후 값에 머문 것. 시험의 다시 띄우기에서도 똑같이 되풀이됨. 튜토리얼 코드는 그대로였고 시작 게이트가 열리는 순서가 바뀌어(그 사이 합친 시작 경로 변경) 마지막 게이트가 이 Task 안에서 열리게 되며 드러난 것으로 봄 — 어느 커밋인지 이분 탐색은 하지 않음. 실제 첫 설치에서도 튜토리얼·권한 안내가 그 실행에서 빠질 수 있어 시험 가정이 아니라 앱 결함.
+- 고침: `TaptionPlan/UI/AppShellView.swift:553` 지연 권한 준비의 확인을 `UIApplication.shared.applicationState == .active`로(지금 앱 상태). 동작·문구·홈 배치 변화 없음, 새 문구 없음.
+- 결과: UI `TaptionPlanFirstRunTutorialUITests` 5건 통과·실패 0(`ui-firstrun.log`, 고치기 전 `probe2.log`는 `testStartNow` 실패), 단위 `FirstRunTutorialTests` 27건 실패 0(`unit-firstrun.log`), `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과. 앱 Debug 빌드는 build-for-testing으로 성공(`build-fixed.log`). 전체 단위·UI 시험은 돌리지 않음.
+
 ## FUL1118A01 · 아이폰 11 프로 실기기 풀 테스트 (2026-11-18, 실기기 — 시뮬레이터 결과와 구분)
 
 - 판: main `b92e0dbb`(MNU1118A01·TVM1117A02까지 합친 판)을 고정 작업 공간 `/Volumes/TaptionPlanBuild/src-FUL1118A01`에서 Debug로. 기기 잠금·빌드 잠금 안에서. 로그 `build/validation/FUL1118A01/`.

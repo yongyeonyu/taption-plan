@@ -548,7 +548,9 @@ struct AppShellView: View {
         Task { @MainActor in
             await Task.yield()
             await model.refreshPermissions()
-            guard scenePhase == .active, proAccess.grantsAccess else { return }
+            // 시작 준비 Task가 잡아 둔 뷰 사본의 scenePhase는 실행 직후 값(inactive)에 머물 수 있다.
+            // 그러면 앞에서 이미 active가 됐어도 여기서 멈추고 다시 부를 곳이 없다(FUL1118A02). 지금 앱 상태를 읽는다.
+            guard UIApplication.shared.applicationState == .active, proAccess.grantsAccess else { return }
             if prepareFirstRunTutorial() { return }
             model.presentPermissionOnboardingIfNeeded()
             await model.requestMissingLocationPermissionAtLaunch()
