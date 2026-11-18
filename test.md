@@ -8,6 +8,7 @@
 - 서버: `src/directions.js` 새 파일, `POST /kakao/directions`(본문 좌표만, GET은 405, 경유지 최대 5개, 좌표 범위 검사, `no-store`, 상류 원문·좌표를 돌려주지 않음). 카카오에는 「경도,위도」, `car_type=1`. 답은 `{found, toll, distance, duration, roads}`(길 좌표 vertexes는 넘기지 않음). 하루 한도는 카카오 검색과 같은 칸.
 - 앱(`LedgerTollGate.swift`에 `LedgerTollKakao`·`LedgerTollKakaoRunner`): 지난 톨게이트·같은 길로 처리하지 못한 이동 중 정착·그 무렵 통행료 없음·약 8km 넘게 달림·아직 안 물은 것만, 이동의 정확한 위치에서 처음·끝과 사이 5개를 골라 묻는다(점은 메모리에만, 한 번에 3개). 통행료가 있으면 「○○고속도로 통행료」(메모 「카카오 길찾기로 자동 추가 · 출발 → 도착 · 카카오 예상 통행료」)로 늘 「확인 필요」에 올림(다시 그린 길의 예상이라). 0원이면 넣지 않고, 실패(키 없음·한도·네트워크)면 1시간 쉼. 확인해 남긴 카카오·지난 톨게이트 통행료로는 같은 길 규칙의 길 모양을 배우지 않음.
 - 서버 `npm test`: 237건 실패 0(새 3건). 단위 `LedgerTollKakaoTests`(새 4)·`LedgerTollGateTests`·`LedgerTollRepeatTests` 27건 실패 0(`build/validation/KDR1118A01/toll-unit-0.log`). 전체 `-only-testing:TaptionPlanTests` 3,064건 실행·26 건너뜀·실패 0(`full-unit-1.log`, Debug 빌드 포함). 번역 새 3줄 12개 언어 `check.py` 실패 0·`generate.py`. 구조 지표·import 경계 통과. `PRIVACY.md`에 통행료 한 줄(도로공사엔 코드·차종만, 모를 때만 카카오에 좌표).
+- 서버 배포(대표가 터미널에서, 2026-11-18 22:06): `EX_API_KEY` 비밀값 올림(Secret Change `3622893a`) 뒤 배포 `81e89e3e`(main `6f003bcb` 작업 트리). 확인: 인증 없이 `/ex/units`·`/kakao/directions` 401(경로 있음, 인증 필요), 없는 경로 404. 앱에서의 실제 응답(영업소 목록·요금·카카오)은 아직 확인 안 함.
 - 제한: 실제 카카오 응답은 확인하지 않음(대표 확인 문서의 `routes[0].summary.fare.toll` 기준). 카카오 통행료에 출퇴근 할인이 들어 있는지 몰라 그대로 「예상」으로 적고 앱 할인을 다시 적용하지 않음. 민자 도로로 매일 다니면 매번 「확인 필요」에 올라옴(길별 규칙 여러 개는 아직 없음).
 
 ## TGT1118A01 · 지난 톨게이트로 통행료 알아내기 (2026-11-18, 시뮬레이터·맥, 실기기·서버 배포 없음)
