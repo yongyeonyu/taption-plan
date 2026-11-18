@@ -3,12 +3,6 @@
  "catalog": 504,
  "unread": [
   {
-   "file": "TaptionPlan/Core/LedgerTollGate.swift",
-   "line": 221,
-   "ko": "normal",
-   "en": "language"
-  },
-  {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
    "ko": "_ korean: UIPhrase",
@@ -127,6 +121,12 @@
    "line": 542,
    "ko": "entry.amount",
    "en": "entry.currency"
+  },
+  {
+   "file": "TaptionPlan/Core/LedgerTollGate.swift",
+   "line": 221,
+   "ko": "normal",
+   "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LiveActivityDaySummaryState.swift",

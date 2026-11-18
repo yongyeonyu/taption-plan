@@ -11,6 +11,7 @@
 - 표시: 제목 「가 영업소 → 나 영업소 통행료」, 메모 「지난 톨게이트로 자동 추가 · 가 영업소 → 나 영업소 · 정상요금 900원 · 출퇴근 할인 20%」(금액 720원). 새 문구 5개 12개 언어, `extract.py`→`check.py` 실패 0(`generate.py`는 메인 몫). 로그 `l10n-*.log`.
 - 단위(시뮬레이터 99AC6F35): `LedgerTollGateTests` 11건·`LedgerTollRepeatTests` 12건 실패 0(`unit-toll-3.log`). 전체 `-only-testing:TaptionPlanTests`: 3,060건 실행, 26건 건너뜀, 실패 0(`unit-all-2.log`; 첫 실행은 시험 실행기가 연결 전에 멈춰 시험 0건 — `unit-all.log`). Debug 빌드 성공(`debug-build.log`). 구조 지표 `--check`·import 경계 통과.
 - 제한: 실기기·실제 고속도로 기록으로 확인하지 않음(150·80m는 영업소 좌표가 요금소 가운데라는 가정, 기기 기록으로 다시 맞춰야 함). 영어·한국어 밖 언어로 넣은 제목은 통행료 낱말 판별(`isToll`)에 안 걸려, 겹침은 `handled`로만 막음. 서버 배포·키 넣기 전에는 503이라 지금의 같은 길 방식만 돎.
+- main 합침(메인 세션): 충돌 없음. `generate.py` 실행, 번역 `check.py` 실패 0, 서버 `npm test` 234건 실패 0, 구조 지표·import 경계 통과, 합친 main에서 `LedgerTollGateTests`+`LedgerTollRepeatTests` 23건 실패 0(Debug 빌드 포함, `build/validation/TGT1118A01/main-merge-toll.log`). 서버 배포·키 넣기·카카오 길찾기 대비(대표 결정 2026-11-18, `AGENTS.md`)는 아직.
 
 ## TOL1118A01 · 같은 길 통행료 할인 금액·다른 길 오인 (2026-11-18, 시뮬레이터, 실기기 없음)
 
