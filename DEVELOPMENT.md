@@ -1,6 +1,6 @@
 # 개발 안내
 
-이 문서는 코드 위치와 재사용 가능한 검증 명령만 설명합니다. 요청 상태는 `temp.md`, 실행 증거는 `test.md`에서 요청 ID로 찾고, 현재 코드를 기준으로 작업하세요.
+이 문서는 코드 위치와 재사용 가능한 검증 명령만 설명합니다. 요청 상태·실기기 확인·실행 증거는 `test.md`에서 요청 ID로 찾고, 현재 코드를 기준으로 작업하세요. 작업 규칙(잠금·시뮬레이터·외장 볼륨·병합)은 `AGENTS.md`.
 
 ## 프로젝트 경계
 
@@ -37,6 +37,8 @@
 | Watch·위젯 | `TaptionPlanWatch/`, `TaptionPlanWidget/`(일정 위젯·`SensorCollectionLiveActivity`·`TaptionPlanLiveActivity`·고양이는 앱 아틀라스), `TaptionPlanWatchWidget/` |
 | 워치 공유 모델·언어 설정 | `Packages/TaptionWatchSync/`(명령 프로토콜·측정값·outbox/spool·행동 규칙·`AppLanguagePreference`, `Core/WatchSyncModels.swift`가 네 target에 다시 내보낸다), CoreML 행동 모델은 `TaptionWatchBehaviorML`(워치 앱만 링크), replay·개인화는 `TaptionPlan/Core/WatchActivityReplay.swift` |
 | 여행 공유(TSH1114A26) | 규약·암호·세션·정산은 `Packages/TaptionTripShare/`(앱·화면·저장소를 모름, 시험용 가짜 서버는 `TaptionTripShareTesting`으로 앱 시험 target에만 링크). 앱 쪽 토대는 `TaptionPlan/Core/TripShareEnvironment.swift`(전송·키체인 `com.taption.plan.tripshare`·앱 키), `TripShareStore.swift`(단일 창구), `TripShareSidecar.swift`(곁 파일 `Application Support/TripShare/<roomId>.json`, 백업 제외), `TripShareMapping.swift`(순수 변환·id), `UX/AppModel+TripShare.swift`(한 번에 투영·`isSharedTrip` 가드). 화면은 `TaptionPlan/UI/TripShare*.swift`. SQLite 스키마·저장 포맷은 바꾸지 않고 좌표는 방에 올리지 않습니다 |
+| 가계부 통행료 | 같은 길 규칙·정가·길 모양·시간대 할인은 `TaptionPlan/Core/LedgerTollRepeat.swift`(`LedgerTollRepeat`·`LedgerTollRoute`·`LedgerTollDiscount`·`LedgerTollRepeatRunner`·관찰자 `LedgerTollRepeatObserver`), 지난 톨게이트 판정·영업소/요금 기기 캐시·카카오 길찾기 대비는 `TaptionPlan/Core/LedgerTollGate.swift`(`LedgerTollGate`·`LedgerTollFareStore`·`LedgerTollGateRunner`·`LedgerTollKakao`·`LedgerTollKakaoRunner`). 서버는 `server/trip-relay/src/expressway.js`(`GET /ex/units`·`GET /ex/fare`, 비밀값 `EX_API_KEY`)와 `server/trip-relay/src/directions.js`(`POST /kakao/directions`, `KAKAO_REST_API_KEY`). 규칙은 아래 「가계부 통행료」 |
+| Apple 모델(PCC → 기기 모델 → 중계 큐) | 판단은 `Packages/TaptionAssistant/Sources/TaptionAssistantKit/AppleModelRouter.swift`(순수 함수, FoundationModels를 모름, 시험 `AppleModelRouterTests`), 조건 읽기·PCC 호출·스위치 `isPrivateCloudComputeEnabled`는 `TaptionPlan/UI/AppleModelEnvironment.swift`. 설계와 승인 뒤 할 일은 `docs/APPLE_FOUNDATION_MODELS.md` |
 | 회귀 테스트 | `TaptionPlanTests/`, 각 package의 `Tests/` |
 
 위젯 target은 `PlanningEngine.swift`를 컴파일하지 않습니다. 위젯이 쓰는 엔진은 앱·위젯 공용 `Core/WidgetSharedEngines.swift`에 둡니다. 저장소 소스는 위젯 인텐트가 DB에 직접 쓰므로 위젯에도 컴파일됩니다.
@@ -190,13 +192,6 @@ AI·Siri·단축어
 - 충전·실패 거르기(TOP1113A01): 은행 출금·이체의 받는 곳이 전국 지역화폐(`LedgerMessageParser.localCurrencies`)이거나 「충전」이 든 글은 지출이 아닙니다(충전소·전기차 충전은 지출). 간편결제 실패 안내(「지원하지 않」「결제 실패」)는 거절과 같이 넣지 않습니다.
 - 인천e음(EUM1113A01): 「○○e음 카드」를 카드 이름으로 읽고(`LedgerMessageParser.localCard`), 「○○e음」 낱말은 가게 이름에서 뺍니다. 잔액은 금액이 아니고 충전은 결제가 아닙니다.
 - 버스·지하철 요금(TRF1113A01): `LedgerTransitFareRunner`가 통행료 관찰자와 함께 오늘·어제의 버스·지하철 이동(3분 이상, 내린 뒤 30분)을 `FareCalculator`(수도권 통합환승·거리 비례, 성인)로 계산해 넣습니다. 앞뒤 30분에 교통비가 이미 있으면 넣지 않고, 버스 한 번이 30km를 넘으면 「확인 필요」(사유 `fare`)입니다. 지역은 탑승 앞 머문 곳 좌표로 정하고 요금표 밖이면 AI 「교통비 확인」이 맡습니다. 버스 종류(간선·지선·광역)와 조조 할인은 위치로 알 수 없어 간선 요금입니다.
-- 지난 톨게이트 통행료(TGT1118A01): `LedgerTollGateRunner`가 같은 길 통행료보다 먼저 돕니다. 영업소 목록은 중계 `/ex/units`에서 통째로 받아 `Caches/toll-units.json`(3,000곳·1MB 한도, 7일마다 새로, 실패하면 1시간 뒤)에 두고, 이동의 정확한 위치(대략 위치·오차 100m 초과 제외)와 기기에서 견줍니다(`LedgerTollGate.passes`, 2분·3km 안의 두 위치는 선으로 이어 봄). 좌표는 서버로 보내지 않고, 요금은 `/ex/fare`에 영업소 코드와 1종만 보냅니다(30일, 0건은 1일 기기 캐시).
-  - 판정: 150m 안이면 지남. 두 곳 이상이면 처음 = 입구·끝 = 출구, 한 곳이면 본선 영업소(같은 코드로 조회).
-  - 확실함(바로 넣음): 쓰는 영업소가 모두 80m 안·위치 오차 50m 이하, 입구와 출구 사이에 80m 안으로 지난 영업소가 없음, 요금이 한 값(0원 초과), 입구·출구 시각의 할인이 같음. 하나라도 아니면 「확인 필요」(사유 `toll`).
-  - 요금 0건(개방식 일부·민자 노선): 같은 길의 배운 금액으로 넣되 늘 「확인 필요」. 영업소를 못 찾았거나 서버에 묻지 못했으면 같은 길 방식 그대로.
-  - 금액: 1종 정상요금에 `LedgerTollDiscount`를 출구(본선은 그 영업소) 지난 시각으로 한 번만 적용합니다. 경차는 6종 금액을 쓰지 않고 1종에 경차 50%, 포털의 시간대 할인 칸은 쓰지 않으며, 출퇴근 할인은 영업소 사이 20km 이상이면 뺍니다.
-  - 제목 「가 영업소 → 나 영업소 통행료」, 메모 「지난 톨게이트로 자동 추가 · 가 영업소 → 나 영업소 · 정상요금 900원 · 출퇴근 할인 20%」. 이 메모는 같은 길 규칙이 금액을 배우지 않는 자동 기록(`isAuto`)이고, 한 이동 한 번·지운 것 다시 넣지 않기는 같은 `handled`를 씁니다.
-  - 거리 기준(150·80m)은 영업소 좌표가 요금소 한가운데라는 가정이라, 실기기 기록으로 다시 맞춰야 합니다.
 
 판정
 - 버스정류장(BST1113A01): 승하차 앞뒤(탑승 3분 전~1분 뒤, 하차 1분 전~2분 뒤) GPS 점이 지도 z14 타일 `poi` 층의 `bus_stop`에서 30m 안이면 정류장입니다(`BusStopCheck`, 타일은 지도와 같은 `OfflineVectorTileCache`로 읽음). 구간 끝마다 기억하고, `BusRideRecognizer`는 둘 다 정류장이면 버스(높음)·둘 다 아니면 차로 둡니다. 도로 위에도 정류장이 많아 내 차 연결이 없을 때만 씁니다.
@@ -205,6 +200,24 @@ AI·Siri·단축어
 화면
 - UI 다듬기(UIR1111A01): 모서리는 `TaptionCorner` 네 단계(8·12·16·24), 17pt 미만 글자는 굵게 → 반굵게·반굵게 → 보통 굵기입니다. 여행 화면도 같은 규칙입니다(대표 결정 2026-11-13). 17pt 이상 제목·큰 숫자·아이콘 비례 크기와 여권·도장 그림은 예외입니다.
 - 화면 확인용 Debug 인자: `-paymentAlertPreview`(뒤에 `inbox`)는 앱별 알림 화면·받은 글 화면을 바로 엽니다.
+
+## 가계부 통행료 (2026-11-18 기준)
+
+자동차 이동 하나에 통행료는 한 번만 넣습니다(한 이동 한 번·지운 것 다시 넣지 않기는 같은 `handled`). 차례는 ① 지난 톨게이트(도로공사) → ② 같은 길 규칙 → ③ 카카오 길찾기입니다. 앞 단계가 처리한 이동은 뒤 단계가 보지 않습니다. 좌표 예외(카카오)는 `AGENTS.md` 4절.
+
+- ① 지난 톨게이트(TGT1118A01): `LedgerTollGateRunner`가 같은 길 통행료보다 먼저 돕니다. 영업소 목록은 중계 `/ex/units`에서 통째로 받아 `Caches/toll-units.json`(3,000곳·1MB 한도, 7일마다 새로, 실패하면 1시간 뒤)에 두고, 이동의 정확한 위치(대략 위치·오차 100m 초과 제외)와 기기에서 견줍니다(`LedgerTollGate.passes`, 2분·3km 안의 두 위치는 선으로 이어 봄). 좌표는 서버로 보내지 않고, 요금은 `/ex/fare`에 영업소 코드와 1종만 보냅니다(30일, 0건은 1일 기기 캐시).
+  - 판정: 150m 안이면 지남. 두 곳 이상이면 처음 = 입구·끝 = 출구, 한 곳이면 본선 영업소(같은 코드로 조회).
+  - 확실함(바로 넣음): 쓰는 영업소가 모두 80m 안·위치 오차 50m 이하, 입구와 출구 사이에 80m 안으로 지난 영업소가 없음, 요금이 한 값(0원 초과), 입구·출구 시각의 할인이 같음. 하나라도 아니면 「확인 필요」(사유 `toll`).
+  - 요금 0건(개방식 일부·민자 노선): 같은 길의 배운 금액으로 넣되 늘 「확인 필요」. 영업소를 못 찾았거나 서버에 묻지 못했으면 같은 길 방식 그대로.
+  - 금액: 1종 정상요금에 `LedgerTollDiscount`를 출구(본선은 그 영업소) 지난 시각으로 한 번만 적용합니다. 경차는 6종 금액을 쓰지 않고 1종에 경차 50%, 포털의 시간대 할인 칸은 쓰지 않으며, 출퇴근 할인은 영업소 사이 20km 이상이면 뺍니다.
+  - 제목 「가 영업소 → 나 영업소 통행료」, 메모 「지난 톨게이트로 자동 추가 · 가 영업소 → 나 영업소 · 정상요금 900원 · 출퇴근 할인 20%」. 이 메모는 같은 길 규칙이 금액을 배우지 않는 자동 기록(`isAuto`)이고, 한 이동 한 번·지운 것 다시 넣지 않기는 같은 `handled`를 씁니다.
+  - 거리 기준(150·80m)은 영업소 좌표가 요금소 한가운데라는 가정이라, 실기기 기록으로 다시 맞춰야 합니다.
+- ② 같은 길 규칙(TOL1111A01·TOL1112B01·TOL1118A01): `LedgerTollRepeat`가 사용자가 확인한 통행료(손·AI 입력, 결제 문자·영수증)로 출발·도착 이름 쌍의 규칙을 배워 같은 길이면 넣습니다.
+  - 정가(`base`): 손·AI 입력은 그대로 정가, 결제 문자·영수증만 그 시각 할인(차종 포함)을 되돌려 정가로 둡니다. 넣을 때 할인은 이동 가운데 시각(이틀 넘게 지난 것은 넣은 시각)으로 봅니다. 예전 규칙은 배운 기록의 출처로 정가를 채우고 없으면 금액 = 정가입니다(저장은 칸 추가만, 예전 JSON 그대로 읽힘).
+  - 길 모양(`route`): 이동 중 정확한 위치(대략 위치·오차 100m 초과 제외)를 약 1km 칸으로 바꿔 기기 `UserDefaults`에만 둡니다(서버·AI로 보내지 않음). 이웃 칸까지 겹친 비율 70% 이상이면 같은 길(넣음), 40% 미만이면 다른 길(안 넣음), 그 사이·위치 부족·길 모양이 없는 예전 규칙은 「확인 필요」입니다. 확인해 남긴 자동 통행료에서도 길 모양을 배우지만, 지난 톨게이트·카카오로 넣은 통행료로는 배우지 않습니다.
+  - 최근 14일 자동 통행료 중 예전 계산 금액(900·570·1,130 등)은 새 정가·시각 할인으로 고칩니다.
+- ③ 카카오 길찾기(KDR1118A01): ①②로 처리하지 못한 이동 중 정착·그 무렵 통행료 없음·약 8km 넘게 달림·아직 안 물은 것만, 이동의 정확한 위치에서 처음·끝과 사이 5개를 골라 중계 `POST /kakao/directions`에 묻습니다(점은 메모리에만, 한 번에 3개). 통행료가 있으면 「○○고속도로 통행료」(메모 「카카오 길찾기로 자동 추가 · 출발 → 도착 · 카카오 예상 통행료」)로 **늘 「확인 필요」**에 올립니다. 0원이면 넣지 않고, 키 없음·한도·네트워크 실패면 1시간 쉽니다. 카카오 금액에 출퇴근 할인이 들었는지 몰라 앱 할인을 다시 적용하지 않습니다.
+- 남은 것(실제 고속도로 기록으로 거리 기준 맞추기, 실제 카카오 응답, 민자 도로를 매일 다닐 때 길별 규칙 여러 개, 한국어·영어 밖 제목의 `isToll`)은 `test.md` `## 남은 작업` 「가계부·통행료」.
 
 ## 2026-11-14에 더한 규칙
 
@@ -265,7 +278,7 @@ AI 동작(외부 AI ⇄ 중계 서버 ⇄ 앱, `docs/AI_RELAY_PLAN.md`)
 - 전체 덮기의 대표 결정(2026-11-08, OVW1108A01): 「상세활동도 지움」은 기본 꺼짐이고, 켜면 범위 안 상세활동을 경계에서 갈라 새 분류로 채웁니다(`NLEOverwritePolicy.clearDetails`). 범위에 직접 입력(`ActualRecord.userOwned`) 기록이 들면 한 번 더 묻고, 건너뛴 원본 구간은 덮지도 합치지도 않으며 건너뛴 수를 편집기 위에 알립니다. 수면이 바뀌면 창에 「수면 N시간이 바뀝니다」(소수 첫째 자리)를 보여 줍니다. 합치기는 같은 원본 구간끼리만입니다. 「적용」은 `AppModel.saveClipEditBatch`가 모든 요청을 스냅숏 값에 반영한 뒤 **저장소에 한 번** 쓰고, 저장·되읽기가 실패하면 메모리와 저장소를 편집 전으로 되돌리고 편집기는 닫지 않습니다. 성공하면 자동 기록의 표시 사본까지 담은 되돌리기 **한 칸**(`includesAutomaticActuals`)을 남깁니다. 대분류 요청의 확정 수면은 조각마다 판단합니다(예전에는 가장 긴 조각 하나로 판단해 섞인 구간에서 수면이 틀렸습니다).
 - 하루 재생은 하루를 24초에 지나갑니다(정지 120분/초). 재생 화면을 시험할 때는 하루 끝까지 남은 구간을 먼저 셉니다. 남은 구간이 짧으면 재생이 1초 만에 스스로 끝나 단추 상태를 볼 수 없으므로, 화면 시험은 시간 레일을 이른 아침으로 먼저 옮겨 재생 구간을 넉넉히 만듭니다. 앱이 멈춘 것으로 오해하지 않도록, 두 번째 재생은 앱을 새로 켜 자정부터 시작합니다.
 - 시작 로딩은 단계별로 남깁니다(`launch_gate` 이벤트, `AppShellLaunchGateRecorder`). "시작이 너무 길다"는 지적을 받으면 먼저 이 기록으로 어느 단계가 마지막까지 남는지 확인합니다 — `initial_launch_ready`의 `duration_ms`는 합계만 줍니다. 스플래시는 저장소 적재·보안·첫 화면이 갖춰지면 걷고, 지도가 오늘 경로를 더 읽는 중이면 0.6초 유예 뒤 걷습니다(`scheduleMapShellGraceIfNeeded` · `AppShellInitialLaunchGate.mapShellGraceElapsed`). 경로는 그 위에 채워집니다. 권한 준비(이벤트킷·건강 읽기, 안내 시트)는 스플래시가 걷힌 뒤로 미룹니다 — 시작 화면 뒤에서 메인 스레드를 먼저 잡으면 지도 첫 화면이 그만큼 늦어집니다.
-- 지도 스타일은 「애플맵」(`standard`)·「위성」(`hybrid`)과 벡터 다섯 종입니다. 벡터는 「야간」(검정 바탕·형광 파랑 도로), 「실외(고대비)」(노란 도로·연녹 땅), 「산책」(벚꽃 색상), 「판타지 지도」, 「수묵」(`mapLibreInk`, 한지 바탕·회청 물가 선·먹 큰길, 시설 아이콘 투명도 0.32, INK1108A01)입니다. 벡터 스타일 정의는 `MapHomeVectorStyle.swift`, 수묵 색·레이어는 `MapHomeInkWash.swift`에 있습니다. OpenFreeMap 글꼴은 Noto Sans뿐이라 명조 느낌은 내지 못하고, 한글은 기기 글꼴로 그려집니다. 밝게·파스텔은 없앴고, 저장된 `mapLibreLight`·`mapLibrePastel` 값은 `MapDisplayStyle` 디코딩에서 산책으로 읽습니다(`retiredRawValues`). 스타일을 더하거나 없앨 때는 `TimeScaleTests`의 스타일 목록·레이어 기대값을 함께 고칩니다.
+- 지도 스타일은 「애플맵」(`standard`)·「위성」(`hybrid`)과 벡터 다섯 종입니다. 벡터는 「야간」(검정 바탕·형광 파랑 도로), 「실외(고대비)」(노란 도로·연녹 땅), 「산책」(벚꽃 색상), 「판타지 지도」, 「수묵」(`mapLibreInk`, 한지 바탕·회청 물가 선·먹 큰길, 시설 아이콘 투명도 0.32, INK1108A01)입니다. 벡터 스타일 정의는 `MapHomeVectorStyle.swift`, 수묵 색·레이어는 `MapHomeInkWash.swift`에 있습니다. OpenFreeMap 글꼴은 Noto Sans뿐이라 명조 느낌은 내지 못하고, 한글은 기기 글꼴로 그려집니다. 밝게·파스텔은 없앴고, 저장된 `mapLibreLight`·`mapLibrePastel` 값은 `MapDisplayStyle` 디코딩에서 산책으로 읽습니다(`retiredRawValues`). 스타일을 더하거나 없앨 때는 `TimeScaleTests`의 스타일 목록·레이어 기대값을 함께 고칩니다. 「실외(고대비)」는 고르는 목록에서 뺐고 저장된 값·AI 명령·옛 「갈색」 테마는 계절 지도로 읽습니다(MCR1114A01). 「판타지 지도」는 「판타지」로 이름을 바꿨고, 새 설치와 지도 값이 없는 옛 설치의 기본은 계절 지도입니다(MDF1114A01).
 - 벡터 지도 오프라인 저장(MAP1108A02 → MAP1108A03, 대표 결정 2026-11-08)은 OpenFreeMap 벡터 타일만 다룹니다. Apple 지도 타일과 MapKit 캐시는 건드리지 않습니다. 메뉴·영역 내려받기는 없앴고, 사용자가 지도를 보며 MapLibre가 실제로 요청한 타일만 저장하는 보통의 클라이언트 캐시입니다(미리 받기 없음). `OfflineVectorMap.install()`이 앱 시작 때 MapLibre 세션에 `OfflineVectorTileURLProtocol`을 끼우고, 이 프로토콜이 OpenFreeMap GET 요청을 모두 `OfflineVectorTileCache`로 넘깁니다. 타일(`/planet/<판>/z/x/y.pbf`, 판과 무관하게 z/x/y로 저장)은 저장본을 먼저 쓰고, TileJSON·글꼴·아이콘은 연결이 끊겼거나 받기에 실패했을 때만 저장본을 씁니다. 없으면 프로토콜을 끼우지 않은 별도 ephemeral 세션(요청에 처리 표시를 붙여 재귀 방지, User-Agent `BOKKIPlan/<버전> (iOS)`, 개인 정보 없음)으로 받아 그대로 돌려줍니다. 저장은 `NWPathMonitor`가 비싸지 않고(`isExpensive` 아님: 셀룰러·핫스폿 제외) 제한되지 않은(`isConstrained` 아님: 저데이터 모드 제외) 연결이라고 알린 때, 200 응답이고 확대 14 이하일 때만 합니다(이때는 저장할 본문을 받도록 MapLibre의 조건부 요청 머리를 뺍니다). 첫 경로 갱신 전은 저장하지 않습니다. 셀룰러에서도 지도는 평소대로 받고 저장본은 먼저 씁니다. 저장소는 SQLite가 아닌 파일(`Application Support/OfflineVectorMap`, iCloud 백업 제외)이고, 마지막 사용(파일 수정 날짜, 1시간 단위로 갱신)이 90일 지난 파일과 전체 300MB·1만 파일을 넘는 파일을 오래 안 쓴 것부터 지웁니다. 정리는 전역 utility 큐에서 앱 시작 10초 뒤·백그라운드 진입 때·저장 200건 또는 10분마다 돌고, 메모리 경고 때는 색인을 버리고 10분 동안 저장 뒤 정리를 미룹니다. Caches는 iOS가 말없이 비워 본 지역이 사라지므로 쓰지 않습니다. 한글·한자·가나는 기기 글꼴로 그려 글리프를 받지 않습니다.
 - 표시 > 사이드바에는 날씨·사진·메모 표시와 시간 표시·시간 간격을 한 묶음으로 둡니다. 시간 표시(`MapHomeSidebarTimeFormat`, `mapHomeSidebarTimeFormat`)는 24시간이 기본이고, 12시간이면 정시 눈금에만 오전·오후를 붙이며 손잡이 시각은 위에 작게 적습니다. 시간 간격(`MapHomeSidebarRulerInterval`, `mapHomeSidebarRulerInterval`)은 눈금 글자의 최소 간격이며, `minuteRulerStep(minimumStep:)`이 화면 높이로 정한 간격과 고른 값 중 넓은 쪽을 씁니다.
 - 앱 색 테마는 지도 스타일이 정합니다(`TaptionUITheme.forMap`). 따로 고르는 메뉴는 없고, 판타지·애플맵·위성은 기본 양피지, 야간은 남색, 산책은 벚꽃, 실외(고대비)는 갈색, 수묵은 한지(먹 글자·인주 강조 #B8322A, 기기 다크 모드에서도 밝은 한지 유지)입니다.
@@ -297,12 +310,14 @@ swift test --package-path Packages/TaptionPlanCore
 
 실기기 Debug 빌드 한 번에 DerivedData가 2~3GB 쌓입니다. 저장소 안의 `build/validation/<ID>/dd`에 두면 맥 디스크가 금방 차서 `database or disk is full`로 빌드가 실패합니다(2026-11-01 실제 발생). 빌드 전에 `df -h /System/Volumes/Data`로 남은 공간을 보고, 설치가 끝난 뒤 중간 산출물을 지웁니다. 설치 파일(`.app`)은 설치 전까지 남깁니다. 실기기 콘솔은 `xcrun devicectl device process launch --console --terminate-existing com.taption.plan`으로 받습니다. 앱 컨테이너의 진단 묶음(`Library/Application Support/TaptionPlan/Diagnostics`)은 `devicectl device copy from --domain-type appDataContainer`로 복사할 수 있지만, 앱 그룹 영역의 로그는 읽히지 않습니다. 묶음의 날짜가 오래됐으면 최근 동작은 콘솔 로그로만 남습니다.
 
+derived data는 외장 이미지 `/Volumes/TaptionPlanBuild/dd/<요청 ID>`, SPM 캐시는 `/Volumes/TaptionPlanBuild/spm`에 둡니다(재부팅 뒤 `hdiutil attach`). 빌드·시험은 빌드 잠금 안에서 합니다(`AGENTS.md` 5절).
+
 앱 Debug 빌드는 generic iOS destination으로 실행합니다. 아래 플래그는 현재 검증 기록에 사용한 Swift macro sandbox 우회입니다. 프로젝트의 기존 DerivedData를 재사용하고 실패하면 첫 관련 오류만 확인합니다.
 
 ```sh
 xcodebuild build -project TaptionPlan.xcodeproj -scheme TaptionPlan \
   -configuration Debug -destination 'generic/platform=iOS' \
-  -derivedDataPath build/ArchiveDD -skipPackagePluginValidation \
+  -derivedDataPath "/Volumes/TaptionPlanBuild/dd/$TASK_ID" -skipPackagePluginValidation \
   COMPILER_INDEX_STORE_ENABLE=NO \
   OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox'
 ```
@@ -312,7 +327,7 @@ Watch 코드를 바꾼 경우 Watch scheme도 별도로 빌드합니다.
 ```sh
 xcodebuild build -project TaptionPlan.xcodeproj -scheme TaptionPlanWatch \
   -configuration Debug -destination 'generic/platform=watchOS' \
-  -derivedDataPath build/ArchiveDD -skipPackagePluginValidation \
+  -derivedDataPath "/Volumes/TaptionPlanBuild/dd/$TASK_ID" -skipPackagePluginValidation \
   COMPILER_INDEX_STORE_ENABLE=NO \
   OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox'
 ```
@@ -321,19 +336,20 @@ xcodebuild build -project TaptionPlan.xcodeproj -scheme TaptionPlanWatch \
 
 실기기 설치본 버전은 `xcrun devicectl device info apps --device "$DEVICE_ID" --bundle-id com.taption.plan`으로 읽습니다. 설치 및 앱 실행만으로 권한, 저장, 센서, 계정 기능을 통과 처리하지 않습니다.
 
-앱 테스트는 현재 사용 가능한 Simulator UDID를 먼저 조회하고 관련 테스트만 선택합니다. 매 실행마다 요청 ID 아래 새 result bundle 경로를 사용합니다.
+앱 테스트는 지정 시뮬레이터 `99AC6F35-6B50-4741-A11D-1A46E1F7F4BD`(iPhone 17)에서 `-parallel-testing-enabled NO`로 돌립니다. 없으면 사용 가능한 Simulator UDID를 조회합니다. 관련 테스트만 선택합니다. 매 실행마다 요청 ID 아래 새 result bundle 경로를 사용합니다.
 
 ```sh
 xcrun simctl list devices available
 mkdir -p "build/validation/$TASK_ID"
 xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
   -configuration Debug -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
-  -derivedDataPath build/ArchiveDD \
+  -derivedDataPath "/Volumes/TaptionPlanBuild/dd/$TASK_ID" \
+  -parallel-testing-enabled NO \
   -resultBundlePath "build/validation/$TASK_ID/app-tests.xcresult" \
   -only-testing:TaptionPlanTests/$TEST_CLASS
 ```
 
-`TASK_ID`는 요청의 10자리 ID, `SIMULATOR_UDID`는 위 목록의 값, `TEST_CLASS`는 변경에 맞는 테스트 클래스로 설정합니다. 전체 앱 테스트를 실행했다면 xcresult의 실제 테스트 수·실패·건너뜀을 확인합니다. 시뮬레이터 결과는 설치·실기기 기능 검증이나 TestFlight 결과를 뜻하지 않습니다.
+`TASK_ID`는 요청의 10자리 ID, `SIMULATOR_UDID`는 위 목록의 값, `TEST_CLASS`는 변경에 맞는 테스트 클래스로 설정합니다. 전체 앱 테스트를 실행했다면 xcresult의 실제 테스트 수·실패·건너뜀을 확인합니다. 시뮬레이터 결과는 설치·실기기 기능 검증이나 TestFlight 결과를 뜻하지 않습니다. 「test runner hung before establishing connection」으로 0건이면 시뮬레이터를 끄고 켜 다시 돌리고 멈춘 로그는 `hung-…`으로 남깁니다. 결과 경로가 이미 있으면 번호를 붙입니다(`…-1`).
 
 `-only-testing`에 적은 클래스 이름이 틀리면 **0건 실행으로 초록**이 됩니다(`** TEST SUCCEEDED **`). 한 파일에 클래스가 둘 이상 있으므로 파일 이름으로 추측하지 말고 클래스 선언을 확인합니다 — `TaptionPlanSmokeUITests.swift`에는 `TaptionPlanSmokeUITests`·`TaptionPlanClipRollUITests`·`TaptionPlanOverwriteUITests`가, `RouteTimelineDataTests.swift`에는 `RouteTimelineDataTests`·`MapHomePawprintInteractionTests`가 함께 있습니다. 실제로 몇 건이 돌았는지는 `xcrun xcresulttool get test-results tests --path <xcresult>`로 확인합니다(2026-10-28에 이 함정으로 두 번 헛돌았다).
 
@@ -362,7 +378,7 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 
 ## 문서
 
-- `AGENTS.md`: 작업 규칙. `docs/HANDOFF_PROTOCOL.md`: 세션 인수인계 절차. `README.md`: 개요. `temp.md`: 남은 요청과 액션아이템. `test.md`: 2026-11-01 이후와 남은 요청의 검증 근거, 이전 기록은 `test_ARCHIVE.md`.
+- `AGENTS.md`: 작업 규칙. `docs/HANDOFF_PROTOCOL.md`: 세션 인수인계 절차. `README.md`: 개요. `test.md`: 남은 작업(영역별 색인·요청 상세)·실기기 확인 목록·검증 기록, 2026-11-14 이전에 닫힌 요청의 기록은 `test_ARCHIVE.md`(`temp.md`는 2026-11-18에 test.md로 옮김). `docs/NEXT_PLAN.md`: 지금 상태와 다음 순서.
 - `docs/TESTFLIGHT.md`(배포), `docs/TRAVEL_MODE_PLAN.md`·`docs/COURSE_FIRST_PLAN.md`(여행 모드·코스 먼저), `docs/IPAD_UI.md`(넓은 화면), `docs/STRUCTURE_PERFORMANCE.md`(구조 성능), `docs/DATA_PIPELINE.md`(저장소 파이프라인), `docs/ARCHITECTURE_ROADMAP.md`(구조 로드맵·ADR), `docs/HOME_EVOLUTION_LIST.md`(집 성장 366일 목록, 생성물).
 - 2026-10-24 진단·설계 자료: `docs/CLIENT_REPORT.md`(요약), `docs/UX_ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`(중국어 원문). 당시 기준입니다. 위젯 딥링크(0a)는 DLK1024B12에서 코드로 고쳤고 실기기 확인이 남았습니다.
 - `scripts/l10n/README.md`: 12개 언어 팩 절차.

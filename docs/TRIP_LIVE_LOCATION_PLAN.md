@@ -14,7 +14,7 @@
 | 서버 | Durable Object `ShareRoom`. 항목(kind: plan·expense-shared·expense-own·notice·member·meta)·잠금·공지 확인·참여자·키 교체·만료 알람. 소켓은 hibernation(`acceptWebSocket`)이고 방송은 `broadcast()` | `server/trip-relay/src/share.js` |
 | 패키지 | 키·암호문·전송·세션(소켓+따라잡기)·내용 모양(`ShareContent`)·정산 | `Packages/TaptionTripShare` |
 | 앱 | 창구 `TripShareStore`, 키체인 `TripShareKeychain`, 곁 파일, 화면(만들기·입장·참여자·공지·정산·상태 띠) | `TaptionPlan/Core/TripShare*.swift`, `TaptionPlan/UI/TripShare*.swift` |
-| 배포 | 서버 배포·빌드 344 업로드까지 끝남(`temp.md` TSH1114A26 진행). 두 기기 실기기 확인은 남음 | |
+| 배포 | 서버 배포·빌드 344 업로드까지 끝남(TSH1114A26). 두 기기 실기기 확인은 남음(`test.md` `## 실기기 확인 목록`). 외부 시험·출시 전에는 `TripLiveLocationService.isAvailable`을 끔(대표 결정 2026-11-17) | |
 
 - **위치는 없음**: 규약 18절 「하지 않은 것」에 친구 위치 공유가 있고, 서버는 모르는 kind를 거절한다. 장소는 이름만 올리고 좌표는 올리지 않는다(대표 결정 2026-11-15).
 - **앱이 백그라운드일 때**: 소켓은 화면이 열려 있는 동안만 유지(규약 9절)하고, 화면을 닫으면 끊긴다. 푸시가 꺼져 있어 닫힌 동안의 알림은 다음에 앱을 열 때까지 늦다(규약 11절). 서버 쪽 APNs 코드(`src/apns.js`)는 있으나 **비밀값 `APNS_KEY_P8`·`APNS_KEY_ID`·`APNS_TEAM_ID`가 아직 설정되지 않았다**(`temp.md` PSH1114A06: P6 전에 APNs 키). 설정 전에는 `sendPush`가 아무것도 보내지 않는다. 방의 참여 기기 토큰 저장(규약 11절 설계안 `PUT <방>/push`)은 구현되지 않았다.

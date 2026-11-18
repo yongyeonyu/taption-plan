@@ -175,7 +175,7 @@
 
 - 서버는 P13 전까지 덧붙이기만 한다. 현장의 334~338이 쓰는 `/tasks`·`/command*`·`/app`·`/answers`·`/polish`·`/activity` 모양은 바꾸지 않는다.
 - P1~P3은 P4보다 먼저(규칙은 새 패키지의 새 코드라 이동에 기대지 않음).
-- 단계마다 AGENTS.md 절차: 요청 ID를 `temp.md`에 먼저 기록, 결과는 `test.md`, 로그는 `build/validation/<ID>/`, 서버 배포·TestFlight는 대표 지시 뒤.
+- 단계마다 AGENTS.md 절차: 요청 ID를 `test.md` `## 남은 작업`에 먼저 기록, 결과는 `## 검증 기록`, 로그는 `build/validation/<ID>/`, 서버 배포·TestFlight는 대표 지시 뒤.
 
 ## 고칠 주요 파일
 
