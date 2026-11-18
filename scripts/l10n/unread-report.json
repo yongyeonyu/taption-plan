@@ -1,5 +1,5 @@
 {
- "ui": 5314,
+ "ui": 5316,
  "catalog": 504,
  "unread": [
   {
@@ -706,7 +706,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeStickerEditor.swift",
-   "line": 345,
+   "line": 351,
    "ko": "aiMark",
    "en": "language"
   },

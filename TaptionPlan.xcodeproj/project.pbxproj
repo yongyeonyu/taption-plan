@@ -172,6 +172,7 @@
 		C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */; };
 		5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F1 /* PlanTextSuggestion.swift */; };
 		A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F1 /* MemoTextPolish.swift */; };
+		A1C11181A0100000000000A1 /* AppleModelEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C11181A0100000000000F1 /* AppleModelEnvironment.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
 		A1000000000000000B1102FC /* SUIT-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FC /* SUIT-Regular.otf */; };
 		A1000000000000000B1102FD /* SUIT-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FD /* SUIT-Bold.otf */; };
@@ -1097,6 +1098,7 @@
 		3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalRepeatRulesEditor.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F1 /* PlanTextSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTextSuggestion.swift; sourceTree = "<group>"; };
 		F1A11102A0100000000000F1 /* MemoTextPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolish.swift; sourceTree = "<group>"; };
+		F1C11181A0100000000000F1 /* AppleModelEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleModelEnvironment.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F1000000000000000000000C /* TimeScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeScaleTests.swift; sourceTree = "<group>"; };
 		B10809000000000000000F11 /* InkWashThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkWashThemeTests.swift; sourceTree = "<group>"; };
@@ -2352,6 +2354,7 @@
 				3A89DB0D863BFCD31B0B6D0C /* GoalRepeatRulesEditor.swift */,
 				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
 				F1A11102A0100000000000F1 /* MemoTextPolish.swift */,
+				F1C11181A0100000000000F1 /* AppleModelEnvironment.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
 				F1000000000000000000000E /* DetailViews.swift */,
 				B10808020000000000000A01 /* QuickActionSheet.swift */,
@@ -3448,6 +3451,7 @@
 				C341F6F63DFC8AEAE27CCE89 /* GoalRepeatRulesEditor.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
 				A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */,
+				A1C11181A0100000000000A1 /* AppleModelEnvironment.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
 				B10808020000000000000B01 /* QuickActionSheet.swift in Sources */,

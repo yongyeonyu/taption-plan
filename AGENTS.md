@@ -52,6 +52,7 @@
 - `docs/COURSE_FIRST_PLAN.md`: 여행 「코스 먼저」 실행 계획 C1~C8과 사진 출처 판단(TVV1113A01).
 - `docs/TRIP_PORT_ANALYSIS.md`: Taption Trip 여행·정산 기능 이식 분석과 단위 U1~U13(TRP1111A01).
 - `docs/AI_RELAY_PLAN.md`: 외부 AI ⇄ 중계 서버 ⇄ 앱 강화 계획 — 패키지 구조, 규칙 저장소, 요청·회신 파이프라인, 동작 확장, 단계 P0~P13과 진행 상태, 패키지 이동의 남은 순서, 여행 공유 설계안(AIX1114A01).
+- `docs/APPLE_FOUNDATION_MODELS.md`: Apple 모델 3단계 길(PCC → 기기 모델 → 중계 큐)의 판단 표·연결한 곳·PCC entitlement 승인 뒤 할 일(PCC1118A01).
 - `docs/TRIP_SHARE_PROTOCOL.md`: 여행 공유 통신 규약 v1 — 키 유도·시험 벡터, 암호문 형식, HTTP 경로·WebSocket 메시지, 잠금, 권한 표, 한도, 키 교체, 앱 구현 체크리스트(TSH1114A26).
 - `Packages/TaptionTripShare`·`TaptionPlan/Core/TripShare*.swift`: 여행 공유의 기기 쪽 핵심과 앱 토대(창구·곁 파일·변환·가드). 위치는 `DEVELOPMENT.md`의 소스 표 「여행 공유」 줄.
 - `docs/SHARED_RULES_PLAN.md`: 공통 규칙(서명한 묶음 받기·후보 모으기·대표 검토·약관 초안) 설계와 배포 순서(SRL1116A01). 약관 초안은 `TERMS.md`, 방침은 `PRIVACY.md`.

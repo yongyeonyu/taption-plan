@@ -2,6 +2,15 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## PCC1118A01 · Apple Foundation Models 3단계 길 (2026-11-18, 시뮬레이터·맥, 실기기 없음)
+
+- 범위: 판단 `AppleModelRouter`(패키지 `TaptionAssistantKit`), 조건 읽기·PCC 호출 `AppleModelEnvironment.swift`(앱), 연결은 메모 다듬기 하나(3순위면 「연결된 AI에게 맡기기」를 켬). 지출·일정 초안·하루 요약은 작업 종류만 있고 연결 안 함. 설계 `docs/APPLE_FOUNDATION_MODELS.md`.
+- 패키지 `swift test`(TaptionAssistant): 40개 실패 0(Rules 6·Protocol 11·Kit 23, 새 `AppleModelRouterTests` 13: PCC 가용→PCC, 한도 임박→PCC+안내, 한도 도달→기기+안내, 한도 도달+길이 초과→큐, 오프라인→기기, 기기 한도 경계→기기/큐, 하루 요약은 기기 안 씀, 미지원·iOS 26 미만→큐, entitlement 없음→기기, PCC 실패 뒤 다시 고름, 공유 끔→기기, 빈 입력, 좌표 알아보기). 로그 `build/validation/PCC1118A01/package-swift-test.log`.
+- 앱 Debug 빌드(시뮬레이터 `99AC6F35…` iOS 27.0, 시험 빌드로) 성공. `MemoTextPolishTests` 29개 실패 0, 1개는 요청할 때만(`unit-memo-3`, 탐침 포함 `unit-memo-probe`). 첫 회차는 맥 부하(74~260)로 시험 실행기가 연결 전에 멈춤·앱 실행 실패(`unit-memo`, `unit-memo-2`) — 시뮬레이터를 다시 켠 뒤 통과.
+- 시뮬레이터 실제 값(entitlement 없음): `PrivateCloudComputeLanguageModel().availability`는 `.available`, `quotaUsage`는 한도 아래로 읽힘(멈추지 않음). 실제 호출(`TAPTION_PCC_PROBE=1`, 고정 시험 글 하나)은 거절되어 `Failure(.service)`로 분류 → 기기 모델로 넘어감. 시뮬레이터에는 기기 모델 자산이 없어 그것도 실패(`.failed`). 즉 「entitlement 없음 → unavailable」이 아니라 「available인데 호출 거절 → 다음 길」로 동작함을 확인. 실기기 값은 모름.
+- 구조 지표 `--check` 통과, import 경계 통과, 번역 `extract.py` → 12개 언어 2문구 → `check.py` 실패 0(`l10n-check.log`). `generate.py`는 돌리지 않음(메인 몫).
+- 못 한 것: `-only-testing:TaptionPlanTests` 전체(맥 부하 260), 실기기, iOS 18 기기 실행(약한 연결은 기존 AIM 기록대로), PCC 실제 성공 응답(entitlement 승인 전).
+
 ## TFB1117A349 · TestFlight 349 (2026-11-17 새벽)
 
 - 판: main `25176d78`(TBH1116A01·RFT1116A02·RFT1116A03·PRF1116A02·DCB1116A01·MRG1117A01을 합침). 올리기 전 전체 시험 실패 0(`MRG1117A01` 절), 서버 206·패키지 시험 통과.
