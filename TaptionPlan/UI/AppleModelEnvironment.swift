@@ -30,7 +30,7 @@ enum AppleModelEnvironment {
     static func cloudState(enabled: Bool = isPrivateCloudComputeEnabled) -> AppleCloudModelState {
         guard enabled else { return .unavailable }
         #if canImport(FoundationModels) && compiler(>=6.4)
-        if #available(iOS 27.0, *) { return AppleCloudModel.state(PrivateCloudComputeLanguageModel()) }
+        if #available(iOS 27.0, *) { return AppleCloudModel.state(AppleCloudModel.Shared.model) }
         #endif
         return .unsupported
     }
@@ -63,7 +63,7 @@ enum AppleCloudModel {
     static func polishMemo(_ text: String) async throws -> String {
         #if canImport(FoundationModels) && compiler(>=6.4)
         if #available(iOS 27.0, *) {
-            let session = LanguageModelSession(model: PrivateCloudComputeLanguageModel(), instructions: MemoPolishFormat.instructions(for: text))
+            let session = LanguageModelSession(model: Shared.model, instructions: MemoPolishFormat.instructions(for: text))
             do {
                 return try await FoundationMemoPolisher.draft(text, in: session)
             } catch {
@@ -78,6 +78,11 @@ enum AppleCloudModel {
 #if canImport(FoundationModels) && compiler(>=6.4)
 @available(iOS 27.0, *)
 extension AppleCloudModel {
+    /// 상태를 읽을 때마다 새로 만들지 않고 하나를 쓴다.
+    enum Shared {
+        static let model = PrivateCloudComputeLanguageModel()
+    }
+
     static func state(_ model: PrivateCloudComputeLanguageModel) -> AppleCloudModelState {
         switch model.availability {
         case .available: .available(quota(model.quotaUsage))
@@ -93,7 +98,7 @@ extension AppleCloudModel {
         }
     }
 
-    /// 글 내용 때문의 거절(가드레일·언어·길이)은 안내로 그대로 두고, 그 밖(entitlement 없음 포함)은 다음 길로 넘긴다.
+    /// 글 내용 때문의 거절(가드레일)만 안내로 두고, 그 밖(길이·언어·entitlement 없음 등)은 다음 길(기기 모델·중계)로 넘긴다.
     static func classified(_ error: Error) -> Error {
         if error is CancellationError { return error }
         if let error = error as? PrivateCloudComputeLanguageModel.Error {
@@ -104,9 +109,8 @@ extension AppleCloudModel {
             @unknown default: return Failure(reason: .service)
             }
         }
-        let notice = FoundationMemoPolisher.notice(for: error)
-        if let notice = notice as? MemoPolishNotice, notice == .failed { return Failure(reason: .service) }
-        return notice
+        if let notice = FoundationMemoPolisher.notice(for: error) as? MemoPolishNotice, notice == .blockedContent { return notice }
+        return Failure(reason: .service)
     }
 }
 #endif

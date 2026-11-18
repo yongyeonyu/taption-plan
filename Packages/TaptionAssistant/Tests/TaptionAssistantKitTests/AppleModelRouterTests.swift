@@ -86,5 +86,28 @@ final class AppleModelRouterTests: XCTestCase {
         XCTAssertTrue(AppleModelRouter.containsCoordinates("-12.34560/123.45670"))
         XCTAssertFalse(AppleModelRouter.containsCoordinates("점심 12,000원, 3.5km 걸음"))
         XCTAssertFalse(AppleModelRouter.containsCoordinates("1.5배 2.25"))
+        // 리뷰(CRV1118A01): 소수 3자리·도분·지도 링크도 좌표로 본다.
+        XCTAssertTrue(AppleModelRouter.containsCoordinates("12.345,123.456"))
+        XCTAssertTrue(AppleModelRouter.containsCoordinates("12°34′56″N 123°45′"))
+        XCTAssertTrue(AppleModelRouter.containsCoordinates("https://maps.example/?q=12.3,123.4"))
+        XCTAssertTrue(AppleModelRouter.containsCoordinates("https://maps.example/@12.34,123.45,15z"))
+        XCTAssertTrue(AppleModelRouter.containsCoordinates("map?ll=12.3%2C123.4"))
+        XCTAssertFalse(AppleModelRouter.containsCoordinates("기온 12°, 1.25배"))
+    }
+
+    /// 좌표가 든 글은 기기 모델이 못 하면 중계 큐(기기 밖)로도 보내지 않는다.
+    func testCoordinatesNeverGoToQueue() {
+        XCTAssertEqual(AppleModelRouter.decide(conditions(device: .unavailable, allowsCloud: false)),
+                       AppleModelDecision(.notAvailable, notice: .keepsCoordinates))
+        XCTAssertEqual(AppleModelRouter.decide(conditions(length: 3_000, allowsCloud: false)),
+                       AppleModelDecision(.notAvailable, notice: .keepsCoordinates))
+        XCTAssertEqual(AppleModelRouter.decide(conditions(cloud: .unavailable, device: .unavailable, allowsCloud: true)).route, .relayQueue)
+    }
+
+    func testConditionsAfterFailureMatchesDecideAfter() {
+        let base = conditions()
+        XCTAssertEqual(AppleModelRouter.decide(AppleModelRouter.conditions(after: .network, base)),
+                       AppleModelRouter.decide(after: .network, base))
+        XCTAssertFalse(AppleModelRouter.conditions(after: .network, base).isOnline)
     }
 }

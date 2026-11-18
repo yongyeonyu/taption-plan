@@ -244,13 +244,7 @@ struct MapHomeStickerEditorSheet: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { polish.refreshAvailability() }
             }
-            .onChange(of: memoText) { polish.clearNotice() }
-            // Apple 모델로 못 하면(PCC1118A01 3순위) 연결된 AI에게 맡기는 상태로 둔다. 저장할 때 맡긴다.
-            .onChange(of: polish.handOffCount) {
-                guard canAskConnectedAI else { return }
-                wantsAIPolish = true
-                if polish.notice?.isFailure == true { polish.clearNotice() }
-            }
+            .onChange(of: memoText) { polish.textDidChange(memoText) }
             .onDisappear {
                 polish.cancel()
                 if isNewMemo, !didSave, !keepsDraft {
@@ -380,6 +374,11 @@ struct MapHomeStickerEditorSheet: View {
         polish.polish(currentText: { memoText }, apply: {
             memoText = $0
             applePolished = $0
+        }, handOff: {
+            // Apple 모델로 못 하면(PCC1118A01 3순위) 연결된 AI에게 맡기는 상태로 둔다. 저장할 때 맡긴다.
+            guard canAskConnectedAI else { return false }
+            wantsAIPolish = true
+            return true
         })
     }
 
@@ -467,6 +466,8 @@ struct MapHomeStickerEditorSheet: View {
         case .failed: language.text("다듬지 못했어요. 잠시 뒤 다시 해 주세요.", "Couldn't polish this. Try again later.")
         case .cloudQuotaApproaching: language.text("Apple 클라우드 사용 한도에 가까워요.", "You're close to the Apple cloud usage limit.")
         case .cloudQuotaReached: language.text("Apple 클라우드 사용 한도에 닿았어요. 잠시 뒤 다시 쓸 수 있어요.", "You've reached the Apple cloud usage limit. Try again later.")
+        case .keepsCoordinates: language.text("위치 좌표가 든 글은 기기 밖으로 보내지 않아요.", "Text with location coordinates stays on this device.")
+        case .unavailableNow: language.text("지금은 이 기기에서 다듬을 수 없어요.", "Polishing isn't available on this device right now.")
         }
         return (text, notice.isFailure)
     }

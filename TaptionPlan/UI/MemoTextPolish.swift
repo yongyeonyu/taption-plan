@@ -27,6 +27,10 @@ enum MemoPolishNotice: Error, Equatable, Sendable {
     /// Apple 클라우드(PCC) 한도(PCC1118A01). 실패가 아니라 안내다.
     case cloudQuotaApproaching
     case cloudQuotaReached
+    /// 좌표가 든 글이라 기기 밖(Apple 서버·연결된 AI)으로 보내지 않았다(CRV1118A01).
+    case keepsCoordinates
+    /// 이 기기에서 쓸 수 있는 길이 지금 없다. 다시 해도 같다.
+    case unavailableNow
 
     var isFailure: Bool { ![.unchanged, .cloudQuotaApproaching, .cloudQuotaReached].contains(self) }
 
@@ -35,15 +39,17 @@ enum MemoPolishNotice: Error, Equatable, Sendable {
         case .cloudQuotaApproaching: self = .cloudQuotaApproaching
         case .cloudQuotaReached: self = .cloudQuotaReached
         case .inputTooLongForDevice: self = .tooLong
+        case .keepsCoordinates: self = .keepsCoordinates
         case nil: return nil
         }
     }
 }
 
-/// 고른 길의 결과. `text`가 nil이면 Apple 모델로 하지 못해 연결된 AI 중계로 넘길 차례다.
+/// 고른 길의 결과. `text`가 nil이면 Apple 모델로 하지 못했다. `canHandOff`면 연결된 AI 중계로 넘겨도 된다.
 struct MemoPolishReply: Equatable, Sendable {
     var text: String?
     var notice: AppleModelNotice?
+    var canHandOff = true
 }
 
 enum MemoPolishResult: Equatable, Sendable {
@@ -129,18 +135,22 @@ final class MemoPolishController {
     private(set) var isPolishing = false
     private(set) var notice: MemoPolishNotice?
     private(set) var history = MemoPolishHistory()
-    /// Apple 모델로 못 해 중계로 넘길 때마다 하나 는다. 화면이 이 값의 변화를 보고 「연결된 AI에게 맡기기」를 켠다.
-    private(set) var handOffCount = 0
 
     @ObservationIgnored private let readAvailability: @MainActor () -> MemoPolishAvailability
     @ObservationIgnored private let polisher: @Sendable (String) async throws -> MemoPolishReply
     @ObservationIgnored private var task: Task<Void, Never>?
+    /// 길이 상한. 어느 길로 갈지는 라우터가 정하므로 가장 긴 길(PCC)의 한도를 쓴다.
+    @ObservationIgnored private let maxInputLength: Int
+    /// 다듬어 넣은 글. 그 글로 바뀐 것은 사용자 편집이 아니라 안내를 지우지 않는다.
+    @ObservationIgnored private var appliedText: String?
 
     init(
         readAvailability: @escaping @MainActor () -> MemoPolishAvailability = { MemoTextPolisher.availability },
+        maxInputLength: Int = AppleModelTask.memoPolish.cloudInputLimit,
         reply: @escaping @Sendable (String) async throws -> MemoPolishReply = { try await MemoTextPolisher.polish($0) }
     ) {
         self.readAvailability = readAvailability
+        self.maxInputLength = maxInputLength
         self.polisher = reply
     }
 
@@ -149,7 +159,8 @@ final class MemoPolishController {
         readAvailability: @escaping @MainActor () -> MemoPolishAvailability,
         polisher: @escaping @Sendable (String) async throws -> String
     ) {
-        self.init(readAvailability: readAvailability, reply: { MemoPolishReply(text: try await polisher($0)) })
+        self.init(readAvailability: readAvailability, maxInputLength: MemoPolishFormat.maxInputLength,
+                  reply: { MemoPolishReply(text: try await polisher($0)) })
     }
 
     func refreshAvailability() {
@@ -163,16 +174,18 @@ final class MemoPolishController {
     }
 
     /// 모델이 도는 사이 글이 바뀌면 결과를 버려 사용자가 쓴 글을 덮지 않는다.
+    /// Apple 모델로 못 하면 `handOff`를 부른다. 연결된 AI에게 맡겼으면 true를 돌려준다.
     @discardableResult
     func polish(
         currentText: @escaping @MainActor () -> String,
-        apply: @escaping @MainActor (String) -> Void
+        apply: @escaping @MainActor (String) -> Void,
+        handOff: @escaping @MainActor () -> Bool = { false }
     ) -> Task<Void, Never>? {
         refreshAvailability()
         let source = currentText()
         guard canPolish(source) else { return nil }
         notice = nil
-        guard source.count <= MemoPolishFormat.maxInputLength else {
+        guard source.count <= maxInputLength else {
             notice = .tooLong
             return nil
         }
@@ -187,7 +200,7 @@ final class MemoPolishController {
             }
             guard let self, !Task.isCancelled else { return }
             self.isPolishing = false
-            self.finish(outcome, source: source, currentText: currentText(), apply: apply)
+            self.finish(outcome, source: source, currentText: currentText(), apply: apply, handOff: handOff)
         }
         task = running
         return running
@@ -202,6 +215,13 @@ final class MemoPolishController {
         if notice != nil { notice = nil }
     }
 
+    /// 글이 바뀌면 안내를 지운다. 방금 다듬어 넣은 글이면 그 안내(한도 등)는 남긴다.
+    func textDidChange(_ text: String) {
+        guard text != appliedText else { return }
+        appliedText = nil
+        clearNotice()
+    }
+
     func cancel() {
         task?.cancel()
         task = nil
@@ -212,7 +232,8 @@ final class MemoPolishController {
         _ outcome: Result<MemoPolishReply, Error>,
         source: String,
         currentText: String,
-        apply: (String) -> Void
+        apply: (String) -> Void,
+        handOff: () -> Bool
     ) {
         guard currentText == source else {
             notice = .textChanged
@@ -221,13 +242,19 @@ final class MemoPolishController {
         do {
             let reply = try outcome.get()
             guard let output = reply.text else {
-                handOffCount += 1
-                notice = MemoPolishNotice(reply.notice) ?? .failed
+                let routeNotice = MemoPolishNotice(reply.notice)
+                if reply.canHandOff, handOff() {
+                    // 맡겼으니 실패 안내는 띄우지 않고 한도 안내만 남긴다.
+                    notice = routeNotice?.isFailure == false ? routeNotice : nil
+                } else {
+                    notice = routeNotice ?? .unavailableNow
+                }
                 return
             }
             switch try MemoPolishFormat.validated(output: output, original: source) {
             case .polished(let polished):
                 history.recordPolish(from: source, to: polished)
+                appliedText = polished
                 apply(polished)
                 notice = MemoPolishNotice(reply.notice)
             case .unchanged:
@@ -260,22 +287,33 @@ enum MemoTextPolisher {
     }
 
     static func polish(_ text: String) async throws -> MemoPolishReply {
-        let conditions = await AppleModelEnvironment.conditions(.memoPolish, text: text)
+        var conditions = await AppleModelEnvironment.conditions(.memoPolish, text: text)
         var decision = AppleModelRouter.decide(conditions)
         if decision.route == .privateCloud {
             do {
                 return MemoPolishReply(text: try await AppleCloudModel.polishMemo(text), notice: decision.notice)
             } catch let failure as AppleCloudModel.Failure {
-                decision = AppleModelRouter.decide(after: failure.reason, conditions)
+                conditions = AppleModelRouter.conditions(after: failure.reason, conditions)
+                decision = AppleModelRouter.decide(conditions)
             }
         }
-        guard decision.route == .onDevice else { return MemoPolishReply(text: nil, notice: decision.notice) }
-        #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            return MemoPolishReply(text: try await FoundationMemoPolisher.polish(text), notice: decision.notice)
+        if decision.route == .onDevice {
+            do {
+                return MemoPolishReply(text: try await onDevice(text), notice: decision.notice)
+            } catch MemoPolishNotice.failed {
+                // 기기 모델이 내용 아닌 까닭으로 못 했으면 다음 길(중계)로 다시 고른다.
+                conditions.device = .unavailable
+                decision = AppleModelRouter.decide(conditions)
+            }
         }
+        return MemoPolishReply(text: nil, notice: decision.notice, canHandOff: decision.route == .relayQueue)
+    }
+
+    private static func onDevice(_ text: String) async throws -> String {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) { return try await FoundationMemoPolisher.polish(text) }
         #endif
-        return MemoPolishReply(text: nil, notice: decision.notice)
+        throw MemoPolishNotice.failed
     }
 }
 

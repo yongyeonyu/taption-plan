@@ -69,6 +69,8 @@ public enum AppleModelRoute: String, Sendable {
     case privateCloud
     case onDevice
     case relayQueue
+    /// 어느 길도 쓸 수 없다. 좌표가 든 글은 중계 큐(기기 밖)로도 보내지 않는다.
+    case notAvailable
 }
 
 /// Alert 없이 화면 한 줄로 알릴 것.
@@ -76,6 +78,8 @@ public enum AppleModelNotice: Equatable, Sendable {
     case cloudQuotaApproaching
     case cloudQuotaReached(resetDate: Date?)
     case inputTooLongForDevice
+    /// 좌표가 든 글이라 기기 밖으로 보내지 않았다.
+    case keepsCoordinates
 }
 
 public struct AppleModelDecision: Equatable, Sendable {
@@ -114,11 +118,17 @@ public enum AppleModelRouter {
             if length <= conditions.task.onDeviceInputLimit { return AppleModelDecision(.onDevice, notice: notice) }
             if conditions.task.onDeviceInputLimit > 0, notice == nil { notice = .inputTooLongForDevice }
         }
+        guard conditions.allowsCloud else { return AppleModelDecision(.notAvailable, notice: .keepsCoordinates) }
         return AppleModelDecision(.relayQueue, notice: notice)
     }
 
     /// PCC가 실패하면 그 까닭을 조건에 넣고 다시 고른다. 다시 PCC가 나오지 않는다.
     public static func decide(after failure: AppleCloudFailure, _ conditions: AppleModelConditions) -> AppleModelDecision {
+        decide(self.conditions(after: failure, conditions))
+    }
+
+    /// PCC 실패를 넣은 다음 조건.
+    public static func conditions(after failure: AppleCloudFailure, _ conditions: AppleModelConditions) -> AppleModelConditions {
         var next = conditions
         switch failure {
         case .quotaReached(let resetDate): next.cloud = .available(.limitReached(resetDate: resetDate))
@@ -127,11 +137,18 @@ public enum AppleModelRouter {
             next.isOnline = false
         case .service: next.cloud = .unavailable
         }
-        return decide(next)
+        return next
     }
 
-    /// 글에 위도·경도 쌍처럼 보이는 것이 있는가. 있으면 기기 밖 AI로 보내지 않는다.
+    /// 글에 위도·경도처럼 보이는 것이 있는가. 있으면 기기 밖 AI로 보내지 않는다.
+    /// 소수 3자리 이상 쌍, 도·분(37°33′), 지도 링크의 좌표 값(q=37.5,127.0)을 본다.
     public static func containsCoordinates(_ text: String) -> Bool {
-        text.range(of: #"-?\d{1,3}\.\d{4,}\s*[,/ ]\s*-?\d{1,3}\.\d{4,}"#, options: .regularExpression) != nil
+        coordinatePatterns.contains { text.range(of: $0, options: [.regularExpression, .caseInsensitive]) != nil }
     }
+
+    private static let coordinatePatterns = [
+        #"-?\d{1,3}\.\d{3,}\s*[,/ ]\s*-?\d{1,3}\.\d{3,}"#,
+        #"\d{1,3}\s*°\s*\d{1,2}\s*['′]"#,
+        #"(?:[?&](?:q|ll|sll|center|query|daddr|saddr|destination|origin)=|@)-?\d{1,3}\.\d+\s*(?:,|%2C)\s*-?\d{1,3}\.\d+"#,
+    ]
 }

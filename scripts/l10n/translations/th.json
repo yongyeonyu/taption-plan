@@ -3822,6 +3822,8 @@
 "다듬은 글로|Use polished": "ใช้ข้อความที่ปรับแล้ว",
 "Apple 클라우드 사용 한도에 가까워요.|You're close to the Apple cloud usage limit.": "ใกล้ถึงขีดจำกัดการใช้งานคลาวด์ของ Apple แล้ว",
 "Apple 클라우드 사용 한도에 닿았어요. 잠시 뒤 다시 쓸 수 있어요.|You've reached the Apple cloud usage limit. Try again later.": "ถึงขีดจำกัดการใช้งานคลาวด์ของ Apple แล้ว โปรดลองอีกครั้งภายหลัง",
+"위치 좌표가 든 글은 기기 밖으로 보내지 않아요.|Text with location coordinates stays on this device.": "ข้อความที่มีพิกัดตำแหน่งจะอยู่ในอุปกรณ์นี้เท่านั้น",
+"지금은 이 기기에서 다듬을 수 없어요.|Polishing isn't available on this device right now.": "ตอนนี้ยังขัดเกลาข้อความบนอุปกรณ์นี้ไม่ได้",
 "다듬지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't polish this. Try again later.": "ปรับข้อความนี้ไม่ได้ โปรดลองอีกครั้งในภายหลัง",
 "다른 날|Other days": "วันอื่น",
 "다른 방법으로 추가(공유 › 단축어)|Add another way (Share › Shortcuts)": "เพิ่มด้วยวิธีอื่น (แชร์ › คำสั่งลัด)",

@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## CRV1118A01 · PCC1118A01 코드 리뷰 9건 고침 (2026-11-18, 시뮬레이터·맥, 실기기 없음)
+
+- 고친 것: ① 좌표가 든 글은 기기 모델이 못 하면 「아무 길도 없음」(`.notAvailable`·안내 「위치 좌표가 든 글은 기기 밖으로 보내지 않아요」)으로, 연결된 AI에게 저절로 넘기지 않음 ② 컨트롤러 상한을 PCC 한도(12,000자)로 두고 길은 라우터가 고름 ③ 다듬어 넣은 글로 바뀐 것은 한도 안내를 지우지 않음(`textDidChange`) ④ 기기 모델 `.failed`는 기기 없음으로 다시 골라 중계로 ⑤ 넘길 곳이 없으면 「지금은 이 기기에서 다듬을 수 없어요」 ⑥ PCC 모델 하나를 재사용(`AppleCloudModel.Shared`) ⑦ PCC 오류는 가드레일만 안내, 길이·언어 등은 다음 길로 ⑧ 좌표 감지에 소수 3자리·도분·지도 링크(`?q=`·`@`·`%2C`) ⑨ `handOffCount`+화면 onChange를 `polish(handOff:)` 콜백으로 바꿈.
+- Assistant 패키지 `swift test`: 실패 0(`AppleModelRouterTests` 15건, 새 2건 포함). 로그 `build/validation/CRV1118A01/assistant-swift-test.log`.
+- 앱 `MemoTextPolishTests`(시뮬레이터 99AC6F35, Debug 빌드 포함): 34건 실행, 1건 건너뜀(요청 때만 도는 PCC 탐침), 실패 0. 로그 `build/validation/CRV1118A01/memo-polish.log`.
+- 번역: 새 문구 2개 12개 언어, `extract.py`→`check.py`(실패 0)→`generate.py`. 구조 지표 `--check`·import 경계 통과.
+- 하지 않음: 전체 단위 시험, 실기기 확인(PCC 스위치 꺼짐, entitlement 승인 전).
+
 ## PCC1118A01 · Apple Foundation Models 3단계 길 (2026-11-18, 시뮬레이터·맥, 실기기 없음)
 
 - 범위: 판단 `AppleModelRouter`(패키지 `TaptionAssistantKit`), 조건 읽기·PCC 호출 `AppleModelEnvironment.swift`(앱), 연결은 메모 다듬기 하나(3순위면 「연결된 AI에게 맡기기」를 켬). 지출·일정 초안·하루 요약은 작업 종류만 있고 연결 안 함. 설계 `docs/APPLE_FOUNDATION_MODELS.md`.

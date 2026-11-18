@@ -783,8 +783,8 @@
    "ko": "AI 다듬기",
    "en": "AI polish",
    "files": [
-    "MapHomeStickerEditor.swift:419",
-    "MapHomeStickerEditor.swift:437"
+    "MapHomeStickerEditor.swift:418",
+    "MapHomeStickerEditor.swift:436"
    ],
    "args": [],
    "targets": [
@@ -1265,7 +1265,7 @@
    "ko": "AI로 문장 다듬기",
    "en": "Polish text with AI",
    "files": [
-    "MapHomeStickerEditor.swift:445"
+    "MapHomeStickerEditor.swift:444"
    ],
    "args": [],
    "targets": [
@@ -1506,7 +1506,7 @@
    "ko": "Apple Intelligence 모델을 준비하는 중이에요.",
    "en": "The Apple Intelligence model is getting ready.",
    "files": [
-    "MapHomeStickerEditor.swift:455"
+    "MapHomeStickerEditor.swift:454"
    ],
    "args": [],
    "targets": [
@@ -1518,7 +1518,7 @@
    "ko": "Apple Intelligence로 다듬기",
    "en": "Polish with Apple Intelligence",
    "files": [
-    "MapHomeStickerEditor.swift:392"
+    "MapHomeStickerEditor.swift:391"
    ],
    "args": [],
    "targets": [
@@ -1680,7 +1680,7 @@
    "ko": "Apple 클라우드 사용 한도에 가까워요.",
    "en": "You're close to the Apple cloud usage limit.",
    "files": [
-    "MapHomeStickerEditor.swift:468"
+    "MapHomeStickerEditor.swift:467"
    ],
    "args": [],
    "targets": [
@@ -1692,7 +1692,7 @@
    "ko": "Apple 클라우드 사용 한도에 닿았어요. 잠시 뒤 다시 쓸 수 있어요.",
    "en": "You've reached the Apple cloud usage limit. Try again later.",
    "files": [
-    "MapHomeStickerEditor.swift:469"
+    "MapHomeStickerEditor.swift:468"
    ],
    "args": [],
    "targets": [
@@ -35380,7 +35380,7 @@
    "ko": "결과가 원문과 달라 적용하지 않았어요.",
    "en": "The result differed from your text, so it wasn't applied.",
    "files": [
-    "MapHomeStickerEditor.swift:464"
+    "MapHomeStickerEditor.swift:463"
    ],
    "args": [],
    "targets": [
@@ -36368,7 +36368,7 @@
    "ko": "고칠 곳을 찾지 못했어요.",
    "en": "Nothing to fix.",
    "files": [
-    "MapHomeStickerEditor.swift:461"
+    "MapHomeStickerEditor.swift:460"
    ],
    "args": [],
    "targets": [
@@ -37560,7 +37560,7 @@
    "ko": "글이 길어 다듬지 못했어요. 1,500자 이하로 줄여 주세요.",
    "en": "This is too long to polish. Keep it under 1,500 characters.",
    "files": [
-    "MapHomeStickerEditor.swift:463"
+    "MapHomeStickerEditor.swift:462"
    ],
    "args": [],
    "targets": [
@@ -37572,7 +37572,7 @@
    "ko": "글이 바뀌어 다듬기를 멈췄어요.",
    "en": "The text changed, so polishing stopped.",
    "files": [
-    "MapHomeStickerEditor.swift:462"
+    "MapHomeStickerEditor.swift:461"
    ],
    "args": [],
    "targets": [
@@ -39983,7 +39983,7 @@
    "ko": "녹음 끝내기",
    "en": "Finish recording",
    "files": [
-    "MapHomeStickerEditor.swift:308"
+    "MapHomeStickerEditor.swift:302"
    ],
    "args": [],
    "targets": [
@@ -40218,8 +40218,8 @@
    "ko": "다듬는 중…",
    "en": "Polishing…",
    "files": [
-    "MapHomeStickerEditor.swift:419",
-    "MapHomeStickerEditor.swift:436"
+    "MapHomeStickerEditor.swift:418",
+    "MapHomeStickerEditor.swift:435"
    ],
    "args": [],
    "targets": [
@@ -40231,7 +40231,7 @@
    "ko": "다듬은 글로",
    "en": "Use polished",
    "files": [
-    "MapHomeStickerEditor.swift:337"
+    "MapHomeStickerEditor.swift:331"
    ],
    "args": [],
    "targets": [
@@ -40243,7 +40243,7 @@
    "ko": "다듬지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't polish this. Try again later.",
    "files": [
-    "MapHomeStickerEditor.swift:467"
+    "MapHomeStickerEditor.swift:466"
    ],
    "args": [],
    "targets": [
@@ -41638,7 +41638,7 @@
    "files": [
     "AssistantSafetyViews.swift:379",
     "MapHomeNLEClipEditor.swift:503",
-    "MapHomeStickerEditor.swift:338"
+    "MapHomeStickerEditor.swift:332"
    ],
    "args": [],
    "targets": [
@@ -42409,7 +42409,7 @@
    "ko": "맡기지 않기",
    "en": "Don't ask",
    "files": [
-    "MapHomeStickerEditor.swift:402"
+    "MapHomeStickerEditor.swift:401"
    ],
    "args": [],
    "targets": [
@@ -42853,7 +42853,7 @@
    "ko": "메모 내용",
    "en": "Memo text",
    "files": [
-    "MapHomeStickerEditor.swift:497"
+    "MapHomeStickerEditor.swift:498"
    ],
    "args": [],
    "targets": [
@@ -42925,7 +42925,7 @@
    "ko": "메모 스티커",
    "en": "Memo sticker",
    "files": [
-    "MapHomeStickerEditor.swift:573"
+    "MapHomeStickerEditor.swift:574"
    ],
    "args": [],
    "targets": [
@@ -42975,7 +42975,7 @@
    "en": "Memo",
    "files": [
     "FirstRunGuideStage.swift:650",
-    "MapHomeStickerEditor.swift:573",
+    "MapHomeStickerEditor.swift:574",
     "MapHomeView+Support2.swift:428"
    ],
    "args": [],
@@ -43038,7 +43038,7 @@
    "ko": "메모로 되돌리기",
    "en": "Turn back into a memo",
    "files": [
-    "MapHomeStickerEditor.swift:659"
+    "MapHomeStickerEditor.swift:660"
    ],
    "args": [],
    "targets": [
@@ -46802,7 +46802,7 @@
    "ko": "새 메모",
    "en": "New memo",
    "files": [
-    "MapHomeStickerEditor.swift:577",
+    "MapHomeStickerEditor.swift:578",
     "MapHomeView+Memos.swift:424"
    ],
    "args": [],
@@ -47479,7 +47479,7 @@
    "files": [
     "AppShellView.swift:960",
     "MapHomeScreenRecording.swift:671",
-    "MapHomeStickerEditor.swift:272"
+    "MapHomeStickerEditor.swift:266"
    ],
    "args": [],
    "targets": [
@@ -47555,7 +47555,7 @@
    "ko": "설정에서 Apple Intelligence를 켜면 쓸 수 있어요.",
    "en": "Turn on Apple Intelligence in Settings to use this.",
    "files": [
-    "MapHomeStickerEditor.swift:453"
+    "MapHomeStickerEditor.swift:452"
    ],
    "args": [],
    "targets": [
@@ -48524,7 +48524,7 @@
    "ko": "스티커 고르기",
    "en": "Choose a sticker",
    "files": [
-    "MapHomeStickerEditor.swift:728",
+    "MapHomeStickerEditor.swift:729",
     "MapHomeStickerPicker.swift:122"
    ],
    "args": [],
@@ -48537,7 +48537,7 @@
    "ko": "스티커 내용을 메모로 다시 만들고 스티커는 지워요.",
    "en": "Creates a memo with this text and removes the sticker.",
    "files": [
-    "MapHomeStickerEditor.swift:662"
+    "MapHomeStickerEditor.swift:663"
    ],
    "args": [],
    "targets": [
@@ -48755,7 +48755,7 @@
    "ko": "시간 지정",
    "en": "Set a time",
    "files": [
-    "MapHomeStickerEditor.swift:619"
+    "MapHomeStickerEditor.swift:620"
    ],
    "args": [],
    "targets": [
@@ -48779,9 +48779,9 @@
    "ko": "시간",
    "en": "Time",
    "files": [
-    "MapHomeStickerEditor.swift:600",
-    "MapHomeStickerEditor.swift:603",
-    "MapHomeStickerEditor.swift:611"
+    "MapHomeStickerEditor.swift:601",
+    "MapHomeStickerEditor.swift:604",
+    "MapHomeStickerEditor.swift:612"
    ],
    "args": [],
    "targets": [
@@ -49487,7 +49487,7 @@
    "ko": "아이콘 표시",
    "en": "Show an icon",
    "files": [
-    "MapHomeStickerEditor.swift:588"
+    "MapHomeStickerEditor.swift:589"
    ],
    "args": [],
    "targets": [
@@ -52280,7 +52280,7 @@
    "ko": "연결된 AI에게 맡겼어요. 다듬은 글이 오면 바뀌어요.",
    "en": "Handed to your connected AI. It changes when the polished text arrives.",
    "files": [
-    "MapHomeStickerEditor.swift:360"
+    "MapHomeStickerEditor.swift:354"
    ],
    "args": [],
    "targets": [
@@ -52292,8 +52292,8 @@
    "ko": "연결된 AI에게 맡기기",
    "en": "Ask my connected AI",
    "files": [
-    "MapHomeStickerEditor.swift:393",
-    "MapHomeStickerEditor.swift:402"
+    "MapHomeStickerEditor.swift:392",
+    "MapHomeStickerEditor.swift:401"
    ],
    "args": [],
    "targets": [
@@ -54725,7 +54725,7 @@
    "ko": "위치 다시 고르기",
    "en": "Choose again",
    "files": [
-    "MapHomeStickerEditor.swift:644"
+    "MapHomeStickerEditor.swift:645"
    ],
    "args": [],
    "targets": [
@@ -54895,6 +54895,18 @@
    ]
   },
   {
+   "key": "위치 좌표가 든 글은 기기 밖으로 보내지 않아요.|Text with location coordinates stays on this device.",
+   "ko": "위치 좌표가 든 글은 기기 밖으로 보내지 않아요.",
+   "en": "Text with location coordinates stays on this device.",
+   "files": [
+    "MapHomeStickerEditor.swift:469"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "위치 좌표를 확인해 주세요.|Check the location coordinates.",
    "ko": "위치 좌표를 확인해 주세요.",
    "en": "Check the location coordinates.",
@@ -54911,7 +54923,7 @@
    "ko": "위치 지우기",
    "en": "Remove location",
    "files": [
-    "MapHomeStickerEditor.swift:645"
+    "MapHomeStickerEditor.swift:646"
    ],
    "args": [],
    "targets": [
@@ -54924,7 +54936,7 @@
    "en": "Add location",
    "files": [
     "MapHomeLocationSheets.swift:225",
-    "MapHomeStickerEditor.swift:653"
+    "MapHomeStickerEditor.swift:654"
    ],
    "args": [],
    "targets": [
@@ -54987,7 +54999,7 @@
    "en": "Location",
    "files": [
     "WidgetShared.swift:72",
-    "MapHomeStickerEditor.swift:625",
+    "MapHomeStickerEditor.swift:626",
     "MapHomeView+Menu.swift:929"
    ],
    "args": [],
@@ -55198,7 +55210,7 @@
    "ko": "음성 첨부",
    "en": "Voice attachment",
    "files": [
-    "MapHomeStickerEditor.swift:308"
+    "MapHomeStickerEditor.swift:302"
    ],
    "args": [],
    "targets": [
@@ -55795,7 +55807,7 @@
    "ko": "이 내용은 Apple Intelligence가 다듬지 못해요.",
    "en": "Apple Intelligence can't polish this content.",
    "files": [
-    "MapHomeStickerEditor.swift:465"
+    "MapHomeStickerEditor.swift:464"
    ],
    "args": [],
    "targets": [
@@ -56004,7 +56016,7 @@
    "ko": "이 언어는 다듬지 못해요.",
    "en": "This language isn't supported.",
    "files": [
-    "MapHomeStickerEditor.swift:466"
+    "MapHomeStickerEditor.swift:465"
    ],
    "args": [],
    "targets": [
@@ -57488,7 +57500,7 @@
    "files": [
     "WidgetShared.swift:70",
     "AssistantDigest.swift:79",
-    "MapHomeStickerEditor.swift:677"
+    "MapHomeStickerEditor.swift:678"
    ],
    "args": [],
    "targets": [
@@ -58772,7 +58784,7 @@
    "ko": "저장하면 연결된 AI에게 맡겨요. 다음에 AI와 대화할 때 다듬어 보내 줘요.",
    "en": "Saving hands it to your connected AI. It polishes it the next time you chat.",
    "files": [
-    "MapHomeStickerEditor.swift:359"
+    "MapHomeStickerEditor.swift:353"
    ],
    "args": [],
    "targets": [
@@ -59429,7 +59441,7 @@
    "ko": "제목",
    "en": "Title",
    "files": [
-    "MapHomeStickerEditor.swift:575"
+    "MapHomeStickerEditor.swift:576"
    ],
    "args": [],
    "targets": [
@@ -60255,6 +60267,18 @@
    ]
   },
   {
+   "key": "지금은 이 기기에서 다듬을 수 없어요.|Polishing isn't available on this device right now.",
+   "ko": "지금은 이 기기에서 다듬을 수 없어요.",
+   "en": "Polishing isn't available on this device right now.",
+   "files": [
+    "MapHomeStickerEditor.swift:470"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.|A past date turns that day's records into this trip's actual records.",
    "ko": "지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.",
    "en": "A past date turns that day's records into this trip's actual records.",
@@ -60605,7 +60629,7 @@
    "files": [
     "FirstRunAIConnectPage.swift:140",
     "MapHomeScreenRecording.swift:580",
-    "MapHomeStickerEditor.swift:676"
+    "MapHomeStickerEditor.swift:677"
    ],
    "args": [],
    "targets": [
@@ -60798,7 +60822,7 @@
    "ko": "지도와 사이드바에 이 아이콘으로 보여요.",
    "en": "This icon shows on the map and in the sidebar.",
    "files": [
-    "MapHomeStickerEditor.swift:594"
+    "MapHomeStickerEditor.swift:595"
    ],
    "args": [],
    "targets": [
@@ -62061,7 +62085,7 @@
    "ko": "추가 위치",
    "en": "Placement",
    "files": [
-    "MapHomeStickerEditor.swift:673"
+    "MapHomeStickerEditor.swift:674"
    ],
    "args": [],
    "targets": [

@@ -187,22 +187,67 @@ final class MemoTextPolishTests: XCTestCase {
 
     // MARK: 3단계 길 (PCC1118A01)
 
-    func testRelayRouteHandsOffWithoutChangingText() async {
-        let controller = MemoPolishController(readAvailability: { .available }, reply: { _ in MemoPolishReply(text: nil, notice: .cloudQuotaReached(resetDate: nil)) })
+    private func routed(_ reply: MemoPolishReply) -> MemoPolishController {
+        let controller = MemoPolishController(readAvailability: { .available }, reply: { _ in reply })
         controller.refreshAvailability()
+        return controller
+    }
+
+    func testRelayRouteHandsOffWithoutChangingText() async {
+        let controller = routed(MemoPolishReply(text: nil, notice: .cloudQuotaReached(resetDate: nil)))
         var text = "메모"
-        await controller.polish(currentText: { text }, apply: { text = $0 })?.value
+        var handOffs = 0
+        await controller.polish(currentText: { text }, apply: { text = $0 }, handOff: { handOffs += 1; return true })?.value
         XCTAssertEqual(text, "메모")
-        XCTAssertEqual(controller.handOffCount, 1)
+        XCTAssertEqual(handOffs, 1)
         XCTAssertEqual(controller.notice, .cloudQuotaReached)
         XCTAssertFalse(MemoPolishNotice.cloudQuotaReached.isFailure)
     }
 
-    func testRelayRouteWithoutNoticeIsFailure() async {
-        let controller = MemoPolishController(readAvailability: { .available }, reply: { _ in MemoPolishReply(text: nil) })
-        controller.refreshAvailability()
-        await controller.polish(currentText: { "메모" }, apply: { _ in })?.value
-        XCTAssertEqual(controller.notice, .failed)
+    /// 맡겼으면 실패 안내(너무 김)는 띄우지 않는다.
+    func testHandOffDropsFailureNotice() async {
+        let controller = routed(MemoPolishReply(text: nil, notice: .inputTooLongForDevice))
+        await controller.polish(currentText: { "메모" }, apply: { _ in }, handOff: { true })?.value
+        XCTAssertNil(controller.notice)
+    }
+
+    /// 넘길 곳이 없으면 「잠시 뒤 다시」가 아니라 지금은 못 한다고 알린다(CRV1118A01).
+    func testNoRouteWithoutConnectedAIIsUnavailable() async {
+        let controller = routed(MemoPolishReply(text: nil))
+        await controller.polish(currentText: { "메모" }, apply: { _ in }, handOff: { false })?.value
+        XCTAssertEqual(controller.notice, .unavailableNow)
+    }
+
+    /// 좌표가 든 글은 연결된 AI에게도 넘기지 않는다(CRV1118A01).
+    func testCoordinatesAreNeverHandedOff() async {
+        let controller = routed(MemoPolishReply(text: nil, notice: .keepsCoordinates, canHandOff: false))
+        var handOffs = 0
+        await controller.polish(currentText: { "메모" }, apply: { _ in }, handOff: { handOffs += 1; return true })?.value
+        XCTAssertEqual(handOffs, 0)
+        XCTAssertEqual(controller.notice, .keepsCoordinates)
+    }
+
+    /// 상한은 가장 긴 길(PCC) 기준이라 1,500자를 넘어도 라우터까지 간다(CRV1118A01).
+    func testRoutedControllerAcceptsTextLongerThanDeviceLimit() async {
+        let controller = routed(MemoPolishReply(text: nil, notice: .inputTooLongForDevice))
+        let text = String(repeating: "가", count: MemoPolishFormat.maxInputLength + 1)
+        var handOffs = 0
+        await controller.polish(currentText: { text }, apply: { _ in }, handOff: { handOffs += 1; return true })?.value
+        XCTAssertEqual(handOffs, 1)
+        let tooLong = String(repeating: "가", count: AppleModelTask.memoPolish.cloudInputLimit + 1)
+        XCTAssertNil(controller.polish(currentText: { tooLong }, apply: { _ in }))
+        XCTAssertEqual(controller.notice, .tooLong)
+    }
+
+    /// 다듬은 글이 들어가며 바뀐 것은 안내를 지우지 않고, 사용자가 고치면 지운다(CRV1118A01).
+    func testQuotaNoticeSurvivesAppliedTextChange() async {
+        let controller = routed(MemoPolishReply(text: "내일 만나요.", notice: .cloudQuotaApproaching))
+        var text = "낼 만나요"
+        await controller.polish(currentText: { text }, apply: { text = $0 })?.value
+        controller.textDidChange(text)
+        XCTAssertEqual(controller.notice, .cloudQuotaApproaching)
+        controller.textDidChange(text + "!")
+        XCTAssertNil(controller.notice)
     }
 
     func testCloudPolishKeepsQuotaNotice() async {
@@ -212,12 +257,12 @@ final class MemoTextPolishTests: XCTestCase {
         await controller.polish(currentText: { text }, apply: { text = $0 })?.value
         XCTAssertEqual(text, "내일 만나요.")
         XCTAssertEqual(controller.notice, .cloudQuotaApproaching)
-        XCTAssertEqual(controller.handOffCount, 0)
     }
 
     func testRouteNoticeMapping() {
         XCTAssertEqual(MemoPolishNotice(.inputTooLongForDevice), .tooLong)
         XCTAssertEqual(MemoPolishNotice(.cloudQuotaApproaching), .cloudQuotaApproaching)
+        XCTAssertEqual(MemoPolishNotice(.keepsCoordinates), .keepsCoordinates)
         XCTAssertNil(MemoPolishNotice(nil))
     }
 
@@ -272,6 +317,11 @@ final class MemoTextPolishTests: XCTestCase {
         XCTAssertEqual(AppleCloudModel.classified(Unknown()) as? AppleCloudModel.Failure, .init(reason: .service))
         let context = LanguageModelSession.GenerationError.Context(debugDescription: "")
         XCTAssertEqual(AppleCloudModel.classified(LanguageModelSession.GenerationError.guardrailViolation(context)) as? MemoPolishNotice, .blockedContent)
+        // 길이·언어는 PCC만의 사정일 수 있어 다음 길로 넘긴다(CRV1118A01).
+        XCTAssertEqual(AppleCloudModel.classified(LanguageModelSession.GenerationError.exceededContextWindowSize(context)) as? AppleCloudModel.Failure,
+                       .init(reason: .service))
+        XCTAssertEqual(AppleCloudModel.classified(LanguageModelSession.GenerationError.unsupportedLanguageOrLocale(context)) as? AppleCloudModel.Failure,
+                       .init(reason: .service))
         XCTAssertTrue(AppleCloudModel.classified(CancellationError()) is CancellationError)
     }
     #endif

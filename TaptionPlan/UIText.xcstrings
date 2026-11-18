@@ -336568,6 +336568,83 @@
         }
       }
     },
+    "위치 좌표가 든 글은 기기 밖으로 보내지 않아요.|Text with location coordinates stays on this device." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "位置の座標を含む文はこの端末の外に送りません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "含有位置坐标的文字不会发送到本设备以外。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "含有位置座標的文字不會傳送到本裝置以外。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text mit Standortkoordinaten bleibt auf diesem Gerät."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un texte contenant des coordonnées reste sur cet appareil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il testo con coordinate di posizione resta su questo dispositivo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El texto con coordenadas de ubicación se queda en este dispositivo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texto com coordenadas de localização fica neste dispositivo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Văn bản có tọa độ vị trí sẽ được giữ trên thiết bị này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teks berisi koordinat lokasi tetap di perangkat ini."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความที่มีพิกัดตำแหน่งจะอยู่ในอุปกรณ์นี้เท่านั้น"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लोकेशन निर्देशांक वाला टेक्स्ट इसी डिवाइस पर रहता है।"
+          }
+        }
+      }
+    },
     "위치 좌표를 확인해 주세요.|Check the location coordinates." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -369366,6 +369443,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "शेयरिंग अवधि चालू है।"
+          }
+        }
+      }
+    },
+    "지금은 이 기기에서 다듬을 수 없어요.|Polishing isn't available on this device right now." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いまはこの端末で整えられません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此设备目前无法润色。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此裝置目前無法潤飾。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verfeinern ist auf diesem Gerät gerade nicht verfügbar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’amélioration n’est pas disponible sur cet appareil pour le moment."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La rifinitura non è disponibile ora su questo dispositivo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora no se puede pulir en este dispositivo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O polimento não está disponível neste dispositivo agora."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiện không thể chỉnh sửa văn bản trên thiết bị này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merapikan teks belum tersedia di perangkat ini saat ini."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตอนนี้ยังขัดเกลาข้อความบนอุปกรณ์นี้ไม่ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस डिवाइस पर अभी सुधार उपलब्ध नहीं है।"
           }
         }
       }

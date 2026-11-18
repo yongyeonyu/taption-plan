@@ -3822,6 +3822,8 @@
 "다듬은 글로|Use polished": "सुधारा हुआ इस्तेमाल करें",
 "Apple 클라우드 사용 한도에 가까워요.|You're close to the Apple cloud usage limit.": "आप Apple क्लाउड की उपयोग सीमा के करीब हैं।",
 "Apple 클라우드 사용 한도에 닿았어요. 잠시 뒤 다시 쓸 수 있어요.|You've reached the Apple cloud usage limit. Try again later.": "आप Apple क्लाउड की उपयोग सीमा तक पहुँच गए हैं। बाद में फिर से कोशिश करें।",
+"위치 좌표가 든 글은 기기 밖으로 보내지 않아요.|Text with location coordinates stays on this device.": "लोकेशन निर्देशांक वाला टेक्स्ट इसी डिवाइस पर रहता है।",
+"지금은 이 기기에서 다듬을 수 없어요.|Polishing isn't available on this device right now.": "इस डिवाइस पर अभी सुधार उपलब्ध नहीं है।",
 "다듬지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't polish this. Try again later.": "इसे सुधारा नहीं जा सका। बाद में फिर कोशिश करें।",
 "다른 날|Other days": "दूसरे दिन",
 "다른 방법으로 추가(공유 › 단축어)|Add another way (Share › Shortcuts)": "दूसरे तरीक़े से जोड़ें (शेयर करें › शॉर्टकट)",
