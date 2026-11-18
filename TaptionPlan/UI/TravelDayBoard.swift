@@ -194,8 +194,8 @@ private struct TravelDayBoardHost: ViewModifier {
 
     private func move(_ itemID: String, to day: String, label: String) {
         TripSharePlanEditor.route(model: model, tripID: tripID, edit: .move(itemID: itemID, minutes: 0)) {
-            func run(includingFixed: Bool) {
-                Task {
+            @MainActor func run(includingFixed: Bool) {
+                Task { @MainActor in
                     guard let step = await TravelDayBoard.move(
                         model: model, tripID: tripID, itemID: itemID, toDay: day, dayLabel: label, includingFixed: includingFixed
                     ) else { return }
@@ -288,7 +288,7 @@ struct TravelCourseSortButton: View {
 struct TravelFixedMoveQuestion: Identifiable {
     let id = UUID()
     let count: Int
-    let move: () -> Void
+    let move: @MainActor () -> Void
 }
 
 extension View {
@@ -332,7 +332,7 @@ struct TravelDayMoveMenu: View {
     /// 캘린더 고정 세부가 있으면 먼저 묻는다(대표 결정 2026-11-18).
     private func move(to day: (key: String, label: String)) {
         func run(includingFixed: Bool) {
-            Task {
+            Task { @MainActor in
                 onDone(await TravelDayBoard.move(
                     model: model, tripID: item.tripID, itemID: item.itemID, toDay: day.key, dayLabel: day.label, includingFixed: includingFixed
                 ))

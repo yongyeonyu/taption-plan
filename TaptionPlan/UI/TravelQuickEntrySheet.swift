@@ -510,7 +510,7 @@ struct TravelQuickEntrySheet: View {
         let fixed = TravelDayBoard.fixedCount(model: model, tripID: item.tripID, itemID: item.itemID)
         if fixed > 0 {
             fixedQuestion = .init(count: fixed) {
-                Task {
+                Task { @MainActor in
                     didFail = !(await model.moveTripItem(tripID: item.tripID, itemID: item.itemID, by: delta, includingFixed: true))
                     if !didFail { dismiss() }
                 }
