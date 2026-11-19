@@ -1,7 +1,10 @@
 ---
 id: 20261119-1609-menu-activity-useradded-details
 created_at: 2026-11-19T16:09+09:00
-status: pending
+status: done
+request_id: MNU1119A01
+finished_at: 2026-11-19T16:40+09:00
+commit: d5f01cf1
 title: 메인 메뉴 「행동 분류」 펼침 목록에 직접 추가 상세 18개도 표시
 from: 비야
 basis: 대표 직접 지시 (2026-11-19)
@@ -71,3 +74,13 @@ basis: 대표 직접 지시 (2026-11-19)
 - `pickle-bridge/README.md`, `AGENTS.md` 5·8·12절.
 - 관련 기록: `test.md`의 ICN1119A06(공연/영화 관람 상세분류 추가), CAT1103A02·DTL1111A01(상세 목록과 「직접 추가」 나눔), CAT1105A01(행동 분류 접기·펼치기).
 - 이 지시는 새 상세를 더하는 일이 아니라 이미 있는 18개가 메인 메뉴에서 안 보이던 표시 문제를 고치는 일입니다.
+
+## 클로드 코드 회신
+
+- 처리: 완료(전체 `TaptionPlanTests`는 안 돌림, 아래 검증 참고)
+- 요청 ID: MNU1119A01 (`test.md` 검증 기록과 실기기 확인 목록에 반영)
+- 시작·끝: 2026-11-19 16:12 ~ 16:40 (KST)
+- 커밋: `d5f01cf1` 작업, 문서 이동은 `[비야 브리지] 20261119-1609-menu-activity-useradded-details` 한 건
+- 바꾼 파일: `TaptionPlan/UI/MapHomeLocationPresentation.swift`(`menuDetails(for:)` 추가, 본문 `ForEach` 교체), `TaptionPlan/UI/MapHomeView+Menu.swift`(펼침 화살표 조건), `TaptionPlanTests/MapHomeStickmanTests.swift`(시험 2건 추가), `test.md`. `details(for:)`·`userAddedDetails(for:)`·`MapHomeNLEDetailLane`·JSON 플래그는 그대로
+- 검증: `MapHomeStickmanTests`+`TimeScaleTests` 254건 중 통과 249·실패 0·건너뜀 5(xcresult, 시뮬레이터 iPhone 17). 메뉴 목록 8·7·5·5, 중복 없음, `details(for:)`가 18개를 계속 제외, `TimeScaleTests`의 나눔 확인 줄 통과. 18개 전수 동작·장면은 지시서 표와 빌드 결과가 모두 같아 정정 없음. 시험 빌드가 앱 Debug 빌드를 포함했다. 전체 `-only-testing:TaptionPlanTests`는 돌리지 않음(대표가 전체 단위 시험을 나중으로 미룬 상태) — 확인 안 함
+- 남은 것·확인 필요: 대표가 `test.md` `## 실기기 확인 목록`의 MNU1119A01 줄(아이폰 11 Pro 표)을 기기에서 확인. 시뮬레이터 화면도 눈으로는 보지 않음. 이 폴더에는 이 요청과 무관한 다른 미커밋 변경이 있어 경로를 지정해 위 파일만 커밋함
