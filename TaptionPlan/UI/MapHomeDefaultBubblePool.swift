@@ -17,7 +17,7 @@ enum MapHomeDefaultBubblePool {
         case .sleeping, .deepSleep, .remSleep, .nap: return .sleep
         case .eating, .coffee: return .eating
         case .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .recovery, .medication, .shower,
-             .meditation, .music, .video, .game, .petCare, .phoneCall: return .rest
+             .meditation, .music, .video, .game, .petCare, .phoneCall, .performanceMovie: return .rest
         case .activity, .exercise, .hobby, .housework, .dishes, .cooking, .groceries, .laundry, .friends, .date,
              .family, .hospital, .salon, .health, .mapReading, .walkInPlace: return .activity
         default: return nil

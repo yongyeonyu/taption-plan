@@ -60,6 +60,14 @@
           "behavior": "phoneCall",
           "systemImage": "phone.fill",
           "userAdded": true
+        },
+        {
+          "id": "activity.performanceMovie",
+          "title": "공연/영화 관람",
+          "englishTitle": "Show / Movie",
+          "behavior": "performanceMovie",
+          "systemImage": "ticket.fill",
+          "userAdded": true
         }
       ]
     },

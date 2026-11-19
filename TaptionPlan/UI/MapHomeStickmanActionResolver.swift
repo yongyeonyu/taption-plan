@@ -437,7 +437,7 @@ enum MapHomeStickmanActionResolver {
         "낮잠": .nap, "nap": .nap, "요리": .cooking, "cooking": .cooking,
         "장보기": .groceries, "groceries": .groceries, "빨래": .laundry, "laundry": .laundry,
         "친구 만남": .friends, "friends": .friends, "데이트": .date, "dating": .date,
-        "가족": .family, "family": .family, "통화": .phoneCall, "phonecall": .phoneCall,
+        "가족": .family, "family": .family, "통화": .phoneCall, "phonecall": .phoneCall, "공연/영화 관람": .performanceMovie, "performancemovie": .performanceMovie,
         "명상": .meditation, "meditation": .meditation, "병원": .hospital, "hospital": .hospital,
         "미용실": .salon, "salon": .salon, "독서": .bookReading, "reading": .bookReading,
         "게임": .game, "gaming": .game, "음악": .music, "music": .music,

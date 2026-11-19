@@ -417,7 +417,8 @@ final class AlgorithmUpgradeTests: XCTestCase {
         XCTAssertEqual(key, "팀 회의")
         XCTAssertEqual(CalendarTitleClassification.ruleDetailID(for: "팀 회의"), "work.meeting")
         XCTAssertEqual(CalendarTitleClassification.ruleDetailID(for: "Team lunch"), "eating.meal")
-        XCTAssertNil(CalendarTitleClassification.ruleDetailID(for: "Classic concert"), "영어는 단어 전체가 같아야 한다")
+        XCTAssertNil(CalendarTitleClassification.ruleDetailID(for: "Concerto practice"), "영어는 단어 전체가 같아야 한다")
+        XCTAssertEqual(CalendarTitleClassification.ruleDetailID(for: "Classic concert"), "activity.performanceMovie")
         XCTAssertEqual(CalendarTitleClassification.verdict(for: "팀 회의", stored: [:]), .init(detailID: "work.meeting", origin: .rule))
         XCTAssertEqual(
             CalendarTitleClassification.verdict(for: "팀 회의", stored: [key: .init(detailID: "study.class")]),
@@ -429,6 +430,24 @@ final class AlgorithmUpgradeTests: XCTestCase {
         )
     }
 
+    /// ICN1119A06: 공연·영화 제목은 「활동 - 공연/영화 관람」으로 자동 분류된다(가짜 이름 사용).
+    func testPerformanceAndMovieTitlesAreClassified() throws {
+        let title = "홍길동 내한공연 (가짜아트센터 서울)"
+        XCTAssertEqual(CalendarTitleClassification.ruleDetailID(for: title), "activity.performanceMovie")
+        let resolved = try XCTUnwrap(CalendarTitleClassification.detail(for: title, stored: [:], at: nil))
+        XCTAssertEqual(resolved.categoryID, "activity")
+        XCTAssertEqual(resolved.detail.id, "activity.performanceMovie")
+        XCTAssertEqual(resolved.detail.title, "공연/영화 관람")
+        XCTAssertEqual(resolved.detail.behavior, "performanceMovie")
+        XCTAssertEqual(resolved.detail.systemImage, "ticket.fill")
+        XCTAssertNil(CalendarTitleClassification.detail(for: title, stored: [:], at: .home), "집에 있으면 실제로 가지 않은 공연이다")
+        XCTAssertTrue(CalendarTitleClassification.selectableDetailIDs.contains("activity.performanceMovie"))
+        for text in ["뮤지컬 가짜극장", "CGV 영화", "예술의전당 클래식", "가짜 오페라 시사회", "Jazz concert", "Movie night", "Piano recital", "메가박스 가짜점"] {
+            XCTAssertEqual(CalendarTitleClassification.ruleDetailID(for: text), "activity.performanceMovie", text)
+        }
+        XCTAssertEqual(CalendarTitleClassification.ruleDetailID(for: "팀 회의 공연 준비"), "work.meeting", "앞선 규칙이 먼저")
+    }
+
     func testSelectableDetailsAreRealTwoLevelDetails() {
         let ids = CalendarTitleClassification.selectableDetailIDs
         XCTAssertTrue(ids.contains("work.meeting"))
@@ -438,7 +457,7 @@ final class AlgorithmUpgradeTests: XCTestCase {
         XCTAssertTrue(ids.contains("work.rest"), "휴식 자세도 일정에서 고를 수 있다")
         XCTAssertTrue(ids.contains("health.recovery"))
         XCTAssertFalse(ids.contains("exercise.workout"), "운동은 건강 앱 기록으로만 정한다")
-        for rule in ["팀 회의", "치과 진료", "미용실", "학원", "수업", "점심", "장보기", "빨래", "요리", "청소", "명상", "독서", "데이트", "가족", "친구", "통화"] {
+        for rule in ["팀 회의", "치과 진료", "미용실", "학원", "수업", "점심", "장보기", "빨래", "요리", "청소", "명상", "독서", "데이트", "가족", "친구", "통화", "내한공연"] {
             XCTAssertTrue(ids.contains(CalendarTitleClassification.ruleDetailID(for: rule) ?? ""), rule)
         }
     }

@@ -4,7 +4,7 @@ import CoreGraphics
 extension HwarangScene {
     static let dailyScenes: [HwarangScene] = [
         .nap, .cook, .groceries, .laundry, .dishes, .coffee, .meeting, .friends, .date, .family, .phoneCall,
-        .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare
+        .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare, .performanceMovie
     ]
 
     /// 관절 자세 대신 누운 몸통을 직접 그리는 장면(SLP1103A01).
@@ -357,6 +357,20 @@ func dailyPose(_ scene: HwarangScene, s: CGFloat) -> Pose {
         return p
     case .video:
         return sit(s, HeadPose(tilt: 0.04, look: 3.4, mouthOpen: wrap(s, 4.4) < 0.7 ? 0.7 : 0, eye: blink(s, 3.7)))
+    case .performanceMovie:
+        // 공연·영화 관람: 무대·스크린 빛 앞에서 눈을 반짝이며 박자에 맞춰 고개를 흔들고, 앞 절반은 박수, 뒤 절반은 티켓을 든다.
+        let beat = sin(s * 4.2)
+        let applause = performanceApplause(s)
+        var p = sit(s, HeadPose(tilt: beat * 0.12, ear: beat * 0.08, look: 2.6, mouthOpen: applause > 0 ? 0.3 : 0.08, eye: applause > 0 || wrap(s, 3.2) < 1.2 ? .happy : blink(s, 3.1)))
+        p.head.y += abs(beat) * 1.2
+        if applause > 0 {
+            // 앞발 둘이 가슴 앞에서 맞닿았다 벌어진다.
+            let open = max(0, sin(s * 8.4))
+            p.fn = P(lerp(86, 81, open), lerp(78, 73, open)); p.ff = P(lerp(90, 97, open), lerp(78, 73, open)); p.foreBend = 1
+        } else {
+            p.fn = P(90, 82 + sin(s * 2) * 1.2); p.ff = P(94, 84); p.foreBend = 1
+        }
+        return p
     case .petCare:
         let pat = sin(s * 5)
         var p = sit(s, HeadPose(tilt: 0.14, look: 3, mouthOpen: 0.12, eye: .happy))
@@ -366,6 +380,9 @@ func dailyPose(_ scene: HwarangScene, s: CGFloat) -> Pose {
         return Pose()
     }
 }
+
+/// 공연/영화 관람의 박수 구간(0: 티켓을 든 구간). 한 바퀴 6초 가운데 앞 3초.
+func performanceApplause(_ sec: CGFloat) -> CGFloat { wrap(sec, 6) < 3 ? 1 : 0 }
 
 extension HwarangPainter {
     /// 고양이 뒤에 깔리는 소품.
@@ -383,6 +400,7 @@ extension HwarangPainter {
         case .hospital: crossSign()
         case .salon: mirror()
         case .video: television(sec)
+        case .performanceMovie: stageLight(sec)
         default: break
         }
     }
@@ -437,6 +455,13 @@ extension HwarangPainter {
         case .readBook: heldBook(sec)
         case .game: console(sec)
         case .music: headphones(head, tilt: pose.h.tilt, sec: sec)
+        case .performanceMovie:
+            // 박수 칠 때가 아니면 티켓을 들고, 눈 옆에서 별빛이 반짝인다.
+            if performanceApplause(sec) == 0 { ticket(P(92, 82 + sin(sec * 2) * 1.2), tilt: -0.2 + sin(sec * 2) * 0.05) }
+            for side: CGFloat in [-1, 1] {
+                let twinkle = wrap(sec * 1.3 + (side > 0 ? 0.5 : 0), 1)
+                sparkle(P(head.x + 7 + side * 14, head.y - 4 - twinkle * 3), size: 2.2 + sin(twinkle * .pi) * 1.6, alpha: sin(twinkle * .pi))
+            }
         default: break
         }
     }
@@ -480,6 +505,12 @@ extension HwarangPainter {
                 musicNote(P(104 + CGFloat(i) * 8 + sin(z * 6) * 3, 62 - z * 44), alpha: 1 - z * z, color: i == 1 ? 0xE96A8A : 0x7A5FC6)
             }
         case .video: popcorn()
+        case .performanceMovie:
+            for i in 0..<3 {
+                let z = wrap(sec * 0.45 + CGFloat(i) / 3, 1)
+                sparkle(P(CGFloat([40, 104, 122][i]) + sin(z * 6 + CGFloat(i)) * 3, 62 - z * 36), size: 2.6 + sin(z * .pi) * 2, alpha: sin(z * .pi))
+            }
+            if performanceApplause(sec) > 0 { musicNote(P(116, 52 - wrap(sec * 0.8, 1) * 10), alpha: 0.9, color: 0xE96A8A) }
         case .petCare:
             hamster(sec)
             let z = wrap(sec * 0.5, 1)
@@ -726,6 +757,28 @@ extension HwarangPainter {
         stroke(outline, 5.6); c.beginPath(); c.addArc(center: P(0, 4), radius: 29, startAngle: .pi * 1.14, endAngle: .pi * 1.86, clockwise: false); c.strokePath()
         stroke(0x7A5FC6, 3); c.beginPath(); c.addArc(center: P(0, 4), radius: 29, startAngle: .pi * 1.14, endAngle: .pi * 1.86, clockwise: false); c.strokePath()
         for side: CGFloat in [-1, 1] { rounded(side * 30 - 6, -3, 12, 19, 5, fillHex: 0xE96A8A, line: 2) }
+        c.restoreGState()
+    }
+
+    /// 무대·스크린에서 내려오는 은은한 빛줄기와 바닥 무대(공연/영화 관람).
+    private func stageLight(_ sec: CGFloat) {
+        let pulse = 0.5 + 0.5 * sin(sec * 2.1)
+        fill(0xFFE9A8, 0.3 + 0.18 * pulse)
+        c.beginPath(); c.addPath(CGPath(roundedRect: CGRect(x: 80, y: 24, width: 50, height: 38), cornerWidth: 6, cornerHeight: 6, transform: nil)); c.fillPath()
+        stroke(0xE9B872, 1.3, 0.55)
+        c.beginPath(); c.addPath(CGPath(roundedRect: CGRect(x: 80, y: 24, width: 50, height: 38), cornerWidth: 6, cornerHeight: 6, transform: nil)); c.strokePath()
+        for (x, hex) in [(CGFloat(56), UInt32(0xFFD0E2)), (CGFloat(100), UInt32(0xFFF0B8))] {
+            fill(hex, 0.2 + 0.1 * pulse); poly([P(x, 12), P(x - 14, groundY), P(x + 16, groundY)]); c.fillPath()
+        }
+        fill(0xB9577A, 0.4); c.beginPath(); oval(70, groundY + 3, 48, 6); c.fillPath()
+    }
+
+    /// 손에 든 공연·영화 티켓. 발바닥 도장이 찍혀 있다.
+    private func ticket(_ q: CGPoint, tilt: CGFloat) {
+        c.saveGState(); c.translateBy(x: q.x, y: q.y); c.rotate(by: tilt)
+        rounded(-12, -7, 24, 14, 4, fillHex: 0xF7C948, line: 2)
+        stroke(outline, 1.1); c.setLineDash(phase: 0, lengths: [1.6, 1.6]); c.beginPath(); c.move(to: P(4, -6)); c.addLine(to: P(4, 6)); c.strokePath(); c.setLineDash(phase: 0, lengths: [])
+        fill(0xE5484D); c.beginPath(); circle(-4, 1.4, 2.4); circle(-7.2, -2, 1); circle(-4, -3.2, 1); circle(-0.8, -2, 1); c.fillPath()
         c.restoreGState()
     }
 

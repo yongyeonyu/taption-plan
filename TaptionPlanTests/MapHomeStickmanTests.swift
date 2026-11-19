@@ -303,6 +303,7 @@ final class MapHomeStickmanTests: XCTestCase {
         ("housework", "장보기", "groceries", .groceries, .groceries), ("housework", "빨래", "laundry", .laundry, .laundry),
         ("activity", "친구 만남", "friends", .friends, .friends), ("activity", "데이트", "dating", .date, .date),
         ("activity", "가족", "family", .family, .family), ("activity", "통화", "phoneCall", .phoneCall, .phoneCall),
+        ("activity", "공연/영화 관람", "performanceMovie", .performanceMovie, .performanceMovie),
         ("health", "명상", "meditation", .meditation, .meditate), ("health", "병원", "hospital", .hospital, .hospital),
         ("health", "미용실", "salon", .salon, .salon), ("hobby", "독서", "reading", .bookReading, .readBook),
         ("hobby", "게임", "gaming", .game, .game), ("hobby", "음악", "music", .music, .music),
@@ -324,7 +325,7 @@ final class MapHomeStickmanTests: XCTestCase {
         }
         let others = MapHomeStickmanAction.allCases.filter { candidate in !Self.dailyCategories.contains { $0.3 == candidate } }
         let otherScenes = Set(others.map(\.hwarangScene))
-        XCTAssertEqual(Set(Self.dailyCategories.map(\.4)).count, 19)
+        XCTAssertEqual(Set(Self.dailyCategories.map(\.4)).count, 20)
         XCTAssertTrue(otherScenes.isDisjoint(with: Self.dailyCategories.map(\.4)))
         XCTAssertEqual(Set(HwarangScene.dailyScenes), Set(Self.dailyCategories.map(\.4)))
     }
@@ -1434,9 +1435,9 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
-        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 55)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 55)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 55)
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 56)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 56)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 56)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(

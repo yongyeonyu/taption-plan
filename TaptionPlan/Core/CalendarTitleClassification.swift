@@ -54,7 +54,11 @@ enum CalendarTitleClassification {
         ("activity.date", ["데이트"], ["date"]),
         ("activity.family", ["가족", "부모님", "엄마", "아빠"], ["family"]),
         ("activity.friends", ["친구", "모임"], ["friends"]),
-        ("activity.phoneCall", ["통화", "전화"], ["call"])
+        ("activity.phoneCall", ["통화", "전화"], ["call"]),
+        // 공연·영화(ICN1119A06). 앞의 규칙(친구·가족·데이트)에 걸리지 않은 제목만 온다.
+        ("activity.performanceMovie",
+         ["공연", "내한공연", "콘서트", "뮤지컬", "연극", "오페라", "클래식", "리사이틀", "영화", "시사회", "아트센터", "예술의전당", "세종문화회관", "cgv", "메가박스", "롯데시네마"],
+         ["concert", "show", "musical", "opera", "theater", "theatre", "movie", "cinema", "film", "recital"])
     ]
 
     static func ruleDetailID(for title: String) -> String? {
@@ -108,7 +112,7 @@ enum CalendarTitleClassification {
     static let titleEvidencePrefixes = [evidencePrefix, "식사 일정 '", "캘린더 일정 '", "일정 '"]
 
     private static let awayFromHomeDetails: Set<String> = [
-        "health.hospital", "health.salon", "study.academy", "housework.groceries", "activity.friends", "activity.date"
+        "health.hospital", "health.salon", "study.academy", "housework.groceries", "activity.friends", "activity.date", "activity.performanceMovie"
     ]
 
     private static func fits(_ id: String, categoryID: String, at place: FrequentPlaceKind?) -> Bool {

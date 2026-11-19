@@ -35,7 +35,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case health
     case shower
     case housework
-    case nap, cooking, groceries, laundry, friends, date, family, phoneCall
+    case nap, cooking, groceries, laundry, friends, date, family, phoneCall, performanceMovie
     case meditation, hospital, salon, bookReading, game, music, video, petCare
 
     var isMoving: Bool {
@@ -70,6 +70,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .date: .date
         case .family: .family
         case .phoneCall: .phoneCall
+        case .performanceMovie: .performanceMovie
         case .meditation: .meditate
         case .hospital: .hospital
         case .salon: .salon
@@ -121,7 +122,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         switch self {
         case .computer, .company, .school, .reading, .hobby, .sleeping, .deepSleep, .remSleep, .recovery, .medication, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .eating,
              .activity, .exercise, .health, .unconfirmed, .shower, .housework,
-             .nap, .cooking, .groceries, .laundry, .friends, .date, .family, .phoneCall,
+             .nap, .cooking, .groceries, .laundry, .friends, .date, .family, .phoneCall, .performanceMovie,
              .meditation, .hospital, .salon, .bookReading, .game, .music, .video, .petCare, .mapReading, .walkInPlace, .workWalking, .meeting, .dishes, .coffee:
             true
         default:
@@ -146,6 +147,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .date: return t("데이트", "Date")
         case .family: return t("가족", "Family")
         case .phoneCall: return t("통화", "Phone call")
+        case .performanceMovie: return t("공연/영화 관람", "Show / Movie")
         case .meditation: return t("명상", "Meditation")
         case .hospital: return t("병원", "Hospital")
         case .salon: return t("미용실", "Hair salon")

@@ -22,7 +22,7 @@ enum MapHomeDetailPattern: String, CaseIterable, Hashable {
         // 건강관리
         "hospital": .crosshatch, "salon": .backDiagonal, "recovery": .horizontal, "medication": .vertical, "meditation": .waves,
         // 활동
-        "zoningOut": .waves, "shower": .vertical, "friends": .diagonal, "dating": .backDiagonal, "family": .grid, "phoneCall": .horizontal,
+        "zoningOut": .waves, "shower": .vertical, "friends": .diagonal, "dating": .backDiagonal, "family": .grid, "phoneCall": .horizontal, "performanceMovie": .dots,
         // 취미
         "hobby": .zigzag, "reading": .horizontal, "gaming": .grid, "music": .waves, "video": .vertical, "petCare": .dots,
         // 집안일

@@ -89,7 +89,7 @@ private enum Glyph {
     case menu, plus, location, home, play, pause, record
     case sleep, walk, run, steps, footprints, walkDistance, route, pin, trips, photo, car, bus, tram, train, door
     case work, study, book, books, exercise, palette, meal, cook, sparkle, heart, pill, pulse, bed, rest, shower, wash, question
-    case bike, plane, ferry, chart, layers, globe, watch, gear, bell, info, wifi, phone
+    case bike, plane, ferry, chart, layers, globe, watch, gear, bell, info, wifi, phone, ticket
 
     init?(symbol: String) {
         switch symbol {
@@ -144,6 +144,7 @@ private enum Glyph {
         case "info.circle": self = .info
         case "wifi": self = .wifi
         case "iphone": self = .phone
+        case "ticket.fill", "ticket": self = .ticket
         default: return nil
         }
     }
@@ -274,6 +275,16 @@ private enum Glyph {
         case .cook:
             pen.dot(10, 13, 7)
             pen.line([[(15.6, 8.4), (21, 3.6)]], width: 2.8)
+        case .ticket:
+            // 공연·영화 티켓(ICN1119A06): 통통한 표에 양옆 홈, 점선, 발바닥 도장과 반짝이.
+            pen.box(2.6, 6.2, 18.8, 11.6, 3.4)
+            pen.cut {
+                $0.dot(2.6, 12, 2.3)
+                $0.dot(21.4, 12, 2.3)
+                $0.line([[(15.4, 8.6), (15.4, 9.8)], [(15.4, 11.4), (15.4, 12.6)], [(15.4, 14.2), (15.4, 15.4)]], width: 1.3)
+                $0.paw(9.2, 10.8, 0.8)
+                $0.dot(18.7, 10.2, 1)
+            }
         case .sparkle:
             pen.blob([(12, 3.6), (14.4, 9.6), (20.4, 12), (14.4, 14.4), (12, 20.4), (9.6, 14.4), (3.6, 12), (9.6, 9.6)], round: 0.9)
         case .heart:
