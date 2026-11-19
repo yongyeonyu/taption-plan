@@ -1,7 +1,10 @@
 ---
 id: 20261119-1943-energy-curve-visualizer
 created_at: 2026-11-19T19:43+09:00
-status: pending
+status: done
+request_id: ENC1119A01
+finished_at: 2026-11-19T21:10+09:00
+commit: 40bd53b9
 title: 컨디션×일정 에너지 곡선 — 하루 요약에 비주얼라이저 카드 추가
 from: 비야
 basis: 대표 선택(2026-11-14 「3개다」 — 신규 비주얼라이저 3종 중 2번) · 비야 제안(구현 범위·형태) · 2026-11-19 비야 브리지 배정
@@ -153,3 +156,16 @@ basis: 대표 선택(2026-11-14 「3개다」 — 신규 비주얼라이저 3종
 - 화면: `TaptionPlan/UI/MapHomeInfoSheets.swift`(`MapHomeDaySummarySheet` 241행, `summaryContent` 415행), `MapHomeView+Presentation.swift:42`(시트 호출), `MapHomeDailyCard.swift`(자기 `@State`로 값을 받는 시트 패턴), `MapHomeDaySummaryBand.swift`(값 캐시와 `Key: Equatable` 패턴), `MapHomePassportBook.swift`·`MapHomeTimeSidebar.swift`(Canvas 그리기 예).
 - 자료: `TaptionPlan/UX/AppModel.swift:209`(`sleepSessions`), `Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/HealthAndSensorModels.swift:87`(`SleepSession`), `Packages/TaptionPlanCore/Sources/TaptionPlanCore/Domain/PlanRecord.swift:33`·`ActualRecord.swift:43`, `TaptionPlan/UI/MapHomeView+Memos.swift:174`(그날 일정)·`:290`(`dayPlans`), `TaptionPlan/UI/LedgerMemoPanel.swift:417`(계획 거르기 규칙), `TaptionPlan/Core/RecordSummaryEngine.swift`(`RecordAnalysisCategoryPolicy`·`DurationText`), `TaptionPlan/Core/ClassifierAdapter.swift:357`(걸음), `TaptionPlan/UI/MapHomeAlarm.swift:160`(`timeText`).
 - 이 요청은 「곡선 계산 + 하루 요약 카드」까지입니다. 위젯·워치·공유 카드에 같은 곡선을 넣는 일, 알림(「곧 에너지가 바닥이에요」), AI가 일정을 다시 짜는 일은 다음 요청에서 정합니다.
+
+## 클로드 코드 회신
+
+- 처리: 완료(전체 단위 시험에 이번 변경과 무관한 기존 실패 1건 남음, 아래 참고)
+- 요청 ID: ENC1119A01 (`test.md` 홈·UI 줄·요청 상세·실기기 확인 목록·검증 기록)
+- 시작·끝: 2026-11-19 19:50 ~ 21:10 (KST)
+- 커밋: `40bd53b9` 작업, 문서 이동은 `[비야 브리지] 20261119-1943-energy-curve-visualizer` 한 건. 시작 때 확인한 `origin/main`은 `75abc866`
+- 바꾼 파일: `TaptionPlan/Core/EnergyCurveEngine.swift`(새, 255줄), `TaptionPlan/UI/MapHomeEnergyCurveCard.swift`(새, 249줄: 카드·Canvas 그림·`extension MapHomeView`의 `energyCurve(for:)`), `TaptionPlanTests/EnergyCurveTests.swift`(새, 16건), `TaptionPlan/UI/MapHomeInfoSheets.swift`(파라미터 `makeEnergyCurve` 하나와 카드 한 줄), `TaptionPlan/UI/MapHomeView+Presentation.swift`(인자 하나), `TaptionPlan.xcodeproj/project.pbxproj`(새 파일 3개 등록), `test.md`. 동결 파일·`MapHomeView.swift` 본 파일·서버·번역 파일은 건드리지 않음. 파일 이름은 지시서 그대로
+- 계약에서 달라진 점: `EnergyCurveResult`에 `day`·`blocks`를 더했습니다(카드가 일정 띠를 그리려면 필요). `EnergyCurveSleep`은 기상 시각을 위해 수면 세션 `span`을 함께 받습니다. 기상 전 칸은 `value: nil`(수면 띠만)입니다. `scheduleStack`은 최저 칸이 있을 때(0.35 미만 여부와 무관) 그 ±90분에 일정 2건 이상이면 붙고, `lowestPoint`는 0.35 미만일 때만 붙습니다
+- 검증: 새 `EnergyCurveTests` 16건 통과(지시서 9개 항목 + 보조 7건: 수면 없음·짧은 잠·예측 칸·걸음·분류 매핑·그림 렌더링 연기). Debug 빌드 성공(시험 빌드가 앱 Debug 빌드 포함). 구조 점검 통과, 동결 파일 무변경, 새 파일 모두 1,200줄 미만. 전체 `TaptionPlanTests` 2,963건 실행·건너뜀 26·실패 1(xcresult 통과 3,135) — 실패 1은 이번과 무관한 `AssistantAppControlTests.testAskUserStoresTheQuestionAnswersUploadAndUndoWithdrawsOnlyUnanswered`로, 시험이 질문을 11-12 시각으로 만드는데 보관 기간이 7일이라 오늘부터 만료되는 시간 의존입니다(ANN1119A01 회신에도 적음, 손대지 않음). 시험 실행기 「hung before establishing connection」(0건) 한 번은 시뮬레이터를 껐다 켜 다시 돌림(`hung-app-tests.*` 보관). 지시서가 적은 기존 실패 `TravelModeView` actor 격리·`DayStoreV3Tests` 간헐 실패는 이번 실행에서 나타나지 않았습니다
+- 다국어: 새 문구는 전부 `language.text`/`runtimeText` 리터럴. 번역 대기 8문구 × 12개 언어(컨디션 에너지 곡선·이 날은 그릴 기록이 없어요·일정 {0}건·{0} 무렵 가장 낮아요 · 에너지 {1}%·가장 낮은 때 {0} {1}%·그 무렵 일정 {0}건({1})이 겹쳐요·어젯밤 {0} 밤잠이라 시작이 낮아요·어젯밤 수면 기록이 없어 기본값으로 그렸어요). 앞선 ANN1119A01의 4문구와 별개입니다. `unread-report`의 읽지 못한 호출은 155건으로 그대로(내 정적 함수 `text`가 번역 호출로 오인돼 3건 늘었던 것을 `insightLine`으로 바꿔 해결). `generate.py`는 안 돌렸고 `source.json`·`unread-report.json`은 되돌려 둠
+- 알아 둘 것: ① 15분 칸 걸음 수는 엔진만 받고 카드는 넘기지 않습니다(하루 표본을 칸마다 다시 훑는 비용이 크고 곡선에 주는 영향이 작음) ② 달력 일정은 분류가 없어 「미확인」으로 쓰므로 예측 곡선에는 영향이 없고 일정 띠·쌓임 인사이트에만 셉니다 ③ 다른 날 요약에서는 달력 일정을 읽지 않고(앱 계획만), 기록은 `currentDayDataSnapshot`이 그날이 아니면 `model.snapshot.actuals`에서 그날과 겹치는 것만 씁니다 ④ 다시 계산 키는 그날·`dayProjectionRevision`·수면 건수·계획 건수입니다. 화면은 눈으로 보지 못했고 그림은 `ImageRenderer` 연기 시험으로만 확인했습니다
+- 남은 것·확인 필요: 대표가 `test.md` 실기기 확인 목록의 ENC1119A01 줄을 아이폰 11 Pro로 확인(시뮬레이터 화면도 눈으로는 안 봄). 번역 대기 문구는 메인 세션이 `generate.py`로 처리
