@@ -1086,6 +1086,7 @@
 | WCH1106A01 · Watch 반복 충돌, 시계 페이스 위젯 없음 | 남은 일: Watch를 Mac에 연결해 `chronod`·WidgetKit 로그와 충돌·Jetsam 기록을 받아 위젯 갤러리 미등록 원인 찾기. | |
 | HLT1106A01 · 새 설치는 설치 시각부터 건강 기록 | 남은 일: 새 설치 기기에서 설치 전 건강 기록이 안 들어오는지, 기존 기기 기록이 그대로인지 확인. | |
 | MNU1119A01 | 메인 메뉴 › 행동 분류를 펼침 → activity·hobby·health·housework 네 분류에 직접 추가 항목(공연/영화 관람 등)이 모두 보이고 각 줄의 화랑이가 움직임 | 분류마다 8·7·5·5줄, 직접 추가 18개 포함 | |
+
 ### Apple Watch
 
 | ID | 할 일(손 순서) | 기대 결과 | 결과 |
@@ -1135,18 +1136,23 @@
 
 ## 검증 기록
 
-### MEL1119A01 · 식당을 벗어난 뒤까지 식사로 잡히던 것 (2026-11-19, 시뮬레이터 iPhone 17)
-- 원인(11-19 아이폰 18 원본): 식당 안 마지막 표본 12:12:06 뒤 10분 넘게 비었다가 12:22:39에 78m 밖 표본이 처음 잡히자, `PlaceZoneStayTracker`가 그 시각을 벗어난 때로 잡아 빈 시간이 식사(11:51~12:22)에 들어갔다. 걷기 감지는 12:15부터였다.
-- 수정: 빈 구간(5분 초과) 뒤 처음 밖에서 잡히면 마지막 안쪽 표본에서 끝내고 `notObserved`로 둔다. 시험 `testExitAfterSilenceEndsAtLastInsideSample` 추가.
-- 검증: PlaceZoneStayTrackerTests·UnobservedStayEngineTests·FeatureEngineTests·MapHomeCounterTimelinePolicyTests 697건 통과·실패 0(`build/validation/MEL1119A01/stay.log`). 전체 단위 시험과 실기기 확인 안 함. 아이폰에서 같은 날 식사가 12:12 전후로 끝나는지는 다음 로그로 봐야 한다.
-
-
 ### MNU1119A01 · 메인 메뉴 「행동 분류」에 직접 추가 상세 18개 표시 (2026-11-19, 시뮬레이터 iPhone 17, 비야 브리지 `20261119-1609-menu-activity-useradded-details`)
 - 원인: `MapHomeCategoryDetailRows.details(for:)`가 `userAdded` 상세를 빼서, 메인 메뉴 펼침에 직접 추가 18개(activity 6·hobby 5·health 3·housework 4)가 안 보였다.
 - 수정: 메뉴 전용 `menuDetails(for:)`(분류표 순서 그대로, 구역 머리 없음)를 더하고 펼침 화살표 조건과 본문 `ForEach`만 바꿨다. `details(for:)`·`userAddedDetails(for:)`, 기록 수정 화면, JSON 플래그는 그대로.
 - 시험: `testCategoryMenuListsUserAddedDetailsToo`(분류별 8·7·5·5, 중복 없음, 대표 항목 포함, 기본 목록은 직접 추가 계속 제외, unconfirmed 빈 목록), `testUserAddedDetailsHaveTheirOwnActionsAndScenes`(18개 전수 동작·장면, 지시서 표와 빌드 결과가 모두 같아 정정 없음) 추가.
 - 검증: `MapHomeStickmanTests`·`TimeScaleTests` 254건 중 통과 249·실패 0·건너뜀 5(xcresult, `build/validation/MNU1119A01/menu.xcresult`). `TimeScaleTests`의 기본/직접 추가 나눔 확인 줄 통과. 시험 빌드가 앱을 Debug로 빌드했다. 전체 `TaptionPlanTests`는 돌리지 않았다(대표가 전체 단위 시험을 나중으로 미룸). 기기 화면은 보지 않았다 — `## 실기기 확인 목록`의 MNU1119A01 줄.
 
+### MEL1119A01 · 식당을 벗어난 뒤까지 식사로 잡히던 것 (2026-11-19, 시뮬레이터 iPhone 17)
+- 원인(11-19 아이폰 18 원본): 식당 안 마지막 표본 12:12:06 뒤 10분 넘게 비었다가 12:22:39에 78m 밖 표본이 처음 잡히자, `PlaceZoneStayTracker`가 그 시각을 벗어난 때로 잡아 빈 시간이 식사(11:51~12:22)에 들어갔다. 걷기 감지는 12:15부터였다.
+- 수정: 빈 구간(5분 초과) 뒤 처음 밖에서 잡히면 마지막 안쪽 표본에서 끝내고 `notObserved`로 둔다. 시험 `testExitAfterSilenceEndsAtLastInsideSample` 추가.
+- 검증: PlaceZoneStayTrackerTests·UnobservedStayEngineTests·FeatureEngineTests·MapHomeCounterTimelinePolicyTests 697건 통과·실패 0(`build/validation/MEL1119A01/stay.log`). 전체 단위 시험과 실기기 확인 안 함. 아이폰에서 같은 날 식사가 12:12 전후로 끝나는지는 다음 로그로 봐야 한다.
+
+### TGT1119A03 · 포털에 위치가 없는 영업소를 카카오 장소 검색으로 채우기 (2026-11-19, 서버 시험, 배포 전)
+
+- 대표 지시: 「도로공사 API에서 위치가 없는 것은 카카오지도로 찾아서 넣어」, 「없는 것을 찾아서 pre fix로 반영해, 나보고 몇 개만 입력하라고 하지 말고」. `GET /ex/units`(`src/expressway.js`)가 포털 목록에서 코드·이름은 있고 좌표가 비었거나 0인 영업소를 모아 카카오 장소 검색(`KAKAO_REST_API_KEY`, 기존 비밀값)으로 채움: 이름이 영업소·IC·톨게이트·요금소·JC·나들목이면 그 이름, 아니면 「이름톨게이트」→「이름IC」 순서로 묻고, 결과에 이름이 들고 영업소·IC·고속도로·교통 장소이며 한국 안 좌표인 것만 씀(`pickPlace`). 영업소 이름만 카카오에 보내고 사용자 좌표는 보내지 않음. 찾은 값(1년)·못 찾음(30일)은 저장소(D1, `geo:<코드>`)에 둬 다시 묻지 않음. 한 번에 묻는 수는 24(서브리퀘스트 한도 보호), 다 못 물으면 응답에 `pending`을 주고 목록을 1시간만 캐시해 다음 요청이 이어서 채움. 고정표 `src/ex-unit-prefix.js`(`PREFIX_UNITS`)를 먼저 쓰고 포털 값이 있는 코드는 포털이 앞섬.
+- `scripts/ex-units-fill.mjs`: `EX_API_KEY`·`KAKAO_REST_API_KEY`만 환경 변수로 주면 위치 없는 영업소를 전부 찾아 고정표 파일을 다시 씀(영업소를 하나씩 입력하지 않음, 출력은 건수와 이름뿐, 못 찾은 이름은 따로 알림).
+- 시험: 서버 `npm test` 257건 통과·실패 0(새 `test/ex-geocode.test.mjs` 7건: 채우기·엉뚱한 장소 거절 후 「없음」 기억·저장된 값 재사용·검색 한도와 짧은 캐시·카카오 키 없음·못 찾음 보고·`pickPlace` 안전 모양). 실제 포털·카카오 호출은 하지 않음(키가 서버 비밀값뿐이라 이 맥에 없음): 포털에 위치 없는 영업소가 실제로 몇 개인지, 카카오가 맞게 찾는지는 배포 뒤·스크립트 실행 뒤에 확인.
+- 한계: 카카오 장소 좌표는 영업소 시설이 아니라 IC·톨게이트 장소의 대표점이라 오차가 클 수 있어(앱 판정 확실함 기준 80m보다 클 수 있음), 이런 영업소는 「확인 필요」로 올라올 가능성이 큼. 앱은 기기에 영업소 목록을 7일 캐시하므로 서버 배포 뒤 앱이 새 목록을 받을 때까지 최대 7일 걸림(앱 캐시를 지우면 즉시).
 
 ### TGT1119A02 · 12:22 로그·원본으로 통행료 다시 시험 (2026-11-19, 시뮬레이터·맥, 실기기 확인 전)
 
