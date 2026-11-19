@@ -1168,7 +1168,7 @@
 
 
 ### SRV1119A04 · 서버 재배포(R2 공지·오분류 표본·통행료 고정표) (2026-11-19, 대표가 터미널에서 실행, 확인은 맥에서 curl)
-- 대표가 순서대로 실행: R2 버킷 `taption-trip-public` 생성 → `wrangler.local.toml`에 `PUBLIC_BUCKET` 바인딩 → D1 마이그레이션 `0002_misclass_samples.sql` 원격 적용(성공) → `CLASSIFIER_ADMIN_TOKEN` 비밀값 등록(성공) → `npm test` 281건 통과 → `npx wrangler deploy`. 새 버전 `b5342cff-8ca6-4e18-80d6-5d01e05b9148`, 바인딩에 R2가 붙음.
+- 대표가 순서대로 실행: R2 버킷 `taption-trip-public` 생성 → `wrangler.local.toml`에 `PUBLIC_BUCKET` 바인딩 → D1 마이그레이션 `0002_misclass_samples.sql` 원격 적용(성공) → `CLASSIFIER_ADMIN_TOKEN` 비밀값 등록(성공) → `npm test` 281건 통과 → `npx wrangler deploy`. 새 버전 `b5342cff-8ca6-4e18-80d6-5d01e05b9148`, 바인딩에 R2가 붙음. 이후 재배포로 현재 운영 버전은 `2a763268-3f80-416e-844f-cd1afa93b331`.
 - 배포 뒤 읽기 전용 확인: `GET /public/announcements` 200 `{"version":0,"items":[]}`+`no-store`, `POST /classifier-samples`(키 없음) 401, `GET /classifier-samples/admin`(토큰 없음) 401, `/public/assets/packs/none.json`·허용 밖 접두어 404.
 - 하지 않은 것: 첫 공지 `r2 object put … --remote` 업로드(올릴 내용 미정), 앱의 「보내기」 업로드, 실제 표본 저장·운영자 읽기(토큰 있는 호출), 아이폰에서 공지 표시 확인.
 - 알아 둔 점: 실행한 터미널 두 곳에 포털·카카오 키가 화면에 그대로 찍혔다. 코드·문서·커밋에는 쓰지 않았고, 대표가 필요하면 재발급을 판단한다.
