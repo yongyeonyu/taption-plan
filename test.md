@@ -1152,6 +1152,12 @@
 
 ## 검증 기록
 
+### SEA1119A01 · 시즌 이벤트 팩 프레임워크와 크리스마스 팩 (2026-11-19, 시뮬레이터 iPhone 17, 비야 브리지 `20261119-2212-season-pack-framework`)
+
+- `swift test --package-path Packages/SeasonPackKit`: 77건 통과·0 실패. 앱 Debug 빌드 성공. `-only-testing:TaptionPlanTests`(`-parallel-testing-enabled NO`): xcresult 통과 3,150·실패 0·건너뜀 26(새로 깨진 시험 없음).
+- `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과. Release 오브젝트에 `-seasonPackDate`·`-seasonPackPreview` 문자열 없음(DEBUG 전용 확인).
+- 시뮬레이터에서 눈으로 보지 않은 것: 트리·산타·의상 렌더, 아이콘 위치, 캐럴·가사 시각. 아이폰 11 Pro 확인은 `## 실기기 확인 목록`의 SEA1119A01 줄. 로그 `build/validation/SEA1119A01/`.
+
 ### TFB1119A04 · TestFlight 354 (2026-11-19, 대표 선택 「지금 354 빌드 올리기」)
 - `scripts/testflight/release.sh --yes --request-id TFB1119A04`를 빌드 잠금 안에서 실행해 종료 코드 0. 빌드 번호 353 → 354, 산출물의 앱·위젯·Watch·Watch 위젯 네 번들이 모두 354(`pbxproj`의 `CURRENT_PROJECT_VERSION`과 네 `Info.plist` 일치).
 - 처리 `VALID`, 내부 그룹 「TP Taption Plan 내부 테스트」 연결, 그룹 화면의 빌드 354 노출, 테스터 1명 노출(`build/validation/TFB1119A04/testflight-report.json`, git 무시 대상).
