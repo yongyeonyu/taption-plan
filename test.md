@@ -1135,6 +1135,15 @@
 
 ## 검증 기록
 
+### 정리 묶음 (2026-11-19, 대표 승인: 푸시·에이전트 워크트리·옛 KV 바인딩·번역 검수·자세 그림·통행료 거리·카카오)
+
+- **D1R1119A02 · 옛 KV 바인딩 제거**: `scripts/kv-to-d1.mjs`로 옛 KV(PLANS)의 남은 키 133개(만료 0)를 읽기만 해 SQL로 만들고(최대 문장 56KB) D1에 `INSERT OR IGNORE`로 적용(129건 새로 들어감, 4건은 이미 있어 그대로, 값은 출력하지 않음). 확인: KV 133개 모두 D1에 있음(D1 146행). 그 뒤 `wrangler.toml`·`wrangler.local.toml`에서 `[[kv_namespaces]]` 블록을 지우고 README에 적음. 서버 `npm test` 250건 통과, `wrangler deploy --dry-run` 바인딩에 `PLANS` 없음·`RELAY_DB` 있음. **서버 재배포(대표, 터미널)가 한 번 남음**: 지금 떠 있는 버전은 아직 KV가 붙어 있고, 재배포해야 KV가 떨어짐. 되돌리려면 같은 스크립트와 KV id로 블록을 다시 넣음.
+- **번역 검수**: 에이전트(읽기 전용)가 12개 언어 새 문구 10개를 검수. 고친 것(높음·보통): ja·zh-Hant 예약 용어, de `Aufführung / Kino`·`Memos`, fr `mémos`, it `memo`, id `pemberitahuan`·`jadwal`·`catatan keuangan`, th `ตารางเวลา`·`โน้ต`, hi `शेड्यूल`·`खर्च खाते`. 안 고친 것(확신 낮음): it·es·pt-BR의 「가계부」 용어, th 9번, 아포스트로피 모양 통일. zh-Hans·vi는 이상 없음. 사람 검수는 아님. `extract`·`check` 실패 0·`generate`.
+- **ICN1119A07 · 공연/영화 관람 잠금화면·위젯·Watch 자세 그림**: `TaptionHwarangPose.performanceMovie`를 맨 끝에 더하고(줄 번호 유지) 위젯 아틀라스 3종(화랑이·춘향이·윤복이)을 다시 뽑아 교체, Watch 스프라이트 `WatchCat-<털색>-performanceMovie` 3개를 더함. 시험: `WidgetPoseAtlasTests`(모든 자세 줄·기존 줄이 현재 장면과 같음)·`MapHomeStickmanTests` 86건 중 81 통과·건너뜀 5(시트 쓰기용)·실패 0. 첫 두 시도는 시뮬레이터 멈춤·부팅 직후 실행 실패(`hung-tests.log`·`launchfail-tests.log`)라 다시 돌려 통과. 로그 `build/validation/ICN1119A07/`.
+- **TGT1118A01 · 영업소 판정 거리(150m·80m)**: 실제 영업소 좌표가 있는 `toll-units.json`을 가져오지 못해(아이폰 18 연결 끊김, 서버의 영업소 목록은 Cloudflare 엣지 캐시라 읽을 수 없음) 영업소와 견주는 확인은 못 함. 대신 11-18 실제 이동 두 건(출근 20.6km·퇴근 23.5km)의 위치 품질을 `scripts/toll-gate-replay.py`로 잼: 위치 간격 중앙값 1.0초, 연속 위치 사이 최대 66.5m, 정확도 p90 10m·최대 26m, 이음 한도(120초·3km) 넘는 공백 이동당 1~2번(최대 150초), 3km 넘게 뛴 곳 0. 따라서 정확도 50m 기준·보간 방식은 이 기록에서 충분하고, 150m(지남)·80m(확실함)이 맞는지는 영업소 좌표가 있어야 알 수 있음. 폰 연결 뒤 `devicectl`로 `Library/Caches/toll-units.json`을 받아 `python3 -I scripts/toll-gate-replay.py raw.json toll-units.json`으로 확인(도로공사 노선을 지나는 이동 필요; 공항고속도로는 민자라 목록에 없을 수 있음).
+- **KDR1118A01 · 카카오 길찾기**: 카카오 문서(영문 개발자 문서·포럼 검색)에서 `fare.toll`은 원 단위 정수이고 택시 요금(`taxi`)과 따로이며 통행료가 없으면 0임을 확인. 할인(하이패스·출퇴근) 포함 여부는 문서에 없어 확인 못 함. 서버는 `car_type=1`(승용차)로만 부르고 할인은 적용하지 않으며 카카오로 넣은 규칙은 정액(`flat`)이라 앱도 할인하지 않음(TGT1119A01). 실제 응답은 서버 비밀값 키가 필요해 내가 부르지 못함: 대표가 `KAKAO_REST_API_KEY=… node scripts/kakao-toll-check.mjs --origin 위도,경도 --dest 위도,경도 [--via …]`로 알려진 요금(공항고속도로 2,500원 등)과 견주면 됨(`server/trip-relay/scripts/kakao-toll-check.mjs`, 서버 `parseDirections`를 그대로 사용).
+- **동행 실시간 위치**: 코드는 그대로 두고 스위치만 꺼 둠(`isAvailable = false`, 대표 결정 2026-11-17·2026-11-19 「남겨놔」). 같은 빌드가 내부 그룹에도 가므로 내부에서도 꺼져 있음.
+
 ### TFB1119A03 외부 · 빌드 353 베타 테스터 릴리즈 (2026-11-19)
 
 - 대표 지시 「베타테스터 릴리즈」: `python3 scripts/testflight/external.py --build 353 --group <TP 지인 테스트> --notes "…"`(테스트할 내용 한국어 5항목: 통행료 길별 규칙·아이콘·지출 줄, 하단 반달, AI 기록 지우기·한 달 보관, 공연/영화 관람, AI 알림 분석). 외부 그룹 「TP 지인 테스트」 연결, 베타 앱 심사 제출. 읽은 상태: `betaReviewState` `APPROVED`·`externalBuildState` `IN_BETA_TESTING`·`internalBuildState` `IN_BETA_TESTING`·그룹 연결 참.
