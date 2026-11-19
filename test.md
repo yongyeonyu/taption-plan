@@ -1149,6 +1149,13 @@
 
 ## 검증 기록
 
+### SRV1119A04 · 서버 재배포(R2 공지·오분류 표본·통행료 고정표) (2026-11-19, 대표가 터미널에서 실행, 확인은 맥에서 curl)
+- 대표가 순서대로 실행: R2 버킷 `taption-trip-public` 생성 → `wrangler.local.toml`에 `PUBLIC_BUCKET` 바인딩 → D1 마이그레이션 `0002_misclass_samples.sql` 원격 적용(성공) → `CLASSIFIER_ADMIN_TOKEN` 비밀값 등록(성공) → `npm test` 281건 통과 → `npx wrangler deploy`. 새 버전 `b5342cff-8ca6-4e18-80d6-5d01e05b9148`, 바인딩에 R2가 붙음.
+- 배포 뒤 읽기 전용 확인: `GET /public/announcements` 200 `{"version":0,"items":[]}`+`no-store`, `POST /classifier-samples`(키 없음) 401, `GET /classifier-samples/admin`(토큰 없음) 401, `/public/assets/packs/none.json`·허용 밖 접두어 404.
+- 하지 않은 것: 첫 공지 `r2 object put … --remote` 업로드(올릴 내용 미정), 앱의 「보내기」 업로드, 실제 표본 저장·운영자 읽기(토큰 있는 호출), 아이폰에서 공지 표시 확인.
+- 알아 둔 점: 실행한 터미널 두 곳에 포털·카카오 키가 화면에 그대로 찍혔다. 코드·문서·커밋에는 쓰지 않았고, 대표가 필요하면 재발급을 판단한다.
+
+
 ### TGT1119A03 · 영업소 위치 고정표 채움 (2026-11-19, 대표가 로컬에서 `scripts/ex-units-fill.mjs` 실행)
 - 대표가 도로공사·카카오 키로 스크립트를 한 번 돌려 `server/trip-relay/src/ex-unit-prefix.js`에 영업소 126개(포털 목록 398개 중 포털에 위치가 없던 것을 카카오 장소 검색으로 찾음, `geo: "kakao"`)가 들어갔다. 126개 모두 한국 좌표 범위 안(위도 33~39·경도 124~132)이다.
 - 카카오에서도 못 찾은 66개는 휴게소·분기점(JC)·본선·「(테스트)」·「(개)」 이름 등 일반 영업소가 아닌 것이 대부분이라 위치 없이 남는다(서버는 이들을 다시 찾으려 하지만 결과가 없으면 30일 동안 다시 묻지 않는다).
