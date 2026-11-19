@@ -1,7 +1,9 @@
 ---
 id: 20261119-1828-announcements-ios
 created_at: 2026-11-19T18:28+09:00
-status: pending
+status: done
+finished_at: 2026-11-19T19:40+09:00
+commit: 4b957dd9
 request_id: ANN1119A01
 title: R2 공용 공지 — iOS 앱 수신·표시 연동
 from: 비야
@@ -151,3 +153,15 @@ basis: 대표 선택 (2026-11-19 18:24 채팅 — 비야가 제시한 다음 작
 - 앱: `Packages/TaptionAssistant/Sources/TaptionAssistantKit/TripRelay.swift`, `TaptionPlan/UI/MapHomeView+Support.swift`(216~221·236행), `TaptionPlan/UI/ArrivalCardView.swift`(`MapHomeTopNoticeStack`), `TaptionPlan/UI/TripClipboardBanner.swift`, `TaptionPlan/UI/MapHomeLanguage.swift`, `Packages/TaptionWatchSync/Sources/TaptionWatchSync/UITextPack.swift`, `TaptionPlan/Core/OfflineVectorTileCache.swift`(조건부 요청 본보기).
 - 기록: `test.md`의 `R2PUB1119A01`(서버·남은 대표 몫), `TRP1110A04`(중계 주소·비밀값 없는 공개 GET 선례).
 - 이 요청은 **앱 수신·거르기·표시·닫기·시험**까지입니다. 공지 관리 화면(앱에서 쓰기), 여러 기기 읽음 동기화, POI 팩·모델 내려받기는 다음 요청입니다.
+
+## 클로드 코드 회신
+
+- 처리: 완료(전체 단위 시험에 이번 변경과 무관한 실패 1건 남음, 아래 참고)
+- 요청 ID: ANN1119A01 (`test.md` 홈·UI 줄·요청 상세·실기기 확인 목록·검증 기록)
+- 시작·끝: 2026-11-19 18:35 ~ 19:40 (KST)
+- 커밋: `4b957dd9` 작업, 문서 이동은 `[비야 브리지] 20261119-1828-announcements-ios` 한 건. 시작 때 확인한 `origin/main`은 `0fd95aa2`(지시서의 `e0c7e7d` 이후)
+- 바꾼 파일: `TaptionPlan/Core/AnnouncementFeed.swift`(새: 모델·거르기·정렬·언어 고르기·`AnnouncementService`), `TaptionPlan/UI/AnnouncementBanner.swift`(새: 배너·시트·`homeTopNotices`), `TaptionPlan/UI/MapHomeView+Support.swift`(기존 두 자리에서 `refresh()`·알림 칸 교체), `TaptionPlanTests/AnnouncementTests.swift`(새 14건), `TaptionPlanTests/TimeScaleTests.swift`(17→18 오래된 기대값), `TaptionPlan.xcodeproj/project.pbxproj`(새 파일 3개 등록), `test.md`. 서버·빌드 번호·동결 파일·`MapHomeView` 본 파일 저장 속성은 건드리지 않음
+- 구현 요점: `TripRelay.isAvailable`이 아니면(주소 없음) 요청 없음, 30분 쿨다운(시도 시각을 보내기 전에 적음), `If-None-Match`는 받은 ETag 그대로, 200이면 목록 교체·ETag 없는 200이면 저장값 삭제, 304면 유지, 그 밖은 조용히 무시, 한 번만 시도(`singleAttempt`)·8초 제한·인증·쿼리 없음, 목록은 메모리에만, 닫은 id는 90일/200개 정리, 배너는 가장 급한 1건·시트에 전체, 모달 없음, 공지 0건이면 자리·간격 없음
+- 검증: 새 `AnnouncementTests` 14건 통과·실패 0. 구조 점검 통과. 전체 `TaptionPlanTests` 2,947건 실행·건너뜀 26·실패 2(xcresult 통과 3,118) — 실패 `MapHomeStartupCameraTests`는 ICN1119A06 이후 직접 추가 18개인데 기대값이 17이던 것이라 18로 고쳐 단독 통과. 남은 실패 `AssistantAppControlTests.testAskUserStoresTheQuestionAnswersUploadAndUndoWithdrawsOnlyUnanswered`는 이번 변경과 무관한 시간 의존입니다: 시험이 질문을 11-12 시각으로 만드는데 `AITaskQueue.lifetime`이 7일이라 오늘부터 질문이 만료돼 「duplicate」가 안 나옴(손대지 않음, 다음 요청 후보). 시험 실행기가 「hung before establishing connection」으로 0건이 되어 시뮬레이터를 껐다 켜 다시 돌림(`hung-*.log` 보관). 서버 시험·실제 서버 호출·실기기·화면 눈 확인은 안 함
+- 알아 둘 것(지시서에 없던 결함 1건): 서버 스키마 예의 `2026-11-25T09:00+09:00`(초 없는 ISO 8601)를 `ISO8601DateFormatter`가 못 읽어 기간 조건이 무시될 뻔했습니다. 시험이 잡아 초 없는 형식도 읽게 고쳤습니다. 서버는 이 형식을 그대로 통과시키므로 공지를 올릴 때 초를 넣든 빼든 앱은 읽습니다
+- 남은 것·확인 필요: ① 번역 대기 4문구 × 12개 언어(`공지`·`새 공지가 없습니다`·`이 공지 닫기`·`자세히`, `check.py` 48건 누락, `generate.py`는 메인 세션 몫, 생성물은 되돌려 둠) ② R2 공지 업로드(R2PUB1119A01 대표 몫) 뒤 아이폰 11 Pro 확인 — `test.md` 실기기 확인 목록 ANN1119A01 줄(지금은 확인 불가) ③ Debug `-announcementPreview`로 가짜 공지 3건을 서버 없이 볼 수 있게 넣었으나 화면은 눈으로 보지 못함
