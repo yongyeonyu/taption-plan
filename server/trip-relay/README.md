@@ -203,6 +203,8 @@ node scripts/kv-to-d1.mjs --config wrangler.local.toml --out /tmp/kv-to-d1.sql -
 | `items[].link` | 선택 | `https://`, 300자 이내 | 「자세히」로 열 주소 |
 | `items[].titleByLang`·`bodyByLang` | 선택 | `{"en": "…", "ja": "…"}` | 다른 언어. 없으면 `title`·`body`(기본 한국어) |
 
+공지를 올리거나 바꾸거나 내릴 때는 아래 명령을 손으로 치는 대신 `scripts/announce.mjs`(BRG1119A01)를 씁니다: 지금 올라간 공지에 합치고(`version`은 +1) 스키마를 검사해 미리보기를 보여 주며, `--upload`를 붙여야만 R2에 올립니다(`--remote` 자동). 예: `node scripts/announce.mjs --host <앱이 쓰는 중계 서버 주소> --title "점검 안내" --body "…" --kind warning --upload`. 비야의 공지 게시 요청 절차는 `pickle-bridge/README.md` 10절.
+
 ### R2 배포·업로드 (대표님이 하는 일 — 아직 안 했습니다)
 
 ```sh
