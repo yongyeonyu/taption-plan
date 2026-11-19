@@ -86,6 +86,7 @@
 
 ### 기록·분류·Watch
 
+- MSC1119B01 · 오분류 표본 「서버로 보내기」(앱 미리보기·확인·전송·비우기)와 맥 집계 스크립트(`classifier-report.mjs`) 코드·시험 끝. 남은 것: 대표가 서버 마이그레이션 0002·`CLASSIFIER_ADMIN_TOKEN`·서버 배포 → 새 앱 빌드 TestFlight → 기기에서 보내기 눈 확인 · 실기기·배포, 대표 몫 · 근거 `server/trip-relay/README.md` 「맥에서 표본 집계」
 - MSC1119A01 · 오분류 교정 표본 수집(옵트인·기기 안 저장·내보내기) 코드·시험 끝. 남은 것: 아이폰 11 Pro에서 설정 › 내 데이터 눈 확인, 번역 대기 8문구(`generate.py`는 메인 세션 몫), 서버 전송·모델 학습·배포는 다음 요청(대표 결정) · 실기기, 대표 몫
 - WSN1112A01·WSN1112A02·WSN1112A03 · Watch 센서 기록 점검: 하룻밤 잔 뒤 로그 내보내기, 수면 중 집안일 재확인, 도착 지연·덮인 비율, 예전 103.8시간 기록, 임계값 재검토(며칠치 쌓인 뒤) · 실기기(Watch), 자료. 대표 결정 대기: 앱 화면·AI로 나가는 예전 근거의 기기 이름도 가릴지, 평상시 Watch 라벨을 iPhone 행동 엔진에 잇기(「실제 기록 확인 뒤」로 보류)
 - HSW1114A01 · 집안일 기준을 높인 숫자는 어림, 실제 기록으로 맞추기 · 자료
@@ -110,7 +111,7 @@
 
 - CI(app job) · 기존 `TravelModeView.swift` 978행 `cannot call value of non-function type 'TravelPlanTableModel'`(Xcode 26, actor 격리)로 실패 중 · 대표 지시로 건드리지 않음
 - CI(packages job) · `DayStoreV3Tests.testConcurrentColdOpensInitializeOneV3Schema`가 「database is locked」로 간헐 실패(로컬 15번 중 2번) · 코드
-- CLS1119A01 · 오분류 표본 서버 엔드포인트 코드·시험 끝(280건 통과). 남은 것: 대표가 D1 마이그레이션 0002 적용·`CLASSIFIER_ADMIN_TOKEN` 비밀값·서버 배포, 앱의 「보내기」 단추와 맥 학습 스크립트는 후속 요청 · 대표 몫 · `server/trip-relay/README.md` 「오분류 교정 표본 모으기」
+- CLS1119A01 · 오분류 표본 서버 엔드포인트 코드·시험 끝(280건 통과). 남은 것: 대표가 D1 마이그레이션 0002 적용·`CLASSIFIER_ADMIN_TOKEN` 비밀값·서버 배포, 앱의 「보내기」 단추와 맥 학습 스크립트는 MSC1119B01에서 만듦(배포·빌드 업로드는 대표 몫) · 대표 몫 · `server/trip-relay/README.md` 「오분류 교정 표본 모으기」
 - R2PUB1119A01 · 코드·서버 시험 끝(271건 통과). 남은 것: 대표가 R2 버킷 만들기·`wrangler.local.toml`에 바인딩 추가·서버 배포·첫 공지 `--remote` 업로드. 앱 연동은 후속 요청 · 대표 몫 · `server/trip-relay/README.md` 「공용 공지·정적 데이터」
 - D1R1119A01 · 코드·단위 시험 끝. 남은 것: 대표가 터미널에서 D1 만들기·마이그레이션 적용·서버 배포, 이관 끝난 뒤 KV 바인딩 떼기 · 대표 몫(배포) · `server/trip-relay/README.md`
 - 출시 전 점검 · `TripLiveLocationService.isAvailable` 끄기(외부 시험·출시 전 반드시), 푸시 권한 항목, PCC 스위치·`PRIVACY.md` 짝 맞추기 · `## 실기기 확인 목록` 「출시 전 점검」
@@ -157,6 +158,7 @@
 - SEA1119A01(비야 브리지 `20261119-2212-season-pack-framework`): 기간 한정 이벤트(성탄 등)를 앱 본체를 고치지 않고 매니페스트로 붙일 구조가 없다(신규 기능, HOM1111A01 「나중에」의 재개). 해결: 새 패키지 `Packages/SeasonPackKit`(배급·판정·표현·상호작용 4층, 아이콘 레지스트리)과 앱 쪽 `TaptionPlan/Core/SeasonPackAdapter.swift`·마운트, 번들 시드 팩 `sample`·`christmas`. 검증 기준: `swift test --package-path Packages/SeasonPackKit`, 앱 Debug 빌드, 전체 단위 시험, 구조 점검 두 가지, 매니페스트에서 아이콘 항목을 지우면 아이콘이 사라짐. 상태: 진행 중(2026-11-19, 워크트리 `season-pack-sea1119a01`).
 - ENC1119A01(비야 브리지 `20261119-1943-energy-curve-visualizer`): 하루 요약에 시간축 위 곡선이 없어 그날 컨디션과 일정 부담을 한눈에 보기 어렵다(신규 기능). 해결: `TaptionPlan/Core/EnergyCurveEngine.swift`(지난밤 수면 시작값 + 15분 칸 변화량, 순수 계산)·`TaptionPlan/UI/MapHomeEnergyCurveCard.swift`(Canvas 곡선·수면 띠·일정 띠·인사이트)·`MapHomeInfoSheets.swift`/`MapHomeView+Presentation.swift` 연결 두 곳. 검증 기준: `EnergyCurveTests`, Debug 빌드, 전체 단위 시험, 구조 점검. 상태: 코드·시험 끝, 기기 눈 확인과 번역 대기는 후속.
 - MSC1119A01(비야 브리지 `20261119-2104-misclassification-samples`): 활동 분류 개선용으로 사용자가 분류를 손으로 고친 자료(자동 분류 → 사용자 분류)를 모으는 코드가 없다(신규 기능). 해결: 비식별 표본(`MisclassificationSample`: 시간대·요일·길이·분류·확신도·규칙 버전·속도/걸음/거리 등 특징값, 좌표·이름·제목·날짜 없음)을 옵트인(기본 꺼짐) 켠 경우에만 `Application Support/MisclassificationSamples/samples.jsonl`에 쌓고(5,000건 상한·백업 제외), 설정 › 내 데이터의 한 행에서 켜기·요약·내보내기·지우기, 「모든 데이터 삭제」에서 함께 삭제. 교정 5곳(`updateActualActivity`·`correctActualFragment`·`classifyUnconfirmedSpan`·`saveActivitySectionEdit`·`confirmTravel`)에서 정말 바뀐 경우만 저장 뒤 한 건. 검증 기준: `MisclassificationCollectorTests`, 전체 단위 시험, 구조 점검. 상태: 코드·시험 끝, 기기 눈 확인·번역 대기, 서버 엔드포인트는 다음 요청.
+- MSC1119B01(대표 지시 2026-11-19, 후속 두 가지): ① 앱 「서버로 보내기」 ② 맥 집계 스크립트. 원인: 서버 `POST /classifier-samples`·`GET /classifier-samples/admin`은 CLS1119A01로 있으나 앱에서 보낼 화면과 서버 표본을 분석할 길이 없다. 해결: ① 설정 행에 「서버로 보내기」(옵트인이 꺼져 있거나 0건이면 비활성) → 시트에서 건수·활동/이동·규칙 버전·최근 5건·실제 JSON 한 건을 보여 주고 「N건 보내기」를 눌러야 전송. 주인 키(`AssistantRegistration.prepare`)로 200건씩 `POST`, 201을 받은 묶음만 기기에서 비움(이유: 서버가 같은 id를 무시하고 곁 파일에 「보냄」 열이 없어 남기면 5,000건 상한만 차지하며 기기에 남는 데이터가 줄어듦, 거절된 표본도 다시 보내도 같아 같이 비움). 429(하루 2,000건)·5xx·오프라인·등록 실패·사생활 잠금은 표본을 그대로 두고 이유를 안내. 표본 형식은 그대로(날짜·좌표·이름 없음). ② 서버에 읽기 길이 이미 있어 서버 변경 없음: `server/trip-relay/scripts/classifier-report.mjs`가 운영자 토큰(환경변수·`--token-file`, 출력 안 함)으로 500건씩 받아 「자동 → 사용자」 쌍 집계와 규칙 후보 문장을 만듦. 검증 기준: `MisclassificationUploaderTests`·`MisclassificationCollectorTests`, 전체 단위 시험, `npm test`(286건 유지 + 새 시험), 구조 점검, l10n `check.py`. 상태: 코드·시험 끝, 서버 배포·앱 빌드 업로드는 대표 확인 뒤, 기기 눈 확인 대기.
 - CLS1119A01(대표 객관식 선택 2026-11-19: 서버 엔드포인트 바로 만들기·보관 1년·한 번 200건/1MB·하루 2,000건): MSC1119A01이 기기에 모으는 표본을 서버에 모을 곳이 없다. 해결: `POST/DELETE /classifier-samples`(주인 키)와 운영자 읽기 `GET /classifier-samples/admin`(`CLASSIFIER_ADMIN_TOKEN`), D1 표 `misclass_samples`, 앱 형식 그대로의 허용 목록 검사(열쇠·짧은 영문 코드·범위), 같은 id 무시, 올릴 때 1년 지난 표본 삭제. 검증 기준: `npm test` 전부 통과·기존 시험 수 유지. 상태: 코드·시험 끝, 배포·마이그레이션·비밀값은 대표 몫, 앱 업로드 단추는 후속.
 - D1R1119A01: 중계 서버 저장소를 KV(`env.PLANS`)에서 Cloudflare D1(`RELAY_DB`, `taption-trip-relay`)로 전환. 원인: KV 무료 한도(하루 쓰기 1,000)가 사용자 증가의 병목이라 `KV_DAILY_WRITE_BUDGET` 900에서 쓰기가 막힘(REV1110A06). 해결: `src/d1kv.js` KV 호환 어댑터(`handle`에서 `RELAY_DB`가 있으면 `env.PLANS`를 어댑터로 바꿈, 호출부 변경 없음), `migrations/0001_kv_entries.sql`, 쓰기·삭제는 D1만·읽기는 D1 먼저 → 옛 KV에서 남은 TTL로 복사(Dual-Read), 삭제는 옛 KV에 같은 키가 있을 때만 D1 삭제 표식, list는 두 쪽을 합쳐 「마지막 이름」 cursor, 쓰기 예산 서버 전체 80000·주인별 5000. 검증 기준: `npm test` 전부 통과(어댑터 TTL·이관·삭제 표식·list·옛 KV 없음·KV 쓰기 0건 시험 포함). 상태(2026-11-19): 코드·시험 끝. 대표 몫: `wrangler d1 create`·`d1 migrations apply --remote`·배포, 이관 뒤 KV 바인딩 제거(배포·마이그레이션은 에이전트가 하지 않음). 한계: 옛 KV가 붙어 있는 동안 list는 접두어 아래 옛 키를 끝까지 읽음, 읽힌 적 없는 만료 없는 옛 키는 이관 전에 KV를 떼면 사라짐, `metadata` 미지원(호출부 사용 없음), 실제 D1에서의 확인은 배포 뒤(시험은 `node:sqlite` 가짜).
 
@@ -1101,6 +1103,7 @@
 | ANN1119A01 | R2에 공지 1건을 올린 뒤(R2PUB1119A01 업로드 선행) 앱 실행 → 홈 위쪽 배너 표시 → X로 닫기 → 앱 종료·재실행 | 배너가 뜨고, 닫으면 사라지고, 재실행해도 다시 안 뜸. 지금은 서버 업로드 전이라 확인 불가 | 배너 표시 ○(아이폰 18 Pro Max, 2026-11-19, 대표가 고른 확인, 354). X로 닫기 ○·앱 재실행 뒤 다시 안 뜸 ○(아이폰 18, 2026-11-19). 상세 시트(배너 누르기)만 미확인 |
 | ENC1119A01 | 하루 요약 › 연봉 카드 아래 컨디션 에너지 곡선: 곡선·일정 띠·인사이트 1~2줄이 보이고, 기록 없는 날은 한 줄 빈 상태, 날짜를 바꿔도 이전 날 곡선이 남지 않음 | 카드가 보이고 곡선이 시간축에 맞으며 날짜를 바꿔도 이전 날 값이 안 남음. 시뮬레이터로는 눈으로 보지 않음(렌더링 연기 시험만) | |
 | SEA1119A01 | ① 12/19 이전(기기 날짜를 건드리지 않고 DEBUG 인자 없이)에 집 아이콘이 평소와 같음 ② `-seasonPackPreview christmas`로 열어 트리 낮 그림→(`-seasonPackDate 2026-12-25T21:00`) 점등·깜빡임·별, 트리 눌러 빠른 점멸·캐럴·가사 말풍선, 산타 첫 시연·눌러 선물, 의상·모자·목도리·뿔이 세 캐릭터에서 맞는지, 하루 공유 카드의 트리 그림 ③ 기간을 지난 날짜(`-seasonPackDate 2027-01-02T12:00`)에서 원래 그림으로 돌아옴 ④ `-seasonPackPreview sample`로 표본 아이콘이 뜨고 눌러 메뉴가 열리며, 매니페스트에서 항목을 지우고 다시 빌드하면 사라짐 ⑤ 기기 시계를 미래로 돌려도 DEBUG 인자 없이는 이벤트가 안 뜸 ⑥ 설정 › 내 데이터 › 시즌 팩 음원 출처 | 각 단계가 지시서 12절 기준대로 보임. 특히 모자 외 의상·목도리·뿔은 장면(자세)마다 위치가 어긋나지 않는지, 트리 터치가 집 탭(하루 요약)과 겹치지 않는지, 아이콘이 집 핀 옆에 보이는지(지금은 화면 오른쪽 가운데 기준) 확인 | |
+| MSC1119B01 | (서버 배포·새 빌드 뒤, 아이폰 11 Pro) 설정 › 내 데이터 › 분류 개선 데이터 수집을 켜고 분류를 몇 번 고친 뒤 ① 「서버로 보내기」 → 시트의 건수·JSON에 좌표·이름·날짜가 없는지 ② 「N건 보내기」 → 「N건을 보냈어요」·기기에 0건 ③ 수집을 끄면 단추가 회색 ④ 비행기 모드에서 보내면 오류 문구와 건수 그대로 | 보낸 건수만큼 서버 `misclass_samples`에 쌓임(운영자가 `classifier-report.mjs`로 확인), 실패하면 표본이 남음 | |
 | MSC1119A01 | 설정 › 내 데이터 › 분류 개선 데이터 수집: ① 꺼진 채 시간표에서 분류를 한 번 고쳐도 「0건」 ② 켜고 한 번 고치면 「1건」 ③ 「내보내기」 파일을 열어 좌표·장소 이름·연월일이 없고 「바꾸기 전 → 바꾼」 분류가 보이는지 ④ 「지우기」 뒤 「0건」 | 켜기 전 0건, 켠 뒤 고칠 때마다 1건씩, 내보낸 JSON에 개인 정보 없음, 지우면 0건. 시뮬레이터로는 화면을 눈으로 보지 않음(단위 시험만) | |
 
 ### Apple Watch
@@ -1151,6 +1154,14 @@
 | COM1016A01·IAP905G002 | 개인정보 라벨, IAP 보류 상태 | 대표 결정대로 | |
 
 ## 검증 기록
+
+### MSC1119B01 · 오분류 표본 「서버로 보내기」와 맥 집계 스크립트 (2026-11-19, 시뮬레이터 iPhone 17 + 맥 Node, 작업 폴더 `/Volumes/TaptionPlanBuild/src-MSC1119B01`, 브랜치 `msc1119b01-upload`)
+
+- 서버 `npm test`: 292건 통과·실패 0(기존 286 + `classifier-report.test.mjs` 6). 서버 코드는 바꾸지 않음(읽기 길 `GET /classifier-samples/admin`과 주인 키 업로드가 이미 있음).
+- 앱 단위 시험: 표적 `MisclassificationUploaderTests`(8)·`MisclassificationCollectorTests` 22건 통과. 전체 `TaptionPlanTests` 3,184건 실행·통과 3,158·실패 0·건너뜀 26(`build/validation/MSC1119B01/unit-1.xcresult`). 앞의 두 번은 「test runner hung before establishing connection」로 0건이라 `hung-unit.log`·`hung-unit-1.log`로 남기고, 시뮬레이터를 껐다 켠 세 번째에 통과.
+- 시험이 확인한 것: 450건 → 200·200·50건으로 나눠 주인 키(Bearer)로 `POST /classifier-samples`, 201 받은 묶음만 기기에서 비움 / 옵트인 꺼짐이면 요청 0건 / 두 번째 묶음에서 429면 더 보내지 않고 250건 남김 / 500이면 전부 남김 / 서버 주소 없으면 `notReady` / 0건이면 아무것도 안 보냄 / 미리보기 JSON 열쇠가 표본 형식과 같고 연도·좌표 없음 / `remove(ids:)`는 순서를 지키고 남의 줄은 안 건드림.
+- 구조 점검 `architecture-metrics.py --check docs/architecture-baseline.json` 통과. l10n `extract.py`→`check.py`(실패 0)→`generate.py`: 새 문구 16개 × 12개 언어(직접 번역, 별도 AI 검수 없음) 덧붙임, `generate.py`는 이 작업 폴더에서 돌림(병합 때 `source.json`·`unread-report.json` 충돌은 ours 후 재생성). pbxproj 파일당 4곳 수동 등록(빌드로 확인).
+- 확인 안 함: 화면 눈 확인(시뮬레이터·실기기 모두), 실제 서버에 보내기(서버 미배포라 대표 몫).
 
 ### BRG1119A01 · 공용 공지 올리기 도우미와 비야 공지 게시 요청 절차 (2026-11-19, 맥 Node `node --test`, 서버 코드만)
 - 배경: 공지는 R2에 쓸 수 있는 Cloudflare 로그인 맥(대표·대표가 시킨 클로드 코드)만 올릴 수 있다. 대표 선택(「비야도 올릴 수 있게 하기」)에 따라 비야는 문서로 요청하고 클로드 코드가 대표 승인 뒤 올리는 절차를 `pickle-bridge/README.md` 10절·`AGENTS.md` 12절에 적었다. 비야가 R2에 직접 쓰는 길·서버 쓰기 엔드포인트는 만들지 않았다.

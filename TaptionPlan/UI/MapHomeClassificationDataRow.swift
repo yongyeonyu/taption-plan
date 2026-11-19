@@ -9,6 +9,7 @@ struct MapHomeClassificationDataRow: View {
     @State private var total = 0
     @State private var exportFile: ExportFile?
     @State private var isDeleteConfirmationPresented = false
+    @State private var isUploadPresented = false
 
     private struct ExportFile: Identifiable {
         let id = UUID()
@@ -31,8 +32,8 @@ struct MapHomeClassificationDataRow: View {
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
             .accessibilityIdentifier("classificationDataToggle")
             Text(language.text(
-                "켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.",
-                "When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export."
+                "켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」(파일) 또는 「서버로 보내기」(미리보기 확인 뒤)를 누를 때만 나가요.",
+                "When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; data leaves only when you tap Export (a file) or Send to server (after a preview you confirm)."
             ))
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(.secondary)
@@ -46,16 +47,20 @@ struct MapHomeClassificationDataRow: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             }
+            Text(language.text("기기에 \(total)건 모음", "\(total) collected on this device"))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+                .accessibilityIdentifier("classificationDataCount")
             HStack(spacing: 10) {
-                Text(language.text("기기에 \(total)건 모음", "\(total) collected on this device"))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
-                    .foregroundStyle(Color.tpSecondary)
-                    .accessibilityIdentifier("classificationDataCount")
-                Spacer(minLength: 0)
                 Button(language.text("내보내기", "Export")) { export() }
                     .buttonStyle(.bordered)
                     .tint(Color.tpReferenceBlue)
                     .disabled(total == 0)
+                Button(language.text("서버로 보내기", "Send to server")) { isUploadPresented = true }
+                    .buttonStyle(.bordered)
+                    .tint(Color.tpReferenceBlue)
+                    .disabled(total == 0 || !isOn)
+                    .accessibilityIdentifier("classificationUploadButton")
                 Button(language.text("지우기", "Delete"), role: .destructive) { isDeleteConfirmationPresented = true }
                     .buttonStyle(.bordered)
                     .disabled(total == 0)
@@ -66,6 +71,9 @@ struct MapHomeClassificationDataRow: View {
         .sheet(item: $exportFile) { file in
             MisclassificationShareSheet(items: [file.url])
                 .onDisappear { try? FileManager.default.removeItem(at: file.url) }
+        }
+        .sheet(isPresented: $isUploadPresented) {
+            MapHomeClassificationUploadSheet(language: language, collector: collector, onFinished: reload)
         }
         .confirmationDialog(
             language.text("모은 분류 개선 데이터를 지울까요?", "Delete the collected classification data?"),

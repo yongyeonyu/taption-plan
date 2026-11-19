@@ -4503,6 +4503,20 @@
    ]
   },
   {
+   "key": "{0}건 보내기|Send {0}",
+   "ko": "{0}건 보내기",
+   "en": "Send {0}",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:73"
+   ],
+   "args": [
+    "preview.total"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0}건|{0} entries",
    "ko": "{0}건",
    "en": "{0} entries",
@@ -4511,6 +4525,34 @@
    ],
    "args": [
     "list.count"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0}건을 보내요|Sending {0} samples",
+   "ko": "{0}건을 보내요",
+   "en": "Sending {0} samples",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:38"
+   ],
+   "args": [
+    "preview.total"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0}건을 보냈어요|Sent {0} samples",
+   "ko": "{0}건을 보냈어요",
+   "en": "Sent {0} samples",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:87"
+   ],
+   "args": [
+    "result.sent"
    ],
    "targets": [
     "TaptionPlan"
@@ -38777,7 +38819,7 @@
    "ko": "끄면 더 모으지 않아요. 이미 모은 {0}건은 그대로 두고, 지우려면 「지우기」를 누르세요.",
    "en": "Turning it off stops collecting. The {0} already collected stay until you tap Delete.",
    "files": [
-    "MapHomeClassificationDataRow.swift:41"
+    "MapHomeClassificationDataRow.swift:42"
    ],
    "args": [
     "total"
@@ -40009,7 +40051,7 @@
    "ko": "내보낼 파일을 만들지 못했습니다.",
    "en": "Couldn't create the export file.",
    "files": [
-    "MapHomeClassificationDataRow.swift:98"
+    "MapHomeClassificationDataRow.swift:106"
    ],
    "args": [],
    "targets": [
@@ -41934,7 +41976,7 @@
    "ko": "되돌릴 수 없어요.",
    "en": "This can't be undone.",
    "files": [
-    "MapHomeClassificationDataRow.swift:81"
+    "MapHomeClassificationDataRow.swift:89"
    ],
    "args": [],
    "targets": [
@@ -43526,7 +43568,7 @@
    "ko": "모은 분류 개선 데이터를 지울까요?",
    "en": "Delete the collected classification data?",
    "files": [
-    "MapHomeClassificationDataRow.swift:71"
+    "MapHomeClassificationDataRow.swift:79"
    ],
    "args": [],
    "targets": [
@@ -45338,6 +45380,18 @@
    ]
   },
   {
+   "key": "보내는 중…|Sending…",
+   "ko": "보내는 중…",
+   "en": "Sending…",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:73"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "보내지 못했어요. 통신을 확인해 주세요.|Could not send. Check your connection.",
    "ko": "보내지 못했어요. 통신을 확인해 주세요.",
    "en": "Could not send. Check your connection.",
@@ -45724,7 +45778,19 @@
    "ko": "분류 개선 데이터 수집",
    "en": "Collect classification improvement data",
    "files": [
-    "MapHomeClassificationDataRow.swift:22"
+    "MapHomeClassificationDataRow.swift:23"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "분류 개선 데이터 수집이 꺼져 있어 보내지 않았어요.|Collection is off, so nothing was sent.",
+   "ko": "분류 개선 데이터 수집이 꺼져 있어 보내지 않았어요.",
+   "en": "Collection is off, so nothing was sent.",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:108"
    ],
    "args": [],
    "targets": [
@@ -46345,6 +46411,18 @@
    "args": [
     "count"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "사생활 잠금 중에는 보내지 않아요. 잠금을 푼 뒤 다시 눌러 주세요.|Nothing is sent while privacy lock is on. Unlock and try again.",
+   "ko": "사생활 잠금 중에는 보내지 않아요. 잠금을 푼 뒤 다시 눌러 주세요.",
+   "en": "Nothing is sent while privacy lock is on. Unlock and try again.",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:109"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -47251,6 +47329,22 @@
    ]
   },
   {
+   "key": "새로 {0}건 · 이미 있음 {1}건 · 받지 않음 {2}건. 보낸 표본은 이 기기에서 지웠어요.|{0} new · {1} already there · {2} not accepted. Sent samples were removed from this device.",
+   "ko": "새로 {0}건 · 이미 있음 {1}건 · 받지 않음 {2}건. 보낸 표본은 이 기기에서 지웠어요.",
+   "en": "{0} new · {1} already there · {2} not accepted. Sent samples were removed from this device.",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:89"
+   ],
+   "args": [
+    "result.accepted",
+    "result.duplicates",
+    "result.rejected"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "새로|New",
    "ko": "새로",
    "en": "New",
@@ -47514,11 +47608,50 @@
    ]
   },
   {
+   "key": "서버가 받지 못했어요({0}). 남은 표본은 그대로 있어요.|The server couldn't accept them ({0}). Your remaining samples are kept.",
+   "ko": "서버가 받지 못했어요({0}). 남은 표본은 그대로 있어요.",
+   "en": "The server couldn't accept them ({0}). Your remaining samples are kept.",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:113"
+   ],
+   "args": [
+    "status"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.|The server doesn't support this yet. The app or server needs an update.",
    "ko": "서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.",
    "en": "The server doesn't support this yet. The app or server needs an update.",
    "files": [
     "AssistantPIN.swift:48"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "서버로 가는 표본 한 건의 실제 모습|What one sample looks like on the wire",
+   "ko": "서버로 가는 표본 한 건의 실제 모습",
+   "en": "What one sample looks like on the wire",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:62"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "서버로 보내기|Send to server",
+   "ko": "서버로 보내기",
+   "en": "Send to server",
+   "files": [
+    "MapHomeClassificationDataRow.swift:59",
+    "MapHomeClassificationUploadSheet.swift:23"
    ],
    "args": [],
    "targets": [
@@ -47555,6 +47688,18 @@
    "en": "Couldn't reach the server, so the key wasn't replaced. Try again in a moment.",
    "files": [
     "AssistantSafetyViews.swift:7"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "서버에 연결하지 못했어요. 남은 표본은 그대로 있으니 잠시 뒤 다시 눌러 주세요.|Couldn't reach the server. Your remaining samples are kept; try again later.",
+   "ko": "서버에 연결하지 못했어요. 남은 표본은 그대로 있으니 잠시 뒤 다시 눌러 주세요.",
+   "en": "Couldn't reach the server. Your remaining samples are kept; try again later.",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:110"
    ],
    "args": [],
    "targets": [
@@ -53894,6 +54039,18 @@
    ]
   },
   {
+   "key": "오늘 보낼 수 있는 양(2,000건)을 넘었어요. 남은 표본은 그대로 있으니 내일 다시 눌러 주세요.|You've hit today's limit (2,000 samples). The rest are kept; try again tomorrow.",
+   "ko": "오늘 보낼 수 있는 양(2,000건)을 넘었어요. 남은 표본은 그대로 있으니 내일 다시 눌러 주세요.",
+   "en": "You've hit today's limit (2,000 samples). The rest are kept; try again tomorrow.",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:112"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "오늘 성장 조건 충족|Today's growth goal met",
    "ko": "오늘 성장 조건 충족",
    "en": "Today's growth goal met",
@@ -57477,6 +57634,18 @@
    "en": "Add the key",
    "files": [
     "AssistantConnectGuide.swift:117"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "인터넷에 연결되지 않았어요. 남은 표본은 그대로 있으니 연결된 뒤 다시 눌러 주세요.|You're offline. Your remaining samples are kept; try again when connected.",
+   "ko": "인터넷에 연결되지 않았어요. 남은 표본은 그대로 있으니 연결된 뒤 다시 눌러 주세요.",
+   "en": "You're offline. Your remaining samples are kept; try again when connected.",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:111"
    ],
    "args": [],
    "targets": [
@@ -62459,6 +62628,18 @@
    ]
   },
   {
+   "key": "최근 표본|Latest samples",
+   "ko": "최근 표본",
+   "en": "Latest samples",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:55"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "최근|Recent",
    "ko": "최근",
    "en": "Recent",
@@ -63476,11 +63657,11 @@
    ]
   },
   {
-   "key": "켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export.",
-   "ko": "켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.",
-   "en": "When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export.",
+   "key": "켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」(파일) 또는 「서버로 보내기」(미리보기 확인 뒤)를 누를 때만 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; data leaves only when you tap Export (a file) or Send to server (after a preview you confirm).",
+   "ko": "켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」(파일) 또는 「서버로 보내기」(미리보기 확인 뒤)를 누를 때만 나가요.",
+   "en": "When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; data leaves only when you tap Export (a file) or Send to server (after a preview you confirm).",
    "files": [
-    "MapHomeClassificationDataRow.swift:33"
+    "MapHomeClassificationDataRow.swift:34"
    ],
    "args": [],
    "targets": [
@@ -64161,6 +64342,18 @@
    "en": " samples",
    "files": [
     "MapHomeNLEClipFactory.swift:633"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "표본에는 시간대·요일·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 있어요. 좌표·장소 이름·일정 제목·날짜·이름은 없어요. 보낸 표본은 이 기기에서 지워요. 설정의 「지우기」와 달리 서버에는 남아 분류 규칙을 고치는 데 쓰고, 1년 뒤 지워요.|Each sample has only the time of day, weekday, length, average speed, step count and the classification before → after with its confidence. No coordinates, place names, event titles, dates or names. Sent samples are removed from this device. Unlike Delete in settings, the server keeps them to improve the classification rules and deletes them after one year.",
+   "ko": "표본에는 시간대·요일·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 있어요. 좌표·장소 이름·일정 제목·날짜·이름은 없어요. 보낸 표본은 이 기기에서 지워요. 설정의 「지우기」와 달리 서버에는 남아 분류 규칙을 고치는 데 쓰고, 1년 뒤 지워요.",
+   "en": "Each sample has only the time of day, weekday, length, average speed, step count and the classification before → after with its confidence. No coordinates, place names, event titles, dates or names. Sent samples are removed from this device. Unlike Delete in settings, the server keeps them to improve the classification rules and deletes them after one year.",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:47"
    ],
    "args": [],
    "targets": [
@@ -66220,6 +66413,22 @@
     "MapHomeDefaultBubblePool.swift:54"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "활동 {0}건 · 이동 {1}건 · 규칙 {2}|{0} activity · {1} travel · rules {2}",
+   "ko": "활동 {0}건 · 이동 {1}건 · 규칙 {2}",
+   "en": "{0} activity · {1} travel · rules {2}",
+   "files": [
+    "MapHomeClassificationUploadSheet.swift:41"
+   ],
+   "args": [
+    "preview.activity",
+    "preview.travel",
+    "preview.ruleVersion"
+   ],
    "targets": [
     "TaptionPlan"
    ]

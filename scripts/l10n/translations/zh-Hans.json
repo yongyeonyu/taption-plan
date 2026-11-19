@@ -6130,6 +6130,24 @@
 "일정 {0}건|{0} events": "{0} 个日程",
 "자세히|Details": "详情",
 "컨디션 에너지 곡선|Condition energy curve": "状态能量曲线",
-"켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export.": "开启后，每次修改分类时，只会在设备上保存时间段、时长、平均速度、步数，以及修改前→修改后的分类和置信度。不包含坐标、地点名称、日程标题和日期。不会自动发送，只有点击“导出”时才会生成文件。"
+"켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export.": "开启后，每次修改分类时，只会在设备上保存时间段、时长、平均速度、步数，以及修改前→修改后的分类和置信度。不包含坐标、地点名称、日程标题和日期。不会自动发送，只有点击“导出”时才会生成文件。",
+"{0}건 보내기|Send {0}": "发送{0}条",
+"{0}건을 보내요|Sending {0} samples": "将发送{0}条样本",
+"{0}건을 보냈어요|Sent {0} samples": "已发送{0}条样本",
+"보내는 중…|Sending…": "正在发送…",
+"분류 개선 데이터 수집이 꺼져 있어 보내지 않았어요.|Collection is off, so nothing was sent.": "分类改进数据收集已关闭,所以没有发送。",
+"사생활 잠금 중에는 보내지 않아요. 잠금을 푼 뒤 다시 눌러 주세요.|Nothing is sent while privacy lock is on. Unlock and try again.": "隐私锁开启时不会发送。请解锁后再点一次。",
+"새로 {0}건 · 이미 있음 {1}건 · 받지 않음 {2}건. 보낸 표본은 이 기기에서 지웠어요.|{0} new · {1} already there · {2} not accepted. Sent samples were removed from this device.": "新增{0}条 · 已有{1}条 · 未接收{2}条。已发送的样本已从此设备删除。",
+"서버가 받지 못했어요({0}). 남은 표본은 그대로 있어요.|The server couldn't accept them ({0}). Your remaining samples are kept.": "服务器未能接收({0})。剩余样本仍保留。",
+"서버로 가는 표본 한 건의 실제 모습|What one sample looks like on the wire": "发送到服务器的一条样本的实际样子",
+"서버로 보내기|Send to server": "发送到服务器",
+"서버에 연결하지 못했어요. 남은 표본은 그대로 있으니 잠시 뒤 다시 눌러 주세요.|Couldn't reach the server. Your remaining samples are kept; try again later.": "无法连接服务器。剩余样本仍保留,请稍后再点一次。",
+"오늘 보낼 수 있는 양(2,000건)을 넘었어요. 남은 표본은 그대로 있으니 내일 다시 눌러 주세요.|You've hit today's limit (2,000 samples). The rest are kept; try again tomorrow.": "已超过今天可发送的数量(2,000条)。剩余样本仍保留,请明天再点一次。",
+"인터넷에 연결되지 않았어요. 남은 표본은 그대로 있으니 연결된 뒤 다시 눌러 주세요.|You're offline. Your remaining samples are kept; try again when connected.": "未连接到互联网。剩余样本仍保留,请连接后再点一次。",
+"최근 표본|Latest samples": "最近的样本",
+"켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」(파일) 또는 「서버로 보내기」(미리보기 확인 뒤)를 누를 때만 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; data leaves only when you tap Export (a file) or Send to server (after a preview you confirm).": "开启后,每次修改分类,只会在此设备上保存时间段、时长、平均速度、步数,以及修改前的分类→修改后的分类和置信度。不包含坐标、地点名称、日程标题和日期。不会自动发送,只有在你点按「导出」(文件)或「发送到服务器」(确认预览后)时才会发出。",
+"표본에는 시간대·요일·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 있어요. 좌표·장소 이름·일정 제목·날짜·이름은 없어요. 보낸 표본은 이 기기에서 지워요. 설정의 「지우기」와 달리 서버에는 남아 분류 규칙을 고치는 데 쓰고, 1년 뒤 지워요.|Each sample has only the time of day, weekday, length, average speed, step count and the classification before → after with its confidence. No coordinates, place names, event titles, dates or names. Sent samples are removed from this device. Unlike Delete in settings, the server keeps them to improve the classification rules and deletes them after one year.": "样本只包含时间段、星期、时长、平均速度、步数,以及修改前的分类→修改后的分类和置信度。不包含坐标、地点名称、日程标题、日期和姓名。已发送的样本会从此设备删除。与设置中的「删除」不同,服务器会保留这些样本用于改进分类规则,一年后删除。",
+"활동 {0}건 · 이동 {1}건 · 규칙 {2}|{0} activity · {1} travel · rules {2}": "活动{0}条 · 出行{1}条 · 规则{2}",
+"시즌 팩 음원 출처|Season pack music credits": "季节包音乐来源"
 }
 }

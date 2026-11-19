@@ -110,6 +110,21 @@ struct MisclassificationCollector {
     /// 내보내기·나중의 `POST /classifier-samples` 본문과 같은 JSON.
     func exportPayload() -> Data { MisclassificationSample.exportData(samples(), ruleVersion: ClassificationRules.version) }
 
+    /// 서버가 받은 표본만 기기에서 뺀다(MSC1119B01). 보내는 사이 새로 쌓인 표본은 그대로 남는다. 줄 순서는 바꾸지 않는다.
+    @discardableResult
+    func remove(ids: Set<UUID>) -> Int {
+        guard !ids.isEmpty else { return 0 }
+        return Self.gate.withLock { _ in
+            let lines = readLines()
+            let kept = lines.filter { line in
+                guard let sample = try? JSONDecoder().decode(MisclassificationSample.self, from: line) else { return true }
+                return !ids.contains(sample.id)
+            }
+            guard kept.count != lines.count, (try? write(kept)) != nil else { return 0 }
+            return lines.count - kept.count
+        }
+    }
+
     /// 파일을 지운다. 다음 `capture` 때 다시 만든다.
     func removeAll() {
         Self.gate.withLock { _ in _ = try? FileManager.default.removeItem(at: directory) }

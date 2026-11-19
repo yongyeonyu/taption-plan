@@ -26104,6 +26104,83 @@
         }
       }
     },
+    "{0}건 보내기|Send {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}件を送信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送{0}条"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送{0}筆"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} senden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่ง {0} รายการ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} भेजें"
+          }
+        }
+      }
+    },
     "{0}건|{0} entries" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -26177,6 +26254,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} प्रविष्टियाँ"
+          }
+        }
+      }
+    },
+    "{0}건을 보내요|Sending {0} samples" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}件を送信します"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将发送{0}条样本"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將傳送{0}筆樣本"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Beispiele werden gesendet"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi de {0} échantillons"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invio di {0} campioni"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviando {0} muestras"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviando {0} amostras"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang gửi {0} mẫu"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengirim {0} sampel"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังส่ง {0} ตัวอย่าง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} नमूने भेजे जा रहे हैं"
+          }
+        }
+      }
+    },
+    "{0}건을 보냈어요|Sent {0} samples" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}件を送信しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已发送{0}条样本"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已傳送{0}筆樣本"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Beispiele gesendet"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} échantillons envoyés"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} campioni inviati"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} muestras enviadas"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} amostras enviadas"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã gửi {0} mẫu"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} sampel terkirim"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่ง {0} ตัวอย่างแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} नमूने भेजे गए"
           }
         }
       }
@@ -279203,6 +279434,83 @@
         }
       }
     },
+    "보내는 중…|Sending…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在发送…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送中…"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gesendet…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invio…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviando…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviando…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang gửi…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengirim…"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังส่ง…"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजा जा रहा है…"
+          }
+        }
+      }
+    },
     "보내지 못했어요. 통신을 확인해 주세요.|Could not send. Check your connection." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -281663,6 +281971,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "वर्गीकरण सुधार डेटा एकत्र करें"
+          }
+        }
+      }
+    },
+    "분류 개선 데이터 수집이 꺼져 있어 보내지 않았어요.|Collection is off, so nothing was sent." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分類改善データの収集がオフのため、送信しませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分类改进数据收集已关闭,所以没有发送。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分類改善資料蒐集已關閉,所以沒有傳送。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Datensammlung zur Verbesserung der Klassifizierung ist aus, daher wurde nichts gesendet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La collecte de données d'amélioration est désactivée, rien n'a été envoyé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La raccolta dei dati per migliorare la classificazione è disattivata, quindi non è stato inviato nulla."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La recopilación de datos para mejorar la clasificación está desactivada, así que no se envió nada."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A coleta de dados para melhorar a classificação está desativada, então nada foi enviado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thu thập dữ liệu cải thiện phân loại đang tắt nên chưa gửi gì."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengumpulan data peningkatan klasifikasi sedang mati, jadi tidak ada yang dikirim."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเก็บข้อมูลเพื่อปรับปรุงการจัดหมวดหมู่ปิดอยู่ จึงไม่ได้ส่งอะไร"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "वर्गीकरण सुधार डेटा संग्रह बंद है, इसलिए कुछ नहीं भेजा गया।"
           }
         }
       }
@@ -285436,6 +285821,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} लोग"
+          }
+        }
+      }
+    },
+    "사생활 잠금 중에는 보내지 않아요. 잠금을 푼 뒤 다시 눌러 주세요.|Nothing is sent while privacy lock is on. Unlock and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プライバシーロック中は送信しません。ロックを解除してからもう一度押してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐私锁开启时不会发送。请解锁后再点一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隱私鎖開啟時不會傳送。請解鎖後再按一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei aktiver Datenschutzsperre wird nichts gesendet. Entsperre und tippe erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien n'est envoyé tant que le verrouillage de confidentialité est actif. Déverrouillez puis réessayez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con il blocco privacy attivo non viene inviato nulla. Sblocca e riprova."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se envía nada mientras el bloqueo de privacidad esté activo. Desbloquea y vuelve a intentarlo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada é enviado enquanto o bloqueio de privacidade estiver ativo. Desbloqueie e tente de novo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi khóa quyền riêng tư đang bật, sẽ không gửi gì. Hãy mở khóa rồi bấm lại."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada yang dikirim saat kunci privasi aktif. Buka kunci lalu coba lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จะไม่ส่งอะไรขณะที่ล็อกความเป็นส่วนตัวเปิดอยู่ ปลดล็อกแล้วลองใหม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "गोपनीयता लॉक चालू रहते कुछ नहीं भेजा जाता। लॉक खोलकर फिर कोशिश करें।"
           }
         }
       }
@@ -291061,6 +291523,83 @@
         }
       }
     },
+    "새로 {0}건 · 이미 있음 {1}건 · 받지 않음 {2}건. 보낸 표본은 이 기기에서 지웠어요.|{0} new · {1} already there · {2} not accepted. Sent samples were removed from this device." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新規{0}件・登録済み{1}件・未受理{2}件。送信したサンプルはこのデバイスから削除しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增{0}条 · 已有{1}条 · 未接收{2}条。已发送的样本已从此设备删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增{0}筆 · 已有{1}筆 · 未接收{2}筆。已傳送的樣本已從此裝置刪除。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} neu · {1} schon vorhanden · {2} nicht angenommen. Gesendete Beispiele wurden von diesem Gerät entfernt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} nouveaux · {1} déjà présents · {2} non acceptés. Les échantillons envoyés ont été supprimés de cet appareil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} nuovi · {1} già presenti · {2} non accettati. I campioni inviati sono stati rimossi da questo dispositivo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} nuevas · {1} ya estaban · {2} no aceptadas. Las muestras enviadas se quitaron de este dispositivo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} novas · {1} já existiam · {2} não aceitas. As amostras enviadas foram removidas deste dispositivo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mới {0} · đã có {1} · không nhận {2}. Các mẫu đã gửi đã được xóa khỏi thiết bị này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} baru · {1} sudah ada · {2} tidak diterima. Sampel yang terkirim sudah dihapus dari perangkat ini."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใหม่ {0} · มีอยู่แล้ว {1} · ไม่รับ {2} ตัวอย่างที่ส่งแล้วถูกลบออกจากอุปกรณ์นี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} नए · {1} पहले से मौजूद · {2} स्वीकार नहीं हुए। भेजे गए नमूने इस डिवाइस से हटा दिए गए।"
+          }
+        }
+      }
+    },
     "새로|New" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -292678,6 +293217,83 @@
         }
       }
     },
+    "서버가 받지 못했어요({0}). 남은 표본은 그대로 있어요.|The server couldn't accept them ({0}). Your remaining samples are kept." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーが受け付けませんでした({0})。残りのサンプルはそのまま残っています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器未能接收({0})。剩余样本仍保留。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器未能接收({0})。剩餘樣本仍保留。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Server hat sie nicht angenommen ({0}). Deine übrigen Beispiele bleiben erhalten."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur n'a pas pu les accepter ({0}). Vos échantillons restants sont conservés."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il server non ha potuto accettarli ({0}). I campioni rimanenti sono conservati."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El servidor no pudo aceptarlas ({0}). Las muestras restantes se conservan."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O servidor não conseguiu aceitá-las ({0}). As amostras restantes foram mantidas."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máy chủ không nhận được ({0}). Các mẫu còn lại vẫn được giữ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server tidak dapat menerimanya ({0}). Sampel yang tersisa tetap disimpan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เซิร์ฟเวอร์รับไม่ได้ ({0}) ตัวอย่างที่เหลือยังคงอยู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर इन्हें स्वीकार नहीं कर सका ({0})। बाकी नमूने सुरक्षित हैं।"
+          }
+        }
+      }
+    },
     "서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.|The server doesn't support this yet. The app or server needs an update." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -292751,6 +293367,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सर्वर अभी इस सुविधा का समर्थन नहीं करता। ऐप या सर्वर को अपडेट करना होगा।"
+          }
+        }
+      }
+    },
+    "서버로 가는 표본 한 건의 실제 모습|What one sample looks like on the wire" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーに送られるサンプル1件の実際の内容"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送到服务器的一条样本的实际样子"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送到伺服器的一筆樣本的實際樣子"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So sieht ein Beispiel auf dem Weg zum Server aus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À quoi ressemble un échantillon envoyé au serveur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Come appare un campione inviato al server"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cómo se ve una muestra enviada al servidor"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Como fica uma amostra enviada ao servidor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hình dạng thực tế của một mẫu gửi lên máy chủ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilan sebenarnya satu sampel yang dikirim ke server"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "หน้าตาจริงของหนึ่งตัวอย่างที่ส่งไปเซิร์ฟเวอร์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर को भेजा जाने वाला एक नमूना असल में कैसा दिखता है"
+          }
+        }
+      }
+    },
+    "서버로 보내기|Send to server" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーに送信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送到服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送到伺服器"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An Server senden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer au serveur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia al server"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar al servidor"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar ao servidor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi lên máy chủ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim ke server"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งไปเซิร์ฟเวอร์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर को भेजें"
           }
         }
       }
@@ -292982,6 +293752,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सर्वर तक नहीं पहुँच सके, इसलिए कुंजी नहीं बदली। थोड़ी देर बाद फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "서버에 연결하지 못했어요. 남은 표본은 그대로 있으니 잠시 뒤 다시 눌러 주세요.|Couldn't reach the server. Your remaining samples are kept; try again later." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーに接続できませんでした。残りのサンプルはそのまま残っているので、しばらくしてからもう一度押してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接服务器。剩余样本仍保留,请稍后再点一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法連線到伺服器。剩餘樣本仍保留,請稍後再按一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Verbindung zum Server. Deine übrigen Beispiele bleiben erhalten; versuche es später erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de joindre le serveur. Vos échantillons restants sont conservés ; réessayez plus tard."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile raggiungere il server. I campioni rimanenti sono conservati; riprova più tardi."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo conectar con el servidor. Las muestras restantes se conservan; inténtalo más tarde."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível conectar ao servidor. As amostras restantes foram mantidas; tente novamente mais tarde."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không kết nối được máy chủ. Các mẫu còn lại vẫn được giữ; hãy thử lại sau."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak dapat terhubung ke server. Sampel yang tersisa tetap disimpan; coba lagi nanti."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตัวอย่างที่เหลือยังคงอยู่ ลองใหม่ภายหลัง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर से कनेक्ट नहीं हो सका। बाकी नमूने सुरक्षित हैं; थोड़ी देर बाद फिर कोशिश करें।"
           }
         }
       }
@@ -303685,6 +304532,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "शुरू करें"
+          }
+        }
+      }
+    },
+    "시즌 팩 음원 출처|Season pack music credits" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シーズンパックの音源クレジット"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "季节包音乐来源"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "季節包音樂來源"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Musikquellen der Saisonpakete"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crédits musicaux des packs de saison"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crediti musicali dei pacchetti stagionali"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créditos musicales de los paquetes de temporada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créditos das músicas dos pacotes de temporada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nguồn nhạc của gói theo mùa"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sumber musik paket musiman"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แหล่งที่มาของเพลงชุดตามฤดูกาล"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मौसमी पैक के संगीत स्रोत"
           }
         }
       }
@@ -330562,6 +331486,83 @@
         }
       }
     },
+    "오늘 보낼 수 있는 양(2,000건)을 넘었어요. 남은 표본은 그대로 있으니 내일 다시 눌러 주세요.|You've hit today's limit (2,000 samples). The rest are kept; try again tomorrow." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本日送信できる量(2,000件)を超えました。残りのサンプルはそのまま残っているので、明日もう一度押してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已超过今天可发送的数量(2,000条)。剩余样本仍保留,请明天再点一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已超過今天可傳送的數量(2,000筆)。剩餘樣本仍保留,請明天再按一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das heutige Limit (2.000 Beispiele) ist erreicht. Der Rest bleibt erhalten; versuche es morgen erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous avez atteint la limite du jour (2 000 échantillons). Le reste est conservé ; réessayez demain."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hai raggiunto il limite di oggi (2.000 campioni). Il resto è conservato; riprova domani."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alcanzaste el límite de hoy (2.000 muestras). El resto se conserva; inténtalo mañana."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você atingiu o limite de hoje (2.000 amostras). O restante foi mantido; tente novamente amanhã."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã vượt giới hạn hôm nay (2.000 mẫu). Phần còn lại vẫn được giữ; hãy thử lại vào ngày mai."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Batas hari ini (2.000 sampel) tercapai. Sisanya tetap disimpan; coba lagi besok."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ถึงขีดจำกัดของวันนี้แล้ว (2,000 ตัวอย่าง) ที่เหลือยังคงอยู่ ลองใหม่พรุ่งนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आज की सीमा (2,000 नमूने) पूरी हो गई। बाकी सुरक्षित हैं; कल फिर कोशिश करें।"
+          }
+        }
+      }
+    },
     "오늘 성장 조건 충족|Today's growth goal met" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -352426,6 +353427,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कुंजी डालें"
+          }
+        }
+      }
+    },
+    "인터넷에 연결되지 않았어요. 남은 표본은 그대로 있으니 연결된 뒤 다시 눌러 주세요.|You're offline. Your remaining samples are kept; try again when connected." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インターネットに接続されていません。残りのサンプルはそのまま残っているので、接続後にもう一度押してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未连接到互联网。剩余样本仍保留,请连接后再点一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未連線到網際網路。剩餘樣本仍保留,請連線後再按一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist offline. Deine übrigen Beispiele bleiben erhalten; versuche es erneut, sobald du verbunden bist."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous êtes hors ligne. Vos échantillons restants sont conservés ; réessayez une fois connecté."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sei offline. I campioni rimanenti sono conservati; riprova quando sei connesso."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin conexión. Las muestras restantes se conservan; inténtalo cuando haya conexión."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você está offline. As amostras restantes foram mantidas; tente novamente quando estiver conectado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn đang ngoại tuyến. Các mẫu còn lại vẫn được giữ; hãy thử lại khi có kết nối."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda sedang offline. Sampel yang tersisa tetap disimpan; coba lagi saat terhubung."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คุณออฟไลน์อยู่ ตัวอย่างที่เหลือยังคงอยู่ ลองใหม่เมื่อเชื่อมต่อแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आप ऑफ़लाइन हैं। बाकी नमूने सुरक्षित हैं; कनेक्ट होने पर फिर कोशिश करें।"
           }
         }
       }
@@ -382460,6 +383538,83 @@
         }
       }
     },
+    "최근 표본|Latest samples" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近のサンプル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近的样本"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近的樣本"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neueste Beispiele"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Derniers échantillons"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ultimi campioni"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Últimas muestras"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Últimas amostras"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mẫu gần đây"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sampel terbaru"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตัวอย่างล่าสุด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हाल के नमूने"
+          }
+        }
+      }
+    },
     "최근|Recent" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -388466,79 +389621,79 @@
         }
       }
     },
-    "켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export." : {
+    "켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」(파일) 또는 「서버로 보내기」(미리보기 확인 뒤)를 누를 때만 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; data leaves only when you tap Export (a file) or Send to server (after a preview you confirm)." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オンにすると、分類を修正するたびに、時間帯・長さ・平均速度・歩数・修正前の分類→修正後の分類と確信度だけが端末に蓄積されます。座標・場所の名前・予定のタイトル・日付は含まれません。自動では送信せず、「エクスポート」を押したときだけファイルとして出力されます。"
+            "value" : "オンにすると、分類を修正するたびに、時間帯・長さ・平均速度・歩数・変更前の分類→変更後の分類と確信度だけをこのデバイスに保存します。座標・場所の名前・予定のタイトル・日付は含まれません。自動では送信せず、「書き出す」(ファイル)または「サーバーに送信」(プレビューで確認した後)をタップしたときだけ外に出ます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开启后，每次修改分类时，只会在设备上保存时间段、时长、平均速度、步数，以及修改前→修改后的分类和置信度。不包含坐标、地点名称、日程标题和日期。不会自动发送，只有点击“导出”时才会生成文件。"
+            "value" : "开启后,每次修改分类,只会在此设备上保存时间段、时长、平均速度、步数,以及修改前的分类→修改后的分类和置信度。不包含坐标、地点名称、日程标题和日期。不会自动发送,只有在你点按「导出」(文件)或「发送到服务器」(确认预览后)时才会发出。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟後，每次修改分類時，只會在裝置上儲存時段、時長、平均速度、步數，以及修改前→修改後的分類和信心度。不包含座標、地點名稱、行程標題和日期。不會自動傳送，只有點選「匯出」時才會產生檔案。"
+            "value" : "開啟後,每次修改分類,只會在此裝置上儲存時段、時長、平均速度、步數,以及修改前的分類→修改後的分類和信心度。不包含座標、地點名稱、行程標題和日期。不會自動傳送,只有在你點按「匯出」(檔案)或「傳送到伺服器」(確認預覽後)時才會送出。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn aktiviert, werden bei jeder Korrektur einer Klassifizierung nur Tageszeit, Dauer, Durchschnittsgeschwindigkeit, Schritte sowie die Klassifizierung davor → danach mit Konfidenz auf diesem Gerät gespeichert. Koordinaten, Ortsnamen, Termintitel und Datumsangaben sind nie enthalten. Nichts wird automatisch gesendet; eine Datei verlässt das Gerät nur, wenn du auf „Exportieren“ tippst."
+            "value" : "Wenn aktiviert, werden bei jeder Korrektur einer Klassifizierung nur Tageszeit, Dauer, Durchschnittsgeschwindigkeit, Schrittzahl sowie die Klassifizierung davor → danach mit Zuverlässigkeit auf diesem Gerät gespeichert. Koordinaten, Ortsnamen, Termintitel und Datum sind nie enthalten. Es wird nichts automatisch gesendet; Daten verlassen das Gerät nur, wenn du auf „Exportieren“ (Datei) oder „An Server senden“ (nach einer bestätigten Vorschau) tippst."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Si cette option est activée, à chaque correction de classification, seuls l’heure de la journée, la durée, la vitesse moyenne, le nombre de pas et la classification avant → après avec sa confiance sont conservés sur cet appareil. Les coordonnées, noms de lieux, titres d’événements et dates ne sont jamais inclus. Rien n’est envoyé automatiquement ; un fichier ne sort que lorsque vous touchez « Exporter »."
+            "value" : "Lorsque c'est activé, chaque fois que vous corrigez une classification, seuls l'heure de la journée, la durée, la vitesse moyenne, le nombre de pas et la classification avant → après avec son niveau de confiance sont conservés sur cet appareil. Les coordonnées, noms de lieux, titres d'événements et dates ne sont jamais inclus. Rien n'est envoyé automatiquement ; les données ne quittent l'appareil que si vous touchez Exporter (un fichier) ou Envoyer au serveur (après un aperçu que vous confirmez)."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se attivo, a ogni correzione di una classificazione vengono salvati su questo dispositivo solo fascia oraria, durata, velocità media, numero di passi e la classificazione prima → dopo con la sua affidabilità. Coordinate, nomi di luoghi, titoli di eventi e date non sono mai inclusi. Non viene inviato nulla in automatico; un file esce dal dispositivo solo quando tocchi «Esporta»."
+            "value" : "Se attivo, ogni volta che correggi una classificazione su questo dispositivo vengono conservati solo fascia oraria, durata, velocità media, numero di passi e la classificazione prima → dopo con la sua affidabilità. Coordinate, nomi di luoghi, titoli degli eventi e date non sono mai inclusi. Nulla viene inviato automaticamente; i dati escono dal dispositivo solo quando tocchi Esporta (un file) o Invia al server (dopo un'anteprima che confermi)."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Si lo activas, cada vez que corrijas una clasificación solo se guardan en este dispositivo la franja horaria, la duración, la velocidad media, los pasos y la clasificación anterior → nueva con su confianza. Nunca se incluyen coordenadas, nombres de lugares, títulos de eventos ni fechas. No se envía nada automáticamente; un archivo solo sale cuando tocas «Exportar»."
+            "value" : "Si lo activas, cada vez que corrijas una clasificación solo se guardan en este dispositivo la franja horaria, la duración, la velocidad media, el número de pasos y la clasificación antes → después con su confianza. Nunca se incluyen coordenadas, nombres de lugares, títulos de eventos ni fechas. No se envía nada automáticamente; los datos solo salen cuando tocas Exportar (un archivo) o Enviar al servidor (tras una vista previa que confirmes)."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se ativado, a cada correção de classificação somente o horário, a duração, a velocidade média, os passos e a classificação antes → depois com a confiança ficam guardados neste aparelho. Coordenadas, nomes de lugares, títulos de eventos e datas nunca são incluídos. Nada é enviado automaticamente; um arquivo só sai quando você toca em “Exportar”."
+            "value" : "Quando ativado, cada vez que você corrige uma classificação, apenas o período do dia, a duração, a velocidade média, o número de passos e a classificação antes → depois com a confiança são guardados neste dispositivo. Coordenadas, nomes de lugares, títulos de eventos e datas nunca são incluídos. Nada é enviado automaticamente; os dados só saem quando você toca em Exportar (um arquivo) ou Enviar ao servidor (após uma prévia que você confirma)."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Khi bật, mỗi lần bạn sửa phân loại, chỉ khung giờ, thời lượng, tốc độ trung bình, số bước chân và phân loại trước → sau kèm độ tin cậy được lưu trên thiết bị. Tọa độ, tên địa điểm, tiêu đề sự kiện và ngày không bao giờ được đưa vào. Không gì được gửi tự động; tệp chỉ rời thiết bị khi bạn nhấn “Xuất”."
+            "value" : "Khi bật, mỗi lần bạn sửa phân loại, chỉ khung giờ, độ dài, tốc độ trung bình, số bước chân và phân loại trước → sau kèm độ tin cậy được lưu trên thiết bị này. Không bao giờ có tọa độ, tên địa điểm, tiêu đề sự kiện hay ngày. Không có gì được gửi tự động; dữ liệu chỉ rời thiết bị khi bạn bấm Xuất (tệp) hoặc Gửi lên máy chủ (sau khi xác nhận bản xem trước)."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jika diaktifkan, setiap kali Anda memperbaiki klasifikasi, hanya waktu dalam sehari, durasi, kecepatan rata-rata, jumlah langkah, serta klasifikasi sebelum → sesudah beserta tingkat keyakinannya yang disimpan di perangkat ini. Koordinat, nama tempat, judul acara, dan tanggal tidak pernah disertakan. Tidak ada yang dikirim otomatis; file hanya keluar saat Anda mengetuk “Ekspor”."
+            "value" : "Jika aktif, setiap kali Anda mengoreksi klasifikasi, hanya waktu dalam sehari, durasi, kecepatan rata-rata, jumlah langkah, serta klasifikasi sebelum → sesudah beserta tingkat keyakinannya yang disimpan di perangkat ini. Koordinat, nama tempat, judul acara, dan tanggal tidak pernah disertakan. Tidak ada yang dikirim otomatis; data hanya keluar saat Anda mengetuk Ekspor (berkas) atau Kirim ke server (setelah pratinjau yang Anda konfirmasi)."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เมื่อเปิด ทุกครั้งที่คุณแก้การจัดหมวดหมู่ จะเก็บเฉพาะช่วงเวลา ระยะเวลา ความเร็วเฉลี่ย จำนวนก้าว และหมวดหมู่ก่อน → หลังพร้อมความมั่นใจไว้ในอุปกรณ์ จะไม่รวมพิกัด ชื่อสถานที่ ชื่อกำหนดการ และวันที่ ระบบไม่ส่งอัตโนมัติ ไฟล์จะออกจากอุปกรณ์ก็ต่อเมื่อคุณแตะ “ส่งออก”"
+            "value" : "เมื่อเปิด ทุกครั้งที่คุณแก้การจัดหมวดหมู่ จะเก็บเฉพาะช่วงเวลาของวัน ระยะเวลา ความเร็วเฉลี่ย จำนวนก้าว และหมวดหมู่ก่อน → หลังพร้อมระดับความมั่นใจไว้ในอุปกรณ์นี้ จะไม่มีพิกัด ชื่อสถานที่ ชื่อกิจกรรม หรือวันที่ ไม่มีการส่งอัตโนมัติ ข้อมูลจะออกจากอุปกรณ์เมื่อคุณแตะส่งออก (ไฟล์) หรือส่งไปเซิร์ฟเวอร์ (หลังยืนยันตัวอย่างที่แสดง) เท่านั้น"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "चालू करने पर, हर बार वर्गीकरण सुधारने पर केवल दिन का समय, अवधि, औसत गति, कदमों की संख्या और पहले → बाद का वर्गीकरण भरोसे के स्तर के साथ इस डिवाइस पर रखा जाता है। निर्देशांक, जगहों के नाम, कार्यक्रम के शीर्षक और तारीखें कभी शामिल नहीं होतीं। कुछ भी अपने आप नहीं भेजा जाता; फ़ाइल तभी बाहर जाती है जब आप “निर्यात करें” पर टैप करते हैं।"
+            "value" : "चालू होने पर, हर बार वर्गीकरण सुधारने पर केवल दिन का समय, अवधि, औसत गति, कदमों की संख्या और पहले का वर्गीकरण → बाद का वर्गीकरण (भरोसे के स्तर सहित) इस डिवाइस पर रखा जाता है। निर्देशांक, जगहों के नाम, इवेंट के शीर्षक और तारीखें कभी शामिल नहीं होतीं। कुछ भी अपने आप नहीं भेजा जाता; डेटा तभी बाहर जाता है जब आप निर्यात (फ़ाइल) या सर्वर को भेजें (पूर्वावलोकन की पुष्टि के बाद) दबाते हैं।"
           }
         }
       }
@@ -392697,6 +393852,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : " सैंपल"
+          }
+        }
+      }
+    },
+    "표본에는 시간대·요일·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 있어요. 좌표·장소 이름·일정 제목·날짜·이름은 없어요. 보낸 표본은 이 기기에서 지워요. 설정의 「지우기」와 달리 서버에는 남아 분류 규칙을 고치는 데 쓰고, 1년 뒤 지워요.|Each sample has only the time of day, weekday, length, average speed, step count and the classification before → after with its confidence. No coordinates, place names, event titles, dates or names. Sent samples are removed from this device. Unlike Delete in settings, the server keeps them to improve the classification rules and deletes them after one year." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サンプルには、時間帯・曜日・長さ・平均速度・歩数・変更前の分類→変更後の分類と確信度だけが含まれます。座標・場所の名前・予定のタイトル・日付・名前は含まれません。送信したサンプルはこのデバイスから削除されます。設定の「削除」とは異なり、サーバーには残って分類ルールの改善に使われ、1年後に削除されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "样本只包含时间段、星期、时长、平均速度、步数,以及修改前的分类→修改后的分类和置信度。不包含坐标、地点名称、日程标题、日期和姓名。已发送的样本会从此设备删除。与设置中的「删除」不同,服务器会保留这些样本用于改进分类规则,一年后删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "樣本只包含時段、星期、時長、平均速度、步數,以及修改前的分類→修改後的分類和信心度。不包含座標、地點名稱、行程標題、日期和姓名。已傳送的樣本會從此裝置刪除。與設定中的「刪除」不同,伺服器會保留這些樣本用於改進分類規則,一年後刪除。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Beispiel enthält nur Tageszeit, Wochentag, Dauer, Durchschnittsgeschwindigkeit, Schrittzahl sowie die Klassifizierung davor → danach mit Zuverlässigkeit. Keine Koordinaten, Ortsnamen, Termintitel, Daten oder Namen. Gesendete Beispiele werden von diesem Gerät entfernt. Anders als „Löschen“ in den Einstellungen behält der Server sie, um die Klassifizierungsregeln zu verbessern, und löscht sie nach einem Jahr."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque échantillon contient uniquement l'heure de la journée, le jour de la semaine, la durée, la vitesse moyenne, le nombre de pas et la classification avant → après avec son niveau de confiance. Aucune coordonnée, aucun nom de lieu, titre d'événement, date ni nom. Les échantillons envoyés sont supprimés de cet appareil. Contrairement à Supprimer dans les réglages, le serveur les conserve pour améliorer les règles de classification et les supprime au bout d'un an."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ogni campione contiene solo fascia oraria, giorno della settimana, durata, velocità media, numero di passi e la classificazione prima → dopo con la sua affidabilità. Nessuna coordinata, nome di luogo, titolo di evento, data o nome. I campioni inviati vengono rimossi da questo dispositivo. A differenza di Elimina nelle impostazioni, il server li conserva per migliorare le regole di classificazione e li elimina dopo un anno."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cada muestra solo tiene la franja horaria, el día de la semana, la duración, la velocidad media, el número de pasos y la clasificación antes → después con su confianza. Sin coordenadas, nombres de lugares, títulos de eventos, fechas ni nombres. Las muestras enviadas se quitan de este dispositivo. A diferencia de Eliminar en los ajustes, el servidor las conserva para mejorar las reglas de clasificación y las elimina al cabo de un año."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cada amostra tem apenas o período do dia, o dia da semana, a duração, a velocidade média, o número de passos e a classificação antes → depois com a confiança. Sem coordenadas, nomes de lugares, títulos de eventos, datas ou nomes. As amostras enviadas são removidas deste dispositivo. Diferente de Excluir nos ajustes, o servidor as mantém para melhorar as regras de classificação e as exclui após um ano."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mỗi mẫu chỉ có khung giờ, thứ trong tuần, độ dài, tốc độ trung bình, số bước chân và phân loại trước → sau kèm độ tin cậy. Không có tọa độ, tên địa điểm, tiêu đề sự kiện, ngày hay tên. Các mẫu đã gửi sẽ bị xóa khỏi thiết bị này. Khác với Xóa trong cài đặt, máy chủ giữ chúng để cải thiện quy tắc phân loại và xóa sau một năm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setiap sampel hanya berisi waktu dalam sehari, hari dalam seminggu, durasi, kecepatan rata-rata, jumlah langkah, serta klasifikasi sebelum → sesudah beserta tingkat keyakinannya. Tanpa koordinat, nama tempat, judul acara, tanggal, atau nama. Sampel yang terkirim dihapus dari perangkat ini. Berbeda dengan Hapus di pengaturan, server menyimpannya untuk memperbaiki aturan klasifikasi dan menghapusnya setelah satu tahun."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แต่ละตัวอย่างมีเฉพาะช่วงเวลาของวัน วันในสัปดาห์ ระยะเวลา ความเร็วเฉลี่ย จำนวนก้าว และหมวดหมู่ก่อน → หลังพร้อมระดับความมั่นใจ ไม่มีพิกัด ชื่อสถานที่ ชื่อกิจกรรม วันที่ หรือชื่อบุคคล ตัวอย่างที่ส่งแล้วจะถูกลบออกจากอุปกรณ์นี้ ต่างจากลบในการตั้งค่า เซิร์ฟเวอร์จะเก็บไว้เพื่อปรับปรุงกฎการจัดหมวดหมู่ และลบหลังหนึ่งปี"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हर नमूने में केवल दिन का समय, सप्ताह का दिन, अवधि, औसत गति, कदमों की संख्या और पहले का वर्गीकरण → बाद का वर्गीकरण (भरोसे के स्तर सहित) होता है। कोई निर्देशांक, जगह का नाम, इवेंट का शीर्षक, तारीख या नाम नहीं। भेजे गए नमूने इस डिवाइस से हटा दिए जाते हैं। सेटिंग में हटाएँ के विपरीत, सर्वर उन्हें वर्गीकरण के नियम सुधारने के लिए रखता है और एक साल बाद हटा देता है।"
           }
         }
       }
@@ -405248,6 +406480,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जोश से चल रहे हैं!"
+          }
+        }
+      }
+    },
+    "활동 {0}건 · 이동 {1}건 · 규칙 {2}|{0} activity · {1} travel · rules {2}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクティビティ{0}件・移動{1}件・ルール{2}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动{0}条 · 出行{1}条 · 规则{2}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活動{0}筆 · 移動{1}筆 · 規則{2}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Aktivität · {1} Fahrt · Regeln {2}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} activité · {1} trajet · règles {2}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} attività · {1} spostamenti · regole {2}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} actividad · {1} viaje · reglas {2}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} atividade · {1} deslocamento · regras {2}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} hoạt động · {1} di chuyển · quy tắc {2}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} aktivitas · {1} perjalanan · aturan {2}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กิจกรรม {0} · การเดินทาง {1} · กฎ {2}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "गतिविधि {0} · यात्रा {1} · नियम {2}"
           }
         }
       }
