@@ -141,37 +141,40 @@ struct LedgerMemoHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             LedgerMemoTabs(filter: $filter, counts: counts.merging([.inbox: inboxCount]) { _, new in new }, language: language)
-            HStack(spacing: 0) {
-                Button { LedgerPresenter.shared.isPresented = true } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "wonsign.circle.fill").foregroundStyle(Color.tpAccent)
-                        Text(summary).lineLimit(1)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.leading, 12)
-                    .padding(.vertical, 7)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("memo-ledger-open")
-                // 오른쪽 ＋는 가계부를 열며 바로 지출 입력 창을 띄운다(HUX1116A05).
-                Button { LedgerPresenter.shared.presentAdding() } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(width: 40)
-                        .frame(maxHeight: .infinity)
+            // 지출 합계 줄은 「지출」 탭에서만 보인다(ICN1119A02, 대표 지시 2026-11-19: 나머지 탭에서 제거).
+            if filter == .today {
+                HStack(spacing: 0) {
+                    Button { LedgerPresenter.shared.isPresented = true } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "wonsign.circle.fill").foregroundStyle(Color.tpAccent)
+                            Text(summary).lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.leading, 12)
+                        .padding(.vertical, 7)
                         .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("memo-ledger-open")
+                    // 오른쪽 ＋는 가계부를 열며 바로 지출 입력 창을 띄운다(HUX1116A05).
+                    Button { LedgerPresenter.shared.presentAdding() } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+                            .foregroundStyle(Color.tpAccent)
+                            .frame(width: 40)
+                            .frame(maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .taptionHitOutset(vertical: 6)
+                    .accessibilityLabel(language.text("지출 넣기", "Add spending"))
+                    .accessibilityIdentifier("memo-ledger-add")
                 }
-                .buttonStyle(.plain)
-                .taptionHitOutset(vertical: 6)
-                .accessibilityLabel(language.text("지출 넣기", "Add spending"))
-                .accessibilityIdentifier("memo-ledger-add")
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                .foregroundStyle(Color.tpInk)
+                .fixedSize(horizontal: false, vertical: true)
+                .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
-            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
-            .foregroundStyle(Color.tpInk)
-            .fixedSize(horizontal: false, vertical: true)
-            .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             // 조용히 넣지 않은 결제는 「확인」 위에 띠로 모아 보인다(LRV1111A01, TDW1114A01).
             if filter == .check { LedgerReviewBand(language: language) }
         }
