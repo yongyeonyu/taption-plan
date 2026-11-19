@@ -1144,6 +1144,12 @@
 
 ## 검증 기록
 
+### TIM1119A01 · `ask_user` 시험의 시간 의존 고침 (2026-11-19, 시뮬레이터 iPhone 17)
+- 원인: `AssistantAppControlTests.testAskUserStoresTheQuestionAnswersUploadAndUndoWithdrawsOnlyUnanswered`가 질문을 `at(11, 12, 9)`(11월 9일 11:12, 인자 순서가 시·분·일)로 만드는데, 운영 코드 `AITaskQueue.add`는 실제 현재 시각으로 7일 지난 질문을 정리(`prune`)해, 11월 16일 이후 질문이 바로 사라져 「duplicate」가 나오지 않고 `Index out of range`로 끝났다(ANN1119A01·ENC1119A01 전체 시험의 실패 1건).
+- 수정: 질문 시각만 `Date.now` 기준으로 만든다(시험 파일 `AssistantPhase3Tests.swift` 한 곳). 운영 코드·다른 시각 인자는 그대로.
+- 검증: `AssistantAppControlTests` 27건 통과·실패 0·건너뜀 0(xcresult, `build/validation/TIM1119A01/askuser.xcresult`). 전체 `TaptionPlanTests`는 이 수정 뒤 다시 돌리지 않았다(직전 전체 실행의 실패는 이 한 건뿐).
+
+
 ### ENC1119A01 · 컨디션×일정 에너지 곡선 (2026-11-19, 시뮬레이터 iPhone 17, 비야 브리지 `20261119-1943-energy-curve-visualizer`)
 - 새 `EnergyCurveTests` 16건 통과·실패 0(`enc-tests-3.xcresult`): 96칸·범위, 빈 데이터, 기상 뒤 단조 감소·시작값 범위, 수면 없음 기본값, 업무가 휴식보다 낮음, 낮잠 상승·1.0 상한, 자정 걸침, DST(25시간 날 100칸·23시간 날 92칸), 일정 쌓임 인사이트(2건 이상일 때만), 짧은 잠, 극단 입력(무한대·NaN·빈 구간), 오늘 예측 칸, 걸음 소모, 분류 매핑, 결정성, 그림 렌더링 연기(ImageRenderer로 픽셀 확인).
 - Debug 빌드: 시험 빌드가 앱 Debug 빌드를 포함해 성공(첫 시도는 `UInt64`·`TimeSpan` 형 불일치 컴파일 오류 2건을 고침).

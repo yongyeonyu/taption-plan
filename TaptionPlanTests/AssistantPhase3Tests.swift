@@ -1412,8 +1412,10 @@ final class AssistantAppControlTests: XCTestCase {
         let store = defaults()
         let model = await model()
         let preferences = AssistantPreferenceStore.test(store)
+        // 운영 코드의 `add`는 실제 지금으로 7일 지난 질문을 정리하므로, 질문 시각은 고정 날짜가 아니라 지금 기준으로 만든다(TIM1119A01).
+        let recent = Date.now
         func question(_ id: String, multi: Bool = false) throws -> AssistantQuestion {
-            try XCTUnwrap(AssistantQuestion.make(id: id, question: "어디였나요?", options: ["회사", "카페", "집"], multiSelect: multi, now: at(11, 12, 9)))
+            try XCTUnwrap(AssistantQuestion.make(id: id, question: "어디였나요?", options: ["회사", "카페", "집"], multiSelect: multi, now: recent))
         }
         let asked = await model.applyAssistantAction(.askUser(try question("q1")), preferences: preferences)
         XCTAssertNil(asked.reason)
