@@ -524,7 +524,7 @@ struct HwarangPainter {
 
     var outlineWidth: CGFloat { (small ? 3.3 : 2.2) * lineScale }
 
-    private func addBlobs(_ list: [Blob], grow: CGFloat = 0) {
+    func addBlobs(_ list: [Blob], grow: CGFloat = 0) {
         for b in list { circle(b.x, b.y, b.r + grow) }
     }
 
@@ -755,7 +755,7 @@ struct HwarangPainter {
         fill(outline); c.beginPath(); addBlobs(parts, grow: w); c.fillPath()
         fill(coat.fur); shaped(); c.fillPath()
         c.beginPath(); addBlobs(parts); c.fillPath()
-        paintPatches(coat.bodyPatches) { shaped() }
+        paintPatches(coat.bodyPatches) { shaped() }; paintSeasonCape { shaped() }
     }
 
     /// 엎드린 자세의 꼬리 끝은 캔버스 왼쪽 끝에 가까워 리본을 뿌리 쪽으로 옮겨 잘리지 않게 한다.
@@ -860,7 +860,7 @@ struct HwarangPainter {
             near.append(Blob(x: bn.x, y: bn.y - 1, r: 7.4))
         }
         if !raw.foreOver, raw.legUp < 0.5 { fore(&near, sh, fn, raw.foreBend) }
-        paint(near, fillColor: coat.fur)
+        paint(near, fillColor: coat.fur); paintSeasonCape(blobs: near, spine: spine, radius: { lerp(raw.rh + 5, raw.rs + 4.4, $0) + sin($0 * .pi) * raw.rm }, upright: raw.legUp >= 0.5)
         drawToes()
         if raw.legUp >= 0.5 {
             tuckedFoot(bf)
@@ -878,10 +878,7 @@ struct HwarangPainter {
         }
         if raw.legUp >= 0.5 {
             // 다리를 든 그루밍 자세에서 보이는 엉덩이 표시. 작은 X로 귀엽게 그린다.
-            let mark = P(hip.x - 8, hip.y + 9)
-            stroke(0xC9607E, 1.3); c.setLineCap(.round); c.beginPath()
-            c.move(to: P(mark.x - 1.6, mark.y - 1.6)); c.addLine(to: P(mark.x + 1.6, mark.y + 1.6))
-            c.move(to: P(mark.x + 1.6, mark.y - 1.6)); c.addLine(to: P(mark.x - 1.6, mark.y + 1.6)); c.strokePath()
+            drawRumpMark(at: P(hip.x - 8, hip.y + 9))
             fill(0xFFB5C4); c.beginPath(); oval(bn.x + 0.6, bn.y + 0.6, 3.4, 2.8)
             let sp = 1 + raw.spread * 0.28
             for d in [P(-3.8, -2.8), P(-0.2, -4.4), P(3.6, -2.6)] { circle(bn.x + 0.6 + d.x * sp, bn.y + d.y * sp, 1.35 + raw.spread * 0.2) }
