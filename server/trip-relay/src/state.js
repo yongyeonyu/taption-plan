@@ -19,9 +19,10 @@ export const LIMITS = {
   sharedPerDay: 2000,
   keyPerMinute: 60,
   keyPerDay: 1000,
-  // KV 쓰기(N1): 주인마다 하루 수. 서버 전체 수는 env.KV_DAILY_WRITE_BUDGET(기본 900).
-  kvWritesPerDay: 600,
-  globalKvWritesPerDay: 900,
+  // 저장소 쓰기(N1): 주인마다 하루 수. 서버 전체 수는 env.KV_DAILY_WRITE_BUDGET(기본 80000).
+  // D1R1119A01: 저장소가 KV(하루 1,000건)에서 D1(무료 하루 10만 행 쓰기)로 바뀌어 올렸다. 이름의 KV는 옛 이름 그대로.
+  kvWritesPerDay: 5000,
+  globalKvWritesPerDay: 80000,
   oauthClientsPerIpDay: 10,
   oauthClientsPerDay: 200,
   kakaoPerDay: 500,
@@ -810,7 +811,7 @@ export async function countPerIpAndGlobal(env, request, name, perIp, global, now
   return userState(env, "global:" + name).call("countDaily", { name, limit: global, now });
 }
 
-// KV 쓰기 예산(N1). 주인의 하루 몫과 서버 전체 하루 몫에서 뺀다. 넘으면 쓰기 전에 429로 끝낸다.
+// 저장소 쓰기 예산(N1, 이제 D1 행 쓰기). 주인의 하루 몫과 서버 전체 하루 몫에서 뺀다. 넘으면 쓰기 전에 429로 끝낸다.
 export async function chargeWrites(env, state, writes, now) {
   if (writes <= 0) return { ok: true };
   if (state) {

@@ -11,13 +11,23 @@ preview_urls = false
 [observability]
 enabled = false
 
-# KV는 대표님 계정에서 만든 뒤 id를 넣는다: `npx wrangler kv namespace create PLANS`
+# D1R1119A01: 저장소는 D1이다. 만든 뒤 실제 database_id는 git에 없는 `wrangler.local.toml`에만 넣는다
+# (`npx wrangler d1 create taption-trip-relay`). 이 파일에는 자리표시자만 둔다.
+[[d1_databases]]
+binding = "RELAY_DB"
+database_name = "taption-trip-relay"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# 옛 KV: 이관(Dual-Read)용 읽기 전용. 코드는 여기에 쓰지 않는다. 쓰던 값이 D1로 다 옮겨 가거나
+# 만료된 뒤(가장 긴 만료 365일, 만료 없는 연결 키는 앱이 다시 읽을 때 옮겨짐) 이 블록과 id를 지운다.
+# 바인딩이 없어도 서버는 동작한다(D1만 씀).
 [[kv_namespaces]]
 binding = "PLANS"
 id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
 # IP당 1분에 POST 20번까지(REV1110A02, SEC1110A03에서 5 → 20: 첫 실행의 등록·PIN·키·업로드가 한 번에 온다).
-# 무료 KV 쓰기 한도를 한 사람이 다 쓰지 못하게 한다.
+# 무료 저장소(D1) 쓰기 한도를 한 사람이 다 쓰지 못하게 한다.
 [[ratelimits]]
 name = "POST_LIMIT"
 namespace_id = "1001"
@@ -44,10 +54,10 @@ namespace_id = "1003"
   limit = 120
   period = 60
 
-# 서버 전체가 하루에 쓰는 KV 쓰기 예산(REV1110A06). 무료 요금제는 하루 1,000건이라 900에서 멈추고 429를 준다.
-# 유료 요금제로 바꾸면 이 값을 올린다.
+# 서버 전체가 하루에 쓰는 저장소 쓰기 예산(REV1110A06, D1R1119A01). D1 무료 요금제는 하루 10만 행 쓰기라 80000에서 멈추고 429를 준다.
+# (변수 이름의 KV는 옛 이름 그대로.) 유료 요금제로 바꾸면 이 값을 올린다.
 [vars]
-KV_DAILY_WRITE_BUDGET = "900"
+KV_DAILY_WRITE_BUDGET = "80000"
 
 # 주인 키마다 하나인 Durable Object(SEC1110A02): 키 목록·영구 폐기 표시·명령 큐·24시간 한도·PIN 시도·요청 예산·카카오 하루 수.
 # SQLite 저장소 DO라 Workers 무료 요금제에서 쓸 수 있다. 이 migration은 처음 배포할 때 한 번 적용되고 되돌릴 수 없다.

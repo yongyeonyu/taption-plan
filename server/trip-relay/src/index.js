@@ -5,6 +5,7 @@
 // AIR1110A02/SEC1110A01 add scoped AI keys, per-user DEK encryption (v2), summaries, a remote MCP endpoint and OpenAPI.
 // SEC1110A02 requires registration (/register), adds a PIN, a per-master Durable Object (keys, queue, budgets, PIN tries),
 // per-route limits and encrypted metadata. AIR1110A03 adds OAuth 2.1 for MCP connectors and more AI actions.
+import { withD1 } from "./d1kv.js";
 import * as apns from "./apns.js";
 import * as rules from "./rules.js";
 import * as share from "./share.js";
@@ -551,7 +552,8 @@ async function authorized(request, env, url, route, exec, pathKey = null) {
   return response;
 }
 
-export async function handle(request, env, exec) {
+export async function handle(request, rawEnv, exec) {
+  const env = withD1(rawEnv); // D1R1119A01: RELAY_DB가 있으면 env.PLANS는 D1 어댑터(옛 KV는 읽기 이관용)
   const url = new URL(request.url);
   const cors = CORS_PATHS.has(url.pathname);
   if (request.method === "OPTIONS" && cors) return new Response(null, { status: 204, headers: CORS });
