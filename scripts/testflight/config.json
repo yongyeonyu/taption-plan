@@ -23,6 +23,11 @@
         "infoPlist": "TaptionPlanWidget/Info.plist"
       },
       {
+        "name": "Share",
+        "bundleId": "com.taption.plan.share",
+        "infoPlist": "TaptionPlanShare/Info.plist"
+      },
+      {
         "name": "Watch",
         "bundleId": "com.taption.plan.watchkitapp",
         "infoPlist": "TaptionPlanWatch/Info.plist"

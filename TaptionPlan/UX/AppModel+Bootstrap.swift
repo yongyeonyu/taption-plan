@@ -246,6 +246,7 @@ extension AppModel {
         await SiriInbox.drain(into: self)
         // 여행이 없어 보류했던 항공 알림을 다시 붙인다(FLT1119A01).
         await FlightInbox.drain(into: self)
+        await FlightShareIntake.drain(into: self)
         await syncFlightBriefings()
         #if DEBUG
         await exportRawOnLaunchIfRequested()

@@ -218,7 +218,7 @@
    "ko": "1080×1080 · 인스타그램 피드 크기",
    "en": "1080×1080 · Instagram feed size",
    "files": [
-    "MapHomeDailyCard.swift:544"
+    "MapHomeDailyCard.swift:545"
    ],
    "args": [],
    "targets": [
@@ -36865,7 +36865,7 @@
    "ko": "공유 항목",
    "en": "Share items",
    "files": [
-    "MapHomeDailyCard.swift:494"
+    "MapHomeDailyCard.swift:495"
    ],
    "args": [],
    "targets": [
@@ -36878,7 +36878,7 @@
    "en": "Share",
    "files": [
     "GPXExportCard.swift:34",
-    "MapHomeDailyCard.swift:534"
+    "MapHomeDailyCard.swift:535"
    ],
    "args": [],
    "targets": [
@@ -36938,7 +36938,7 @@
    "ko": "공유할 항목 (최대 4개)",
    "en": "Items to share (up to 4)",
    "files": [
-    "MapHomeDailyCard.swift:420"
+    "MapHomeDailyCard.swift:421"
    ],
    "args": [],
    "targets": [
@@ -39526,7 +39526,7 @@
    "en": "Date",
    "files": [
     "FlightPickerSheet.swift:69",
-    "MapHomeDailyCard.swift:373",
+    "MapHomeDailyCard.swift:374",
     "MapHomePlaceBookTools.swift:782"
    ],
    "args": [],
@@ -41030,7 +41030,7 @@
    "ko": "다음날",
    "en": "Next day",
    "files": [
-    "MapHomeDailyCard.swift:387"
+    "MapHomeDailyCard.swift:388"
    ],
    "args": [],
    "targets": [
@@ -47074,7 +47074,7 @@
    "ko": "사진 앱에 저장했어요.",
    "en": "Saved to Photos.",
    "files": [
-    "MapHomeDailyCard.swift:624"
+    "MapHomeDailyCard.swift:625"
    ],
    "args": [],
    "targets": [
@@ -47098,7 +47098,7 @@
    "ko": "사진 저장 권한이 없어요. 설정에서 허용해 주세요.",
    "en": "Photo access is needed to save.",
    "files": [
-    "MapHomeDailyCard.swift:620"
+    "MapHomeDailyCard.swift:621"
    ],
    "args": [],
    "targets": [
@@ -47184,7 +47184,7 @@
    "ko": "사진에 저장",
    "en": "Save to Photos",
    "files": [
-    "MapHomeDailyCard.swift:529"
+    "MapHomeDailyCard.swift:530"
    ],
    "args": [],
    "targets": [
@@ -58966,7 +58966,7 @@
    "ko": "자동 기록으로 만든 하루",
    "en": "A day from automatic records",
    "files": [
-    "MapHomeDailyCard.swift:268"
+    "MapHomeDailyCard.swift:269"
    ],
    "args": [],
    "targets": [
@@ -59954,7 +59954,7 @@
    "ko": "저장하지 못했어요.",
    "en": "Could not save.",
    "files": [
-    "MapHomeDailyCard.swift:624"
+    "MapHomeDailyCard.swift:625"
    ],
    "args": [],
    "targets": [
@@ -60064,7 +60064,7 @@
    "ko": "전날",
    "en": "Previous day",
    "files": [
-    "MapHomeDailyCard.swift:371"
+    "MapHomeDailyCard.swift:372"
    ],
    "args": [],
    "targets": [
@@ -62175,7 +62175,7 @@
    "ko": "지출 요약",
    "en": "Spending",
    "files": [
-    "MapHomeDailyCard.swift:508"
+    "MapHomeDailyCard.swift:509"
    ],
    "args": [],
    "targets": [
@@ -65605,8 +65605,8 @@
    "en": "Day card",
    "files": [
     "AssistantDataCommands.swift:496",
-    "MapHomeDailyCard.swift:366",
-    "MapHomeDailyCard.swift:507"
+    "MapHomeDailyCard.swift:367",
+    "MapHomeDailyCard.swift:508"
    ],
    "args": [],
    "targets": [
@@ -66281,7 +66281,7 @@
    "ko": "항목 추가",
    "en": "Add item",
    "files": [
-    "MapHomeDailyCard.swift:430"
+    "MapHomeDailyCard.swift:431"
    ],
    "args": [],
    "targets": [
@@ -66891,7 +66891,7 @@
    "ko": "화면 녹화",
    "en": "Screen recording",
    "files": [
-    "MapHomeView+Support.swift:313"
+    "MapHomeView+Support.swift:314"
    ],
    "args": [],
    "targets": [

@@ -211,6 +211,7 @@ AI·Siri·단축어
 - **앱 연결**: `FlightCardMapping`(카드 ↔ `TravelTripItem` 항공 칸과 기기 전용 `flightLog`), `FlightIngest`(글 → 반영, 보관함 `FlightInbox`), `FlightIntents`(단축어 「항공 알림 넣기」), `FlightPrep`(eSIM·숙소·면세 → `TravelPrepItem`), `FlightBriefing`(출발 전날 20시·4시간 전·지연 즉시 로컬 알림), `FlightDayBoard`(당일 배너).
 - **서버**: `server/trip-relay/src/flights.js`(`/flights/schedule`·`/flights/status`), 상류 응답 칸 이름은 문서로 확인하지 못해 `FIELD` 후보로 읽는다. 키를 받은 뒤 `scripts/flights-probe.mjs`로 칸 이름을 확인한다.
 - **개인정보 선**: 예약번호(`pnrLocal`)·`flightLog`는 기기와 백업 파일에만 둔다. 서버로는 공항 코드·날짜·방향·편명만 보낸다. 파서·병합·로그 어디에도 이름·예약번호를 출력하지 않는다.
+- **공유 확장**(새 타깃 `TaptionPlanShare`, 번들 `com.taption.plan.share`, App Group `group.com.taption.plan`): 공유 시트 「BOKKI Plan에 넣기」가 글·링크·`.pkpass`를 `FlightShareStore`(두 타깃이 같은 파일을 컴파일, Foundation만)로 보관함에 두기만 한다. 앱은 켜질 때·앞으로 올 때 `FlightShareIntake`가 읽어 `ingestFlightAlert`로 반영한다. 탑승권은 `FlightPassReader`가 zip의 `pass.json`에서 편명·공항·날짜·시각만 읽어 알림 글로 바꾼다(이름·좌석·바코드는 읽지 않고 서명은 검증하지 않는다). 확장은 네트워크를 쓰지 않는다. 릴리스 스크립트의 번들 버전 점검에 `scripts/testflight/config.json`의 `Share` 제품이 들어 있다.
 - **UI는 엔진을 직접 import하지 않는다**(`check-app-engine-import-boundary.sh`): 화면은 `FlightPlacement`의 어댑터(`AirportChoice`·`draft(from:)`)를 쓴다.
 
 ## 가계부 통행료 (2026-11-18 기준)

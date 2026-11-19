@@ -220,6 +220,7 @@ extension MapHomeView {
             Task { await checkTripRelay() }
             Task { await AnnouncementService.shared.refresh() }
             Task { await SeasonPackAdapter.refresh() }
+            Task { await FlightShareIntake.drain(into: model) }
         }
         .task { await checkTripRelay() }
         .task { await AnnouncementService.shared.refresh() }
