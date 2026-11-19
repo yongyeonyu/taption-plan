@@ -172,6 +172,58 @@ node scripts/kv-to-d1.mjs --config wrangler.local.toml --out /tmp/kv-to-d1.sql  
 node scripts/kv-to-d1.mjs --config wrangler.local.toml --out /tmp/kv-to-d1.sql --apply  # D1에도 적용
 ```
 
+## 공용 공지·정적 데이터 (R2PUB1119A01)
+
+모두에게 같은 공지·POI 팩·온디바이스 모델을 R2 버킷(`PUBLIC_BUCKET`, `taption-trip-public`)에서 **읽기 전용**으로 줍니다. 인증·CORS·속도 제한은 없고(앱은 네이티브), `route()`에서 공용 표 바로 뒤, `USER_STATE` 확인 앞에서 가로챕니다(`src/public.js`). Worker에는 R2 `put`/`delete` 호출이 없고, 주인 키·AI 키·OAuth 토큰은 이 길에서 읽지 않으며, R2 자격 증명은 비밀값으로도 두지 않습니다(바인딩만).
+
+| 경로 | 응답 |
+| --- | --- |
+| `GET /public/announcements` | 버킷 `announcements/latest.json`을 **고치지 않고** 그대로. 200 + `etag` + `cache-control: public, max-age=300`. 바인딩·파일이 없거나 JSON이 깨졌거나 `items`가 배열이 아니면 항상 200 `{"version":0,"items":[]}` + `no-store`. `If-None-Match`가 맞으면 304 |
+| `GET /public/assets/<접두어>/<파일…>` | 접두어는 `announcements`·`packs`·`models`만. 없으면 404, 200은 `etag`·`accept-ranges: bytes`·`content-type`, `Range`는 206 + `content-range`, 잘못된 범위는 416, `If-None-Match`는 304. `announcements/`는 `max-age=300`, 나머지는 `max-age=86400` |
+| 그 밖의 메서드 | 405 + `allow: GET`(HEAD 포함) |
+
+키 모양: 각 칸은 `^[A-Za-z0-9][A-Za-z0-9._-]*$`, 8칸·200자 이하. `%`·공백·역슬래시·빈 칸(`//`)·`.`으로 시작하는 칸은 정규화하지 않고 **400**으로 거부합니다. 그래서 올리는 파일 이름도 영문·숫자·`.`·`_`·`-`만 씁니다. `..`·`%2e%2e` 칸은 URL 해석기가 먼저 걷어내므로 허용 접두어 밖이 되어 404입니다. 파일 이름 없이 `/public/assets/packs/`만 오면 404입니다. 엣지 캐시(`caches.default`)가 있으면 공지 200 응답만 `max-age`만큼 캐시하고, 없으면(시험·로컬) 그냥 R2로 갑니다.
+
+### 공지 JSON 스키마 초안
+
+`version`은 올릴 때마다 1씩 올리는 정수(`0`은 서버가 주는 「아직 없음」). 서버는 아래 시각·빌드 조건으로 거르지 않습니다 — 거르는 일은 앱 몫입니다. 예: `test/fixtures/public-announcements.json`.
+
+| 필드 | 필수 | 형식·한도 | 뜻 |
+| --- | --- | --- | --- |
+| `version` | 필수 | 1 이상 정수 | 공지 묶음의 판 |
+| `items` | 필수 | 배열, 최대 50개 | 공지 목록 |
+| `items[].id` | 필수 | `[a-z0-9][a-z0-9._-]{0,63}` | 바뀌지 않는 식별자(앱의 「읽음」 표시) |
+| `items[].title` | 필수 | 1~100자 평문 | 제목 |
+| `items[].body` | 필수 | 1~2000자 평문(HTML·마크다운 금지) | 본문 |
+| `items[].kind` | 필수 | `info`·`update`·`warning`·`critical` | 표시 분류, 이 순서가 곧 심각도 |
+| `items[].startsAt` | 선택 | ISO 8601(오프셋 포함) | 이때부터 보임. 없으면 즉시 |
+| `items[].expiresAt` | 선택 | ISO 8601 또는 `null` | 이때부터 안 보임. 없으면 계속 |
+| `items[].minBuild` | 선택 | 정수 | 이 빌드 미만 앱에는 안 보임 |
+| `items[].maxBuild` | 선택 | 정수 또는 `null` | 이 빌드 초과 앱에는 안 보임 |
+| `items[].link` | 선택 | `https://`, 300자 이내 | 「자세히」로 열 주소 |
+| `items[].titleByLang`·`bodyByLang` | 선택 | `{"en": "…", "ja": "…"}` | 다른 언어. 없으면 `title`·`body`(기본 한국어) |
+
+### R2 배포·업로드 (대표님이 하는 일 — 아직 안 했습니다)
+
+```sh
+npx wrangler r2 bucket create taption-trip-public
+# wrangler.local.toml의 [[d1_databases]] 아래에 wrangler.toml과 같은 [[r2_buckets]] PUBLIC_BUCKET 블록을 넣는다
+npm test
+npx wrangler deploy --config wrangler.local.toml
+```
+
+업로드는 이 CLI뿐입니다(공용 버킷에 쓰는 길은 이것 하나, 앱 키로는 읽기만). **Wrangler v4부터 `wrangler r2 object`는 `--remote` 없이는 로컬 시뮬레이터에만 쓰므로**, 올린 것처럼 보여도 실제 버킷에는 없습니다. 반드시 `--remote`를 붙입니다.
+
+```sh
+npx wrangler r2 object put taption-trip-public/announcements/latest.json \
+  --file ./announcements.json --content-type application/json \
+  --cache-control "public, max-age=300" --remote --config wrangler.local.toml
+```
+
+POI 팩·모델도 같은 방식(`packs/…`, `models/…`). 배포 뒤 확인: `curl -s -o /dev/null -w '%{http_code}\n' <앱이 쓰는 중계 서버 주소>/public/announcements`가 200, `-H 'If-None-Match: <받은 ETag>'`로 304, 없는 파일은 404.
+
+무료 한도(2026-11-19 Cloudflare 문서 기준): R2 저장 10GB·월, Class A(쓰기·목록) 월 100만, Class B(읽기) 월 1,000만, 나가기 전송료 무료. Worker 요청은 무료 계정 하루 10만 건에 함께 세어지므로 공지는 엣지 캐시로 R2 읽기를 줄입니다. 유료 전환은 대표 결정 없이 하지 않습니다. iOS 연동(언제·얼마나 자주 부르는지, `kind`별 표시, 읽음 표시)은 이번 범위가 아니며 별도 후속 요청입니다.
+
 ## 여행 공유 방(TSH1114A26)
 
 `/share/rooms`(방 만들기, 앱 등록 키)와 `/share/rooms/<방 id>/…`(입장·따라잡기·쓰기·잠금·공지 확인·WebSocket, 방의 참여 토큰). 방마다 Durable Object `ShareRoom` 하나이고 기기가 암호화한 덩어리만 둡니다. 규약 전체는 [docs/TRIP_SHARE_PROTOCOL.md](../../docs/TRIP_SHARE_PROTOCOL.md).

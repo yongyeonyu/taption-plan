@@ -124,3 +124,38 @@ export function makeShareEnv(extra = {}) {
   };
   return { ...made, rooms };
 }
+
+// R2PUB1119A01: 공용 R2 버킷 가짜. `get(key, { range, onlyIf })`는 R2처럼 없으면 null, 조건이 맞으면 body 없는 객체, 범위가 틀리면 던진다.
+export class MemoryBucket {
+  constructor() { this.objects = new Map(); this.reads = 0; this.writes = 0; }
+  async put(key, value, { contentType } = {}) {
+    this.writes++;
+    const bytes = typeof value === "string" ? new TextEncoder().encode(value) : new Uint8Array(value);
+    this.objects.set(key, { bytes, contentType, httpEtag: `"${Buffer.from(bytes).toString("base64url").slice(0, 12)}-${bytes.length}"` });
+  }
+  async delete(key) { this.writes++; this.objects.delete(key); }
+  async get(key, { range, onlyIf } = {}) {
+    this.reads++;
+    const entry = this.objects.get(key);
+    if (!entry) return null;
+    const base = { key, size: entry.bytes.length, httpEtag: entry.httpEtag };
+    const tags = (onlyIf?.get?.("if-none-match") ?? "").split(",").map((tag) => tag.trim());
+    if (tags.includes(entry.httpEtag)) return base; // 전제 실패: 본문 없음
+    let slice = entry.bytes, applied;
+    const header = range?.get?.("range");
+    if (header) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(header);
+      if (!match || (match[1] === "" && match[2] === "")) throw new Error("invalid range");
+      const size = entry.bytes.length;
+      const offset = match[1] === "" ? Math.max(0, size - Number(match[2])) : Number(match[1]);
+      const end = match[1] === "" || match[2] === "" ? size - 1 : Math.min(Number(match[2]), size - 1);
+      if (offset >= size || end < offset) throw new Error("unsatisfiable range");
+      slice = entry.bytes.slice(offset, end + 1);
+      applied = { offset, length: slice.length };
+    }
+    return {
+      ...base, range: applied, body: new Response(slice).body, text: async () => new TextDecoder().decode(slice),
+      writeHttpMetadata(headers) { if (entry.contentType) headers.set("content-type", entry.contentType); },
+    };
+  }
+}

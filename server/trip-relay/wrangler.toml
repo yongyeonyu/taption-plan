@@ -19,6 +19,13 @@ database_name = "taption-trip-relay"
 database_id = "REPLACE_WITH_D1_DATABASE_ID"
 migrations_dir = "migrations"
 
+# R2PUB1119A01: 모두에게 같은 공용 공지·정적 데이터(POI 팩·모델)를 읽기 전용으로 주는 R2 버킷. Worker는 읽기만 한다.
+# 버킷은 대표가 `npx wrangler r2 bucket create taption-trip-public`로 만들고, git에 없는 `wrangler.local.toml`에도 같은 블록을 넣는다.
+# 바인딩이 없어도 코드는 503이 아니라 안전한 빈 응답(`/public/announcements`)을 준다. 로컬 미리보기는 R2 없이 돈다(preview_bucket_name 없음).
+[[r2_buckets]]
+binding = "PUBLIC_BUCKET"
+bucket_name = "taption-trip-public"
+
 # 옛 KV(PLANS) 바인딩은 D1R1119A02에서 뗐다(2026-11-19, 남은 키 133개를 D1로 복사한 뒤). 코드는 `env.PLANS`가 없어도 D1만으로 돈다.
 # IP당 1분에 POST 20번까지(REV1110A02, SEC1110A03에서 5 → 20: 첫 실행의 등록·PIN·키·업로드가 한 번에 온다).
 # 무료 저장소(D1) 쓰기 한도를 한 사람이 다 쓰지 못하게 한다.

@@ -14,6 +14,7 @@ import { createSetup, readSetup } from "./setup.js";
 import { exFare, exUnits } from "./expressway.js";
 import { kakaoDirections } from "./directions.js";
 import { fxRoute } from "./fx.js";
+import { publicRoute as publicAssets } from "./public.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
 import { bearer, json, limited, readBody, tooMany, writeAllowed } from "./http.js";
 import { allows, buryLegacyWrap, importLegacyKeys, keyring, keysRoute, pinResetRoute, pinRoute, registerRoute, resealLegacyWrap, resolveKey, sealInfo } from "./keys.js";
@@ -568,6 +569,9 @@ async function route(request, env, url, exec) {
   const now = env.NOW?.() ?? Date.now();
   const publicRoute = PUBLIC[url.pathname];
   if (publicRoute) return request.method === "GET" ? publicRoute(request, env, url) : json({ error: "method_not_allowed" }, 405);
+  // R2PUB1119A01: 공용 공지·정적 데이터는 키·DO·속도 제한보다 앞에서 읽기 전용으로 답한다.
+  const common = await publicAssets(request, env, exec);
+  if (common) return common;
   if (!env.USER_STATE) return json({ error: "unavailable" }, 503);
   // 인증 전에 IP마다 요청 수를 제한한다(finding 3). 카카오는 자기 제한(KAKAO_LIMIT)을 쓴다(N2: 이것도 인증 전).
   if (await limited(url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/") || url.pathname.startsWith("/ex/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();

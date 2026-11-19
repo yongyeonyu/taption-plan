@@ -1,0 +1,24 @@
+{
+  "version": 3,
+  "items": [
+    {
+      "id": "maintenance-1126",
+      "title": "앱 점검 안내",
+      "body": "서버 점검으로 공유 기능이 잠시 느려질 수 있습니다.",
+      "kind": "warning",
+      "startsAt": "2026-11-25T09:00+09:00",
+      "expiresAt": "2026-11-27T09:00+09:00",
+      "minBuild": 350,
+      "maxBuild": null,
+      "link": "https://example.com/notice/maintenance",
+      "titleByLang": { "en": "Maintenance notice" },
+      "bodyByLang": { "en": "Sharing may be slow during server maintenance." }
+    },
+    {
+      "id": "whats-new-354",
+      "title": "새 기능 안내",
+      "body": "메인 메뉴에서 직접 추가 항목이 모두 보입니다.",
+      "kind": "update"
+    }
+  ]
+}
