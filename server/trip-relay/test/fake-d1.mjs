@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 export class FakeD1 {
   constructor() {
     this.db = new DatabaseSync(":memory:");
-    this.db.exec(readFileSync(new URL("../migrations/0001_kv_entries.sql", import.meta.url), "utf8"));
+    for (const file of ["0001_kv_entries.sql", "0002_misclass_samples.sql"]) {
+      this.db.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
+    }
     this.writes = 0; // INSERT·UPDATE·DELETE 실행 수
   }
   prepare(sql) {
@@ -19,5 +21,6 @@ export class FakeD1 {
       }),
     };
   }
+  async batch(statements) { for (const statement of statements) await statement.run(); return []; }
   rows() { return this.db.prepare("SELECT key, value, expires_at FROM kv_entries ORDER BY key").all(); }
 }

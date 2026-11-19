@@ -224,6 +224,32 @@ POI 팩·모델도 같은 방식(`packs/…`, `models/…`). 배포 뒤 확인: 
 
 무료 한도(2026-11-19 Cloudflare 문서 기준): R2 저장 10GB·월, Class A(쓰기·목록) 월 100만, Class B(읽기) 월 1,000만, 나가기 전송료 무료. Worker 요청은 무료 계정 하루 10만 건에 함께 세어지므로 공지는 엣지 캐시로 R2 읽기를 줄입니다. 유료 전환은 대표 결정 없이 하지 않습니다. iOS 연동(언제·얼마나 자주 부르는지, `kind`별 표시, 읽음 표시)은 이번 범위가 아니며 별도 후속 요청입니다.
 
+## 오분류 교정 표본 모으기 (CLS1119A01)
+
+앱의 「분류 개선 데이터 수집」(MSC1119A01)을 켠 사용자가 **「보내기」를 눌렀을 때만** 올리는 비식별 표본을 D1 표 `misclass_samples`에 쌓습니다(마이그레이션 `migrations/0002_misclass_samples.sql`). 앱 쪽 업로드 단추는 이번 범위가 아니며(후속 요청), 서버 엔드포인트와 표만 먼저 있습니다. 코드는 `src/classifier.js`.
+
+| 경로 | 누가 | 응답 |
+| --- | --- | --- |
+| `POST /classifier-samples` | 주인 키 | 본문 `{"format":"bokki-misclassification","version":1,"ruleVersion":"…","samples":[1~200개]}`, **1MB까지**. `201` `{"ok":true,"accepted":n,"duplicates":n,"rejected":n}`. 같은 `id`는 무시, 허용 목록에 안 맞는 표본은 그 표본만 `rejected`. `422` 형식·건수 틀림, `413` 1MB 초과, `429 classifier_daily_limit` 하루 2,000건 초과(24시간 창, `retry-after: 3600`) |
+| `DELETE /classifier-samples` | 주인 키 | `200` `{"ok":true,"deleted":n}` 내가 올린 표본을 모두 지운다 |
+| `GET /classifier-samples/admin?since=<seq>&limit=<1~500>` | 운영자 토큰 | `200` `{"format","version","samples":[{"seq":n,…표본}],"next":seq}`. `CLASSIFIER_ADMIN_TOKEN`(32자 이상 비밀값)이 없으면 `503`, 틀리면 `401`. 주인·받은 시각은 내주지 않는다 |
+
+- **허용 목록 검사**: 표본은 앱 형식의 열쇠(15개, 특징 9개)와 일치해야 하고, 문자열은 짧은 영문 코드 모양(`^[a-z][A-Za-z0-9_-]{0,31}$` 등)만 받습니다. 한글·공백·긴 글·모르는 열쇠·범위 밖 숫자는 거부합니다. 그래서 좌표·이름·제목이 실수로 들어와도 저장되지 않습니다.
+- **저장**: `owner`는 주인 키 유래 해시(하루 한도·「내 표본 지우기」용)로 표본 안에 없고, 받은 시각(`received_at`)은 보관 기간과 하루 한도에만 씁니다.
+- **보관 1년**(대표 결정 2026-11-19): 올릴 때마다 1년이 지난 표본을 지웁니다(예약 작업 없음).
+- **한도**(대표 결정 2026-11-19): 한 번 200건·1MB, 하루 2,000건(주인별).
+
+### 배포 (대표님이 하는 일 — 아직 안 했습니다)
+
+```sh
+npx wrangler d1 migrations apply taption-trip-relay --remote --config wrangler.local.toml   # 0002 적용
+npx wrangler secret put CLASSIFIER_ADMIN_TOKEN --config wrangler.local.toml                  # 32자 이상 임의 문자열(학습용 읽기)
+npm test
+npx wrangler deploy --config wrangler.local.toml
+```
+
+마이그레이션 없이 배포하면 표가 없어 `POST`가 `500`입니다. 순서를 지켜 주세요. 앱이 아직 이 경로를 부르지 않으므로 배포해도 사용자에게 달라지는 것은 없습니다.
+
 ## 여행 공유 방(TSH1114A26)
 
 `/share/rooms`(방 만들기, 앱 등록 키)와 `/share/rooms/<방 id>/…`(입장·따라잡기·쓰기·잠금·공지 확인·WebSocket, 방의 참여 토큰). 방마다 Durable Object `ShareRoom` 하나이고 기기가 암호화한 덩어리만 둡니다. 규약 전체는 [docs/TRIP_SHARE_PROTOCOL.md](../../docs/TRIP_SHARE_PROTOCOL.md).

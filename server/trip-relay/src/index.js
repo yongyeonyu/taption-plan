@@ -15,6 +15,7 @@ import { exFare, exUnits } from "./expressway.js";
 import { kakaoDirections } from "./directions.js";
 import { fxRoute } from "./fx.js";
 import { publicRoute as publicAssets } from "./public.js";
+import * as classifier from "./classifier.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
 import { bearer, json, limited, readBody, tooMany, writeAllowed } from "./http.js";
 import { allows, buryLegacyWrap, importLegacyKeys, keyring, keysRoute, pinResetRoute, pinRoute, registerRoute, resealLegacyWrap, resolveKey, sealInfo } from "./keys.js";
@@ -338,6 +339,11 @@ async function kakaoRoute(request, ctx) {
 }
 
 const ROUTES = {
+  // CLS1119A01: 오분류 교정 표본. 앱이 사용자가 「보내기」를 눌렀을 때만 올린다.
+  "/classifier-samples": {
+    POST: ["master", (request, ctx) => classifier.upload(request, ctx)],
+    DELETE: ["master", (request, ctx) => classifier.erase(ctx)],
+  },
   "/plan": {
     GET: ["read", (request, ctx) => store.readPlan(ctx)],
     POST: ["write", withBody(store.savePlan)],
@@ -585,6 +591,7 @@ async function route(request, env, url, exec) {
       const setup = SETUP_PATH.exec(url.pathname);
       if (setup) return request.method === "GET" ? readSetup(env, setup[1], now) : json({ error: "method_not_allowed" }, 405);
       if (url.pathname.startsWith("/shared/admin/")) return shared.adminRoute(request, env, url, now);
+      if (url.pathname === "/classifier-samples/admin") return classifier.adminRoute(request, env, url);
       const room = share.ROOM_PATH.exec(url.pathname);
       if (room) return share.roomRoute(request, env, room, now);
       const keyed = MCP_KEY_PATH.exec(url.pathname);

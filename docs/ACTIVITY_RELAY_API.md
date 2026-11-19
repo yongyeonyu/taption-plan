@@ -24,6 +24,8 @@
 | `GET /activity?date=YYYY-MM-DD` | AI·읽기 | 없음 | `200` 그날 하루, `204` 없음, `400` 날짜 형식 틀림 |
 | `GET /activity` | AI·읽기 | 없음 | `200` `{"days":[…]}` 있는 날 중 최근 7일(최신 먼저), `204` 없음 |
 | `DELETE /activity` | 앱 | 없음 | `204` 이 키의 모든 날을 지운다 |
+| `POST /classifier-samples` | 앱(주인 키) | `{"format":"bokki-misclassification","version":1,"ruleVersion":"…","samples":[1~200개]}`, 1MB까지 | `201` `{"ok":true,"accepted":n,"duplicates":n,"rejected":n}`, `422` 형식·건수, `413` 1MB 초과, `429` 하루 2,000건 초과. 사용자가 「보내기」를 눌렀을 때만(CLS1119A01, 앱 업로드는 후속) |
+| `DELETE /classifier-samples` | 앱(주인 키) | 없음 | `200` `{"ok":true,"deleted":n}` 이 키가 올린 표본을 모두 지운다 |
 | `GET /activity/summary?range=week\|month[&end=YYYY-MM-DD]` | AI·읽기 | 없음 | `200` 묶음(8장), `204` 그 기간에 날 없음, `400` 기간·날짜 틀림 |
 | `POST /command` | AI·쓰기 | 아래 명령 하나 | `201` `{"ok":true,"id":"…","queued":n,"remainingToday":n,"expiresInSeconds":604800}`, `422` 형식 틀림(`{"error":"not_command","reason"?}`, `reason`은 `bad_id` 또는 말풍선 이유), `409` `{"error":"id_conflict"}` 다른 연결이 넣어 둔 같은 `id`, `429` 24시간 100개 초과(`{"error":"daily_command_limit","retryAfterSeconds"}`, `Retry-After` 헤더) |
 | `GET /command` | 앱 | 없음 | `200` `{"commands":[…]}`, `204` 없음 |
