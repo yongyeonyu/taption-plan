@@ -60,6 +60,7 @@ extension MapHomeView {
                 memoCounts: dayMemoCounts,
                 model: model,
                 homePlaceID: model.settings.frequentPlaces.first { $0.kind == .home }?.id,
+                makeEnergyCurve: { day in await energyCurve(for: day) },
                 detent: $daySummaryDetent
             )
             .presentationDragIndicator(.visible)

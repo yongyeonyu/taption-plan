@@ -253,6 +253,8 @@ struct MapHomeDaySummarySheet: View {
     /// 집 범위를 이 화면에서 바꿀 수 있도록 모델과 집 장소 id를 받는다.
     var model: AppModel? = nil
     var homePlaceID: UUID? = nil
+    /// 컨디션 에너지 곡선 카드(ENC1119A01). 없으면 카드를 그리지 않는다.
+    var makeEnergyCurve: (@MainActor (Date) async -> EnergyCurveResult?)? = nil
     /// 시트 높이. 접힌 절반과 펼친 전체 두 단계뿐이다.
     @Binding var detent: PresentationDetent
     @State private var isGrowthPresented = false
@@ -441,6 +443,10 @@ struct MapHomeDaySummarySheet: View {
 
             if let salary {
                 salaryCardView(salary)
+            }
+
+            if let makeEnergyCurve {
+                MapHomeEnergyCurveCard(day: date, language: language, model: model, make: makeEnergyCurve)
             }
 
             if memoCounts.total > 0 {
