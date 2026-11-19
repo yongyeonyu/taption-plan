@@ -183,7 +183,10 @@ extension AssistantCommandParser {
         if let text = raw.parentGoalId {
             if allowsDetach, text == "none" { parent = "" } else if UUID(uuidString: text) != nil { parent = text } else { return nil }
         }
+        // NTR1119A02: addSchedule의 상세분류 id(`activity.performanceMovie` 꼴). 고칠 때(allowsDetach)는 받지 않는다.
+        if raw.detailId != nil, allowsDetach || clean(raw.detailId, max: 100) == nil { return nil }
         var extras = AssistantScheduleExtras(categoryID: clean(raw.categoryId, max: 100), important: raw.important, parentGoalID: parent)
+        extras.detailID = allowsDetach ? nil : clean(raw.detailId, max: 100)
         // RMN1114A22: 장소는 `latitude`·`longitude`만 받는다(`lat`·`lng`는 여행 핀의 옛 이름). 장소 지우기는 고칠 때만.
         guard extras.readSpot(
             placeName: raw.placeName, latitude: raw.latitude, longitude: raw.longitude,

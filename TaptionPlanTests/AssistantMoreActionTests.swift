@@ -322,6 +322,30 @@ final class AssistantMoreActionTests: XCTestCase {
         XCTAssertFalse(MapHomeGrowthPolicy.unequip(kind: .hat, in: &other))
     }
 
+    // MARK: 일정의 상세분류 (NTR1119A02)
+
+    func testAddScheduleDetailIDSetsCategoryAndDetailName() async throws {
+        XCTAssertFalse(try invalid("addSchedule", ["title": "가짜 뮤지컬", "start": start, "detailId": "activity.performanceMovie"]))
+        XCTAssertTrue(try invalid("updateSchedule", ["planId": UUID().uuidString, "detailId": "activity.performanceMovie"]), "고칠 때는 받지 않는다")
+        let store = defaults()
+        let model = await makeModel()
+        let sent = try await send(model, "addSchedule", ["title": "가짜 뮤지컬", "start": start, "detailId": "activity.performanceMovie"], store: store)
+        XCTAssertNil(sent.reason)
+        let plan = try XCTUnwrap(model.snapshot.plans.first { $0.title == "가짜 뮤지컬" })
+        XCTAssertEqual(plan.categoryID, "activity")
+        XCTAssertEqual(plan.middleCategoryName, "공연/영화 관람")
+        // 대분류를 함께 주면 같아야 하고, 없는 상세는 거절한다.
+        let same = try await send(model, "addSchedule", ["title": "가짜 영화", "start": start, "categoryId": "activity", "detailId": "activity.performanceMovie"], store: store)
+        XCTAssertNil(same.reason)
+        let mismatch = try await send(model, "addSchedule", ["title": "가짜 다른 일", "start": start, "categoryId": "work", "detailId": "activity.performanceMovie"], store: store)
+        XCTAssertEqual(mismatch.reason, "unknown_category")
+        let unknown = try await send(model, "addSchedule", ["title": "가짜 없는 상세", "start": start, "detailId": "activity.nothing"], store: store)
+        XCTAssertEqual(unknown.reason, "unknown_category")
+        XCTAssertNil(model.snapshot.plans.first { $0.title == "가짜 다른 일" || $0.title == "가짜 없는 상세" })
+        try await undo(model, sent.entry, store: store)
+        XCTAssertNil(model.snapshot.plans.first { $0.title == "가짜 뮤지컬" }, "되돌리면 일정도 지운다")
+    }
+
     // MARK: 기록이 바뀐 알림
 
     func testTheLogAnnouncesNewEntriesAndUndoMarks() async throws {
@@ -350,5 +374,26 @@ final class AssistantMoreActionTests: XCTestCase {
         XCTAssertEqual(count, 2)
         XCTAssertNotNil(AssistantActionLog.load(from: file).first?.undoneAt)
         XCTAssertEqual(AssistantActionLog.load(from: file).map(\.id), [entry.id], "저장 형식은 그대로다")
+        // 한 달(30일)이 지난 기록은 읽을 때 빠지고 새로 쓸 때 지워진다(ICN1119A05).
+        let now = Date()
+        var stale = entry
+        stale.id = UUID()
+        stale.appliedAt = now.addingTimeInterval(-31 * 86_400)
+        var recent = entry
+        recent.id = UUID()
+        recent.appliedAt = now.addingTimeInterval(-29 * 86_400)
+        AssistantActionLog.save([stale, recent, entry], to: file)
+        XCTAssertEqual(AssistantActionLog.load(from: file, now: now).map(\.id), [recent.id, entry.id])
+        XCTAssertEqual(AssistantActionLog.load(from: file, now: now.addingTimeInterval(-40 * 86_400)).count, 3, "읽기만으로는 파일을 고치지 않는다")
+        var fresh = entry
+        fresh.id = UUID()
+        fresh.appliedAt = now
+        AssistantActionLog.append([fresh], to: file, now: now)
+        let kept = AssistantActionLog.load(from: file, now: now.addingTimeInterval(-40 * 86_400)).map(\.id)
+        XCTAssertEqual(kept, [fresh.id, recent.id, entry.id], "새로 쓸 때 한 달이 지난 것을 지운다")
+        // 「기록 지우기」(ICN1119A04): 파일을 지우고 열려 있는 화면이 다시 읽도록 알린다.
+        AssistantActionLog.clear(file: file)
+        XCTAssertTrue(AssistantActionLog.load(from: file).isEmpty)
+        XCTAssertEqual(count, 4)
     }
 }

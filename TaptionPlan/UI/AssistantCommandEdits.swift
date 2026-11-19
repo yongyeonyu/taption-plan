@@ -188,6 +188,15 @@ extension AppModel {
             // 분류를 주지 않으면 일반 활동에 둔다.
             if let note, note.count > TaptionPlanMemoRecord.maximumTextLength { return .rejected("note_too_long") }
             if let categoryID = extras.categoryID, !isAssistantCategory(categoryID) { return .rejected("unknown_category") }
+            // NTR1119A02: 상세분류 id가 있으면 그 대분류에 두고 상세 이름을 중분류로 남긴다. 대분류를 함께 주면 같아야 한다.
+            var categoryID = extras.categoryID
+            var detailName: String?
+            if let detailID = extras.detailID {
+                guard let found = Self.assistantDetail(detailID), categoryID == nil || categoryID == found.categoryID, isAssistantCategory(found.categoryID)
+                else { return .rejected("unknown_category") }
+                categoryID = found.categoryID
+                detailName = found.title
+            }
             let duration = end.map { $0.timeIntervalSince(start) } ?? 3_600
             var parentID: UUID?
             if let goalID = extras.parentGoalID {
@@ -200,7 +209,7 @@ extension AppModel {
             // RMN1114A22: 장소·예상 지출. 없으면 nil을 넘겨 칸을 만들지 않는다.
             let spot = extras.place == nil && extras.plannedSpend == nil ? nil : Self.assistantSpot(extras, current: nil)
             guard let planID = addPlan(
-                title: title, categoryID: extras.categoryID ?? "activity", startAt: start, duration: duration, parentID: parentID, spot: spot
+                title: title, categoryID: categoryID ?? "activity", middleCategoryName: detailName, startAt: start, duration: duration, parentID: parentID, spot: spot
             ) else {
                 userFacingError = errorBefore
                 return .rejected("schedule_failed")
@@ -283,6 +292,14 @@ extension AppModel {
     /// 앱이 자동 기록에 직접 쓰는 분류(식사·집안일·샤워)는 분류 목록에 없어도 받는다. AI가 읽은 값을 그대로 돌려보내면
     /// `unknown_category`로 거절됐다(PAY1114A01 조사).
     static let builtInRecordCategories: Set<String> = ["eating", "housework", "shower"]
+
+    /// 분류표의 상세분류 id(`대분류.상세`)를 찾는다. 자동 판정 전용이나 길·휴식은 일정으로 고를 수 없다.
+    static func assistantDetail(_ id: String) -> (categoryID: String, title: String)? {
+        guard let categoryID = id.split(separator: ".").first.map(String.init),
+              let detail = CalendarTitleClassification.selectableCategories.first(where: { $0.id == categoryID })?.details.first(where: { $0.id == id })
+        else { return nil }
+        return (categoryID, detail.title)
+    }
 
     func isAssistantCategory(_ id: String) -> Bool {
         id != "unconfirmed" && (Self.builtInRecordCategories.contains(id) || snapshot.categories.contains { $0.id == id })

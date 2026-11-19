@@ -43,6 +43,8 @@ public struct AssistantScheduleExtras: Equatable, Sendable {
     public static let maximumPlannedSpend = 1e10
 
     public var categoryID: String?
+    /// 상세분류 id(예: `activity.performanceMovie`). 대분류를 함께 정하고 일정의 중분류 이름으로 남는다(addSchedule만, NTR1119A02).
+    public var detailID: String?
     public var important: Bool?
     public var parentGoalID: String?
     public var place: AssistantSchedulePlace?
@@ -53,9 +55,10 @@ public struct AssistantScheduleExtras: Equatable, Sendable {
 
     public init(
         categoryID: String? = nil, important: Bool? = nil, parentGoalID: String? = nil,
-        place: AssistantSchedulePlace? = nil, plannedSpend: Double? = nil, clearPlace: Bool = false
+        place: AssistantSchedulePlace? = nil, plannedSpend: Double? = nil, clearPlace: Bool = false, detailID: String? = nil
     ) {
         self.categoryID = categoryID
+        self.detailID = detailID
         self.important = important
         self.parentGoalID = parentGoalID
         self.place = place

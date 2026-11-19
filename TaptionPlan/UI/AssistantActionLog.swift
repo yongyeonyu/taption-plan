@@ -330,10 +330,13 @@ struct AssistantMovementChange: Codable, Equatable, Sendable {
     var after: State
 }
 
-/// 최근 200개를 앱 Application Support의 파일 하나에 둔다. 메모 글이 들어 있어 기기 밖으로 보내지 않는다.
+/// 최근 한 달(30일) 안의 기록을 앱 Application Support의 파일 하나에 둔다(개수는 `limit`까지). 메모 글이 들어 있어 기기 밖으로 보내지 않는다.
 @MainActor
 enum AssistantActionLog {
-    static let limit = 200
+    /// 한 달(30일)이 지난 기록은 읽을 때 빼고 새로 쓸 때 지운다(ICN1119A05, 대표 지시 2026-11-19).
+    static let retention: TimeInterval = 30 * 86_400
+    /// 한 달 안이라도 이 개수를 넘으면 오래된 것부터 버린다(파일이 무한히 커지지 않게).
+    static let limit = 1_000
 
     static var url: URL {
         let base = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
@@ -341,15 +344,22 @@ enum AssistantActionLog {
         return base.appendingPathComponent("TaptionPlan/Assistant", isDirectory: true).appendingPathComponent("assistant-log.json")
     }
 
-    static func load(from file: URL = url) -> [AssistantLogEntry] {
+    static func load(from file: URL = url, now: Date = .now) -> [AssistantLogEntry] {
         guard let data = try? Data(contentsOf: file) else { return [] }
-        return (try? JSONDecoder().decode([AssistantLogEntry].self, from: data)) ?? []
+        let all = (try? JSONDecoder().decode([AssistantLogEntry].self, from: data)) ?? []
+        return fresh(all, now: now)
+    }
+
+    /// 한 달이 지난 기록을 뺀 것.
+    static func fresh(_ entries: [AssistantLogEntry], now: Date = .now) -> [AssistantLogEntry] {
+        let oldest = now.addingTimeInterval(-retention)
+        return entries.filter { $0.appliedAt >= oldest }
     }
 
     /// 새 항목을 앞에 붙이고 오래된 것을 버린다.
-    static func append(_ entries: [AssistantLogEntry], to file: URL = url) {
+    static func append(_ entries: [AssistantLogEntry], to file: URL = url, now: Date = .now) {
         guard !entries.isEmpty else { return }
-        save(Array((entries.reversed() + load(from: file)).prefix(limit)), to: file)
+        save(Array((entries.reversed() + load(from: file, now: now)).prefix(limit)), to: file)
         NotificationCenter.default.post(name: didChange, object: nil)
     }
 
@@ -371,7 +381,10 @@ enum AssistantActionLog {
         NotificationCenter.default.post(name: didChange, object: nil)
     }
 
-    static func clear(file: URL = url) { try? FileManager.default.removeItem(at: file) }
+    static func clear(file: URL = url) {
+        try? FileManager.default.removeItem(at: file)
+        NotificationCenter.default.post(name: didChange, object: nil)
+    }
 }
 
 extension AppModel {

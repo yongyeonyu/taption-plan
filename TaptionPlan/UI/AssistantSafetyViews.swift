@@ -332,13 +332,14 @@ struct AssistantActionTogglesView: View {
     }
 }
 
-/// 「AI가 한 일」 최근 200개. 항목마다 되돌리기(AIR1110A02).
+/// 「AI가 한 일」 최근 한 달 기록. 항목마다 되돌리기(AIR1110A02).
 struct AssistantActionLogView: View {
     let model: AppModel
     let language: MapHomeLanguage
     @State private var entries: [AssistantLogEntry] = []
     @State private var workingID: UUID?
     @State private var failedID: UUID?
+    @State private var confirmsClear = false
 
     var body: some View {
         List {
@@ -354,6 +355,25 @@ struct AssistantActionLogView: View {
         .font(.taptionStyle(.subheadline))
         .navigationTitle(language.text("AI가 한 일", "What the AI did"))
         .onAppear { entries = AssistantActionLog.load() }
+        // 기록 지우기(ICN1119A04): 되돌리기를 쓸 수 없게 되므로 한 번 더 묻는다. 이미 반영된 변경은 그대로 둔다.
+        .toolbar {
+            if !entries.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(language.text("기록 지우기", "Clear log"), role: .destructive) { confirmsClear = true }
+                        .accessibilityIdentifier("assistant-log-clear")
+                }
+            }
+        }
+        .confirmationDialog(language.text("AI가 한 일 기록을 모두 지울까요?", "Clear the whole AI activity log?"), isPresented: $confirmsClear, titleVisibility: .visible) {
+            Button(language.text("기록 지우기", "Clear log"), role: .destructive) {
+                AssistantActionLog.clear()
+                entries = []
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(language.text("지운 기록은 되돌리기를 쓸 수 없어요. 이미 반영된 변경은 그대로 남아요.",
+                               "Cleared entries can't be undone from here. Changes already applied stay as they are."))
+        }
     }
 
     private func row(_ entry: AssistantLogEntry) -> some View {
