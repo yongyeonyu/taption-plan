@@ -22,6 +22,12 @@ enum FlightIngest {
         case lookupFailed
         /// 여행 부가 예약(eSIM·숙소·면세점)을 준비물 카드로 넣었다.
         case prepAdded(created: Int, updated: Int)
+        /// 항공편이 아닌 공유 글을 기기 안에서 읽어 일정으로 넣었다.
+        case planAdded
+        /// 기기에서 못 읽어 연결된 AI에게 맡겼다.
+        case sentToAI
+        /// AI 연결이 없어 메모로 남겼다.
+        case savedAsMemo
     }
 
     struct Candidate: Equatable, Identifiable {
@@ -106,6 +112,9 @@ enum FlightIngest {
         case .deferred: return language.text("붙일 카드가 없어 보류했어요.", "No card to attach it to, so it is on hold.")
         case .lookupFailed: return language.text("편명으로 시간표를 찾지 못했어요. 직접 넣어 주세요.", "Could not find the timetable for that flight. Please add it manually.")
         case .prepAdded: return language.text("여행 준비물 카드로 넣었어요.", "Added it as a trip prep card.")
+        case .planAdded: return language.text("일정으로 넣었어요.", "Added it to your schedule.")
+        case .sentToAI: return language.text("AI에게 일정으로 만들어 달라고 맡겼어요. 메모 › AI에서 볼 수 있어요.", "Asked your AI to turn it into a plan. See Memo › AI.")
+        case .savedAsMemo: return language.text("AI 연결이 없어 메모로 남겼어요.", "No AI connection, so it was saved as a memo.")
         }
     }
 }

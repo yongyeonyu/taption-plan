@@ -1030,6 +1030,18 @@
    ]
   },
   {
+   "key": "AI 연결이 없어 메모로 남겼어요.|No AI connection, so it was saved as a memo.",
+   "ko": "AI 연결이 없어 메모로 남겼어요.",
+   "en": "No AI connection, so it was saved as a memo.",
+   "files": [
+    "FlightIngest.swift:117"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.|No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't.",
    "ko": "AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
    "en": "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't.",
@@ -1412,6 +1424,18 @@
    "en": "Asks your AI for a rule that reads this format",
    "files": [
     "LedgerMessageRules.swift:263"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI에게 일정으로 만들어 달라고 맡겼어요. 메모 › AI에서 볼 수 있어요.|Asked your AI to turn it into a plan. See Memo › AI.",
+   "ko": "AI에게 일정으로 만들어 달라고 맡겼어요. 메모 › AI에서 볼 수 있어요.",
+   "en": "Asked your AI to turn it into a plan. See Memo › AI.",
+   "files": [
+    "FlightIngest.swift:116"
    ],
    "args": [],
    "targets": [
@@ -36964,6 +36988,18 @@
    ]
   },
   {
+   "key": "공유한 일정|Shared plan",
+   "ko": "공유한 일정",
+   "en": "Shared plan",
+   "files": [
+    "ShareTextRouter.swift:27"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "공유할 항목 (최대 4개)|Items to share (up to 4)",
    "ko": "공유할 항목 (최대 4개)",
    "en": "Items to share (up to 4)",
@@ -37661,7 +37697,7 @@
    "ko": "그 날짜의 여행이 없어요. 여행을 만든 뒤 다시 열면 이어서 붙일게요.",
    "en": "No trip covers that date. Create the trip and reopen the app to attach it.",
    "files": [
-    "FlightIngest.swift:105"
+    "FlightIngest.swift:111"
    ],
    "args": [],
    "targets": [
@@ -44553,6 +44589,18 @@
    ]
   },
   {
+   "key": "받았어요. 앱을 열면 일정으로 넣을게요.|Got it. I'll add it to your schedule when the app opens.",
+   "ko": "받았어요. 앱을 열면 일정으로 넣을게요.",
+   "en": "Got it. I'll add it to your schedule when the app opens.",
+   "files": [
+    "FlightIntents.swift:60"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "받았어요. 앱을 열면 카드에 붙일게요.|Got it. I'll attach it to the card when the app opens.",
    "ko": "받았어요. 앱을 열면 카드에 붙일게요.",
    "en": "Got it. I'll attach it to the card when the app opens.",
@@ -46251,7 +46299,7 @@
    "ko": "붙일 카드가 없어 보류했어요.",
    "en": "No card to attach it to, so it is on hold.",
    "files": [
-    "FlightIngest.swift:106"
+    "FlightIngest.swift:112"
    ],
    "args": [],
    "targets": [
@@ -51587,7 +51635,7 @@
    "ko": "어느 카드인지 확인해 주세요.",
    "en": "Please confirm which card this belongs to.",
    "files": [
-    "FlightIngest.swift:103"
+    "FlightIngest.swift:109"
    ],
    "args": [],
    "targets": [
@@ -52587,7 +52635,7 @@
    "ko": "여행 준비물 카드로 넣었어요.",
    "en": "Added it as a trip prep card.",
    "files": [
-    "FlightIngest.swift:108"
+    "FlightIngest.swift:114"
    ],
    "args": [],
    "targets": [
@@ -58649,6 +58697,18 @@
    ]
   },
   {
+   "key": "일정으로 넣었어요.|Added it to your schedule.",
+   "ko": "일정으로 넣었어요.",
+   "en": "Added it to your schedule.",
+   "files": [
+    "FlightIngest.swift:115"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "일정을 방에 올리는 중이에요.|Uploading plans to the room.",
    "ko": "일정을 방에 올리는 중이에요.",
    "en": "Uploading plans to the room.",
@@ -63874,7 +63934,7 @@
    "ko": "카드에 붙였어요.",
    "en": "Attached to the card.",
    "files": [
-    "FlightIngest.swift:102"
+    "FlightIngest.swift:108"
    ],
    "args": [],
    "targets": [
@@ -64998,7 +65058,7 @@
    "ko": "편명으로 시간표를 찾지 못했어요. 직접 넣어 주세요.",
    "en": "Could not find the timetable for that flight. Please add it manually.",
    "files": [
-    "FlightIngest.swift:107"
+    "FlightIngest.swift:113"
    ],
    "args": [],
    "targets": [
@@ -66237,7 +66297,7 @@
    "ko": "항공편 알림으로 읽지 못했어요.",
    "en": "Could not read this as a flight notice.",
    "files": [
-    "FlightIngest.swift:104",
+    "FlightIngest.swift:110",
     "FlightPickerSheet.swift:166"
    ],
    "args": [],
@@ -66263,7 +66323,7 @@
    "ko": "항공편 카드를 만들고 붙였어요.",
    "en": "Created and attached the flight cards.",
    "files": [
-    "FlightIngest.swift:101"
+    "FlightIngest.swift:107"
    ],
    "args": [],
    "targets": [
@@ -66275,7 +66335,7 @@
    "ko": "항공편 카드를 만들었어요.",
    "en": "Created the flight card.",
    "files": [
-    "FlightIngest.swift:102"
+    "FlightIngest.swift:108"
    ],
    "args": [],
    "targets": [
@@ -68543,6 +68603,22 @@
   },
   {
    "table": "Localizable",
+   "key": "글 내용",
+   "en": "Text",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "글을 일정으로 넣기",
+   "en": "Add Text to Schedule",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "금액(원)",
    "en": "Amount (KRW)",
    "targets": [
@@ -69289,6 +69365,14 @@
    "table": "Localizable",
    "key": "반복 이름 · 예: 주중 수면",
    "en": "Repeat name · e.g. Weekday sleep",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "받은 문자나 메시지 글을 읽어 BOKKI Plan 일정이나 항공편 카드로 넣어요. 못 읽으면 연결된 AI에게 맡기고, AI가 없으면 메모로 남겨요.",
+   "en": "Reads a received text or message and adds it to BOKKI Plan as a plan or flight card. If it can't read it, it asks your connected AI, or saves a memo when there is no AI.",
    "targets": [
     "TaptionPlan"
    ]

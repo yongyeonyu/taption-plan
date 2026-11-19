@@ -17,7 +17,10 @@ enum FlightShareIntake {
             case .pass: text = FlightShareStore.passData(for: entry, container: container).flatMap(FlightPassReader.text(from:))
             }
             guard let text else { best = better(best, .unreadable); continue }
-            best = better(best, await model.ingestFlightAlert(text, source: .share, now: entry.at))
+            var reply = await model.ingestFlightAlert(text, source: .share, now: entry.at)
+            // 항공 알림이 아닌 글은 일정으로 읽거나 AI에게 맡기거나 메모로 남긴다(탑승권 파일은 제외).
+            if case .unreadable = reply, entry.kind == .text { reply = await model.routeSharedText(text, now: entry.at) }
+            best = better(best, reply)
         }
         FlightShareStore.remove(entries.map(\.id), now: now, container: container)
         if let best { FlightAlertCenter.shared.show(best) }
@@ -28,8 +31,10 @@ enum FlightShareIntake {
         guard let current else { return next }
         func rank(_ reply: FlightIngest.Reply) -> Int {
             switch reply {
-            case .needsConfirmation: 5
-            case .attached, .prepAdded: 4
+            case .needsConfirmation: 7
+            case .attached, .prepAdded, .planAdded: 6
+            case .sentToAI: 5
+            case .savedAsMemo: 4
             case .noTrip: 3
             case .deferred, .lookupFailed: 2
             case .unreadable: 1

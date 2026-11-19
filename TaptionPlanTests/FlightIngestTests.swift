@@ -243,7 +243,7 @@ final class FlightIngestTests: XCTestCase {
     }
 
     func testRepliesHaveKoreanAndEnglishWordingAndNeverEchoThePersonalText() {
-        let replies: [FlightIngest.Reply] = [.attached(created: 1, merged: 0), .attached(created: 0, merged: 1), .attached(created: 1, merged: 1), .unreadable, .noTrip, .deferred, .lookupFailed, .prepAdded(created: 1, updated: 0),
+        let replies: [FlightIngest.Reply] = [.attached(created: 1, merged: 0), .attached(created: 0, merged: 1), .attached(created: 1, merged: 1), .unreadable, .noTrip, .deferred, .lookupFailed, .prepAdded(created: 1, updated: 0), .planAdded, .sentToAI, .savedAsMemo,
                                             .needsConfirmation(.init(text: "HONG/GILDONG ABC123", candidates: [], allowsNew: true))]
         for reply in replies {
             let ko = FlightIngest.message(for: reply, language: .korean), en = FlightIngest.message(for: reply, language: .english)

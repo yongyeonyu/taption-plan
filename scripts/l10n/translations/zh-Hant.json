@@ -505,7 +505,10 @@
 "Localizable:활동 변경": "更改活動",
 "Localizable:활동 선택": "選擇活動",
 "Localizable:항공 알림 넣기": "新增航班通知",
-"Localizable:항공사 문자·알림톡을 읽어 BOKKI Plan 여행의 항공편 카드에 붙여요. 읽기만 하고 예약·결제는 하지 않아요.": "讀取航空公司的簡訊或通知，並附到 BOKKI Plan 行程的航班卡片上。只讀取，不會訂位或付款。"
+"Localizable:항공사 문자·알림톡을 읽어 BOKKI Plan 여행의 항공편 카드에 붙여요. 읽기만 하고 예약·결제는 하지 않아요.": "讀取航空公司的簡訊或通知，並附到 BOKKI Plan 行程的航班卡片上。只讀取，不會訂位或付款。",
+"Localizable:글을 일정으로 넣기": "把文字加入行程",
+"Localizable:받은 문자나 메시지 글을 읽어 BOKKI Plan 일정이나 항공편 카드로 넣어요. 못 읽으면 연결된 AI에게 맡기고, AI가 없으면 메모로 남겨요.": "讀取收到的簡訊或訊息，加入 BOKKI Plan 的行程或航班卡片。讀不出來時交給已連接的 AI，沒有 AI 則儲存為備忘。",
+"Localizable:글 내용": "文字內容"
 },
 "ui": {
 "새로고침·iCloud 동기화 실행|Refresh or run the iCloud sync": "重新整理或執行 iCloud 同步",
@@ -6219,6 +6222,11 @@
 "수하물 {0}|Baggage {0}": "行李轉盤 {0}",
 "오늘의 항공편|Today's flights": "今日航班",
 "곧 출발! 공항에 {0}까지 가요 ✈|Departing soon! Be at the airport by {0} ✈": "即將出發！請在 {0} 前到機場 ✈",
-"{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}": "{0} 延誤{1}分鐘，新出發 {2}"
+"{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}": "{0} 延誤{1}分鐘，新出發 {2}",
+"일정으로 넣었어요.|Added it to your schedule.": "已加入行程。",
+"AI에게 일정으로 만들어 달라고 맡겼어요. 메모 › AI에서 볼 수 있어요.|Asked your AI to turn it into a plan. See Memo › AI.": "已請 AI 把它整理成行程。可在 備忘 › AI 中查看。",
+"AI 연결이 없어 메모로 남겼어요.|No AI connection, so it was saved as a memo.": "沒有 AI 連接，已儲存為備忘。",
+"받았어요. 앱을 열면 일정으로 넣을게요.|Got it. I'll add it to your schedule when the app opens.": "已收到。開啟 App 後會加入行程。",
+"공유한 일정|Shared plan": "分享的行程"
 }
 }

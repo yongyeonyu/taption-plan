@@ -143,12 +143,78 @@ final class FlightShareTests: XCTestCase {
         let model = AppModel(repository: InMemoryPlanRepository(), cloudSyncService: nil)
         await model.bootstrapLocalSnapshot()
         FlightAlertCenter.shared.clearMessage()
-        XCTAssertTrue(FlightShareStore.enqueue(text: "안녕하세요 점심 뭐 드실래요", now: now, container: container))
+        // 읽을 수 없는 탑승권 파일만 있으면 「못 읽음」이고 보관함은 비운다.
         XCTAssertTrue(FlightShareStore.enqueue(passData: Data("garbage".utf8), now: now, container: container))
         await FlightShareIntake.drain(into: model, now: now.addingTimeInterval(5), container: container)
         XCTAssertTrue(FlightShareStore.pending(now: now.addingTimeInterval(6), container: container).isEmpty, "못 읽은 것도 지운다")
         XCTAssertEqual(FlightAlertCenter.shared.message, FlightIngest.message(for: .unreadable))
         XCTAssertTrue((model.settings.travelTripItems ?? []).isEmpty)
+        // 날짜·시각이 없는 일반 글은 AI 연결이 없으면 메모로 남긴다(글이 사라지지 않는다).
+        FlightAlertCenter.shared.clearMessage()
+        XCTAssertTrue(FlightShareStore.enqueue(text: "안녕하세요 점심 뭐 드실래요", now: now, container: container))
+        await FlightShareIntake.drain(into: model, now: now.addingTimeInterval(10), container: container)
+        XCTAssertEqual(FlightAlertCenter.shared.message, FlightIngest.message(for: .savedAsMemo))
+    }
+
+    // MARK: 항공편이 아닌 공유 글
+
+    @MainActor
+    private func tripModel() async throws -> AppModel {
+        let model = AppModel(repository: InMemoryPlanRepository(), cloudSyncService: nil)
+        await model.bootstrapLocalSnapshot()
+        let saved = await model.saveTravelTrip(TravelTrip(id: "t1", title: "방콕", startDay: "2027-03-07", endDay: "2027-03-11"))
+        XCTAssertTrue(saved)
+        return model
+    }
+
+    @MainActor
+    func testSharedPlainScheduleTextBecomesADayPlanOnDevice() async throws {
+        let model = try await tripModel()
+        let before = model.snapshot.plans.count
+        let reply = await model.routeSharedText("내일 오후 3시 치과 예약", now: now)
+        XCTAssertEqual(reply, .planAdded)
+        XCTAssertEqual(model.snapshot.plans.count, before + 1)
+        let plan = try XCTUnwrap(model.snapshot.plans.last)
+        XCTAssertTrue(plan.title.contains("치과"))
+        XCTAssertTrue((model.settings.travelTripItems ?? []).isEmpty, "여행 기간 밖이라 하루 일정이다")
+    }
+
+    @MainActor
+    func testSharedTextInsideATripBecomesATripItemWithoutSendingAnythingOut() async throws {
+        let model = try await tripModel()
+        let reply = await model.routeSharedText("3월 8일 오후 2시 박물관 관람", now: now)
+        XCTAssertEqual(reply, .planAdded)
+        let item = try XCTUnwrap((model.settings.travelTripItems ?? []).first)
+        XCTAssertEqual(item.tripID, "t1")
+        XCTAssertTrue(item.title.contains("박물관"))
+        XCTAssertNotNil(item.note, "원문은 메모로 남는다")
+    }
+
+    @MainActor
+    func testTextWithoutDateAndTimeFallsBackToAMemoWhenNoAIIsConnected() async throws {
+        let model = try await tripModel()
+        let reply = await model.routeSharedText("다음에 같이 점심 먹자", now: now)
+        XCTAssertEqual(reply, .savedAsMemo, "연결된 AI가 없으면 보내지 않고 메모로 남긴다")
+    }
+
+    @MainActor
+    func testIntakeRoutesNonFlightSharedTextAndKeepsFlightAlertsOnTheFlightPath() async throws {
+        let model = try await tripModel()
+        XCTAssertTrue(FlightShareStore.enqueue(text: "내일 오후 3시 치과 예약", now: now, container: container))
+        await FlightShareIntake.drain(into: model, now: now.addingTimeInterval(5), container: container)
+        XCTAssertEqual(FlightAlertCenter.shared.message, FlightIngest.message(for: .planAdded))
+        XCTAssertTrue(FlightShareStore.pending(now: now.addingTimeInterval(6), container: container).isEmpty)
+        XCTAssertTrue(FlightShareStore.enqueue(text: booking, now: now, container: container))
+        await FlightShareIntake.drain(into: model, now: now.addingTimeInterval(10), container: container)
+        XCTAssertEqual((model.settings.travelTripItems ?? []).filter(\.isFlight).count, 1)
+    }
+
+    @MainActor
+    func testShortcutRunnerQueuesWhenTheAppIsNotReady() async {
+        AppModel.live = nil
+        let reply = await SharedTextIntentRunner.run("내일 오후 3시 치과 예약", now: now, container: container)
+        XCTAssertFalse(reply.isEmpty)
+        XCTAssertEqual(FlightShareStore.pending(now: now.addingTimeInterval(1), container: container).count, 1)
     }
 
     @MainActor

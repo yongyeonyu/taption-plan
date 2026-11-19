@@ -505,7 +505,10 @@
 "Localizable:활동 변경": "Mudar atividade",
 "Localizable:활동 선택": "Escolher atividade",
 "Localizable:항공 알림 넣기": "Adicionar aviso de voo",
-"Localizable:항공사 문자·알림톡을 읽어 BOKKI Plan 여행의 항공편 카드에 붙여요. 읽기만 하고 예약·결제는 하지 않아요.": "Lê uma mensagem ou aviso da companhia aérea e anexa ao cartão de voo de uma viagem do BOKKI Plan. Apenas lê: não reserva nem paga."
+"Localizable:항공사 문자·알림톡을 읽어 BOKKI Plan 여행의 항공편 카드에 붙여요. 읽기만 하고 예약·결제는 하지 않아요.": "Lê uma mensagem ou aviso da companhia aérea e anexa ao cartão de voo de uma viagem do BOKKI Plan. Apenas lê: não reserva nem paga.",
+"Localizable:글을 일정으로 넣기": "Adicionar texto à agenda",
+"Localizable:받은 문자나 메시지 글을 읽어 BOKKI Plan 일정이나 항공편 카드로 넣어요. 못 읽으면 연결된 AI에게 맡기고, AI가 없으면 메모로 남겨요.": "Lê uma mensagem recebida e adiciona ao BOKKI Plan como plano ou cartão de voo. Se não conseguir, pede à sua IA conectada ou salva um memo.",
+"Localizable:글 내용": "Conteúdo do texto"
 },
 "ui": {
 "새로고침·iCloud 동기화 실행|Refresh or run the iCloud sync": "Atualizar ou iniciar a sincronização do iCloud",
@@ -6219,6 +6222,11 @@
 "수하물 {0}|Baggage {0}": "Esteira de bagagem {0}",
 "오늘의 항공편|Today's flights": "Voos de hoje",
 "곧 출발! 공항에 {0}까지 가요 ✈|Departing soon! Be at the airport by {0} ✈": "Partida em breve! Chegue ao aeroporto até {0} ✈",
-"{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}": "{0} atraso de {1} min, nova partida {2}"
+"{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}": "{0} atraso de {1} min, nova partida {2}",
+"일정으로 넣었어요.|Added it to your schedule.": "Adicionado à sua agenda.",
+"AI에게 일정으로 만들어 달라고 맡겼어요. 메모 › AI에서 볼 수 있어요.|Asked your AI to turn it into a plan. See Memo › AI.": "Pedi à sua IA para transformar em um plano. Veja Memo › IA.",
+"AI 연결이 없어 메모로 남겼어요.|No AI connection, so it was saved as a memo.": "Sem conexão com IA, salvo como memo.",
+"받았어요. 앱을 열면 일정으로 넣을게요.|Got it. I'll add it to your schedule when the app opens.": "Recebido. Vou adicionar à agenda quando o app abrir.",
+"공유한 일정|Shared plan": "Plano compartilhado"
 }
 }

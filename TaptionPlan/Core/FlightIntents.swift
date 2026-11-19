@@ -33,3 +33,35 @@ enum FlightIntentRunner {
         return FlightIngest.message(for: reply, language: language)
     }
 }
+
+/// 단축어 동작 「글을 일정으로 넣기」(FLT1119A01 확장). 단축어 자동화 「메시지를 받을 때」에서 받은 문자 가운데
+/// 항공 알림이면 항공편 카드에 붙이고, 아니면 기기에서 일정으로 읽거나(날짜·시각이 모두 있을 때) 연결된 AI에게 맡기고, AI가 없으면 메모로 남긴다.
+/// 앱이 아직 준비되지 않았으면 공유 확장과 같은 보관함에 두었다가 앱이 열릴 때 처리한다.
+struct AddSharedTextIntent: AppIntent {
+    static let title: LocalizedStringResource = "글을 일정으로 넣기"
+    static let description = IntentDescription("받은 문자나 메시지 글을 읽어 BOKKI Plan 일정이나 항공편 카드로 넣어요. 못 읽으면 연결된 AI에게 맡기고, AI가 없으면 메모로 남겨요.")
+    static let openAppWhenRun = false
+
+    @Parameter(title: "글 내용", inputConnectionBehavior: .connectToPreviousIntentResult)
+    var text: String
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        .result(dialog: IntentDialog(stringLiteral: await SharedTextIntentRunner.run(text)))
+    }
+}
+
+@MainActor
+enum SharedTextIntentRunner {
+    static func run(_ text: String, now: Date = .now, container: URL? = nil) async -> String {
+        let language = MapHomeLanguage.current
+        guard let model = AppModel.live, model.isBootstrapped else {
+            guard FlightShareStore.enqueue(text: text, now: now, container: container) else { return FlightIngest.message(for: .unreadable, language: language) }
+            return language.text("받았어요. 앱을 열면 일정으로 넣을게요.", "Got it. I'll add it to your schedule when the app opens.")
+        }
+        var reply = await model.ingestFlightAlert(text, source: .intent, now: now)
+        if case .unreadable = reply { reply = await model.routeSharedText(text, now: now) }
+        FlightAlertCenter.shared.show(reply)
+        return FlightIngest.message(for: reply, language: language)
+    }
+}

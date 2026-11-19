@@ -505,7 +505,10 @@
 "Localizable:활동 변경": "Ubah aktivitas",
 "Localizable:활동 선택": "Pilih aktivitas",
 "Localizable:항공 알림 넣기": "Tambah pemberitahuan penerbangan",
-"Localizable:항공사 문자·알림톡을 읽어 BOKKI Plan 여행의 항공편 카드에 붙여요. 읽기만 하고 예약·결제는 하지 않아요.": "Membaca SMS atau pemberitahuan maskapai dan melampirkannya ke kartu penerbangan perjalanan BOKKI Plan. Hanya membaca: tidak memesan atau membayar."
+"Localizable:항공사 문자·알림톡을 읽어 BOKKI Plan 여행의 항공편 카드에 붙여요. 읽기만 하고 예약·결제는 하지 않아요.": "Membaca SMS atau pemberitahuan maskapai dan melampirkannya ke kartu penerbangan perjalanan BOKKI Plan. Hanya membaca: tidak memesan atau membayar.",
+"Localizable:글을 일정으로 넣기": "Tambah teks ke jadwal",
+"Localizable:받은 문자나 메시지 글을 읽어 BOKKI Plan 일정이나 항공편 카드로 넣어요. 못 읽으면 연결된 AI에게 맡기고, AI가 없으면 메모로 남겨요.": "Membaca pesan yang diterima dan menambahkannya ke BOKKI Plan sebagai rencana atau kartu penerbangan. Jika tidak terbaca, meminta AI yang terhubung, atau menyimpan memo bila tidak ada AI.",
+"Localizable:글 내용": "Isi teks"
 },
 "ui": {
 "새로고침·iCloud 동기화 실행|Refresh or run the iCloud sync": "Segarkan atau jalankan sinkronisasi iCloud",
@@ -6219,6 +6222,11 @@
 "수하물 {0}|Baggage {0}": "Ban bagasi {0}",
 "오늘의 항공편|Today's flights": "Penerbangan hari ini",
 "곧 출발! 공항에 {0}까지 가요 ✈|Departing soon! Be at the airport by {0} ✈": "Segera berangkat! Tiba di bandara paling lambat {0} ✈",
-"{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}": "{0} terlambat {1} menit, keberangkatan baru {2}"
+"{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}": "{0} terlambat {1} menit, keberangkatan baru {2}",
+"일정으로 넣었어요.|Added it to your schedule.": "Ditambahkan ke jadwal.",
+"AI에게 일정으로 만들어 달라고 맡겼어요. 메모 › AI에서 볼 수 있어요.|Asked your AI to turn it into a plan. See Memo › AI.": "Sudah diminta ke AI untuk dijadikan rencana. Lihat di Memo › AI.",
+"AI 연결이 없어 메모로 남겼어요.|No AI connection, so it was saved as a memo.": "Tidak ada koneksi AI, jadi disimpan sebagai memo.",
+"받았어요. 앱을 열면 일정으로 넣을게요.|Got it. I'll add it to your schedule when the app opens.": "Diterima. Akan saya tambahkan ke jadwal saat aplikasi dibuka.",
+"공유한 일정|Shared plan": "Rencana yang dibagikan"
 }
 }
