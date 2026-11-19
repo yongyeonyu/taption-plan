@@ -346,6 +346,8 @@ struct AssistantActionLogView: View {
             Group {
             if entries.isEmpty {
                 Text(language.text("아직 AI가 한 일이 없어요", "The AI hasn't done anything yet")).foregroundStyle(.secondary)
+            } else {
+                clearButton
             }
             ForEach(entries) { row($0) }
         }
@@ -356,14 +358,6 @@ struct AssistantActionLogView: View {
         .navigationTitle(language.text("AI가 한 일", "What the AI did"))
         .onAppear { entries = AssistantActionLog.load() }
         // 기록 지우기(ICN1119A04): 되돌리기를 쓸 수 없게 되므로 한 번 더 묻는다. 이미 반영된 변경은 그대로 둔다.
-        .toolbar {
-            if !entries.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(language.text("기록 지우기", "Clear log"), role: .destructive) { confirmsClear = true }
-                        .accessibilityIdentifier("assistant-log-clear")
-                }
-            }
-        }
         .confirmationDialog(language.text("AI가 한 일 기록을 모두 지울까요?", "Clear the whole AI activity log?"), isPresented: $confirmsClear, titleVisibility: .visible) {
             Button(language.text("기록 지우기", "Clear log"), role: .destructive) {
                 AssistantActionLog.clear()
@@ -373,6 +367,22 @@ struct AssistantActionLogView: View {
         } message: {
             Text(language.text("지운 기록은 되돌리기를 쓸 수 없어요. 이미 반영된 변경은 그대로 남아요.",
                                "Cleared entries can't be undone from here. Changes already applied stay as they are."))
+        }
+    }
+
+    /// 「끝난 일 지우기」(AI 탭)와 같은 모양: 쓰레기통 + 작고 굵은 보조색 글자, 목록 맨 위 오른쪽(ICN1119A08).
+    private var clearButton: some View {
+        HStack {
+            Spacer()
+            Button { confirmsClear = true } label: {
+                Label(language.text("기록 지우기", "Clear log"), systemImage: "trash")
+                    .font(.taptionStyle(.caption, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("assistant-log-clear")
         }
     }
 
