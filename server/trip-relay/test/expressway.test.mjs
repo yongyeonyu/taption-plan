@@ -3,7 +3,7 @@ import test from "node:test";
 import { exFare, exUnits, normalizeUnit } from "../src/expressway.js";
 
 // TGT1118A01: 고속도로 영업소·통행료 중계. 키는 서버에서만 붙이고, 사용자 좌표는 받지 않는다. 값은 모두 가짜다.
-const env = { EX_API_KEY: "secret" };
+const env = { EX_API_KEY: "secret", EX_PREFIX_UNITS: [] };
 const get = (path) => new Request(`https://relay.example.com${path}`);
 const ok = (body) => new Response(JSON.stringify(body), { status: 200 });
 const unitRow = (code, name, lat, lng) => ({ unitCode: `${code} `, unitName: name, routeName: "가짜선", routeNo: "999", xValue: String(lng), yValue: String(lat), pageNo: null });

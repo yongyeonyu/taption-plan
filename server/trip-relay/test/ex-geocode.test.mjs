@@ -25,7 +25,7 @@ function relay({ rows, kakao }) {
   return { fetcher, calls };
 }
 const fakeStore = () => { const map = new Map(); return { map, async get(k) { return map.get(k) ?? null; }, async put(k, v) { map.set(k, v); } }; };
-const env = (extra = {}) => ({ EX_API_KEY: "secret", KAKAO_REST_API_KEY: "kakao-secret", ...extra });
+const env = (extra = {}) => ({ EX_API_KEY: "secret", KAKAO_REST_API_KEY: "kakao-secret", EX_PREFIX_UNITS: [], ...extra });
 
 test("a unit without a location is found through Kakao place search and added", async () => {
   const { fetcher, calls } = relay({
@@ -84,7 +84,7 @@ test("search budget leaves a partial list with a short cache and a pending count
 
 test("without a Kakao key nothing is searched and units without a location stay out", async () => {
   const { fetcher, calls } = relay({ rows: [row("901", "가짜북", 10.1, 20.1), row("951", "가짜청", null, null)], kakao: {} });
-  const body = await (await exUnits(get(), { EX_API_KEY: "secret" }, fetcher, null)).json();
+  const body = await (await exUnits(get(), { EX_API_KEY: "secret", EX_PREFIX_UNITS: [] }, fetcher, null)).json();
   assert.deepEqual(body.units.map((unit) => unit.code), ["901"]);
   assert.equal(calls.kakao.length, 0);
 });
@@ -105,4 +105,17 @@ test("pickPlace and unitWithoutLocation keep to safe shapes", () => {
   assert.equal(pickPlace([place("가짜청톨게이트", TOLL, 10, 20)], "가짜청"), null, "한국 밖 좌표는 버린다");
   assert.equal(pickPlace([place("가짜청 식당", "음식점", 37.5, 126.6)], "가짜청"), null, "영업소·IC 장소가 아니면 버린다");
   assert.deepEqual(pickPlace([place("가짜청 식당", "음식점", 37.5, 126.6), place("가짜청톨게이트", TOLL, 37.5, 126.6)], "가짜청톨게이트"), { lat: 37.5, lng: 126.6, place: "가짜청톨게이트" }, "첫 결과가 아니라 맞는 결과");
+});
+
+test("the shipped fixed table is merged after the portal list and a portal code wins over it", async () => {
+  const { PREFIX_UNITS } = await import("../src/ex-unit-prefix.js");
+  assert.ok(PREFIX_UNITS.length > 0, "고정표가 채워져 있다");
+  assert.ok(PREFIX_UNITS.every((unit) => /^\d{3}$/.test(unit.code) && unit.lat >= 33 && unit.lat <= 39 && unit.lng >= 124 && unit.lng <= 132), "모두 한국 좌표");
+  const fixed = PREFIX_UNITS[0];
+  const { fetcher } = relay({ rows: [row("901", "가짜북", 10.1, 20.1), row(fixed.code, "포털이앞섬", 11.5, 21.5)], kakao: {} });
+  const body = await (await exUnits(get(), { EX_API_KEY: "secret" }, fetcher, null)).json();
+  const codes = body.units.map((unit) => unit.code);
+  assert.equal(new Set(codes).size, codes.length, "코드는 한 번씩만");
+  assert.equal(body.units.find((unit) => unit.code === fixed.code).lat, 11.5, "포털에 위치가 있으면 포털 값");
+  assert.ok(body.units.length > 2, "고정표 항목이 더해졌다");
 });

@@ -161,7 +161,8 @@ export async function exUnits(request, env, fetcher = fetch, cache = globalThis.
   }
   if (units.length === 0) return upstreamFailed();
   // 고정표(PREFIX_UNITS)가 있으면 그 좌표를 먼저 쓴다(포털 값이 있는 코드는 포털이 앞선다).
-  for (const fixed of PREFIX_UNITS) {
+  // 시험은 `env.EX_PREFIX_UNITS`(배열)로 실제 고정표 대신 자기 표를 넣는다. 운영 환경 변수는 문자열이라 배열이 아니다.
+  for (const fixed of Array.isArray(env.EX_PREFIX_UNITS) ? env.EX_PREFIX_UNITS : PREFIX_UNITS) {
     if (seen.has(fixed.code)) continue;
     seen.add(fixed.code);
     units.push({ ...fixed });
