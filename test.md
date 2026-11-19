@@ -1135,6 +1135,11 @@
 
 ## 검증 기록
 
+### TFB1119A02 · TestFlight 352 (2026-11-19)
+
+- `bash scripts/testflight/release.sh --yes`(빌드 잠금 안, 대표 지시 「커밋·병합 뒤 TestFlight 빌드업」): 빌드 번호 351 → 352(pbxproj·앱·위젯·Watch·Watch 위젯 `CFBundleVersion` 갱신). 포함: TGT1119A01·ICN1119A01~A06·NTR1119A02·NTR1119A03(앱 쪽)과 서버 브랜치 병합분. 처리 `VALID`, 내부 그룹 연결 확인, 테스터 노출 1명, 종료 코드 0. 보고서 `build/validation/TFB1119A02/testflight-report.json`(첫 점검 `TFB1119A01`은 `--preflight`만). 시험은 `--with-tests` 없이 관련 단위 시험(각 요청 기록)만 돌림, 전체 단위 시험은 이번에 돌리지 않음.
+- 서버(D1·`notification_review`·`detailId`)는 아직 배포 전이라 이 빌드의 알림 분석은 서버 배포 뒤에 동작한다. 푸시는 하지 않음.
+
 ### NTR1119A03 · 알림 분석 선택식·메신저 잠금·일정 detailId (2026-11-19, 시뮬레이터·맥, 실기기·서버 배포 전)
 
 - 대표 결정(2026-11-19 객관식): 문자는 결제 문자만, 앱은 사용자가 고른 앱만(앱 안에서 고르기), 메신저 앱은 선택 불가로 하드코딩. `addSchedule`에 `detailId` 추가. 요청별 커밋 7개 + 서버 브랜치 2개(D1R1119A01·NTR1119A01) `--no-ff` 병합(충돌은 `test.md`뿐, 양쪽 모두 남김).
