@@ -167,11 +167,13 @@ export function bubbleText(value) {
 }
 
 // 동작마다 받는 칸. 다른 칸은 큐에 넣기 전에 버린다(finding 14).
+// NTR1119A02: addSchedule의 상세분류 id(「대분류.상세」 꼴, 예: activity.performanceMovie).
+const scheduleDetailId = (v) => typeof v === "string" && /^[a-z][A-Za-z]{0,29}\.[A-Za-z][A-Za-z0-9.]{0,39}$/.test(v);
 export const COMMAND_FIELDS = {
   addMemo: ["text", "date", "time"],
   // ACT1114A07: categoryId(분류)·important(중요)·parentGoalId(루틴 아래에 두기).
   // RMN1114A22: 일정의 장소(이름+좌표 셋이 함께)·예상 지출(원). 옛 앱은 모르는 칸을 무시한다.
-  addSchedule: ["title", "start", "end", "note", "categoryId", "important", "parentGoalId", "placeName", "latitude", "longitude", "plannedSpend"],
+  addSchedule: ["title", "start", "end", "note", "categoryId", "detailId", "important", "parentGoalId", "placeName", "latitude", "longitude", "plannedSpend"],
   updateActivity: ["date", "recordId", "startTime", "title", "categoryId"],
   hideRecord: ["date", "recordId", "startTime"],
   mergeRecords: ["date", "recordIds", "title", "categoryId"],
@@ -388,7 +390,7 @@ export function isCommand(value) {
     case "addSchedule":
       return nonEmpty(v.title, 200) && isInstant(v.start)
         && optional(v.end, (e) => isInstant(e) && Date.parse(e) > Date.parse(v.start)) && optional(v.note, note)
-        && optional(v.categoryId, targetID) && optional(v.important, isBoolean) && optional(v.parentGoalId, uuid)
+        && optional(v.categoryId, targetID) && optional(v.detailId, scheduleDetailId) && optional(v.important, isBoolean) && optional(v.parentGoalId, uuid)
         && schedulePlace(v) && optional(v.plannedSpend, plannedSpend);
     case "updateActivity":
       return recordTarget(v) && optional(v.title, title(100)) && optional(v.categoryId, targetID)

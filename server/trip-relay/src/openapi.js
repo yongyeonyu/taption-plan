@@ -118,6 +118,7 @@ const command = {
     payer: { type: "string", maxLength: 30, description: "addExpense: who paid, when not me" },
     entryId: { type: "string", maxLength: 100, description: "updateExpense: ledger entry id" },
     delete: { type: "boolean", description: "updateExpense: true deletes the entry" },
+    detailId: { type: "string", maxLength: 70, description: "setCalendarTitleDetail: detail id or none. addSchedule: detail id (major.detail, e.g. activity.performanceMovie) to file the plan under; it sets the category" },
     important: { type: "boolean", description: "addSchedule, updateSchedule: mark the plan as important" },
     parentGoalId: { type: "string", description: "addSchedule, updateSchedule: goal id to put the plan under (updateSchedule: \"none\" takes it out)" },
     placeName: { type: "string", maxLength: 100, description: "addSchedule, updateSchedule: name of the plan's place; always with latitude and longitude" },

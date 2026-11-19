@@ -197,6 +197,13 @@ test("actions batch 2: schedules take a category, the important mark and a paren
   accepts("addSchedule", { ...base, categoryId: "health", important: true, parentGoalId: UUID });
   refuses("addSchedule", { ...base, important: "yes" });
   refuses("addSchedule", { ...base, parentGoalId: "none" });
+  // NTR1119A02: 상세분류 id(「대분류.상세」 꼴)로 일정을 분류한다.
+  accepts("addSchedule", { ...base, detailId: "activity.performanceMovie" });
+  accepts("addSchedule", { ...base, categoryId: "activity", detailId: "activity.performanceMovie" });
+  refuses("addSchedule", { ...base, detailId: "performanceMovie" });
+  refuses("addSchedule", { ...base, detailId: "none" });
+  refuses("addSchedule", { ...base, detailId: 7 });
+  assert.equal(cleanCommand(cmd("addSchedule", { ...base, detailId: "activity.performanceMovie", junk: 1 })).detailId, "activity.performanceMovie");
   accepts("updateSchedule", { planId: "p1", important: false });
   accepts("updateSchedule", { planId: "p1", categoryId: "work" });
   accepts("updateSchedule", { planId: "p1", parentGoalId: "none" });
