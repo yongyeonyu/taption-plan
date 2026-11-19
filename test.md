@@ -69,6 +69,7 @@
 
 ### 홈·UI
 
+- ANN1119A01 · 공지 앱 연동 코드·시험 끝. 남은 것: 대표가 R2 공지를 올린 뒤 아이폰 11 Pro에서 배너·닫기 확인(R2PUB1119A01 업로드가 먼저), 번역 대기 문구 4건(공지·새 공지가 없습니다·이 공지 닫기·자세히 × 12개 언어, `generate.py`는 메인 세션 몫) · 실기기, 대표 몫
 - FUL1118A01 · 아이폰 11 Pro 풀 테스트. 실기기 단위 시험·시뮬레이터 단위·UI 시험은 끝. 남은 것: 눈 확인 점검표 17개(아이폰 18 TestFlight로 보기로 함) · 실기기 · `build/validation/FUL1118A01/checklist.md`
 - HUX1116A01 · 홈 검토 문서·시안. 대표가 시작할 제안을 고름(제안 1~8은 HUX1116A02~A06으로 진행) · 대표 결정 · `docs/HOME_UX_REVIEW.md`
 - HUX1116A02~A06 · 홈 제안 1~8 구현 끝(main 합침 뒤 재시험 통과). 남은 것: 아이폰 11 눈 확인. 아래 메뉴 이름 글자 하한은 짧은 이름 번역이 먼저(HUX1116A02 제한) · 실기기
@@ -148,6 +149,7 @@
 - ICN1119A02: 대표 요청(2026-11-19, 홈 메모 패널 스크린샷 「지출을 제외한 나머지 항목에서 제거」). 원인: `LedgerMemoHeader`의 「₩ 오늘 · 이번 달 금액 ＋」 줄이 모든 탭(확인·일정·메모·내역·AI)에 붙어 있음. 해결: 그 줄을 「지출」 탭(`.today`)에서만 그림. 확인 탭의 결제 확인 띠(`LedgerReviewBand`)는 그대로. 검증 기준: Debug 빌드, 기기에서 확인 탭 등에 지출 줄이 없고 지출 탭에는 있음. 상태: 코드·빌드 끝, 기기 확인 전. 제한: 지출 탭이 아닌 상태로 열리면 가계부 ＋ 단추(`memo-ledger-add`)·줄 단추(`memo-ledger-open`)도 그 탭에서는 없음(가계부는 메뉴·지출 탭에서 엶), UI 시험 `TaptionPlanSmokeUITests`는 이 줄을 홈 첫 화면에서 찾으므로 시작 탭이 지출이 아닐 때 영향 가능(돌리지 않음).
 - ICN1119A01: 대표 요청(2026-11-19, 가계부 스크린샷 「기름값은 주유건 아이콘으로 은행은 은행 아이콘으로」). 원인: 가계부 행 아이콘이 분류 아이콘뿐이라 주유소(교통)는 전철, 은행 입금(기타)은 점 세 개로 보임. 해결: `LedgerEntrySymbol.name(for:)`(`LedgerHighwayShield.swift`)가 제목에 주유·오일뱅크·에스오일·칼텍스·SK에너지 등이 있으면 `fuelpump.fill`, 은행·뱅크·bank가 있으면 `building.columns.fill`, 아니면 분류 아이콘. 이름에 뱅크가 든 주유소가 은행으로 보이지 않게 주유를 먼저 봄. 통행료 표지는 그대로. 검증 기준: 단위 시험, 앱 Debug 빌드, 가계부에서 두 항목 아이콘 확인. 상태: 코드·시험 끝, 기기 확인 전. 제한: 가계부 목록(`LedgerRow`)에만 적용(메모 패널·내보내기·여행 장부는 분류 아이콘 그대로), 이체(transfer)가 있는 기록은 주유 판정에서 뺌.\n- TGT1119A01: 대표 신고(2026-11-19, 「어제 공항고속도로 퇴근이 가계부에 제대로 적용 안 됨」 → 금액·표시 틀림, IC로 나와 2,500원, 경인고속도로로 이어짐). 원인: 아이폰 18 기기 설정의 통행료 규칙이 출발→도착 이름 한 쌍당 하나뿐이라 11-12에 배운 900원(정가)이 길이 달라도 되풀이됨. 어제 퇴근은 빌드 350(영업소 판정 없음)이었고, 351도 같은 이름 쌍의 규칙이 있으면 카카오 길찾기에 가기 전에 900원을 넣고, 길 모양을 모르는 규칙(`unknown`)은 배운 금액을 「확인 필요」로 올림. 해결(대표 결정 2026-11-19 「길별 규칙으로 수정」): 규칙을 `출발→도착`(첫 길)·`출발→도착#<길 첫 칸>`(다른 길)로 길마다 두고(쌍당 최대 4개, 저장 형식은 그대로 호환), 이동의 길 모양과 같은 규칙만 쓰며, 길 모양을 모르는 규칙은 위치가 충분하면(칸 4개 이상) 금액을 되풀이하지 않고 카카오 길찾기가 이어받음(위치가 없을 때만 예전처럼 확인 필요). 「확인 필요」에서 금액을 고쳐 남기거나 카카오 금액을 확인해 남기면 그 길의 정액 규칙으로 배움(`Rule.flat`, 출퇴근 할인 없음). 영업소 목록이 있는데 도로공사 영업소를 안 지난 이동에서 손으로 넣은 금액도 정액으로 봄. 검증 기준: 관련 단위 시험, 앱 Debug 빌드, 대표가 어제 퇴근 항목을 2,500원으로 고쳐 남기고 다음 퇴근에서 2,500원이 들어감. 상태(2026-11-19): 코드·시험 끝, 실기기 확인 전. 제한: 아이폰 18 기기 설정에 이미 있는 규칙(900원, 길 모양이 11-18 이동으로 채워짐)은 대표가 어제 항목을 2,500원으로 고쳐 남겨야 그 길 규칙이 2,500원으로 바뀜(안 하면 같은 길이라 900원 반복 가능). 어제 이동은 이미 처리됨이라 자동으로 다시 보지 않음.
 - R2PUB1119A01(비야 브리지 `20261119-1655-r2-public-announcements`): 모두에게 같은 전체 공지·POI 팩·모델을 줄 공용 정적 저장소가 없었다. 해결: R2 바인딩 `PUBLIC_BUCKET`(`taption-trip-public`)과 인증·CORS·속도 제한 앞에서 읽기 전용으로 답하는 `GET /public/announcements`·`GET /public/assets/<announcements|packs|models>/…`(`src/public.js`). 바인딩·파일이 없어도 공지는 200 빈 목록. Worker에는 R2 쓰기·삭제 없음. 검증 기준: `npm test` 전부 통과·기존 시험 수 유지, 304·206·416·400·404·405와 쓰기 0건 확인. 상태: 코드·시험 끝, 배포·버킷 생성·업로드는 대표 몫(수행 안 함). 앱 연동은 별도 후속 요청.
+- ANN1119A01(비야 브리지 `20261119-1828-announcements-ios`): 서버가 주는 공용 공지(`GET /public/announcements`)를 앱이 받아 홈 위쪽에 보여 줘야 한다. 해결: `TaptionPlan/Core/AnnouncementFeed.swift`(모델·거르기·정렬·언어 고르기·30분 쿨다운·ETag·닫은 공지 90일/200개), `TaptionPlan/UI/AnnouncementBanner.swift`(배너 1건+시트, 홈 알림 칸에 공지→여행 가져오기 순서), `MapHomeView+Support.swift`의 기존 두 자리에서 `refresh()`. 목록은 메모리에만, 실패는 조용히, 모달 없음. 검증 기준: 새 `AnnouncementTests` 14건, Debug 빌드, 전체 단위 시험 수치, 구조 점검. 상태: 코드·시험 끝, 대표 몫: 공지 업로드 뒤 실기기 확인, 번역 대기 4건.
 - D1R1119A01: 중계 서버 저장소를 KV(`env.PLANS`)에서 Cloudflare D1(`RELAY_DB`, `taption-trip-relay`)로 전환. 원인: KV 무료 한도(하루 쓰기 1,000)가 사용자 증가의 병목이라 `KV_DAILY_WRITE_BUDGET` 900에서 쓰기가 막힘(REV1110A06). 해결: `src/d1kv.js` KV 호환 어댑터(`handle`에서 `RELAY_DB`가 있으면 `env.PLANS`를 어댑터로 바꿈, 호출부 변경 없음), `migrations/0001_kv_entries.sql`, 쓰기·삭제는 D1만·읽기는 D1 먼저 → 옛 KV에서 남은 TTL로 복사(Dual-Read), 삭제는 옛 KV에 같은 키가 있을 때만 D1 삭제 표식, list는 두 쪽을 합쳐 「마지막 이름」 cursor, 쓰기 예산 서버 전체 80000·주인별 5000. 검증 기준: `npm test` 전부 통과(어댑터 TTL·이관·삭제 표식·list·옛 KV 없음·KV 쓰기 0건 시험 포함). 상태(2026-11-19): 코드·시험 끝. 대표 몫: `wrangler d1 create`·`d1 migrations apply --remote`·배포, 이관 뒤 KV 바인딩 제거(배포·마이그레이션은 에이전트가 하지 않음). 한계: 옛 KV가 붙어 있는 동안 list는 접두어 아래 옛 키를 끝까지 읽음, 읽힌 적 없는 만료 없는 옛 키는 이관 전에 KV를 떼면 사라짐, `metadata` 미지원(호출부 사용 없음), 실제 D1에서의 확인은 배포 뒤(시험은 `node:sqlite` 가짜).
 
 - TGT1118A01: 지난 톨게이트(영업소)를 기기에서 알아내 가계부 통행료에 「인천 영업소 → 서울 영업소 · 900원 · 출퇴근 할인 20%」처럼 남김(대표 결정 2026-11-18 객관식: 요금은 중계 서버가 한국도로공사 OpenAPI에 묻고 앱은 영업소 코드·차종만 보냄 / 확실하면 바로 넣음 / 불확실하면 「확인 필요」). 원인: 같은 길 통행료(TOL1111A01·TOL1118A01)는 어느 요금소를 지났는지 몰라 배운 금액만 되풀이하고, 처음 가는 길이나 다른 출구로 나간 날은 금액을 모름. 해결: 서버에 `GET /ex/units`(영업소 위치 `locationinfoUnit` 모든 쪽을 모아 정리, 오래 캐시)·`GET /ex/fare?from&to&car`(영업소간 통행요금 `bhoinstIntoTollList`, 정상요금만 정리)를 덧붙이고(키는 Worker 비밀값 `EX_API_KEY`, 없으면 503 `ex_key_missing`, 좌표는 받지 않음), 앱은 영업소 목록을 통째로 받아 기기에 캐시(크기 제한, 실패하면 다음에)한 뒤 이동의 정확한 위치(대략 위치·오차 100m 초과 제외)와 견줘 지난 영업소를 순수 함수로 판정. 두 곳 이상이면 처음=입구·끝=출구(폐쇄식), 하나면 본선 영업소(개방식, 같은 코드로 요금 조회). 금액은 정상 1종 요금에 기존 `LedgerTollDiscount`(통과 시각 기준). 확실하면 넣고 아니면 `LedgerReviewStore.add(…, reason: .toll)`, 영업소를 못 알아내거나 요금을 못 받으면 지금의 같은 길 방식. 한 이동 한 번·지운 것 다시 넣지 않음(`handled`)은 그대로. 검증 기준: 서버 `npm test` 3회 통과(새 시험: 쪽 모으기·정리·키 없음·잘못된 코드·상류 실패), 앱 새 단위 시험(판정·확실함·표시·넣기/확인 필요)과 `LedgerTollRepeatTests`, `-only-testing:TaptionPlanTests` 전체 실패 0, 앱 Debug 빌드, 구조 지표 `--check`·import 경계, 번역 `extract.py`·`check.py` 실패 0. 서버 배포·키 발급·실기기 확인은 대표 몫(로그 `build/validation/TGT1118A01/`). 상태(2026-11-18): 서버·앱·시험·번역 점검 끝(`test.md` TGT1118A01: 서버 234건·전체 단위 3,060건 실패 0). 남은 기준: 메인 `generate.py`, 대표가 `npx wrangler secret put EX_API_KEY`·서버 배포, 아이폰 11 실제 고속도로 기록으로 거리 기준(150·80m) 확인. 그 전까지 지우지 않음.
@@ -1088,6 +1090,7 @@
 | WCH1106A01 · Watch 반복 충돌, 시계 페이스 위젯 없음 | 남은 일: Watch를 Mac에 연결해 `chronod`·WidgetKit 로그와 충돌·Jetsam 기록을 받아 위젯 갤러리 미등록 원인 찾기. | |
 | HLT1106A01 · 새 설치는 설치 시각부터 건강 기록 | 남은 일: 새 설치 기기에서 설치 전 건강 기록이 안 들어오는지, 기존 기기 기록이 그대로인지 확인. | |
 | MNU1119A01 | 메인 메뉴 › 행동 분류를 펼침 → activity·hobby·health·housework 네 분류에 직접 추가 항목(공연/영화 관람 등)이 모두 보이고 각 줄의 화랑이가 움직임 | 분류마다 8·7·5·5줄, 직접 추가 18개 포함 | |
+| ANN1119A01 | R2에 공지 1건을 올린 뒤(R2PUB1119A01 업로드 선행) 앱 실행 → 홈 위쪽 배너 표시 → X로 닫기 → 앱 종료·재실행 | 배너가 뜨고, 닫으면 사라지고, 재실행해도 다시 안 뜸. 지금은 서버 업로드 전이라 확인 불가 | |
 
 ### Apple Watch
 
@@ -1137,6 +1140,18 @@
 | COM1016A01·IAP905G002 | 개인정보 라벨, IAP 보류 상태 | 대표 결정대로 | |
 
 ## 검증 기록
+
+### ANN1119A01 · R2 공용 공지 iOS 수신·표시 (2026-11-19, 시뮬레이터 iPhone 17, 비야 브리지 `20261119-1828-announcements-ios`)
+- 새 `AnnouncementTests` 14건 통과·실패 0(`ann-tests-2.xcresult`). 첫 실행에서 1건이 실제 결함을 잡았다: 서버 스키마 예 `2026-11-25T09:00+09:00`(초 없음)를 앱이 못 읽어 시작·끝 시각 조건이 무시되던 것을 초 없는 형식도 읽게 고침.
+- Debug 빌드: 시험 빌드가 앱 Debug 빌드를 포함해 성공(`generic/platform=iOS` 빌드는 따로 안 함).
+- 전체 `-only-testing:TaptionPlanTests`(`app-tests.xcresult`): 2,947건 실행, 통과 3,118(xcresult 기준, 같은 시험 중복 집계 포함), 실패 2, 건너뜀 26. 첫 시도는 「test runner hung before establishing connection」(시험 0건)으로 `hung-app-tests.*`로 보관하고 시뮬레이터를 껐다 켠 뒤 다시 돌렸다.
+  - 실패 1 `MapHomeStartupCameraTests.testUserAddedDetailsLeaveTheDefaultListButCalendarStillSetsThem`: ICN1119A06으로 직접 추가가 18개가 됐는데 기대값이 17이던 오래된 값 → 18로 고쳐 단독 실행 통과(`two-tests.xcresult`).
+  - 실패 2 `AssistantAppControlTests.testAskUserStoresTheQuestionAnswersUploadAndUndoWithdrawsOnlyUnanswered`: 이번 변경과 무관한 시간 의존. 시험이 질문을 11-12 시각으로 만드는데 `AITaskQueue.lifetime`(7일)이라 오늘(11-19)부터 만료돼 「duplicate」가 나오지 않는다. 고치지 않았다(범위 밖, 단독 실행도 실패, 이어 `Index out of range` 종료).
+  - 단독 재실행 두 번도 「hung」·「Simulator device failed to launch」(`hung-two-tests*.log`)로 0건이었고 시뮬레이터 완전 재시작 뒤 실행됨.
+- 구조 점검 `scripts/architecture-metrics.py --check docs/architecture-baseline.json` 통과, 동결 파일 무변경.
+- 다국어: 새 문구는 모두 `language.text` 리터럴. `extract.py` 뒤 `check.py`는 번역 대기 4문구 × 12개 언어 = 48건(공지·새 공지가 없습니다·이 공지 닫기·자세히). 생성물(`source.json`·`unread-report.json`)은 되돌려 두었다.
+- 하지 않은 것: 실기기·실제 서버 호출(R2 공지 업로드 전), 서버·빌드 번호·TestFlight 변경 없음. `-announcementPreview`(Debug)로 가짜 공지 3건을 서버 없이 띄우게 넣었으나 화면은 눈으로 보지 않았다.
+
 
 ### R2PUB1119A01 · 공용 공지·정적 데이터 R2 읽기 엔드포인트 (2026-11-19, 맥 Node `node --test`, 서버 코드만, 앱·Xcode 시험 없음)
 - `cd server/trip-relay && npm test`: 271건 실행, 통과 271, 실패 0, 건너뜀 0(기존 257건 + 새 `test/public.test.mjs` 14건, 가짜 R2 `MemoryBucket`은 `test/fakes.mjs`). 새 의존성 없음.

@@ -5290,10 +5290,10 @@ final class MapHomeStartupCameraTests: XCTestCase {
         XCTAssertEqual(MapHomeLaunchPromptPolicy.unansweredCalendarTitles(events, stored: stored, now: now), ["주간 회의"])
     }
 
-    /// 센서로 정할 수 없는 상세 17개는 기본 목록에서 빠져 「직접 추가」로 가고, 일정 제목으로는 그대로 붙는다(DTL1111A01).
+    /// 센서로 정할 수 없는 상세 18개(공연/영화 관람 포함, ICN1119A06)는 기본 목록에서 빠져 「직접 추가」로 가고, 일정 제목으로는 그대로 붙는다(DTL1111A01).
     func testUserAddedDetailsLeaveTheDefaultListButCalendarStillSetsThem() {
         let userAdded = RecordClassificationCatalog.categories.flatMap(\.details).filter { $0.userAdded == true }.map(\.id)
-        XCTAssertEqual(userAdded.count, 17)
+        XCTAssertEqual(userAdded.count, 18)
         XCTAssertFalse(MapHomeCategoryDetailRows.details(for: "hobby").contains { $0.id == "hobby.reading" })
         XCTAssertTrue(MapHomeCategoryDetailRows.userAddedDetails(for: "hobby").contains { $0.id == "hobby.reading" })
         XCTAssertTrue(MapHomeCategoryDetailRows.details(for: "work").contains { $0.id == "work.meeting" })

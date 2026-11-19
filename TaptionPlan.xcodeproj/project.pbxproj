@@ -338,6 +338,7 @@
 		A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AIX1114A01000000000001 /* AssistantRuleStore.swift */; };
 		A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PAS1113A01000000000001 /* PaymentAlertSources.swift */; };
 		A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000001 /* LedgerTransitFare.swift */; };
+		A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000001 /* AnnouncementFeed.swift */; };
 		A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TGT1118A01000000000001 /* LedgerTollGate.swift */; };
 		A1TRF1113A01000000000002 /* BusRideRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000002 /* BusRideRecognizer.swift */; };
 		A1BST1113A01000000000001 /* BusStopCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1BST1113A01000000000001 /* BusStopCheck.swift */; };
@@ -377,6 +378,7 @@
 		B1A1110A0300000000000001 /* AssistantPINDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0300000000000001 /* AssistantPINDerivation.swift */; };
 		5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B1F /* AppLockAndPIN.swift */; };
 		5BL1110A010000000000000A /* LedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BL1110A010000000000000F /* LedgerTests.swift */; };
+		A1ANN1119A01000000000003 /* AnnouncementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000003 /* AnnouncementTests.swift */; };
 		A1TGT1118A01000000000002 /* LedgerTollGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TGT1118A01000000000002 /* LedgerTollGateTests.swift */; };
 		5B00000000000000000000A4 /* TaptionBackupV2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */; };
 		A1E0110A0400000000000002 /* StorageReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E0110A0400000000000002 /* StorageReviewFixTests.swift */; };
@@ -586,6 +588,7 @@
 		C1A1116A01B0000000000000 /* AIConnectNudge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A01F0000000000000 /* AIConnectNudge.swift */; };
 		C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A02F0000000000000 /* TravelPuzzle.swift */; };
 		C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */; };
+		A1ANN1119A01000000000002 /* AnnouncementBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000002 /* AnnouncementBanner.swift */; };
 		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
 		B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */; };
 		B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */; };
@@ -1173,6 +1176,7 @@
 		F1AIX1114A01000000000001 /* AssistantRuleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRuleStore.swift; sourceTree = "<group>"; };
 		F1PAS1113A01000000000001 /* PaymentAlertSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentAlertSources.swift; sourceTree = "<group>"; };
 		F1TRF1113A01000000000001 /* LedgerTransitFare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTransitFare.swift; sourceTree = "<group>"; };
+		F1ANN1119A01000000000001 /* AnnouncementFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementFeed.swift; sourceTree = "<group>"; };
 		F1TGT1118A01000000000001 /* LedgerTollGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollGate.swift; sourceTree = "<group>"; };
 		F1TRF1113A01000000000002 /* BusRideRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusRideRecognizer.swift; sourceTree = "<group>"; };
 		F1BST1113A01000000000001 /* BusStopCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusStopCheck.swift; sourceTree = "<group>"; };
@@ -1204,6 +1208,7 @@
 		F1B1110A0300000000000001 /* AssistantPINDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINDerivation.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B1F /* AppLockAndPIN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockAndPIN.swift; sourceTree = "<group>"; };
 		5BL1110A010000000000000F /* LedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTests.swift; sourceTree = "<group>"; };
+		F1ANN1119A01000000000003 /* AnnouncementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementTests.swift; sourceTree = "<group>"; };
 		F1TGT1118A01000000000002 /* LedgerTollGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollGateTests.swift; sourceTree = "<group>"; };
 		5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupV2Tests.swift; sourceTree = "<group>"; };
 		F1E0110A0400000000000002 /* StorageReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageReviewFixTests.swift; sourceTree = "<group>"; };
@@ -1411,6 +1416,7 @@
 		C1A1116A01F0000000000000 /* AIConnectNudge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConnectNudge.swift; sourceTree = "<group>"; };
 		C1A1116A02F0000000000000 /* TravelPuzzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzle.swift; sourceTree = "<group>"; };
 		C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleDrawer.swift; sourceTree = "<group>"; };
+		F1ANN1119A01000000000002 /* AnnouncementBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationAlwaysPrompt.swift; sourceTree = "<group>"; };
 		B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeIslandOutlines.swift; sourceTree = "<group>"; };
@@ -1875,6 +1881,7 @@
 				F40000000000000000000008 /* TaptionStoreColumnCodingTests.swift */,
 				F40000000000000000000006 /* SensorDayStoreTests.swift */,
 				5BL1110A010000000000000F /* LedgerTests.swift */,
+				F1ANN1119A01000000000003 /* AnnouncementTests.swift */,
 				F1TGT1118A01000000000002 /* LedgerTollGateTests.swift */,
 				T5H1114A26000000000F0021 /* TripShareFoundationTests.swift */,
 				L0C1116S01000000000F0004 /* TripLiveLocationTests.swift */,
@@ -2037,6 +2044,7 @@
 				C1A1116A01F0000000000000 /* AIConnectNudge.swift */,
 				C1A1116A02F0000000000000 /* TravelPuzzle.swift */,
 				C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */,
+				F1ANN1119A01000000000002 /* AnnouncementBanner.swift */,
 				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
 				B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */,
 				B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */,
@@ -2362,6 +2370,7 @@
 				F1AIX1114A01000000000001 /* AssistantRuleStore.swift */,
 				F1PAS1113A01000000000001 /* PaymentAlertSources.swift */,
 				F1TRF1113A01000000000001 /* LedgerTransitFare.swift */,
+				F1ANN1119A01000000000001 /* AnnouncementFeed.swift */,
 				F1TGT1118A01000000000001 /* LedgerTollGate.swift */,
 				F1TRF1113A01000000000002 /* BusRideRecognizer.swift */,
 				F1BST1113A01000000000001 /* BusStopCheck.swift */,
@@ -3070,6 +3079,7 @@
 				C1A1116A01B0000000000000 /* AIConnectNudge.swift in Sources */,
 				C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */,
 				C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */,
+				A1ANN1119A01000000000002 /* AnnouncementBanner.swift in Sources */,
 				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
 				B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */,
 				B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */,
@@ -3334,6 +3344,7 @@
 				A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */,
 				A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */,
 				A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */,
+				A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */,
 				A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */,
 				A1TRF1113A01000000000002 /* BusRideRecognizer.swift in Sources */,
 				A1BST1113A01000000000001 /* BusStopCheck.swift in Sources */,
@@ -3510,6 +3521,7 @@
 				A4000000000000000000000E /* TaptionStoreColumnCodingTests.swift in Sources */,
 				A40000000000000000000008 /* SensorDayStoreTests.swift in Sources */,
 				5BL1110A010000000000000A /* LedgerTests.swift in Sources */,
+				A1ANN1119A01000000000003 /* AnnouncementTests.swift in Sources */,
 				A1TGT1118A01000000000002 /* LedgerTollGateTests.swift in Sources */,
 				T5H1114A26000000000B0021 /* TripShareFoundationTests.swift in Sources */,
 				L0C1116S01000000000B0004 /* TripLiveLocationTests.swift in Sources */,
