@@ -1,7 +1,10 @@
 ---
 id: 20261119-2104-misclassification-samples
 created_at: 2026-11-19T21:04+09:00
-status: pending
+status: done
+request_id: MSC1119A01
+finished_at: 2026-11-19T23:30+09:00
+commit: 5ebcb32a
 title: 오분류 교정 표본 수집(비식별 특징값)·옵트인·내보내기 기반
 from: 비야
 basis: 대표 결정(2026-11-17 통화 「활동 분류 — 오분류 로그 수집 & 모델 배포」) · 비야 제안(구현 범위·형식) · 2026-11-19 비야 브리지 배정
@@ -223,3 +226,20 @@ basis: 대표 결정(2026-11-17 통화 「활동 분류 — 오분류 로그 수
 - 선례: `TaptionPlan/Core/TripShareSidecar.swift`(곁 파일·`Mutex`·주입 디렉터리·백업 제외), `TaptionPlan/Core/SharedRuleStore.swift:46`·`TaptionPlan/UI/SharedRulesView.swift:81`(옵트인 `UserDefaults`·기본 꺼짐·안내 문구), `Packages/TaptionWatchSync/Sources/TaptionWatchBehaviorML/WatchBehaviorModel.swift`(나중에 분류기를 Core ML로 갈아 끼울 때의 모양: 모델이 없으면 규칙으로).
 - 서버 규격 선례: `docs/ACTIVITY_RELAY_API.md` 2절(경로·인증·한도 표). 다음 요청에서 `POST /classifier-samples`를 넣을 때 이 표에 한 줄을 더하는 방식.
 - 이 요청은 「앱에서 표본을 모아 두고 사용자가 내보내는 데까지」입니다. 서버 엔드포인트·D1 표·맥 학습 스크립트(Core ML 변환·R2 배포)·앱이 모델을 내려받아 교체하는 일은 다음 요청에서 정합니다.
+
+## 클로드 코드 회신
+
+- 처리: 완료
+- 요청 ID: MSC1119A01 (`test.md` 기록·분류·Watch 줄·요청 상세·실기기 확인 목록·검증 기록)
+- 시작·끝: 2026-11-19 21:20 ~ 23:30 (KST)
+- 커밋: `5ebcb32a` 작업, 문서 이동은 `[비야 브리지] 20261119-2104-misclassification-samples` 한 건. 시작 때 확인한 `origin/main`은 `676312cd`
+- 바꾼 파일: 새 `TaptionPlan/Core/MisclassificationSample.swift`(217줄)·`MisclassificationCollector.swift`(145줄)·`TaptionPlan/UI/MapHomeClassificationDataRow.swift`(111줄)·`TaptionPlanTests/MisclassificationCollectorTests.swift`(251줄), 기존 `TaptionPlan/UX/AppModel+ActualEditing.swift`(교정 3곳+구간 편집 연결+도우미 함수)·`AppModel+MapEditing.swift`(`confirmTravel`)·`AppModel+Backup.swift`(`deleteAllUserData`에 한 줄)·`TaptionPlan/UI/MapHomeSettingsSheets.swift`(내 데이터 카드에 행 한 줄), `PRIVACY.md`·`DEVELOPMENT.md`(각 한 줄), `TaptionPlan.xcodeproj/project.pbxproj`(새 파일 4개 등록, `EnergyCurve` 방식), `test.md`. 서버·동결 파일·`AppFeatureSettings`·분류 판정은 무변경. 파일 이름은 지시서 그대로
+- 지시서와 달라진 점:
+  1. 수집 함수 `captureMisclassification`은 `private`이 아니라 `internal`입니다(`confirmTravel`이 다른 파일이라서). `Task {}`만 쓰고 분리된 작업은 만들지 않았습니다.
+  2. 표본은 값이 없는 칸도 `null`로 써서 열쇠가 항상 15개(특징 9개)로 같습니다(기본 Codable은 nil 칸을 빼서 열쇠 집합이 흔들렸고 시험이 잡음).
+  3. 시간표 구간 편집은 「원래 분류와 다른 조각이 정확히 하나」일 때만 담되, 자동으로 메운 「미확인」 조각은 사용자가 고른 분류가 아니라서 세지 않습니다(그렇게 하지 않으면 구간을 줄이며 분류를 바꾸는 흔한 경우가 모두 빠집니다).
+  4. `MisclassificationCollector`는 `Sendable`이 아닙니다(`UserDefaults`가 `Sendable`이 아니라서 빌드 오류). `summary().topCorrected`는 지시서대로 튜플 배열입니다.
+  5. `build(...)`는 분류표를 직접 읽지 않고 `knownBehaviors` 집합을 받습니다(엔진 파일이 저장소 타입을 모르게). 수집기가 분류표에서 만들어 줍니다.
+- 검증: 새 `MisclassificationCollectorTests` 14건 통과(지시서 12개 항목 + 이동 표본·특징값 반올림). 전체 `TaptionPlanTests` 3,124건 실행·건너뜀 26·실패 0(xcresult 통과 3,150), 앞선 `ask_user` 시험 수정(TIM1119A01)으로 이번에는 기존 실패도 없었습니다. 시험 실행기 「hung before establishing connection」(0건)이 두 번 있어 `hung-*.log`를 보관하고 시뮬레이터를 껐다 켜 다시 돌렸습니다. 구조 점검 통과(처음에 주석에 쓴 `Task.detached` 글자를 지표가 세어 35>34로 실패해 문구를 바꿈). 기존 교정 시험이 표본 파일을 만들지 않는지는 전체 시험 통과로 확인(기본 꺼짐). 실제 센서 원본·실기기·화면은 확인 안 함
+- 다국어: 새 문구는 모두 `language.text` 리터럴. 번역 대기 8문구(분류 개선 데이터 수집·안내문·끄면 더 모으지 않아요…·기기에 {0}건 모음·내보내기·모은 분류 개선 데이터를 지울까요?·되돌릴 수 없어요.·내보낼 파일을 만들지 못했습니다.). `check.py`는 de·ja·zh-Hans·zh-Hant에서 누락을 보고합니다(앞선 공지·에너지 곡선 문구 포함). 읽지 못한 호출은 155건 그대로. `generate.py`는 안 돌렸고 `source.json`·`unread-report.json`은 되돌려 둠
+- 남은 것·확인 필요: 대표가 `test.md` 실기기 확인 목록의 MSC1119A01 줄을 아이폰 11 Pro로 확인(설정 › 내 데이터). `PRIVACY.md`에 넣은 한 줄은 지시서 초안 그대로이고 「대표 확정 전」 표시를 달아 두었습니다. 서버 엔드포인트(`POST /classifier-samples`)·D1 표·학습 스크립트는 다음 요청(대표 결정)
