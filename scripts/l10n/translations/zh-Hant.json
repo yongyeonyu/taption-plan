@@ -6106,7 +6106,7 @@
 "지운 기록은 되돌리기를 쓸 수 없어요. 이미 반영된 변경은 그대로 남아요.|Cleared entries can't be undone from here. Changes already applied stay as they are.": "清除後的記錄無法再從這裡復原。已生效的變更會保留。",
 "공연/영화 관람|Show / Movie": "演出／觀影",
 "AI 알림 분석|AI notification review": "AI 通知分析",
-"가계부가 아닌 알림(예매·예약·배송 등)을 AI에게 보내 일정·메모로 정리해요. 광고·인증 번호는 보내지 않아요.|Sends alerts that aren't payments (bookings, reservations, deliveries) to your AI to file as events or memos. Ads and verification codes are never sent.": "把非付款類通知（訂位、預約、配送等）傳給 AI，整理成行程或備忘。廣告和驗證碼不會傳送。",
+"가계부가 아닌 알림(예매·예약·배송 등)을 AI에게 보내 일정·메모로 정리해요. 광고·인증 번호는 보내지 않아요.|Sends alerts that aren't payments (bookings, reservations, deliveries) to your AI to file as events or memos. Ads and verification codes are never sent.": "把非付款類通知（訂票、預約、配送等）傳給 AI，整理成行程或備忘。廣告和驗證碼不會傳送。",
 "결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "這不是付款通知，已交給 AI 確認。",
 "알림 분석|Notification review": "通知分析",
 "문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "簡訊只會把付款簡訊記入帳本，不使用 AI 通知分析。",

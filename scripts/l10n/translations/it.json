@@ -6106,7 +6106,7 @@
 "지운 기록은 되돌리기를 쓸 수 없어요. 이미 반영된 변경은 그대로 남아요.|Cleared entries can't be undone from here. Changes already applied stay as they are.": "Le voci cancellate non si possono più annullare da qui. Le modifiche già applicate restano.",
 "공연/영화 관람|Show / Movie": "Spettacolo / Film",
 "AI 알림 분석|AI notification review": "Analisi notifiche con IA",
-"가계부가 아닌 알림(예매·예약·배송 등)을 AI에게 보내 일정·메모로 정리해요. 광고·인증 번호는 보내지 않아요.|Sends alerts that aren't payments (bookings, reservations, deliveries) to your AI to file as events or memos. Ads and verification codes are never sent.": "Invia alla tua IA le notifiche che non sono pagamenti (prenotazioni, consegne…) per archiviarle come eventi o note. Pubblicità e codici di verifica non vengono mai inviati.",
+"가계부가 아닌 알림(예매·예약·배송 등)을 AI에게 보내 일정·메모로 정리해요. 광고·인증 번호는 보내지 않아요.|Sends alerts that aren't payments (bookings, reservations, deliveries) to your AI to file as events or memos. Ads and verification codes are never sent.": "Invia alla tua IA le notifiche che non sono pagamenti (prenotazioni, consegne…) per archiviarle come eventi o memo. Pubblicità e codici di verifica non vengono mai inviati.",
 "결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "Non è un pagamento: affidato alla tua IA per un controllo.",
 "알림 분석|Notification review": "Analisi notifica",
 "문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "Gli SMS vengono usati solo per i messaggi di pagamento nel registro spese. L’analisi delle notifiche con IA non viene usata.",

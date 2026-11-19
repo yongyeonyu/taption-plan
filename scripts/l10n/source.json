@@ -834,7 +834,7 @@
    "ko": "AI 비서 요청을 반영했어요",
    "en": "Applied AI assistant requests",
    "files": [
-    "AssistantCommands.swift:286"
+    "AssistantCommands.swift:289"
    ],
    "args": [],
    "targets": [
@@ -34218,7 +34218,7 @@
    "en": "{0} ledger entr(ies)",
    "files": [
     "AssistantOperationReading.swift:48",
-    "AssistantCommands.swift:283"
+    "AssistantCommands.swift:286"
    ],
    "args": [
     "count"
@@ -34453,7 +34453,7 @@
    "ko": "가림",
    "en": "Hidden",
    "files": [
-    "AssistantCommandEdits.swift:234"
+    "AssistantCommandEdits.swift:243"
    ],
    "args": [],
    "targets": [
@@ -38053,7 +38053,7 @@
    "en": "{0} record edit(s)",
    "files": [
     "AssistantOperationReading.swift:46",
-    "AssistantCommands.swift:280"
+    "AssistantCommands.swift:283"
    ],
    "args": [
     "count"
@@ -42433,7 +42433,7 @@
    "ko": "말풍선 {0}개",
    "en": "{0} bubble(s)",
    "files": [
-    "AssistantCommands.swift:282"
+    "AssistantCommands.swift:285"
    ],
    "args": [
     "bubbles"
@@ -42949,7 +42949,7 @@
    "en": "{0} memo(s)",
    "files": [
     "AssistantOperationReading.swift:44",
-    "AssistantCommands.swift:278"
+    "AssistantCommands.swift:281"
    ],
    "args": [
     "count"
@@ -43466,7 +43466,7 @@
    "ko": "못 한 것 {0}개",
    "en": "{0} not done",
    "files": [
-    "AssistantCommands.swift:285"
+    "AssistantCommands.swift:288"
    ],
    "args": [
     "rejected"
@@ -47585,7 +47585,7 @@
    "en": "{0} setting(s)",
    "files": [
     "AssistantOperationReading.swift:47",
-    "AssistantCommands.swift:281"
+    "AssistantCommands.swift:284"
    ],
    "args": [
     "count"
@@ -57458,7 +57458,7 @@
    "en": "{0} schedule(s)",
    "files": [
     "AssistantOperationReading.swift:45",
-    "AssistantCommands.swift:279"
+    "AssistantCommands.swift:282"
    ],
    "args": [
     "count"
@@ -61628,7 +61628,7 @@
    "ko": "질문 {0}개",
    "en": "{0} question(s)",
    "files": [
-    "AssistantCommands.swift:284"
+    "AssistantCommands.swift:287"
    ],
    "args": [
     "questions"

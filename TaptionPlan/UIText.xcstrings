@@ -5913,7 +5913,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Analisis notifikasi AI"
+            "value" : "Analisis pemberitahuan AI"
           }
         },
         "th" : {
@@ -212527,7 +212527,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "決済以外の通知（予約・予約確認・配送など）をAIに送り、予定やメモに整理します。広告や認証番号は送りません。"
+            "value" : "決済以外の通知（チケット予約・宿泊予約・配送など）をAIに送り、予定やメモに整理します。広告や認証番号は送りません。"
           }
         },
         "zh-Hans" : {
@@ -212539,25 +212539,25 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "把非付款類通知（訂位、預約、配送等）傳給 AI，整理成行程或備忘。廣告和驗證碼不會傳送。"
+            "value" : "把非付款類通知（訂票、預約、配送等）傳給 AI，整理成行程或備忘。廣告和驗證碼不會傳送。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schickt Mitteilungen, die keine Zahlungen sind (Buchungen, Reservierungen, Lieferungen), an deine KI, die sie als Termine oder Notizen ablegt. Werbung und Bestätigungscodes werden nie gesendet."
+            "value" : "Schickt Mitteilungen, die keine Zahlungen sind (Buchungen, Reservierungen, Lieferungen), an deine KI, die sie als Termine oder Memos ablegt. Werbung und Bestätigungscodes werden nie gesendet."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Envoie à votre IA les notifications qui ne sont pas des paiements (réservations, livraisons…) pour les classer en événements ou notes. Les publicités et codes de vérification ne sont jamais envoyés."
+            "value" : "Envoie à votre IA les notifications qui ne sont pas des paiements (réservations, livraisons…) pour les classer en événements ou mémos. Les publicités et codes de vérification ne sont jamais envoyés."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Invia alla tua IA le notifiche che non sono pagamenti (prenotazioni, consegne…) per archiviarle come eventi o note. Pubblicità e codici di verifica non vengono mai inviati."
+            "value" : "Invia alla tua IA le notifiche che non sono pagamenti (prenotazioni, consegne…) per archiviarle come eventi o memo. Pubblicità e codici di verifica non vengono mai inviati."
           }
         },
         "es" : {
@@ -212581,19 +212581,19 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mengirim notifikasi non-pembayaran (pemesanan, reservasi, pengiriman) ke AI untuk dicatat sebagai acara atau memo. Iklan dan kode verifikasi tidak pernah dikirim."
+            "value" : "Mengirim pemberitahuan non-pembayaran (pemesanan, reservasi, pengiriman) ke AI untuk dicatat sebagai jadwal atau memo. Iklan dan kode verifikasi tidak pernah dikirim."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ส่งการแจ้งเตือนที่ไม่ใช่การชำระเงิน (การจอง การนัดหมาย การจัดส่ง) ให้ AI จัดเป็นกิจกรรมหรือบันทึก โฆษณาและรหัสยืนยันจะไม่ถูกส่ง"
+            "value" : "ส่งการแจ้งเตือนที่ไม่ใช่การชำระเงิน (การจอง การนัดหมาย การจัดส่ง) ให้ AI จัดลงตารางเวลาหรือโน้ต โฆษณาและรหัสยืนยันจะไม่ถูกส่ง"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "भुगतान न होने वाली सूचनाएँ (बुकिंग, रिज़र्वेशन, डिलीवरी) AI को भेजता है ताकि वह उन्हें इवेंट या मेमो में दर्ज करे। विज्ञापन और वेरिफ़िकेशन कोड कभी नहीं भेजे जाते।"
+            "value" : "भुगतान न होने वाली सूचनाएँ (बुकिंग, रिज़र्वेशन, डिलीवरी) AI को भेजता है ताकि वह उन्हें शेड्यूल या मेमो में दर्ज करे। विज्ञापन और वेरिफ़िकेशन कोड कभी नहीं भेजे जाते।"
           }
         }
       }
@@ -226328,7 +226328,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show / Kino"
+            "value" : "Aufführung / Kino"
           }
         },
         "fr" : {
@@ -266404,7 +266404,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Notifikasi aplikasi pesan tidak pernah dikirim ke AI."
+            "value" : "Pemberitahuan aplikasi pesan tidak pernah dikirim ke AI."
           }
         },
         "th" : {
@@ -268406,7 +268406,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SMS hanya dipakai untuk pesan pembayaran di buku keuangan. Analisis notifikasi AI tidak dipakai."
+            "value" : "SMS hanya dipakai untuk pesan pembayaran di catatan keuangan. Analisis pemberitahuan AI tidak dipakai."
           }
         },
         "th" : {
@@ -268418,7 +268418,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SMS केवल भुगतान संदेशों के लिए खाते में उपयोग होते हैं। AI सूचना विश्लेषण इस्तेमाल नहीं होता।"
+            "value" : "SMS केवल भुगतान संदेशों के लिए खर्च खाते में उपयोग होते हैं। AI सूचना विश्लेषण इस्तेमाल नहीं होता।"
           }
         }
       }
@@ -307753,7 +307753,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Analisis notifikasi"
+            "value" : "Analisis pemberitahuan"
           }
         },
         "th" : {
