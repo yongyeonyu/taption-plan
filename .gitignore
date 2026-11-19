@@ -51,3 +51,6 @@ design/APS1115A01/source/promo-clips/
 
 # wrangler가 저장소 루트에서 실행되면 계정 정보 캐시를 만든다(커밋 금지)
 .wrangler/
+
+# Local admin console settings (ADM1120A01)
+tools/admin-console/config.local.json

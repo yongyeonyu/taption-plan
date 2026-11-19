@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="admin-token" content="__TOKEN__">
+<title>BOKKI 운영</title>
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<header>
+  <h1>BOKKI 운영 <span id="mode" class="chip" hidden>연습 모드 · 올리지 않음</span></h1>
+  <nav>
+    <button data-tab="notices" class="tab on">공지</button>
+    <button data-tab="packs" class="tab">시즌 팩</button>
+    <button data-tab="settings" class="tab">설정</button>
+  </nav>
+</header>
+
+<main>
+  <section id="notices" class="panel">
+    <div class="row between">
+      <h2>지금 올라간 공지 <span id="noticeVersion" class="muted"></span></h2>
+      <button id="reloadNotices">새로 읽기</button>
+    </div>
+    <ul id="noticeList" class="list"></ul>
+
+    <h2 id="formTitle">새 공지</h2>
+    <form id="noticeForm" class="grid">
+      <label>id<input name="id" placeholder="비우면 자동(notice-날짜)" pattern="[a-z0-9][a-z0-9._\-]{0,63}"></label>
+      <label>종류
+        <select name="kind">
+          <option value="info">info · 안내</option>
+          <option value="update">update · 새 기능</option>
+          <option value="warning">warning · 주의</option>
+          <option value="critical">critical · 긴급</option>
+        </select>
+      </label>
+      <label class="wide">제목<input name="title" maxlength="100" required></label>
+      <label class="wide">본문(평문)<textarea name="body" maxlength="2000" rows="4" required></textarea></label>
+      <label class="wide">영어 제목<input name="titleEn" maxlength="100"></label>
+      <label class="wide">영어 본문<textarea name="bodyEn" maxlength="2000" rows="3"></textarea></label>
+      <label>시작(비우면 바로)<input name="startsAt" type="datetime-local"></label>
+      <label>끝(비우면 계속)<input name="expiresAt" type="datetime-local"></label>
+      <label>최소 빌드<input name="minBuild" type="number" min="1"></label>
+      <label>최대 빌드<input name="maxBuild" type="number" min="1"></label>
+      <label class="wide">링크(https://)<input name="link" maxlength="300" pattern="https://\S+"></label>
+      <div class="wide row">
+        <button type="submit" class="primary" id="queueButton">변경 목록에 넣기</button>
+        <button type="button" id="cancelEdit" hidden>편집 취소</button>
+      </div>
+    </form>
+
+    <h2>올릴 변경</h2>
+    <ul id="pendingList" class="list"><li class="muted">아직 없습니다</li></ul>
+    <div class="row">
+      <button id="previewNotices">미리보기</button>
+      <button id="publishNotices" class="primary" disabled>서버에 올리기</button>
+      <button id="clearPending">변경 비우기</button>
+    </div>
+    <pre id="noticePreview" class="out" hidden></pre>
+  </section>
+
+  <section id="packs" class="panel" hidden>
+    <div class="row between">
+      <h2>서버 카탈로그</h2>
+      <button id="reloadPacks">새로 읽기</button>
+    </div>
+    <ul id="catalogList" class="list"></ul>
+
+    <h2>이 맥의 팩 폴더</h2>
+    <ul id="localList" class="list"></ul>
+    <pre id="packOut" class="out" hidden></pre>
+    <div class="row"><button id="publishPack" class="primary" hidden>이 결과를 서버에 올리기</button></div>
+  </section>
+
+  <section id="settings" class="panel" hidden>
+    <h2>설정</h2>
+    <p class="muted">이 맥의 <code>tools/admin-console/config.local.json</code>에만 저장합니다(git 제외). 비밀값은 여기 넣지 않습니다 — 올리기는 이 맥에 로그인된 wrangler를 그대로 씁니다.</p>
+    <form id="configForm" class="grid">
+      <label class="wide">중계 서버 주소(호스트만)<input name="host" required></label>
+      <label class="wide">R2 버킷 이름<input name="bucket" required></label>
+      <label class="wide">wrangler 설정 파일<input name="wranglerConfig" required></label>
+      <div class="wide row"><button type="submit" class="primary">저장</button></div>
+    </form>
+    <ul id="configErrors" class="errors"></ul>
+  </section>
+
+  <section class="panel">
+    <div class="row between"><h2>기록</h2><span id="busy" class="muted"></span></div>
+    <pre id="log" class="out log"></pre>
+  </section>
+</main>
+
+<dialog id="confirm">
+  <form method="dialog">
+    <p id="confirmText"></p>
+    <div class="row end">
+      <button value="no">취소</button>
+      <button value="yes" class="primary">올리기</button>
+    </div>
+  </form>
+</dialog>
+</body>
+</html>

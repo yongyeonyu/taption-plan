@@ -1,0 +1,26 @@
+# BOKKI 운영 페이지 (ADM1120A01)
+
+이 맥에서만 여는 작은 웹 페이지입니다. 앱 사용자 모두에게 보이는 **공지**와 **시즌 팩**(`.bpack` + 카탈로그)을 R2 공용 버킷에 올리고 내립니다.
+
+```sh
+node tools/admin-console/server.mjs             # 실제로 올림
+node tools/admin-console/server.mjs --dry-run   # 연습: 명령을 기록만 하고 올리지 않음
+```
+
+실행하면 `http://127.0.0.1:8742/?t=<토큰>` 주소를 터미널에 찍고 브라우저를 엽니다. 끄려면 Ctrl+C. 의존 패키지는 없습니다(Node 20 이상, 팩 묶기에 `python3`).
+
+## 할 수 있는 것
+- **공지**: 지금 올라간 공지(`GET /public/announcements`)를 보고, 새로 쓰거나 고치거나 내립니다. 「미리보기」로 검사를 통과해야 「서버에 올리기」가 켜집니다. 검사·합치기 규칙은 `server/trip-relay/scripts/announce.mjs`와 같고, 그 사이 서버 공지가 바뀌었으면(version이 다르면) 올리지 않습니다.
+- **시즌 팩**: 번들 시드 폴더(`Packages/SeasonPackKit/Sources/SeasonPackKit/Resources/seed/<id>/<version>/`)를 `scripts/season-pack/build_bpack.py`로 묶어, 서버 카탈로그에 합친 결과를 보여 줍니다. 올리면 **파일을 먼저, 카탈로그를 나중에** 올리고 `Range` 이어받기(206)를 확인합니다. 서버에 같은 버전 이상이 있으면 묶지 않습니다(`manifest.json`의 `version`을 올리세요). 「카탈로그에서 내리기」는 카탈로그 항목만 뺍니다.
+- **설정**: 중계 서버 호스트, R2 버킷, `wrangler.local.toml` 경로. 처음에는 `TaptionPlan/AppSecrets.local.xcconfig`의 `TRIP_RELAY_HOST`와 `server/trip-relay/wrangler.toml`의 버킷을 읽고, 저장하면 `tools/admin-console/config.local.json`(git 제외)에 둡니다.
+
+## 바깥으로 열리지 않게
+- `127.0.0.1`에만 묶고, `Host` 머리글이 `127.0.0.1:<포트>`·`localhost:<포트>`가 아니면 421(DNS 리바인딩 차단).
+- 로그인 대신 실행마다 새로 만드는 토큰. 페이지는 `?t=` 토큰이 맞아야 열리고, API는 `X-Admin-Token` 머리글이 맞아야 답합니다. POST는 JSON만 받아 다른 사이트의 폼 전송을 막고, CORS에는 답하지 않습니다.
+- 비밀값은 다루지 않습니다. 올리기는 이 맥에 로그인된 `wrangler`(`npx wrangler r2 object put … --remote`)를 그대로 부릅니다.
+
+## 시험
+```sh
+node --test tools/admin-console/server.test.mjs
+```
+가짜 서버 응답과 연습 모드로 공지 올리기·팩 묶기·올리기·내리기, 토큰·Host·JSON 검사를 확인합니다. 실제 R2 업로드는 시험하지 않습니다.
