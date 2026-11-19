@@ -88,8 +88,8 @@
     {
       "id": "accessory.santaHat",
       "path": "accessory-santa-hat.png",
-      "sha256": "106643d2017dfb512d02ae29f9d4ac34e0879720e799f9c3d3ea3246d9b38eee",
-      "bytes": 41574,
+      "sha256": "d53d833d89b8b9f78b6a7663308fcf4afb1c07cb595b83dbf3e574999d2b96a6",
+      "bytes": 67878,
       "kind": "image"
     },
     {
@@ -116,8 +116,8 @@
     {
       "id": "carol.jingle",
       "path": "audio/jingle-bells.m4a",
-      "sha256": "ee43ee2ab59657c931df6f6c26817d14d9443baf640fb1d3c888d160d399a101",
-      "bytes": 355361,
+      "sha256": "2bb3f2c758ba66b8d97cd54da409539fdf956f17b0c0a43a71d5646991bfa87c",
+      "bytes": 355355,
       "kind": "audio"
     }
   ],
@@ -395,10 +395,10 @@
     },
     "costume": {
       "redNose": true,
-      "antlers": "8A5A36",
+      "cape": true,
       "scarf": {
         "base": "D63A3A",
-        "shade": "AD2A2D",
+        "shade": "9E2230",
         "accent": "FFF6EC",
         "trim": "FFF6EC",
         "pattern": "bands"

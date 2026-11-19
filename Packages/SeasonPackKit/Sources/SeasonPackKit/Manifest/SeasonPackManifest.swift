@@ -167,8 +167,8 @@ public struct SeasonPackManifest: Codable, Sendable, Equatable {
                 public var pattern: String?
             }
             public var redNose: Bool?
-            /// 사슴뿔 머리띠 색(RRGGBB). 있으면 머리 양옆에 뿔이 솟는다.
-            public var antlers: String?
+            /// true면 목도리 자리에 망토를 입힌다(`scarf` 색이 망토 천 색).
+            public var cape: Bool?
             public var scarf: Cloth?
             public var ribbon: Cloth?
         }

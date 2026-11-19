@@ -15,13 +15,21 @@ public final class SeasonPackCenter {
         public var urlForKey: @Sendable (String) -> URL?
         public var allowsLargeDownload: @Sendable () -> Bool
         public var defaultsSuite: String?
+        /// 있으면 `.bpack`을 이 이름의 백그라운드 `URLSession`으로 이어 받는다. 없으면 예전 방식(파일 하나씩)만 쓴다.
+        public var backgroundSessionID: String?
+        /// 시험이 가짜 엔진을 꽂을 때만 쓴다(없으면 `backgroundSessionID`로 만든 실제 엔진).
+        public var engine: (any SeasonPackDownloadEngine)?
 
-        public init(storeRoot: URL, urlForKey: @escaping @Sendable (String) -> URL?, allowsLargeDownload: @escaping @Sendable () -> Bool = { true }, defaultsSuite: String? = nil) {
+        public init(storeRoot: URL, urlForKey: @escaping @Sendable (String) -> URL?, allowsLargeDownload: @escaping @Sendable () -> Bool = { true }, defaultsSuite: String? = nil,
+                    backgroundSessionID: String? = nil, engine: (any SeasonPackDownloadEngine)? = nil) {
             self.storeRoot = storeRoot; self.urlForKey = urlForKey; self.allowsLargeDownload = allowsLargeDownload; self.defaultsSuite = defaultsSuite
+            self.backgroundSessionID = backgroundSessionID; self.engine = engine
         }
     }
 
     public private(set) var packs: [SeasonPack] = []
+    /// 시즌 팩 받기 상태(설정 화면이 보여 준다).
+    public private(set) var downloadStatus: SeasonPackDownloadStatus = .idle
     public private(set) var active: SeasonPack?
     /// 마지막 판정에 쓴 이벤트 시각(의심이면 nil).
     public private(set) var eventDate: Date?
@@ -35,6 +43,7 @@ public final class SeasonPackCenter {
     @ObservationIgnored public private(set) var memoStore: SeasonPackMemoStore?
     @ObservationIgnored public private(set) var clock: SeasonPackClock?
     @ObservationIgnored private var fetcher: SeasonPackFetcher?
+    @ObservationIgnored public private(set) var backgroundEngine: SeasonPackBackgroundEngine?
     @ObservationIgnored private(set) var defaults = SeasonPackDefaults()
     @ObservationIgnored private var timer: Task<Void, Never>?
     @ObservationIgnored private var previewID: String?
@@ -78,6 +87,13 @@ public final class SeasonPackCenter {
             deviceNow: { [host] in host.now() }
         )
         self.clock = clock
+        let report: @Sendable (SeasonPackDownloadStatus) -> Void = { [weak self] status in Task { @MainActor in self?.downloadStatus = status } }
+        let engine = configuration.engine ?? configuration.backgroundSessionID.map { SeasonPackBackgroundEngine(identifier: $0) }
+        backgroundEngine = engine as? SeasonPackBackgroundEngine
+        let downloader = engine.map {
+            SeasonPackDownloader(directory: configuration.storeRoot.appendingPathComponent(".downloads", isDirectory: true), engine: $0,
+                                 urlForKey: configuration.urlForKey, allowsLargeDownload: configuration.allowsLargeDownload, onStatus: report)
+        }
         fetcher = SeasonPackFetcher(
             store: store,
             transport: SeasonPackURLSessionTransport(urlForKey: configuration.urlForKey),
@@ -87,7 +103,9 @@ public final class SeasonPackCenter {
             windows: { SeasonPackWindows() },
             allowsLargeDownload: configuration.allowsLargeDownload,
             knownVersion: { [book = versionBook] id in book.version(of: id) },
-            onServerDate: { clock.recordServerDate($0) }
+            onServerDate: { clock.recordServerDate($0) },
+            downloader: downloader,
+            onStatus: report
         )
 #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments

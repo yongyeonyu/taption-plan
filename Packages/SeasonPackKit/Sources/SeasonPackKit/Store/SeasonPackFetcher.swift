@@ -87,6 +87,8 @@ public final class SeasonPackFetcher: Sendable {
     private let allowsLargeDownload: @Sendable () -> Bool
     private let knownVersion: @Sendable (String) -> Int
     private let onServerDate: @Sendable (Date) -> Void
+    private let downloader: SeasonPackDownloader?
+    private let onStatus: @Sendable (SeasonPackDownloadStatus) -> Void
     private let running = Mutex(false)
 
     public init(
@@ -98,8 +100,11 @@ public final class SeasonPackFetcher: Sendable {
         windows: @escaping @Sendable () -> SeasonPackWindows = { SeasonPackWindows() },
         allowsLargeDownload: @escaping @Sendable () -> Bool = { true },
         knownVersion: @escaping @Sendable (String) -> Int = { _ in 0 },
-        onServerDate: @escaping @Sendable (Date) -> Void = { _ in }
+        onServerDate: @escaping @Sendable (Date) -> Void = { _ in },
+        downloader: SeasonPackDownloader? = nil,
+        onStatus: @escaping @Sendable (SeasonPackDownloadStatus) -> Void = { _ in }
     ) {
+        self.downloader = downloader; self.onStatus = onStatus
         self.store = store; self.transport = transport; self.defaults = defaults; self.appBuild = appBuild; self.now = now
         self.windows = windows; self.allowsLargeDownload = allowsLargeDownload; self.knownVersion = knownVersion; self.onServerDate = onServerDate
     }
@@ -111,9 +116,14 @@ public final class SeasonPackFetcher: Sendable {
         defer { running.withLock { $0 = false } }
         let current = now().timeIntervalSince1970
         if let last = defaults.double(Self.attemptKey), current >= last, current - last < Self.cooldown {
-            return SeasonPackRefreshResult(skippedReason: "cooldown")
+            // 받다 만 팩이 있으면 쿨다운과 상관없이 저장해 둔 카탈로그로 이어 받는다(카탈로그를 다시 묻지는 않는다).
+            guard downloader?.hasPending == true, let cached = defaults.data(Self.indexCacheKey), let index = SeasonPackIndex.decode(cached) else {
+                return SeasonPackRefreshResult(skippedReason: "cooldown")
+            }
+            return await installAll(index, pendingOnly: true)
         }
         defaults.set(current, Self.attemptKey)
+        onStatus(.checking)
 
         guard let reply = await transport.get(key: Self.indexKey, etag: defaults.string(Self.etagKey)) else {
             return SeasonPackRefreshResult(skippedReason: "offline")
@@ -132,21 +142,27 @@ public final class SeasonPackFetcher: Sendable {
             return SeasonPackRefreshResult(skippedReason: "status \(reply.status)")
         }
         guard let index = SeasonPackIndex.decode(indexData) else { return SeasonPackRefreshResult(skippedReason: "bad-index") }
+        return await installAll(index, pendingOnly: false)
+    }
 
+    private func installAll(_ index: SeasonPackIndex, pendingOnly: Bool) async -> SeasonPackRefreshResult {
         var result = SeasonPackRefreshResult()
-        for entry in index.packs {
+        let pending = Set(downloader?.pendingMetas().map { "\($0.id)@\($0.version)" } ?? [])
+        for entry in index.packs where !pendingOnly || pending.contains("\(entry.id)@\(entry.version)") {
             if let ref = await install(entry) { result.installed.append(ref) }
         }
+        if result.installed.isEmpty, downloader?.hasPending != true { onStatus(.idle) }
         return result
     }
 
     private func install(_ entry: SeasonPackIndex.Entry) async -> SeasonPackRef? {
-        guard SeasonPackValidation.isKeyName(entry.id), !SeasonPackValidation.reservedIDs.contains(entry.id), entry.version >= 1,
-              entry.manifest == "packs/season/\(entry.id)/\(entry.version)/manifest.json" else { return nil }
+        guard SeasonPackValidation.isKeyName(entry.id), !SeasonPackValidation.reservedIDs.contains(entry.id), entry.version >= 1 else { return nil }
         if let required = entry.requiresAppBuild, let build = appBuild(), required > build { return nil }
         if entry.version <= knownVersion(entry.id) || store.hasInstalled(id: entry.id, version: entry.version) { return nil }
+        if entry.archive != nil { return await installArchive(entry) }
+        guard entry.manifest == "packs/season/\(entry.id)/\(entry.version)/manifest.json", let manifestKey = entry.manifest else { return nil }
 
-        guard let manifestReply = await transport.get(key: entry.manifest, etag: nil), manifestReply.status == 200 else { return nil }
+        guard let manifestReply = await transport.get(key: manifestKey, etag: nil), manifestReply.status == 200 else { return nil }
         if let date = manifestReply.serverDate { onServerDate(date) }
         guard let manifest = try? JSONDecoder().decode(SeasonPackManifest.self, from: manifestReply.data),
               manifest.id == entry.id, manifest.version == entry.version, Self.isNear(manifest, now: now(), windows: windows()) else { return nil }
@@ -168,11 +184,41 @@ public final class SeasonPackFetcher: Sendable {
         return SeasonPackRef(id: entry.id, version: entry.version)
     }
 
+    /// 새 방식: 파일 하나(`.bpack`)를 이어 받아 해시를 확인하고 풀어 설치한다. 실패하면 이전 팩이 그대로 남는다.
+    private func installArchive(_ entry: SeasonPackIndex.Entry) async -> SeasonPackRef? {
+        guard let downloader else { return nil }
+        if let windows = entry.windows, !windows.isEmpty, !Self.isNear(windows, now: now(), calendar: self.windows()) { return nil }
+        switch await downloader.ensure(entry) {
+        case .ready(let file):
+            onStatus(.installing)
+            do {
+                let unpacked = try SeasonPackArchive.decode(from: file)
+                guard let manifest = try? JSONDecoder().decode(SeasonPackManifest.self, from: unpacked.manifestData),
+                      manifest.id == entry.id, manifest.version == entry.version else { throw SeasonPackArchiveError.badManifest }
+                _ = try store.install(manifestData: unpacked.manifestData, files: unpacked.files, appBuild: appBuild(), serverDate: nil, now: now())
+                downloader.finish(entry)
+                onStatus(.installed(id: entry.id, version: entry.version))
+                return SeasonPackRef(id: entry.id, version: entry.version)
+            } catch {
+                // 못 푸는 파일은 버리고 이전 팩을 그대로 쓴다. 같은 실행에서 되풀이하지 않는다.
+                downloader.purge(entry)
+                onStatus(.failed("install"))
+                return nil
+            }
+        case .deferred, .interrupted, .failed:
+            return nil
+        }
+    }
+
     /// 창이 지금 ±45일과 겹치는가(지난 창·먼 창의 큰 파일은 받지 않는다).
     static func isNear(_ manifest: SeasonPackManifest, now: Date, windows: SeasonPackWindows) -> Bool {
+        isNear(manifest.event.windows, now: now, calendar: windows)
+    }
+
+    static func isNear(_ list: [SeasonPackManifest.Window], now: Date, calendar windows: SeasonPackWindows) -> Bool {
         let around = DateInterval(start: now.addingTimeInterval(-nearDays), end: now.addingTimeInterval(nearDays))
         let year = windows.calendar.component(.year, from: now)
-        return manifest.event.windows.contains { window in
+        return list.contains { window in
             [year - 1, year, year + 1].contains { windows.interval(of: window, startYear: $0)?.intersects(around) == true }
         }
     }

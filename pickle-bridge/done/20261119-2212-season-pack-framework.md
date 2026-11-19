@@ -402,3 +402,12 @@ packs/season/<packId>/<version>/<파일…>      ← 그림·소리·라이선�
 - 눈꽃송이: 트리가 보이는 동안 날씨와 무관하게 여섯 갈래 눈꽃이 사르르 내림(`effects.snow`, 동작 줄이기는 정지, 저전력은 절반·12fps, 터치 통과).
 - 검증: `swift test` 80건 통과 / 앱 Debug 빌드 성공 / `-only-testing:TaptionPlanTests` 통과 3,150·실패 0·건너뜀 26 / `architecture-metrics.py --check docs/architecture-baseline.json` 통과(HwarangRig.swift 1,200줄 예산 끝) / 엔진 경계 점검 통과. 눈꽃·전구의 실제 화면 움직임은 시뮬레이터에서 보지 않았고 아이폰 11 Pro 확인 대상(`test.md` SEA1119A01 줄에 항목 추가).
 - 푸시하지 않음. 브랜치 `season-pack-sea1119a01`을 메인 세션이 병합.
+
+### 추가 회신 2 (2026-11-20, 대표 요청: 팩 하나를 파일 하나로 서버에서 이어 받기)
+
+- 커밋: `404eabc2`(복장 마무리 + 받기 구조). 푸시 안 함, 브랜치 `season-pack-sea1119a01`.
+- 복장 최종: 빨간 산타 모자(그림)+갈색 펠트 뿔(끝에 붙은 두 가닥 중 작은 것 삭제), 빨간 코, 등을 덮는 망토(하얀 털단·솜방울 둘), 초록 꼬리 리본. 세 고양이 모든 동작(앱 리그가 직접 그림).
+- 받기 구조: 팩 하나 = `.bpack` 파일 하나(압축 없는 컨테이너 `SeasonPackArchive`, 선언 크기 = 실제 크기라 풀면서 부풀 수 없고 경로 탈출·중복·한도 초과 거절). 카탈로그 `packs/season/index.json`에 `archive{key,bytes,sha256}`·`windows`. 서버는 기존 Worker가 이미 Range(206)·ETag·304를 지원해 **서버 코드 무변경**. 앱 실행 시 `If-None-Match`로 카탈로그 확인(30분 간격), 받다 만 팩이 있으면 간격과 무관하게 이어 받기. 백그라운드 `URLSession`(`SeasonPackBackgroundEngine`)+`resumeData`·부분 상태를 `SeasonPacks/.downloads/`에 보관(앱이 죽어도 이어짐, 백그라운드에서 끝난 파일은 다음 실행이 검증), Range 불일치·ETag 변경 시 처음부터 한 번 더, 셀룰러 2MB·디스크 여유 확인, 크기·SHA-256 확인 → 임시 폴더 → 원자적 설치, 실패 시 이전 팩 유지, `discard`로 롤백. 설정 › 내 데이터 「시즌 팩 업데이트」 줄에 진행률·상태(ko/en). 만들기 `scripts/season-pack/build_bpack.py`(파이썬으로 만든 파일을 Swift가 풀어 설치하는 것까지 확인).
+- 검증(시뮬레이터 iPhone 17): `swift test` 100건 통과 / 앱 Debug 빌드 / `-only-testing:TaptionPlanTests` 통과 3,150·실패 0·건너뜀 26 / 구조 점검·엔진 경계 점검 통과. 새 시험: 재개, 앱 재시작 뒤 이어받기, 쿨다운 우회, 해시 불일치, 카탈로그 변경, 경로 탈출·크기 부풀림, 롤백, 실제 시드 라운드트립.
+- **확인 안 함(실기기·실서버)**: 실제 백그라운드 `URLSession`으로 비행기 모드를 켰다 끄며 이어 받기, `handleEventsForBackgroundURLSession` 호출, 서버 Range 응답(R2 업로드 뒤 `curl`로 확인, `docs/SEASON_PACK_PLAN.md` 9절). 엔진은 가짜 엔진으로만 시험했습니다.
+- 대표 몫: R2 버킷·`wrangler r2 object put`(스크립트가 명령을 출력만 함, 팩 파일 먼저 → `index.json` 나중), `christmas-2026` 공지. 번역 대기 앱 문구 1건 추가: 「시즌 팩 업데이트 / Season pack updates」(`generate.py`는 메인 세션).

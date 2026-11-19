@@ -669,7 +669,6 @@ struct HwarangPainter {
         fill(coat.fur); stroke(outline, lineWidth); headPath(); c.drawPath(using: .fillStroke)
         paintPatches(coat.headPatches) { headPath() }
         if !coat.headPatches.isEmpty { stroke(outline, lineWidth); headPath(); c.strokePath() }
-        if let antlers = seasonLook?.antlers { drawAntlerHeadband(antlers, turn: t, lineWidth: lineWidth) }
         if !small {
             stroke(outline, 1, 0.28); c.beginPath()
             let fx = lerp(0, 4, t)
@@ -735,9 +734,9 @@ struct HwarangPainter {
         if let bow = coat.bow { bow_(bow, lineWidth: lineWidth) }
         if let hatImage {
             // 모자를 귀 사이 머리 위에 씌운다. 머리와 함께 기울고 돈다.
-            let w: CGFloat = 32, h = w * 60 / 68
+            let w: CGFloat = 36, h = w * 60 / 68
             UIGraphicsPushContext(c)
-            hatImage.draw(in: CGRect(x: lerp(0, 3, t) - w / 2, y: -10.5 - h, width: w, height: h))
+            hatImage.draw(in: CGRect(x: lerp(0, 3, t) - w / 2, y: -9.5 - h, width: w, height: h))
             UIGraphicsPopContext()
         }
         c.restoreGState()
@@ -1175,7 +1174,7 @@ struct HwarangSceneView: View {
     static let worldWidth: CGFloat = 146
     static let worldHeight: CGFloat = 134
     /// 머리 위 모자가 잘리지 않게 위쪽에 남기는 세계 좌표 높이.
-    static let hatHeadroom: CGFloat = 40
+    static let hatHeadroom: CGFloat = 48
 
     var body: some View {
         let hat = hatImage ?? hatAssetName.flatMap { UIImage(named: $0) }

@@ -188,8 +188,8 @@ def christmas(folder):
             },
             "costume": {
                 "redNose": True,
-                "antlers": "8A5A36",
-                "scarf": {"base": "D63A3A", "shade": "AD2A2D", "accent": "FFF6EC", "trim": "FFF6EC", "pattern": "bands"},
+                "cape": True,
+                "scarf": {"base": "D63A3A", "shade": "9E2230", "accent": "FFF6EC", "trim": "FFF6EC", "pattern": "bands"},
                 "ribbon": {"base": "2F9E58", "shade": "1F7A41", "accent": "FFF6EC", "trim": "D63A3A", "pattern": "dots"},
             },
             # 트리가 나와 있는 동안 날씨와 무관하게 눈꽃송이가 사르르 내린다.
