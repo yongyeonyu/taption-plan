@@ -296,10 +296,9 @@ public struct FlightItinerary {      // 여행 하나의 항공 여정
 ## 클로드 코드 회신
 
 - 처리: 일부(1~5단계 완료, 6단계·말풍선·환승 점 미착수)
-- 요청 ID: FLT1119A01 ( 「남은 작업」 여행·공유와 「요청 상세」)
+- 요청 ID: FLT1119A01 (`test.md` 「남은 작업」 여행·공유와 「요청 상세」)
 - 시작·끝: 2026-11-19 23:40 ~ 2026-11-20 01:30 (KST), 메인 세션
-- 커밋:  공항 카탈로그·여정 /  서버  /  앱 조회·고르기 화면·저장 필드 /  알림 파서·병합 엔진 /  알림 반영·준비물·브리핑 알림 /  당일 배너 /  문서
-- 바꾼 파일: (카탈로그·여정·파서·병합), (항공 선택 필드·), ··시험, , ···, 번역 12개 언어, ··
-- 검증: RouteEngine 163·Store 37·서버 308 통과, 앱 전체  3,233건 중 통과 3,207·실패 0·건너뜀 26(시뮬레이터). 상류 공공데이터는 키가 없어 실제로 부르지 않음. 아이폰 11 Pro·화면 눈 확인 안 함
-- 남은 것·확인 필요: ⑴ 상류 응답 칸 이름을 문서로 확인하지 못함(요청 변수·일 500회만 확인) — 대표가 공공데이터 키를 발급해 ·· 뒤 로 칸 이름 확인 ⑵ 6단계 공유 확장은 새 타깃(pbxproj·서명·Info.plist)이라 대표에게 먼저 알린 뒤 별도 진행 ⑶ 화랑이 말풍선·지구본 환승 공항 점 미구현 ⑷  의 FLT1119A01 줄(아이폰 11 Pro), 특히 알림톡이 「알림 › 앱 푸시」로 잡히는지
-
+- 커밋: `e2184a2d` 공항 카탈로그·여정 / `a5698f9b` 서버 `/flights` / `578f2bd4` 앱 조회·고르기 화면·저장 필드 / `b75d16bd` 알림 파서·병합 엔진 / `da4b5bf1` 알림 반영·준비물·브리핑 알림 / `5d524ee2` 당일 배너 / `9e767b50` 문서
+- 바꾼 파일: `Packages/TaptionRouteEngine`(카탈로그·여정·파서·병합), `Packages/TaptionPlanStore`(항공 선택 필드·`TravelPrepItem`), `server/trip-relay/src/flights.js`·`scripts/flights-probe.mjs`·시험, `TaptionPlan/Core/Flight*.swift`, `TaptionPlan/UI/FlightPickerSheet.swift`·`FlightAlertNotice.swift`·`FlightDayBanner.swift`·`TravelPrepSheet.swift`, 번역 12개 언어, `PRIVACY.md`·`DEVELOPMENT.md`·`test.md`
+- 검증: RouteEngine 163·Store 37·서버 308 통과, 앱 전체 `TaptionPlanTests` 3,233건 중 통과 3,207·실패 0·건너뜀 26(시뮬레이터). 상류 공공데이터는 키가 없어 실제로 부르지 않음. 아이폰 11 Pro·화면 눈 확인 안 함
+- 남은 것·확인 필요: ⑴ 상류 응답 칸 이름을 문서로 확인하지 못함(요청 변수·일 500회만 확인) — 대표가 공공데이터 키를 발급해 `wrangler secret put ICN_API_KEY`·`KAC_API_KEY`·`wrangler deploy` 뒤 `server/trip-relay/scripts/flights-probe.mjs`로 칸 이름 확인 ⑵ 6단계 공유 확장은 새 타깃(pbxproj·서명·Info.plist)이라 대표에게 먼저 알린 뒤 별도 진행 ⑶ 화랑이 말풍선·지구본 환승 공항 점 미구현 ⑷ `test.md` `## 실기기 확인 목록`의 FLT1119A01 줄(아이폰 11 Pro), 특히 알림톡이 「알림 › 앱 푸시」로 잡히는지
