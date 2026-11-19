@@ -226,6 +226,7 @@
 		A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */; };
 		D16A1114A160000000000001 /* AssistantDirectActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D16F1114A160000000000001 /* AssistantDirectActionTests.swift */; };
 		A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000002 /* TripItemStatusTests.swift */; };
+		A1FLT1119A0100000000033 /* FlightDayBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000033 /* FlightDayBoardTests.swift */; };
 		A1FLT1119A0100000000025 /* FlightBriefingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000025 /* FlightBriefingTests.swift */; };
 		A1FLT1119A0100000000024 /* FlightPrepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000024 /* FlightPrepTests.swift */; };
 		A1FLT1119A0100000000015 /* FlightIngestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000015 /* FlightIngestTests.swift */; };
@@ -349,6 +350,7 @@
 		A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000001 /* AnnouncementFeed.swift */; };
 		A1SEA1119A01000000000001 /* SeasonPackAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1SEA1119A01000000000001 /* SeasonPackAdapter.swift */; };
 		A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TGT1118A01000000000001 /* LedgerTollGate.swift */; };
+		A1FLT1119A0100000000031 /* FlightDayBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000031 /* FlightDayBoard.swift */; };
 		A1FLT1119A0100000000022 /* FlightBriefing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000022 /* FlightBriefing.swift */; };
 		A1FLT1119A0100000000021 /* FlightPrep.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000021 /* FlightPrep.swift */; };
 		A1FLT1119A0100000000013 /* FlightIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000013 /* FlightIntents.swift */; };
@@ -751,6 +753,7 @@
 		T5H1114A26000000000B0006 /* TripShareMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0006 /* TripShareMembersView.swift */; };
 		T5H1114A26000000000B0007 /* TripShareOwnerActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0007 /* TripShareOwnerActions.swift */; };
 		T5H1114A26000000000B0008 /* TripSharePlanEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */; };
+		A1FLT1119A0100000000032 /* FlightDayBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000032 /* FlightDayBanner.swift */; };
 		A1FLT1119A0100000000023 /* TravelPrepSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000023 /* TravelPrepSheet.swift */; };
 		A1FLT1119A0100000000014 /* FlightAlertNotice.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000014 /* FlightAlertNotice.swift */; };
 		A1FLT1119A0100000000003 /* FlightPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000003 /* FlightPickerSheet.swift */; };
@@ -1102,6 +1105,7 @@
 		F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantReviewFixTests.swift; sourceTree = "<group>"; };
 		D16F1114A160000000000001 /* AssistantDirectActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDirectActionTests.swift; sourceTree = "<group>"; };
 		F1C1110A0900000000000002 /* TripItemStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatusTests.swift; sourceTree = "<group>"; };
+		F1FLT1119A0100000000033 /* FlightDayBoardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightDayBoardTests.swift; sourceTree = "<group>"; };
 		F1FLT1119A0100000000025 /* FlightBriefingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightBriefingTests.swift; sourceTree = "<group>"; };
 		F1FLT1119A0100000000024 /* FlightPrepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightPrepTests.swift; sourceTree = "<group>"; };
 		F1FLT1119A0100000000015 /* FlightIngestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightIngestTests.swift; sourceTree = "<group>"; };
@@ -1215,6 +1219,7 @@
 		F1ANN1119A01000000000001 /* AnnouncementFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementFeed.swift; sourceTree = "<group>"; };
 		F1SEA1119A01000000000001 /* SeasonPackAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonPackAdapter.swift; sourceTree = "<group>"; };
 		F1TGT1118A01000000000001 /* LedgerTollGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollGate.swift; sourceTree = "<group>"; };
+		F1FLT1119A0100000000031 /* FlightDayBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightDayBoard.swift; sourceTree = "<group>"; };
 		F1FLT1119A0100000000022 /* FlightBriefing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightBriefing.swift; sourceTree = "<group>"; };
 		F1FLT1119A0100000000021 /* FlightPrep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightPrep.swift; sourceTree = "<group>"; };
 		F1FLT1119A0100000000013 /* FlightIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightIntents.swift; sourceTree = "<group>"; };
@@ -1592,6 +1597,7 @@
 		T5H1114A26000000000F0006 /* TripShareMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareMembersView.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0007 /* TripShareOwnerActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareOwnerActions.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSharePlanEditor.swift; sourceTree = "<group>"; };
+		F1FLT1119A0100000000032 /* FlightDayBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightDayBanner.swift; sourceTree = "<group>"; };
 		F1FLT1119A0100000000023 /* TravelPrepSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPrepSheet.swift; sourceTree = "<group>"; };
 		F1FLT1119A0100000000014 /* FlightAlertNotice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightAlertNotice.swift; sourceTree = "<group>"; };
 		F1FLT1119A0100000000003 /* FlightPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightPickerSheet.swift; sourceTree = "<group>"; };
@@ -1879,6 +1885,7 @@
 				F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */,
 				D16F1114A160000000000001 /* AssistantDirectActionTests.swift */,
 				F1C1110A0900000000000002 /* TripItemStatusTests.swift */,
+				F1FLT1119A0100000000033 /* FlightDayBoardTests.swift */,
 				F1FLT1119A0100000000025 /* FlightBriefingTests.swift */,
 				F1FLT1119A0100000000024 /* FlightPrepTests.swift */,
 				F1FLT1119A0100000000015 /* FlightIngestTests.swift */,
@@ -2206,6 +2213,7 @@
 				T5H1114A26000000000F0006 /* TripShareMembersView.swift */,
 				T5H1114A26000000000F0007 /* TripShareOwnerActions.swift */,
 				T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */,
+				F1FLT1119A0100000000032 /* FlightDayBanner.swift */,
 				F1FLT1119A0100000000023 /* TravelPrepSheet.swift */,
 				F1FLT1119A0100000000014 /* FlightAlertNotice.swift */,
 				F1FLT1119A0100000000003 /* FlightPickerSheet.swift */,
@@ -2448,6 +2456,7 @@
 				F1ANN1119A01000000000001 /* AnnouncementFeed.swift */,
 				F1SEA1119A01000000000001 /* SeasonPackAdapter.swift */,
 				F1TGT1118A01000000000001 /* LedgerTollGate.swift */,
+				F1FLT1119A0100000000031 /* FlightDayBoard.swift */,
 				F1FLT1119A0100000000022 /* FlightBriefing.swift */,
 				F1FLT1119A0100000000021 /* FlightPrep.swift */,
 				F1FLT1119A0100000000013 /* FlightIntents.swift */,
@@ -3259,6 +3268,7 @@
 				T5H1114A26000000000B0006 /* TripShareMembersView.swift in Sources */,
 				T5H1114A26000000000B0007 /* TripShareOwnerActions.swift in Sources */,
 				T5H1114A26000000000B0008 /* TripSharePlanEditor.swift in Sources */,
+				A1FLT1119A0100000000032 /* FlightDayBanner.swift in Sources */,
 				A1FLT1119A0100000000023 /* TravelPrepSheet.swift in Sources */,
 				A1FLT1119A0100000000014 /* FlightAlertNotice.swift in Sources */,
 				A1FLT1119A0100000000003 /* FlightPickerSheet.swift in Sources */,
@@ -3443,6 +3453,7 @@
 				A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */,
 				A1SEA1119A01000000000001 /* SeasonPackAdapter.swift in Sources */,
 				A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */,
+				A1FLT1119A0100000000031 /* FlightDayBoard.swift in Sources */,
 				A1FLT1119A0100000000022 /* FlightBriefing.swift in Sources */,
 				A1FLT1119A0100000000021 /* FlightPrep.swift in Sources */,
 				A1FLT1119A0100000000013 /* FlightIntents.swift in Sources */,
@@ -3567,6 +3578,7 @@
 				A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */,
 				D16A1114A160000000000001 /* AssistantDirectActionTests.swift in Sources */,
 				A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */,
+				A1FLT1119A0100000000033 /* FlightDayBoardTests.swift in Sources */,
 				A1FLT1119A0100000000025 /* FlightBriefingTests.swift in Sources */,
 				A1FLT1119A0100000000024 /* FlightPrepTests.swift in Sources */,
 				A1FLT1119A0100000000015 /* FlightIngestTests.swift in Sources */,

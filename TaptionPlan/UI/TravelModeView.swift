@@ -824,7 +824,9 @@ struct TravelModeView: View {
 
     private func tripFooter(_ entry: TravelTripDirectory.Entry) -> some View {
         let items = (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }.sorted { $0.start < $1.start }
-        return TravelTripFooter(items: items, tripID: entry.id, language: language, actions: [
+        return VStack(spacing: 8) {
+            FlightDayBanner(items: items, language: language)
+            TravelTripFooter(items: items, tripID: entry.id, language: language, actions: [
             .init(language.text("일정 넣기", "Add plan"), "calendar.badge.plus") { addEntry(entry, cell: planCell) },
             .init(language.text("항공편 찾기", "Find a flight"), "airplane") { flightTrip = entry.trip },
             .init(language.text("준비물", "Prep items"), "checklist") { prepTrip = entry.trip },
@@ -833,7 +835,8 @@ struct TravelModeView: View {
             .init(language.text("AI로 만들기", "Plan with AI"), "sparkles") { isImportPresented = true },
             .init(language.text("지출 넣기", "Add expense"), "wonsign") { addExpense(entry, minute: nil) },
             .init(language.text("계획과 실제", "Plan vs actual"), "chart.bar.xaxis") { realityDay = .init(date: dayDate(dayKey(entry))) },
-        ]) { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
+            ]) { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
+        }
     }
 
     /// 여행 중이고 보는 날이 오늘이면, 내린 판에 한 줄 대신 오늘 카드를 보인다(TVZ1116C01).

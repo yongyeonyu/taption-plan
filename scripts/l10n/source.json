@@ -1278,7 +1278,7 @@
    "en": "Plan with AI",
    "files": [
     "TravelModeView.swift:729",
-    "TravelModeView.swift:833"
+    "TravelModeView.swift:835"
    ],
    "args": [],
    "targets": [
@@ -4811,10 +4811,11 @@
    "ko": "{0}분 지연",
    "en": "Delayed {0} min",
    "files": [
+    "FlightDayBanner.swift:44",
     "FlightPickerSheet.swift:229"
    ],
    "args": [
-    "status.delayMinutes"
+    "row.delayMinutes"
    ],
    "targets": [
     "TaptionPlan"
@@ -5342,7 +5343,7 @@
    "files": [
     "TravelDayBoard.swift:41",
     "TravelModeView.swift:808",
-    "TravelModeView.swift:983"
+    "TravelModeView.swift:986"
    ],
    "args": [
     "index + 1"
@@ -35846,6 +35847,7 @@
    "ko": "결항",
    "en": "Cancelled",
    "files": [
+    "FlightDayBanner.swift:42",
     "FlightPickerSheet.swift:228"
    ],
    "args": [],
@@ -36230,7 +36232,7 @@
    "files": [
     "MapHomeMenuShortcuts.swift:25",
     "PlanRealityView.swift:65",
-    "TravelModeView.swift:835"
+    "TravelModeView.swift:837"
    ],
    "args": [],
    "targets": [
@@ -36689,7 +36691,7 @@
    "en": "Add a stop",
    "files": [
     "TravelModeSupport.swift:631",
-    "TravelModeView.swift:831",
+    "TravelModeView.swift:833",
     "TravelTodayCard.swift:45"
    ],
    "args": [],
@@ -41129,9 +41131,9 @@
    "ko": "닫기",
    "en": "Close",
    "files": [
-    "FlightAlertNotice.swift:25",
-    "TravelPrepSheet.swift:36",
-    "AIConnectNudge.swift:40"
+    "AIConnectNudge.swift:40",
+    "AnnouncementBanner.swift:31",
+    "AnnouncementBanner.swift:113"
    ],
    "args": [],
    "targets": [
@@ -41246,7 +41248,7 @@
    "en": "Day trip",
    "files": [
     "TravelModeView.swift:594",
-    "TravelModeView.swift:982",
+    "TravelModeView.swift:985",
     "TravelNewTripSheet.swift:53"
    ],
    "args": [],
@@ -49074,6 +49076,20 @@
    ]
   },
   {
+   "key": "수하물 {0}|Baggage {0}",
+   "ko": "수하물 {0}",
+   "en": "Baggage {0}",
+   "files": [
+    "FlightDayBanner.swift:50"
+   ],
+   "args": [
+    "baggage"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "숙소 예약|Lodging booking",
    "ko": "숙소 예약",
    "en": "Lodging booking",
@@ -50007,6 +50023,7 @@
    "ko": "실시간",
    "en": "Live",
    "files": [
+    "FlightDayBanner.swift:20",
     "FlightPickerSheet.swift:209"
    ],
    "args": [],
@@ -53797,7 +53814,7 @@
    "ko": "열 편집",
    "en": "Edit columns",
    "files": [
-    "TravelModeView.swift:832",
+    "TravelModeView.swift:834",
     "TravelNewTripSheet.swift:269"
    ],
    "args": [],
@@ -54667,6 +54684,18 @@
    "en": "Today's Expedition Log",
    "files": [
     "MapHomeInfoSheets.swift:177"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "오늘의 항공편|Today's flights",
+   "ko": "오늘의 항공편",
+   "en": "Today's flights",
+   "files": [
+    "FlightDayBanner.swift:18"
    ],
    "args": [],
    "targets": [
@@ -58369,7 +58398,7 @@
    "ko": "일정 넣기",
    "en": "Add plan",
    "files": [
-    "TravelModeView.swift:828",
+    "TravelModeView.swift:830",
     "TravelPlanTable.swift:502",
     "TravelQuickEntrySheet.swift:223"
    ],
@@ -60243,6 +60272,7 @@
    "ko": "정기 스케줄 기준",
    "en": "Scheduled timetable",
    "files": [
+    "FlightDayBanner.swift:20",
     "FlightPickerSheet.swift:233"
    ],
    "args": [],
@@ -61018,8 +61048,8 @@
    "ko": "준비물",
    "en": "Prep items",
    "files": [
-    "TravelPrepSheet.swift:34",
-    "TravelModeView.swift:830"
+    "TravelModeView.swift:832",
+    "TravelPrepSheet.swift:34"
    ],
    "args": [],
    "targets": [
@@ -62118,7 +62148,7 @@
    "ko": "지출 넣기",
    "en": "Add expense",
    "files": [
-    "TravelModeView.swift:834",
+    "TravelModeView.swift:836",
     "TravelPlanTable.swift:517",
     "TravelPlanTable.swift:669"
    ],
@@ -63596,9 +63626,9 @@
    "ko": "취소",
    "en": "Cancel",
    "files": [
-    "FlightAlertNotice.swift:45",
     "AssistantBubble.swift:339",
-    "AssistantConnectView.swift:199"
+    "AssistantConnectView.swift:199",
+    "AssistantPINReset.swift:96"
    ],
    "args": [],
    "targets": [
@@ -64654,6 +64684,7 @@
    "ko": "탑승구 {0}",
    "en": "Gate {0}",
    "files": [
+    "FlightDayBanner.swift:49",
     "FlightPickerSheet.swift:213"
    ],
    "args": [
@@ -64680,6 +64711,7 @@
    "ko": "터미널 {0}",
    "en": "Terminal {0}",
    "files": [
+    "FlightDayBanner.swift:48",
     "FlightPickerSheet.swift:212"
    ],
    "args": [
@@ -66189,7 +66221,7 @@
    "en": "Find a flight",
    "files": [
     "FlightPickerSheet.swift:135",
-    "TravelModeView.swift:829"
+    "TravelModeView.swift:831"
    ],
    "args": [],
    "targets": [
