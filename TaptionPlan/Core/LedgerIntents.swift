@@ -88,6 +88,17 @@ enum PaymentTextCapture {
         return .unmatched
     }
 
+    /// 가계부 글이 아닌 알림을 AI 태스크(`notification_review`)로 맡긴다. 앱마다 「AI 알림 분석」을 켠 것만, 광고·인증 번호는 제외.
+    /// 「넣지 않을 낱말」·무시 규칙에 걸린 글은 `process`가 여기까지 오기 전에 걸러진다. 맡겼으면 안내 글, 아니면 nil.
+    static func delegateToAI(_ text: String, source: String?, now: Date, language: MapHomeLanguage, defaults: UserDefaults = .standard) -> String? {
+        guard LedgerMessageParser.isAIReviewCandidate(text), PaymentAlertSources.allowsAIReview(source, defaults: defaults) else { return nil }
+        var context = ["receivedAt": ISO8601DateFormatter().string(from: now)]
+        if let name = PaymentAlertSources.name(source) { context["sourceApp"] = name }
+        // 넣으면 올리기까지 `enqueue`가 한다. 연결된 AI가 없으면 맡길 곳이 없어 nil.
+        guard AITaskQueue.enqueue(.notificationReview, text: text, day: now, context: context, defaults: defaults) else { return nil }
+        return language.text("결제가 아닌 알림이라 AI에게 확인을 맡겼어요.", "Not a payment, so it was sent to your AI to review.")
+    }
+
     static func process(_ text: String, requiresTime: Bool, source: String? = nil, now: Date = .now) async -> (String, PaymentInbox.Outcome) {
         let language = MapHomeLanguage.current
         // 사용자가 정한 「넣지 않을 낱말」이 든 글은 넣지 않는다(SMS1114A01).
@@ -136,6 +147,8 @@ enum PaymentTextCapture {
         }
         // 자동화는 결제가 아닌 문자·알림도 넘긴다. 그런 글은 넣지도 AI에게 보내지도 않는다(SMA1111A01).
         guard LedgerMessageParser.isPaymentCandidate(text) else {
+            // 가계부가 아닌 알림(예매·예약·배송 등)은 버리지 않고 AI 태스크로 맡긴다(NTR1119A01).
+            if let sent = delegateToAI(text, source: source, now: now, language: language) { return (sent, .askedAI) }
             return (language.text("가계부에 넣을 결제 문자가 아니에요.", "Not a payment message, so nothing was added."), .skipped)
         }
         // 등록한 내 계좌로 옮기는 돈은 지출이 아니다(LIN1111A01).

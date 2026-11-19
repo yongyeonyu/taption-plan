@@ -67,6 +67,16 @@ enum LedgerMessageParser {
         text.count <= 1_000 && hasPaymentSign(text) && !isNotice(text) && amount(text) != nil
     }
 
+    /// 가계부 글이 아닌 알림 중 AI에게 맡길 만한 것(NTR1119A01): 예매 확정, 식당·병원·공연 예약, 배송 같은 안내.
+    /// 광고·인증 번호·비밀번호·수신 거부 안내와, 돈이 오간 글(결제·입출금·충전은 가계부 몫)은 맡기지 않는다.
+    static func isAIReviewCandidate(_ text: String) -> Bool {
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (8...1_000).contains(body.count) else { return false }
+        if neverPayments.contains(where: body.contains) || aiNeverWords.contains(where: { body.localizedCaseInsensitiveContains($0) }) { return false }
+        return !(hasPaymentSign(body) && amount(body) != nil)
+    }
+    private static let aiNeverWords = ["비밀번호", "보안코드", "otp", "verification code", "광고)", "수신거부", "무료거부", "080-"]
+
     /// 문자 자동화와 앱 알림 자동화가 같은 결제를 두 번 넘기면 하나만 남긴다. 같은 금액·통화·종류가 10분 안에 이미 있으면 같은 결제다.
     static func isDuplicate(_ entry: LedgerEntry, in entries: [LedgerEntry]) -> Bool {
         entries.contains {

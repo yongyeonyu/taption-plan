@@ -134,3 +134,98 @@ final class LedgerReviewTests: XCTestCase {
         XCTAssertFalse(LedgerMessageParser.looksLikeCardBill("신한카드 승인 12,000원 스타벅스", merchant: "스타벅스"))
     }
 }
+
+/// NTR1119A01: 결제 알림은 가계부로, 가계부가 아닌 예매·예약·배송 알림은 AI 태스크 큐(`notification_review`)로 간다.
+@MainActor
+final class NotificationReviewDelegationTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+    private let payment = "신한카드 승인 3,000원 가짜편의점"
+    private let booking = "[가짜티켓] 가짜 뮤지컬 예매가 확정되었어요. 11월 21일 19:30 3층 B열 2매 가짜극장"
+
+    private func defaults(connected: Bool = true) throws -> UserDefaults {
+        let store = try XCTUnwrap(UserDefaults(suiteName: "NotificationReviewTests-\(UUID())"))
+        if connected { store.set(["key": "피클"], forKey: AssistantKeyLabels.labelsKey) }
+        return store
+    }
+
+    func testPaymentGoesToLedgerAndBookingGoesToAI() throws {
+        XCTAssertTrue(LedgerMessageParser.isPaymentCandidate(payment))
+        XCTAssertFalse(LedgerMessageParser.isAIReviewCandidate(payment), "결제는 가계부 몫이다")
+        XCTAssertFalse(LedgerMessageParser.isPaymentCandidate(booking))
+        XCTAssertTrue(LedgerMessageParser.isAIReviewCandidate(booking))
+
+        let store = try defaults()
+        PaymentAlertSources.set(.init(name: "가짜앱", lastSeen: now, aiAnalysis: true), defaults: store)
+        XCTAssertNil(PaymentTextCapture.delegateToAI(payment, source: "가짜앱", now: now, language: .korean, defaults: store))
+        XCTAssertTrue(AITaskQueue.pendingUploads(store).isEmpty, "결제 글은 알림 분석 일로 올리지 않는다")
+
+        let message = try XCTUnwrap(PaymentTextCapture.delegateToAI(booking, source: "가짜앱", now: now, language: .korean, defaults: store))
+        XCTAssertFalse(message.isEmpty)
+        let task = try XCTUnwrap(AITaskQueue.pendingUploads(store).first)
+        XCTAssertEqual(task.kind, .notificationReview)
+        XCTAssertEqual(task.kind.rawValue, "notification_review")
+        XCTAssertEqual(task.text, booking)
+        XCTAssertEqual(task.context?["sourceApp"], "가짜앱")
+        XCTAssertEqual(task.context?["receivedAt"], ISO8601DateFormatter().string(from: now))
+        XCTAssertEqual(task.date, AITaskQueue.dayText(now))
+    }
+
+    func testAdsCodesAndSkippedTextsAreNotDelegated() throws {
+        let store = try defaults()
+        PaymentAlertSources.set(.init(name: "가짜앱", lastSeen: now, aiAnalysis: true), defaults: store)
+        for text in ["(광고) 가짜식당 가을 이벤트 안내입니다. 많은 관심 부탁드려요", "[가짜은행] 인증번호 123456을 입력해 주세요 타인 노출 금지",
+                     "가짜쇼핑 혜택 안내 무료거부 080-000-0000 수신거부", "가짜앱 비밀번호 변경 안내입니다 확인해 주세요", "짧음"] {
+            XCTAssertFalse(LedgerMessageParser.isAIReviewCandidate(text), text)
+            XCTAssertNil(PaymentTextCapture.delegateToAI(text, source: "가짜앱", now: now, language: .korean, defaults: store), text)
+        }
+        XCTAssertTrue(AITaskQueue.pendingUploads(store).isEmpty)
+        // 「넣지 않을 낱말」이 든 글은 `process`가 여기 오기 전에 걸러 AI에도 가지 않는다.
+        let standard = UserDefaults.standard
+        let before = PaymentAlertSources.skipWords(standard)
+        PaymentAlertSources.addSkipWord("가짜광고낱말", defaults: standard)
+        defer { PaymentAlertSources.removeSkipWord("가짜광고낱말", defaults: standard); XCTAssertEqual(PaymentAlertSources.skipWords(standard), before) }
+        XCTAssertNotNil(PaymentAlertSources.skipWord(in: booking + " 가짜광고낱말", defaults: standard))
+    }
+
+    func testNeedsAConnectionAndTheAppSwitch() throws {
+        let unconnected = try defaults(connected: false)
+        PaymentAlertSources.set(.init(name: "가짜앱", lastSeen: now, aiAnalysis: true), defaults: unconnected)
+        XCTAssertNil(PaymentTextCapture.delegateToAI(booking, source: "가짜앱", now: now, language: .korean, defaults: unconnected), "맡길 AI가 없다")
+
+        let store = try defaults()
+        XCTAssertFalse(PaymentAlertSources.allowsAIReview("가짜앱", defaults: store), "처음 본 앱은 꺼 둔다(사용자가 고른 앱만)")
+        XCTAssertNil(PaymentTextCapture.delegateToAI(booking, source: "가짜앱", now: now, language: .korean, defaults: store))
+        PaymentAlertSources.set(.init(name: "가짜앱", lastSeen: now, aiAnalysis: true), defaults: store)
+        XCTAssertNotNil(PaymentTextCapture.delegateToAI(booking, source: "가짜앱", now: now, language: .korean, defaults: store), "고른 앱은 맡긴다")
+        PaymentAlertSources.set(.init(name: "가짜앱", lastSeen: now, aiAnalysis: false), defaults: store)
+        XCTAssertNil(PaymentTextCapture.delegateToAI(booking, source: "가짜앱", now: now, language: .korean, defaults: store), "앱마다 끌 수 있다")
+        XCTAssertFalse(PaymentAlertSources.allowsAIReview(nil, defaults: store))
+        // 문자와 메신저 앱은 스위치가 켜져 있어도 안 된다.
+        for name in [PaymentAlertSources.smsName, "카카오톡", "KakaoTalk", "LINE", "라인", "Telegram", "WhatsApp", "메시지", "Messenger", "Slack", "iMessage"] {
+            PaymentAlertSources.set(.init(name: name, lastSeen: now, aiAnalysis: true), defaults: store)
+            XCTAssertFalse(PaymentAlertSources.allowsAIReview(name, defaults: store), name)
+            XCTAssertNil(PaymentTextCapture.delegateToAI(booking, source: name, now: now, language: .korean, defaults: store), name)
+        }
+        XCTAssertFalse(PaymentAlertSources.isMessenger("가짜항공 Airline"), "line이 든 이름이 모두 메신저는 아니다")
+        XCTAssertFalse(PaymentAlertSources.isMessenger("가짜티켓"))
+        XCTAssertTrue(AITaskQueue.pendingUploads(store).count == 1)
+        // 지출·수입 스위치와는 따로다.
+        PaymentAlertSources.set(.init(name: "가짜앱", expense: false, income: false, lastSeen: now, aiAnalysis: true), defaults: store)
+        XCTAssertTrue(PaymentAlertSources.allowsAIReview("가짜앱", defaults: store))
+    }
+
+    func testOldSourcesWithoutTheSwitchStillDecode() throws {
+        let old = #"[{"name":"가짜앱","expense":true,"income":false,"lastSeen":0}]"#
+        let store = try defaults()
+        store.set(Data(old.utf8), forKey: PaymentAlertSources.key)
+        let sources = PaymentAlertSources.all(store)
+        XCTAssertEqual(sources.map(\.name), ["가짜앱"])
+        XCTAssertNil(sources.first?.aiAnalysis)
+        XCTAssertFalse(PaymentAlertSources.allowsAIReview("가짜앱", defaults: store), "예전 저장값은 꺼진 채로")
+    }
+
+    func testNonPaymentNotificationIsNotAddedToTheLedger() async {
+        let (message, outcome) = await PaymentTextCapture.process(booking, requiresTime: false, source: "가짜앱", now: now)
+        XCTAssertEqual(outcome, .skipped, "AI에 연결되지 않은 기기에서는 가계부에도 AI에도 가지 않는다: \(message)")
+    }
+}

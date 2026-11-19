@@ -9,8 +9,29 @@ enum PaymentAlertSources {
         var expense = true
         var income = true
         var lastSeen: Date
+        /// 「AI 알림 분석」(NTR1119A01): 가계부가 아닌 알림을 AI에게 맡길지. 사용자가 고른 앱만 켠다(기본 꺼짐).
+        /// 문자와 메신저 앱은 켤 수 없다(대표 결정 2026-11-19: 문자는 결제 문자만, 메신저는 선택 불가로 고정).
+        var aiAnalysis: Bool?
         var id: String { name }
+        var reviewsWithAI: Bool { aiAnalysis == true && PaymentAlertSources.canReviewWithAI(name) }
     }
+
+    // MARK: 알림 AI 분석 대상 (NTR1119A01)
+
+    /// 메신저·메시지 앱. 사적인 대화라 AI 알림 분석을 켤 수 없다(하드코딩).
+    private static let messengerExact: Set<String> = ["line", "라인", "band", "밴드", "signal", "시그널", "메시지", "message", "messages", "문자", "sms", "mms"]
+    private static let messengerWords = [
+        "카카오톡", "kakaotalk", "텔레그램", "telegram", "whatsapp", "왓츠앱", "위챗", "wechat", "messenger", "메신저", "discord", "디스코드",
+        "slack", "슬랙", "viber", "바이버", "imessage", "아이메시지", "instagram", "인스타그램", "facebook", "페이스북", "네이트온", "마이피플", "teams"
+    ]
+
+    static func isMessenger(_ raw: String) -> Bool {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return messengerExact.contains(name) || messengerWords.contains(where: name.contains)
+    }
+
+    /// AI 알림 분석을 켤 수 있는 출처인가: 문자와 메신저 앱은 아니다.
+    static func canReviewWithAI(_ name: String) -> Bool { name != smsName && !isMessenger(name) }
 
     static let key = "paymentAlertSources"
     static let limit = 40
@@ -96,6 +117,12 @@ enum PaymentAlertSources {
         return income ? lane.income : lane.expense
     }
 
+    /// 가계부가 아닌 이 앱의 알림을 AI에게 맡겨도 되는가. 사용자가 그 앱에서 「AI 알림 분석」을 켰을 때만. 문자·메신저 앱은 늘 안 된다.
+    static func allowsAIReview(_ raw: String?, defaults: UserDefaults = .standard) -> Bool {
+        guard let name = name(raw) else { return false }
+        return all(defaults).first(where: { $0.name == name })?.reviewsWithAI ?? false
+    }
+
     /// 꺼 둔 종류라 넣지 않았다고 알리는 글.
     static func blockedMessage(_ raw: String?, income: Bool, language: MapHomeLanguage) -> String {
         let app = name(raw) ?? ""
@@ -141,6 +168,22 @@ struct PaymentAlertSourcesView: View {
                 Section {
                     Toggle(language.text("지출", "Spending"), isOn: $source.expense)
                     Toggle(language.text("수입", "Income"), isOn: $source.income)
+                    // 가계부가 아닌 알림(예매·예약·배송)을 AI에게 맡겨 일정·메모로 정리하게 한다(NTR1119A01). 고른 앱만, 문자·메신저는 선택 불가.
+                    if source.name == PaymentAlertSources.smsName {
+                        Text(language.text("문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.", "Texts are only used for payment messages in the ledger. AI notification review isn't used."))
+                            .font(.taptionStyle(.caption)).foregroundStyle(Color.tpSecondary)
+                    } else if PaymentAlertSources.isMessenger(source.name) {
+                        Toggle(language.text("AI 알림 분석", "AI notification review"), isOn: .constant(false)).disabled(true)
+                        Text(language.text("메신저 앱의 알림은 AI에게 보내지 않아요.", "Messenger app alerts are never sent to your AI."))
+                            .font(.taptionStyle(.caption)).foregroundStyle(Color.tpSecondary)
+                    } else {
+                        Toggle(language.text("AI 알림 분석", "AI notification review"), isOn: Binding(
+                            get: { source.reviewsWithAI }, set: { source.aiAnalysis = $0 }
+                        ))
+                        Text(language.text("가계부가 아닌 알림(예매·예약·배송 등)을 AI에게 보내 일정·메모로 정리해요. 광고·인증 번호는 보내지 않아요.",
+                                           "Sends alerts that aren't payments (bookings, reservations, deliveries) to your AI to file as events or memos. Ads and verification codes are never sent."))
+                            .font(.taptionStyle(.caption)).foregroundStyle(Color.tpSecondary)
+                    }
                     if source.name != PaymentAlertSources.smsName {
                         Button(role: .destructive) {
                             PaymentAlertSources.remove(source.name)

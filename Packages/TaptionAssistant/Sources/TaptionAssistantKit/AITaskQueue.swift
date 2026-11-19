@@ -20,6 +20,8 @@ public enum AITaskQueue {
         case paymentRule = "payment_rule"
         /// 계획보다 밀렸거나 예산을 넘겨 남은 일정을 다시 짜 달라는 부탁(PVR1114A13).
         case replan
+        /// 가계부로 읽지 않은 알림(예매·예약·배송 같은 안내)을 AI가 일정·메모로 정리해 달라는 부탁(NTR1119A01).
+        case notificationReview = "notification_review"
         case other
 
         /// 서버가 새 종류를 더해도 목록이 깨지지 않게 모르는 값은 `other`로 읽는다(AIP1114A05).
