@@ -228,7 +228,7 @@ POI 팩·모델도 같은 방식(`packs/…`, `models/…`). 배포 뒤 확인: 
 
 ## 오분류 교정 표본 모으기 (CLS1119A01)
 
-앱의 「분류 개선 데이터 수집」(MSC1119A01)을 켠 사용자가 **「보내기」를 눌렀을 때만** 올리는 비식별 표본을 D1 표 `misclass_samples`에 쌓습니다(마이그레이션 `migrations/0002_misclass_samples.sql`). 앱 쪽 업로드 단추는 이번 범위가 아니며(후속 요청), 서버 엔드포인트와 표만 먼저 있습니다. 코드는 `src/classifier.js`.
+앱의 「분류 개선 데이터 수집」(MSC1119A01)을 켠 사용자가 **「보내기」를 눌렀을 때만** 올리는 비식별 표본을 D1 표 `misclass_samples`에 쌓습니다(마이그레이션 `migrations/0002_misclass_samples.sql`). 앱의 「서버로 보내기」(MSC1119B01)가 이 경로를 부르고, 모인 표본은 `scripts/classifier-report.mjs`로 맥에서 집계합니다(아래). 코드는 `src/classifier.js`.
 
 | 경로 | 누가 | 응답 |
 | --- | --- | --- |
@@ -241,6 +241,16 @@ POI 팩·모델도 같은 방식(`packs/…`, `models/…`). 배포 뒤 확인: 
 - **보관 1년**(대표 결정 2026-11-19): 올릴 때마다 1년이 지난 표본을 지웁니다(예약 작업 없음).
 - **한도**(대표 결정 2026-11-19): 한 번 200건·1MB, 하루 2,000건(주인별).
 
+### 맥에서 표본 집계 (MSC1119B02)
+
+```sh
+CLASSIFIER_ADMIN_TOKEN=… node scripts/classifier-report.mjs --host <중계 서버 주소> [--rule-version classifier-v1r4] [--min-count 5] [--json] [--save 표본.json]
+node scripts/classifier-report.mjs --token-file <토큰 파일> --host <주소>   # 토큰을 셸 기록에 남기지 않으려면
+node scripts/classifier-report.mjs --input 표본.json                       # 받아 둔 표본으로 다시 집계(서버를 부르지 않음)
+```
+
+`GET /classifier-samples/admin`을 500건씩 끝까지 읽어(읽기만 합니다) 「자동 분류 → 사용자 분류」 쌍별로 건수·시간대·요일·움직임·속도·확신도를 집계하고, 같은 쌍이 `--min-count`건(기본 5) 이상 반복된 것을 규칙 고칠 후보로 문장으로 요약합니다(예: 확신도 high인데 틀림 → 점수 구간 재보정, 직접 만든 분류 반복 → 새 상세 분류, 이동수단 경계 속도 점검). 토큰은 환경변수나 `--token-file`로만 받고 출력·로그에 쓰지 않으며, 서버 주소도 인자로만 받습니다. `--save`는 표본 원본을 파일로 남기므로 저장소 밖에 둡니다. 시험은 `test/classifier-report.test.mjs`.
+
 ### 배포 (대표님이 하는 일 — 아직 안 했습니다)
 
 ```sh
@@ -250,7 +260,7 @@ npm test
 npx wrangler deploy --config wrangler.local.toml
 ```
 
-마이그레이션 없이 배포하면 표가 없어 `POST`가 `500`입니다. 순서를 지켜 주세요. 앱이 아직 이 경로를 부르지 않으므로 배포해도 사용자에게 달라지는 것은 없습니다.
+마이그레이션 없이 배포하면 표가 없어 `POST`가 `500`입니다. 순서를 지켜 주세요. 앱 빌드 354는 이 경로를 아직 부르지 않으므로 서버만 배포해도 사용자에게 달라지는 것은 없습니다. 「서버로 보내기」가 든 앱 빌드가 나가려면 이 배포가 먼저여야 합니다(없으면 앱이 500을 받아 「서버가 받지 못했어요」를 보입니다).
 
 ## 여행 공유 방(TSH1114A26)
 

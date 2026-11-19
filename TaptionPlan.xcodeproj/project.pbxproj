@@ -382,6 +382,7 @@
 		5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B1F /* AppLockAndPIN.swift */; };
 		5BL1110A010000000000000A /* LedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BL1110A010000000000000F /* LedgerTests.swift */; };
 		A1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift */; };
+		A1MSC1119B01000000000012 /* MisclassificationUploaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119B01000000000012 /* MisclassificationUploaderTests.swift */; };
 		A1ENC1119A01000000000003 /* EnergyCurveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ENC1119A01000000000003 /* EnergyCurveTests.swift */; };
 		A1ANN1119A01000000000003 /* AnnouncementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000003 /* AnnouncementTests.swift */; };
 		A1TGT1118A01000000000002 /* LedgerTollGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TGT1118A01000000000002 /* LedgerTollGateTests.swift */; };
@@ -594,6 +595,8 @@
 		C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A02F0000000000000 /* TravelPuzzle.swift */; };
 		C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */; };
 		A1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift */; };
+		A1MSC1119B01000000000011 /* MapHomeClassificationUploadSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119B01000000000011 /* MapHomeClassificationUploadSheet.swift */; };
+		A1MSC1119B01000000000010 /* MisclassificationUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119B01000000000010 /* MisclassificationUploader.swift */; };
 		A1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift */; };
 		A1ANN1119A01000000000002 /* AnnouncementBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000002 /* AnnouncementBanner.swift */; };
 		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
@@ -1219,6 +1222,7 @@
 		5B0000000000000000000B1F /* AppLockAndPIN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockAndPIN.swift; sourceTree = "<group>"; };
 		5BL1110A010000000000000F /* LedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTests.swift; sourceTree = "<group>"; };
 		F1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MisclassificationCollectorTests.swift; sourceTree = "<group>"; };
+		F1MSC1119B01000000000012 /* MisclassificationUploaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MisclassificationUploaderTests.swift; sourceTree = "<group>"; };
 		F1ENC1119A01000000000003 /* EnergyCurveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyCurveTests.swift; sourceTree = "<group>"; };
 		F1ANN1119A01000000000003 /* AnnouncementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementTests.swift; sourceTree = "<group>"; };
 		F1TGT1118A01000000000002 /* LedgerTollGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollGateTests.swift; sourceTree = "<group>"; };
@@ -1429,6 +1433,8 @@
 		C1A1116A02F0000000000000 /* TravelPuzzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzle.swift; sourceTree = "<group>"; };
 		C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleDrawer.swift; sourceTree = "<group>"; };
 		F1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeClassificationDataRow.swift; sourceTree = "<group>"; };
+		F1MSC1119B01000000000011 /* MapHomeClassificationUploadSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeClassificationUploadSheet.swift; sourceTree = "<group>"; };
+		F1MSC1119B01000000000010 /* MisclassificationUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MisclassificationUploader.swift; sourceTree = "<group>"; };
 		F1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeEnergyCurveCard.swift; sourceTree = "<group>"; };
 		F1ANN1119A01000000000002 /* AnnouncementBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
@@ -1896,6 +1902,7 @@
 				F40000000000000000000006 /* SensorDayStoreTests.swift */,
 				5BL1110A010000000000000F /* LedgerTests.swift */,
 				F1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift */,
+				F1MSC1119B01000000000012 /* MisclassificationUploaderTests.swift */,
 				F1ENC1119A01000000000003 /* EnergyCurveTests.swift */,
 				F1ANN1119A01000000000003 /* AnnouncementTests.swift */,
 				F1TGT1118A01000000000002 /* LedgerTollGateTests.swift */,
@@ -2061,6 +2068,8 @@
 				C1A1116A02F0000000000000 /* TravelPuzzle.swift */,
 				C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */,
 				F1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift */,
+				F1MSC1119B01000000000011 /* MapHomeClassificationUploadSheet.swift */,
+				F1MSC1119B01000000000010 /* MisclassificationUploader.swift */,
 				F1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift */,
 				F1ANN1119A01000000000002 /* AnnouncementBanner.swift */,
 				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
@@ -3101,6 +3110,8 @@
 				C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */,
 				C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */,
 				A1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift in Sources */,
+				A1MSC1119B01000000000011 /* MapHomeClassificationUploadSheet.swift in Sources */,
+				A1MSC1119B01000000000010 /* MisclassificationUploader.swift in Sources */,
 				A1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift in Sources */,
 				A1ANN1119A01000000000002 /* AnnouncementBanner.swift in Sources */,
 				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
@@ -3548,6 +3559,7 @@
 				A40000000000000000000008 /* SensorDayStoreTests.swift in Sources */,
 				5BL1110A010000000000000A /* LedgerTests.swift in Sources */,
 				A1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift in Sources */,
+				A1MSC1119B01000000000012 /* MisclassificationUploaderTests.swift in Sources */,
 				A1ENC1119A01000000000003 /* EnergyCurveTests.swift in Sources */,
 				A1ANN1119A01000000000003 /* AnnouncementTests.swift in Sources */,
 				A1TGT1118A01000000000002 /* LedgerTollGateTests.swift in Sources */,
