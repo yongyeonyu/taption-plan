@@ -165,9 +165,8 @@ extension HwarangPainter {
     /// 머리보다 먼저, 몸보다 나중에 부른다. 띠는 머리 윤곽을 따라 돌고 양 끝은 머리 뒤로 숨는다.
     /// `swing`은 지금부터 과거로 갈수록 오래된 머리 속도(세계 좌표/초), `wind`는 달리는 바람(뒤쪽이 양수)이다.
     func drawScarf(_ capeOrScarf: HwarangClothStyle, neck: HwarangNeck, swing: [CGVector], wind: CGFloat, phase: CGFloat, showsStrands strands: Bool = true) {
-        // 시즌 팩이 망토를 주면 목도리 자리에 망토(빨간 천 + 하얀 털 옷깃·단 + 솜방울)를 그린다.
+        // 시즌 팩이 망토를 주면 목도리 자리에는 하얀 털 옷깃과 솜방울을 그리고, 망토 천은 몸통에 `paintSeasonCape`로 입힌다.
         let isCape = seasonLook?.cape == true
-        if isCape { drawCape(capeOrScarf, neck: neck) }
         let style = isCape ? HwarangClothStyle(base: 0xFFF8EE, shade: 0xE1E7F2, accent: 0xFFFFFF, trim: 0xFFFFFF, pattern: .dots) : capeOrScarf
         let showsStrands = strands && !isCape
         let hs: CGFloat = small ? 1.72 : 1.5
@@ -228,42 +227,6 @@ extension HwarangPainter {
         }
         c.restoreGState()
         if isCape { drawCapeBells(at: knot, axis: neck.toward) }
-    }
-
-    /// 어깨를 덮는 망토. 머리 뒤에서 목 아래로 늘어지고 밑단은 물결 모양 하얀 털단이다. 목도리와 같은 목 기준점(`neck`)을 쓴다.
-    func drawCape(_ cloth: HwarangClothStyle, neck: HwarangNeck) {
-        let hs: CGFloat = small ? 1.72 : 1.5, ax = neck.toward, n = P(-ax.y, ax.x)
-        let a = atan2(ax.y, ax.x)
-        let chinR = headRadius(a - neck.tilt, hs: hs) - (1 - neck.snug) * 7 + 1
-        let top = P(neck.head.x + ax.x * chinR, neck.head.y + ax.y * chinR)
-        let len: CGFloat = small ? 33 : 31, topW: CGFloat = 11, botW: CGFloat = small ? 27 : 25
-        func pt(_ u: CGFloat, _ v: CGFloat) -> CGPoint {
-            let w = lerp(topW, botW, u)
-            return P(top.x + ax.x * len * u + n.x * w * v - 3 * u, top.y + ax.y * len * u + n.y * w * v)
-        }
-        func body() {
-            c.beginPath(); c.move(to: pt(0, -1)); c.addQuadCurve(to: pt(1, -1), control: pt(0.5, -1.16))
-            for i in 0..<4 { let v0 = -1 + 0.5 * CGFloat(i), v1 = v0 + 0.5; c.addQuadCurve(to: pt(1, v1), control: pt(1.12, (v0 + v1) / 2)) }
-            c.addQuadCurve(to: pt(0, 1), control: pt(0.5, 1.16)); c.closePath()
-        }
-        c.setLineJoin(.round); c.setLineCap(.round)
-        fill(cloth.base); body(); c.fillPath()
-        c.saveGState(); body(); c.clip()
-        // 뒤쪽 그늘, 주름, 어깨 위쪽 빛.
-        fill(cloth.shade, 0.6); c.beginPath(); c.move(to: pt(0, -1)); c.addLine(to: pt(1.2, -1)); c.addLine(to: pt(1.2, -0.25)); c.addQuadCurve(to: pt(0, -0.2), control: pt(0.5, -0.5)); c.closePath(); c.fillPath()
-        stroke(0x1E120A, 0.9, 0.22); c.beginPath()
-        for v: CGFloat in [-0.45, 0.25, 0.62] { c.move(to: pt(0.25, v * 0.8)); c.addLine(to: pt(0.98, v)) }
-        c.strokePath()
-        stroke(white, 1.2, 0.3); c.beginPath(); c.move(to: pt(0.12, 0.7)); c.addQuadCurve(to: pt(0.7, 0.9), control: pt(0.4, 0.95)); c.strokePath()
-        c.restoreGState()
-        stroke(outline, max(outlineWidth * 0.8, 1.6)); body(); c.strokePath()
-        // 밑단 하얀 털단: 겹친 동그라미.
-        for pass in 0..<2 {
-            for v in stride(from: CGFloat(-1), through: 1, by: 0.14) {
-                let p = pt(1.03, v), r: CGFloat = small ? 3.2 : 2.8
-                if pass == 0 { fill(outline); c.beginPath(); circle(p.x, p.y, r + 0.9); c.fillPath() } else { fill(0xFFFDF8); c.beginPath(); circle(p.x, p.y, r); c.fillPath() }
-            }
-        }
     }
 
     /// 망토 앞 매듭 밑에 달리는 하얀 솜방울 둘(빨간 끈).
