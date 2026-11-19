@@ -69,14 +69,13 @@ struct RenderTests {
         #expect(own == SeasonPackAccessorySlots(hat: "tophat", scarf: "plaid", ribbon: nil)) // 원본은 지워지지 않았다
     }
 
-    @Test func christmasDressesAllCatsWithHatNoseAntlersScarfAndRibbon() {
+    @Test func christmasDressesAllCatsWithSantaHatNoseCapeAndRibbon() {
         let slots = christmas.manifest.slots!
         #expect(slots.accessory?.layers.hat != nil) // 모자만 그림 파일
         #expect(slots.accessory?.layers.scarf == nil && slots.accessory?.layers.ribbon == nil) // 목도리·리본은 리그가 천으로 그린다
         let costume = slots.costume!
         #expect(costume.redNose == true)
-        #expect(costume.antlers == "B98458")
-        #expect(costume.scarf?.base == "D63A3A") // 빨간 목도리
+        #expect(costume.cape == true && costume.scarf?.base == "D63A3A") // 목도리 자리의 빨간 망토
         #expect(costume.ribbon?.base == "2F9E58") // 초록 꼬리 리본
         #expect(slots.outfit == nil) // 겉옷 그림은 없다 — 세 고양이 모두 같은 복장
     }

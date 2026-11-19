@@ -14,7 +14,7 @@
 | 넓은 화면(폭 600pt 이상) 왼쪽 패널(메뉴·달력은 한 열 스크롤) | `TaptionPlan/UI/MapHomeWideLayoutPolicy.swift`, 구성안은 `docs/IPAD_UI.md` |
 | 집 아이콘의 위치 기준 하늘(해·달·노을) | `TaptionPlan/UI/MapHomeHomeSkyMath.swift`, `MapHomeHomeSkyArt.swift` |
 | 화랑이 장면·소품 | `TaptionPlan/UI/HwarangRig.swift`, `HwarangRigProps.swift`, `HwarangRigDailyScenes.swift`, `HwarangRigAccessories.swift` |
-| 시즌 이벤트 팩(성탄 등 기간 한정 이벤트: 배급·판정·표현·상호작용·아이콘 레지스트리) | `Packages/SeasonPackKit`(앱 타입을 모름), 앱 쪽은 `TaptionPlan/Core/SeasonPackAdapter.swift`(`SeasonPackHost` 구현)와 `MapHomeView+Support.swift`의 오버레이·새로고침 연결, 팩 그림 생성 `tools/season-pack/`, 설계 `docs/SEASON_PACK_PLAN.md` |
+| 시즌 이벤트 팩(성탄 등 기간 한정 이벤트: 배급·판정·표현·상호작용·아이콘 레지스트리) | `Packages/SeasonPackKit`(앱 타입을 모름), 앱 쪽은 `TaptionPlan/Core/SeasonPackAdapter.swift`(`SeasonPackHost` 구현)와 `MapHomeView+Support.swift`의 오버레이·새로고침 연결, 팩 그림 생성 `tools/season-pack/`, 팩 파일(`.bpack`)·카탈로그 만들기 `scripts/season-pack/build_bpack.py`(이어 받기 구조는 설계 문서 3절), 설계 `docs/SEASON_PACK_PLAN.md` |
 | 지도 안개(세기 정책·벡터/Apple 지도 렌더러) | `TaptionPlan/UI/MapHomeFogLayer.swift` |
 | 벡터 지도 자동 오프라인 저장(파일 저장소·기간/LRU 정리·Wi-Fi 판정·MapLibre 가로채기) | `TaptionPlan/Core/OfflineVectorTiles.swift`, `OfflineVectorTileCache.swift` |
 | 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |

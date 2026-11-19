@@ -21,3 +21,21 @@ struct SeasonPackCreditsRow: View {
         }
     }
 }
+
+/// 설정 › 내 데이터 아래의 「시즌 팩 업데이트」 상태 줄(SEA1119A01): 받는 중 진행률·중단·실패를 보여 준다. 문구는 패키지가 ko/en으로 준다.
+struct SeasonPackUpdateRow: View {
+    let language: MapHomeLanguage
+
+    var body: some View {
+        let center = SeasonPackCenter.shared
+        HStack {
+            Text(language.text("시즌 팩 업데이트", "Season pack updates"))
+            Spacer()
+            Text(center.downloadStatus.label(language: AnnouncementPolicy.languageCode(language: language)))
+                .font(.footnote).foregroundStyle(.secondary)
+            if case .downloading(let received, let total) = center.downloadStatus, total > 0 {
+                ProgressView(value: Double(received), total: Double(total)).frame(width: 44)
+            }
+        }
+    }
+}

@@ -178,8 +178,76 @@ def gift(kind):
     return art.out()
 
 
+# ---- 갈색 펠트 사슴뿔 (산타 모자 뒤로 솟는다) -------------------------------------------------------
+FELT = ((170, 112, 70), (112, 70, 42))
+FELT_EDGE = (74, 44, 28)
+
+
+def _taper_segments(pts, w0, w1, steps=14):
+    """점들을 지나는 부드러운 곡선을 (x, y, 굵기) 표본으로."""
+    out = []
+    n = len(pts) - 1
+    for i in range(n):
+        p0, p1, p2, p3 = pts[max(i - 1, 0)], pts[i], pts[i + 1], pts[min(i + 2, n)]
+        for k in range(steps):
+            u = k / steps
+
+            def cr(a, b, c, d):
+                return 0.5 * (2 * b + (-a + c) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (-a + 3 * b - 3 * c + d) * u ** 3)
+
+            t = (i + u) / n
+            out.append((cr(p0[0], p1[0], p2[0], p3[0]), cr(p0[1], p1[1], p2[1], p3[1]), w0 + (w1 - w0) * t))
+    out.append((*pts[-1], w1))
+    return out
+
+
+def _felt_antler(art, stem, branches, mirror):
+    def fx(x):
+        return 360 - x if mirror else x
+
+    shapes = [_taper_segments([(fx(x), y) for x, y in stem[0]], stem[1], stem[2])]
+    for pts, w0, w1 in branches:
+        shapes.append(_taper_segments([(fx(x), y) for x, y in pts], w0, w1))
+
+    def paint(grow, fill, alpha=1.0, shift=(0, 0)):
+        def fn(d, s=art._s):
+            for samples in shapes:
+                for x, y, w in samples:
+                    if w / 2 + grow <= 0.4:
+                        continue
+                    r = s(w / 2 + grow)
+                    cx, cy = s(x + shift[0]), s(y + shift[1])
+                    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=255)
+
+        art._put(fill, art._mask(fn), alpha)
+
+    paint(3.2, FELT_EDGE)                       # 겉선
+    paint(0, ("v", FELT[0], FELT[1], 10, 220))   # 펠트 본색
+    paint(-6.0, (190, 134, 90), 0.55, shift=(-2.2 if not mirror else 2.2, -1.5))  # 말랑한 윗면 빛
+
+    def mask_fn(d, s=art._s):
+        for samples in shapes:
+            for x, y, w in samples:
+                r = s(max(w / 2 - 1, 1))
+                d.ellipse([s(x) - r, s(y) - r, s(x) + r, s(y) + r], fill=255)
+
+    art.texture(mask_fn, 520, 11 if not mirror else 12, (206, 154, 108), (104, 64, 40), length=(3, 7), width=1.0, alpha=0.32)
+
+
+def _hat_antlers(art):
+    """큰 몸통 하나에 가지가 갈라진다. 끝에 붙은 두 가닥 중 작은 것은 뺐다(안쪽 가지만 남김)."""
+    stem = ([(82, 222), (68, 156), (54, 84), (48, 16)], 40, 20)
+    branches = [
+        ([(74, 180), (52, 166), (28, 136)], 29, 16),   # 바깥 아래
+        ([(66, 140), (94, 122), (108, 90)], 27, 15),   # 안쪽
+    ]
+    for mirror in (False, True):
+        _felt_antler(art, stem, branches, mirror)
+
+
 def santa_hat():
     art = Art(360, 318)
+    _hat_antlers(art)
     art.shadow(lambda d, s: d.polygon([(s(70), s(260)), (s(190), s(60)), (s(300), s(260))], fill=255), color=(60, 10, 20), alpha=0.25, blur=6, dy=4)
     # 휘어진 몸통
     body = [(52, 258), (92, 150), (150, 80), (214, 56), (262, 78), (288, 128), (312, 258)]
@@ -196,6 +264,12 @@ def santa_hat():
         x = 40 + i * 34
         art.ellipse((x - 20, 226, x + 20, 262), ("v", (255, 255, 255), (230, 238, 250), 226, 262))
     art.texture(lambda d: d.rounded_rectangle([22 * 4, 236 * 4, 338 * 4, 312 * 4], radius=36 * 4, fill=255), 140, 9, (255, 255, 255), (186, 200, 224), length=(5, 10), alpha=0.6)
+    # 고양이 그림과 같은 진한 갈색 윤곽선을 두른다(하얀 털 위에서도 모자가 또렷하게).
+    from PIL import ImageFilter
+    grown = art.im.split()[3].filter(ImageFilter.GaussianBlur(5)).point(lambda v: 255 if v > 6 else 0)
+    edge = Image.new("RGBA", art.im.size, FELT_EDGE + (255,))
+    edge.putalpha(grown)
+    art.im = Image.alpha_composite(edge, art.im)
     return art.out()
 
 
@@ -348,3 +422,4 @@ def star_icon():
     art.glow(48, 50, 36, (255, 220, 120), 0.4)
     rounded_star(art, 48, 50, 36, (255, 240, 150), (228, 150, 30), outline=(170, 110, 20, 90))
     return art.out()
+

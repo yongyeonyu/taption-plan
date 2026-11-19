@@ -178,7 +178,7 @@ struct CenterTests {
             let (center, _) = await make(at: Fixture.date(2026, 12, 25, 21), character: character)
             #expect(center.characterLayers(includeHat: false).isEmpty) // 겉옷·목도리 그림 없음: 리그가 직접 그린다
             #expect(center.accessoryImageData("hat") != nil)
-            #expect(center.costume?.redNose == true && center.costume?.antlers != nil)
+            #expect(center.costume?.redNose == true)
             #expect(center.costume?.scarf != nil && center.costume?.ribbon != nil)
             #expect(center.activeSnow != nil) // 트리가 나오면 눈꽃도 같이
         }

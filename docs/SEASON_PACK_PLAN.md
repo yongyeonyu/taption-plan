@@ -45,7 +45,17 @@ packs/season/<packId>/<version>/<파일…>
 
 ## 3. 배급·보관
 
-- 받기: 앱 진입과 `scenePhase == .active`. 인덱스 → 지금과 ±45일 안의 팩 매니페스트 → 파일 → 검증 → 설치. 30분 쿨다운·ETag·8초·한 번 시도·실패는 조용히(공지 `AnnouncementService`와 같은 정책). 요청은 인증·식별자·쿼리·쿠키 없는 `GET` 하나이고 좌표·기기 id·계정을 싣지 않습니다. 저데이터·셀룰러에서는 2MB 넘는 팩을 받지 않습니다(`OfflineVectorNetworkStatus`).
+**현재 방식(2026-11-20~): 팩 하나 = 파일 하나(`.bpack`)를 이어 받기.** 아래 「예전 방식」은 카탈로그 항목에 `archive`가 없을 때만 쓰는 호환 경로입니다.
+
+- 파일 `<id>-<version>.bpack`(압축 없는 단순 컨테이너, `SeasonPackArchive`): `"BSPK" | 형식 버전 1 | 매니페스트 길이(u32 BE) | 매니페스트 JSON | assets 순서대로 파일 바이트`. 압축이 없어 풀면서 부풀 수 없고(선언한 크기 = 실제 크기, 팩 8MB·파일 40개·매니페스트 256KB 상한을 읽기 전에 확인), 경로는 매니페스트 `assets`의 상대 경로만이라 경로 탈출(`..`·절대 경로·중복)은 거절합니다. 개별 파일은 매니페스트의 SHA-256, 파일 전체는 카탈로그의 SHA-256이 지킵니다.
+- 카탈로그 `packs/season/index.json`: `{format, schema, packs:[{id, version, archive:{key, bytes, sha256}, requiresAppBuild?, windows?, updatedAt?}]}`. `windows`는 매니페스트 `event.windows`의 사본이라 받기 전에 「지금 ±45일 안인가」를 가려 먼 팩의 큰 파일은 받지 않습니다. `key`는 `packs/season/<id>/<version>/<id>-<version>.bpack`.
+- 서버: 기존 Cloudflare Worker 읽기 경로 `GET /public/assets/<key>`가 이미 `Range`(206)·`ETag`·`If-None-Match`(304)·`Accept-Ranges`를 지원합니다(`server/trip-relay/src/public.js`, R2 `range`·`onlyIf`). 서버 코드는 바꾸지 않습니다. 파일은 불변(버전이 키에 있음)이라 `immutable` 캐시, 카탈로그만 짧은 캐시.
+- 앱 실행 시 확인: 앱 진입·`scenePhase == .active`에서 카탈로그를 `If-None-Match`로 가볍게 묻고(30분 간격), 새 팩이 있으면 받습니다. **받다 만 팩이 있으면 30분 간격과 상관없이** 저장해 둔 카탈로그로 바로 이어 받습니다.
+- 받기(`SeasonPackDownloader` + `SeasonPackBackgroundEngine`): 백그라운드 `URLSession`(앱이 멈춰도 시스템이 이어 받고 앱 델리게이트 `handleEventsForBackgroundURLSession`로 끝을 알림). 끊기면 `resumeData`를 `Application Support/SeasonPacks/.downloads/<id>-<버전>.resume`에, 무엇을 받는 중인지는 `.meta`에, 끝난 파일은 `.bpack`에 둡니다(앱이 죽었다 떠도 이어짐, 백그라운드에서 끝난 파일도 다음 실행이 곧바로 검증). 이어 받기는 `URLSession`이 `Range`·`If-Range`(ETag)로 서버와 맞추고, 서버가 Range를 못 하거나 ETag가 바뀌어 이어 받기가 거절되면 처음부터 한 번 더 받습니다. 카탈로그의 `sha256`·`bytes`가 바뀌면 옛 부분 파일은 버립니다. 셀룰러·저데이터에서는 2MB 넘는 팩을 Wi-Fi로 미루고(작은 팩은 셀룰러 허용), 받기 전에 디스크 여유(팩 크기 3배 + 4MB)를 확인합니다. 진행률·상태(`SeasonPackCenter.downloadStatus`)는 설정 › 내 데이터의 「시즌 팩 업데이트」 줄에 ko/en으로 보입니다.
+- 확인·설치: 받은 파일의 크기·SHA-256 확인 → 임시 폴더에서 풀어 팩 검증(자산 해시·한도·창) → 폴더째 원자적 이름 바꾸기. 해시가 틀리면 파일을 버리고 처음부터 한 번 더, 그래도 틀리면 포기. 어느 단계든 실패하면 이전 팩이 그대로 남고 같은 실행에서 되풀이하지 않습니다. 롤백: `SeasonPackStore.discard(id:version:)`로 말썽인 버전을 지우면 이전 버전이 다시 쓰입니다(한 id당 최근 3개 보관).
+- 적용: 센터는 설치본과 번들 시드 중 `version`이 높은 쪽을 쓰고(같으면 번들), 받은 팩이 없거나 못 쓰면 번들, 번들도 없으면 이벤트 없음(끔)입니다.
+
+**예전 방식(호환)**: 앱 진입과 `scenePhase == .active`. 인덱스 → 지금과 ±45일 안의 팩 매니페스트 → 파일 → 검증 → 설치. 30분 쿨다운·ETag·8초·한 번 시도·실패는 조용히(공지 `AnnouncementService`와 같은 정책). 요청은 인증·식별자·쿼리·쿠키 없는 `GET` 하나이고 좌표·기기 id·계정을 싣지 않습니다. 저데이터·셀룰러에서는 2MB 넘는 팩을 받지 않습니다(`OfflineVectorNetworkStatus`).
 - 저장: `Application Support/SeasonPacks/<packId>/<version>/`(+ `installed.json`), 임시 폴더 → 검증 → 이름 바꾸기. 지우지 않고(다음 해 재사용) 한 id당 최근 3개 버전·전체 32MB를 넘을 때만 오래 안 쓴 것부터 지우되 지금 쓰는 팩은 지우지 않습니다. iCloud 백업 제외. 메모는 `SeasonPacks/memos/<packId>/<itemId>.json`.
 - 번들 시드: `Resources/seed/<id>/<version>/`(크리스마스)와 DEBUG 전용 `seed-debug/`(표본 `sample`, 기간 1970-01-01). 같은 매니페스트·같은 해시 규칙이며, 서버 인덱스가 있으면 버전이 높은 쪽, 같으면 번들을 씁니다. R2 배포 전에도 12/19에 크리스마스가 뜹니다.
 - 「모든 데이터 삭제」: 팩·메모·시계·시연 기록(`seasonPack.*` 키) 삭제.
@@ -87,14 +97,18 @@ packs/season/<packId>/<version>/<파일…>
 ## 9. 배포 순서 (대표 몫 — 이 요청에서 실행하지 않음)
 
 1. R2 버킷이 있어야 합니다(`R2PUB1119A01`: 버킷 생성·배포·업로드는 대표 몫).
-2. 팩 파일을 먼저, `index.json`을 **마지막에** 올립니다(반쯤 올라간 팩을 앱이 받지 않게). `<bucket>`은 R2 버킷 이름입니다.
+2. 팩 파일을 만듭니다(서버에 올리지 않고 `build/season-pack/`에 만들고 `index.json` 항목을 갱신).
 ```
-npx wrangler r2 object put <bucket>/packs/season/christmas/1/manifest.json --file Packages/SeasonPackKit/Sources/SeasonPackKit/Resources/seed/christmas/1/manifest.json --content-type application/json --cache-control "public, max-age=86400" --remote
-npx wrangler r2 object put <bucket>/packs/season/christmas/1/<파일 경로> --file <로컬 파일> --content-type <image/png | audio/mp4> --cache-control "public, max-age=86400" --remote
-npx wrangler r2 object put <bucket>/packs/season/index.json --file <index.json> --content-type application/json --remote
+python3 scripts/season-pack/build_bpack.py Packages/SeasonPackKit/Sources/SeasonPackKit/Resources/seed/christmas/1 --out build/season-pack
 ```
-3. 크리스마스 공지(`christmas-2026`)를 R2 공지(`announcements/latest.json`)에 올립니다(팩이 켜질 때 기존 공지 시트가 한 번 열림).
-4. 번들 시드가 있어 서버가 없어도 12/19에 뜹니다. 서버 팩의 `version`이 시드보다 높을 때만 서버 팩을 씁니다.
+3. **팩 파일을 먼저, `index.json`을 마지막에** 올립니다(반쯤 올라간 팩을 앱이 가리키지 않게). `<bucket>`은 R2 버킷 이름입니다(스크립트가 같은 명령을 출력합니다).
+```
+npx wrangler r2 object put <bucket>/packs/season/christmas/1/christmas-1.bpack --file build/season-pack/christmas-1.bpack --content-type application/octet-stream --cache-control "public, max-age=31536000, immutable" --remote
+npx wrangler r2 object put <bucket>/packs/season/index.json --file build/season-pack/index.json --content-type application/json --cache-control "public, max-age=300" --remote
+```
+4. 크리스마스 공지(`christmas-2026`)를 R2 공지(`announcements/latest.json`)에 올립니다(팩이 켜질 때 기존 공지 시트가 한 번 열림).
+5. 번들 시드가 있어 서버가 없어도 12/19에 뜹니다. 서버 팩의 `version`이 시드보다 높을 때만 서버 팩을 씁니다. 같은 팩을 고쳐 올릴 때는 `manifest.json`의 `version`을 올려 새 키로 올립니다(옛 파일은 지우지 않아도 됩니다).
+6. 올린 뒤 확인(대표): Range가 되는지 `curl -s -o /dev/null -D - -H "Range: bytes=0-99" https://<서버>/public/assets/packs/season/christmas/1/christmas-1.bpack` 가 `206`과 `Content-Range`를 돌려주는지.
 
 ## 10. 다음 단계
 

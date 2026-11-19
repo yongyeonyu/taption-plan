@@ -43,6 +43,15 @@ final class SeasonPackAdapter: SeasonPackHost {
 
     // MARK: 마운트
 
+    /// 팩 파일(`.bpack`)을 이어 받는 백그라운드 `URLSession` 이름. 앱이 죽었다가 떠도 같은 이름으로 이어진다.
+    static var backgroundSessionID: String { (Bundle.main.bundleIdentifier ?? "app") + ".seasonpack" }
+
+    /// 앱 델리게이트 `handleEventsForBackgroundURLSession`에서 부른다(시스템이 앱을 깨워 받기 끝을 알릴 때).
+    @MainActor static func handleBackgroundEvents(identifier: String, completion: @escaping @MainActor @Sendable () -> Void) {
+        guard let engine = SeasonPackCenter.shared.backgroundEngine else { completion(); return }
+        engine.handleEvents(forIdentifier: identifier, completion: completion)
+    }
+
     static var storeRoot: URL {
         (FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? FileManager.default.temporaryDirectory)
             .appendingPathComponent("SeasonPacks", isDirectory: true)
@@ -58,7 +67,8 @@ final class SeasonPackAdapter: SeasonPackHost {
         SeasonPackCenter.shared.configure(host: shared, configuration: .init(
             storeRoot: storeRoot,
             urlForKey: { TripRelay.url("/public/assets/\($0)") },
-            allowsLargeDownload: { OfflineVectorNetworkStatus.shared.current.allowsCaching }
+            allowsLargeDownload: { OfflineVectorNetworkStatus.shared.current.allowsCaching },
+            backgroundSessionID: backgroundSessionID
         ))
         SeasonPackCenter.shared.recompute()
     }
@@ -96,7 +106,7 @@ final class SeasonPackAdapter: SeasonPackHost {
             }
             return HwarangClothStyle(base: base, shade: shade, accent: accent, trim: trim, pattern: pattern)
         }
-        let look = HwarangSeasonLook(redNose: c.redNose ?? false, antlers: c.antlers.flatMap(hex), scarf: cloth(c.scarf), ribbon: cloth(c.ribbon))
+        let look = HwarangSeasonLook(redNose: c.redNose ?? false, cape: c.cape ?? false, scarf: cloth(c.scarf), ribbon: cloth(c.ribbon))
         return look.isEmpty ? nil : look
     }
 

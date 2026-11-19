@@ -105,6 +105,17 @@ public final class SeasonPackStore: Sendable {
         }
     }
 
+    /// 설치본 한 버전을 지운다(롤백: 새 버전이 말썽이면 지우고 이전 버전이 다시 쓰이게 한다).
+    @discardableResult
+    public func discard(id: String, version: Int) -> Bool {
+        guard SeasonPackValidation.isKeyName(id), version >= 1 else { return false }
+        return lock.withLock { _ in
+            let folder = root.appendingPathComponent(id, isDirectory: true).appendingPathComponent(String(version), isDirectory: true)
+            guard FileManager.default.fileExists(atPath: folder.path) else { return false }
+            return (try? FileManager.default.removeItem(at: folder)) != nil
+        }
+    }
+
     /// 디스크의 팩을 모두 다시 읽어 검증한다. 손상된 것은 건너뛴다(그 팩만 버리고 기본 모습으로).
     public func installedPacks(appBuild: Int?) -> [SeasonPack] {
         lock.withLock { _ in

@@ -268,6 +268,15 @@ final class TaptionPlanAppDelegate:
         "TaptionPlan.pendingNotificationPlanID"
     private var sensorRecoveryTask: Task<Void, Never>?
 
+    /// 시즌 팩 파일 받기가 앱이 멈춘 사이 끝났을 때(SEA1119A01).
+    func application(
+        _ application: UIApplication,
+        handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        SeasonPackAdapter.handleBackgroundEvents(identifier: identifier) { completionHandler() }
+    }
+
     func application(
         _ application: UIApplication,
         supportedInterfaceOrientationsFor window: UIWindow?
