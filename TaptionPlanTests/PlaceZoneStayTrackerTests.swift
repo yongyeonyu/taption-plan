@@ -150,4 +150,19 @@ final class PlaceZoneStayTrackerTests: XCTestCase {
             restaurants: [restaurant], readings: [sample(0, meters: 5), sample(100, meters: 5)], inside: span, asOf: span.end
         ).isEmpty)
     }
+
+    /// 식당 안 마지막 표본 뒤 10분 넘게 비었다가 밖에서 처음 잡히면, 언제 나갔는지 모른다.
+    /// 빈 시간을 식사로 세지 않고 마지막 안쪽 표본에서 끝낸다(실기기 11-19 12:22 식사 오류).
+    func testExitAfterSilenceEndsAtLastInsideSample() throws {
+        let readings = [sample(0, meters: 10), sample(5, meters: 10), sample(21, meters: 4), sample(31, meters: 78)]
+        let stay = try XCTUnwrap(stays(readings, radius: 40).first)
+        XCTAssertEqual(stay.span.end, start.addingTimeInterval(21 * 60))
+        XCTAssertEqual(stay.exitBasis, .notObserved)
+
+        var restaurant = FrequentPlace(kind: .restaurant, name: "식당", point: GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: -1))
+        restaurant.radiusMeters = 40
+        let span = TimeSpan(start: start.addingTimeInterval(-3_600), end: start.addingTimeInterval(7_200))
+        let meals = RestaurantMealActualEngine.records(restaurants: [restaurant], readings: readings, inside: span, asOf: span.end)
+        XCTAssertEqual(meals.first?.endedAt, start.addingTimeInterval(21 * 60))
+    }
 }

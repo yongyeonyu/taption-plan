@@ -1135,6 +1135,12 @@
 
 ## 검증 기록
 
+### MEL1119A01 · 식당을 벗어난 뒤까지 식사로 잡히던 것 (2026-11-19, 시뮬레이터 iPhone 17)
+- 원인(11-19 아이폰 18 원본): 식당 안 마지막 표본 12:12:06 뒤 10분 넘게 비었다가 12:22:39에 78m 밖 표본이 처음 잡히자, `PlaceZoneStayTracker`가 그 시각을 벗어난 때로 잡아 빈 시간이 식사(11:51~12:22)에 들어갔다. 걷기 감지는 12:15부터였다.
+- 수정: 빈 구간(5분 초과) 뒤 처음 밖에서 잡히면 마지막 안쪽 표본에서 끝내고 `notObserved`로 둔다. 시험 `testExitAfterSilenceEndsAtLastInsideSample` 추가.
+- 검증: PlaceZoneStayTrackerTests·UnobservedStayEngineTests·FeatureEngineTests·MapHomeCounterTimelinePolicyTests 697건 통과·실패 0(`build/validation/MEL1119A01/stay.log`). 전체 단위 시험과 실기기 확인 안 함. 아이폰에서 같은 날 식사가 12:12 전후로 끝나는지는 다음 로그로 봐야 한다.
+
+
 ### MNU1119A01 · 메인 메뉴 「행동 분류」에 직접 추가 상세 18개 표시 (2026-11-19, 시뮬레이터 iPhone 17, 비야 브리지 `20261119-1609-menu-activity-useradded-details`)
 - 원인: `MapHomeCategoryDetailRows.details(for:)`가 `userAdded` 상세를 빼서, 메인 메뉴 펼침에 직접 추가 18개(activity 6·hobby 5·health 3·housework 4)가 안 보였다.
 - 수정: 메뉴 전용 `menuDetails(for:)`(분류표 순서 그대로, 구역 머리 없음)를 더하고 펼침 화살표 조건과 본문 `ForEach`만 바꿨다. `details(for:)`·`userAddedDetails(for:)`, 기록 수정 화면, JSON 플래그는 그대로.

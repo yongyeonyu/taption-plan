@@ -64,6 +64,8 @@ enum PlaceZoneStayTracker {
         var pendingExit: Date?
         var radiusRunStart: Date?
         var previous: Date?
+        /// 빈 구간(관측 안 됨) 뒤에 처음 바깥에서 잡혔는지. 그러면 벗어난 때를 알 수 없다.
+        var leftAfterGap = false
 
         func close(end: Date, basis: Stay.ExitBasis) {
             if let start = entered, end > start {
@@ -77,6 +79,7 @@ enum PlaceZoneStayTracker {
             entered = nil
             lastInRadius = nil
             leftRadius = nil
+            leftAfterGap = false
             unobserved = []
             pendingEntry = nil
             pendingExit = nil
@@ -84,8 +87,10 @@ enum PlaceZoneStayTracker {
         }
 
         for sample in samples {
+            var gapBefore: TimeInterval = 0
             if let last = previous {
                 let gap = sample.time.timeIntervalSince(last)
+                gapBefore = gap
                 if gap > maximumSampleGap {
                     if entered != nil { close(end: lastInRadius ?? last, basis: .notObserved) }
                     radiusRunStart = nil
@@ -131,13 +136,20 @@ enum PlaceZoneStayTracker {
             if inRadius {
                 lastInRadius = sample.time
                 leftRadius = nil
+                leftAfterGap = false
             } else if leftRadius == nil {
-                leftRadius = sample.time
+                // 표본이 길게 비었다가 밖에서 처음 잡히면 언제 나갔는지 모른다. 빈 시간을 머문 것으로 세지 않는다.
+                if gapBefore > unobservedGap, let inside = lastInRadius {
+                    leftRadius = inside
+                    leftAfterGap = true
+                } else {
+                    leftRadius = sample.time
+                }
             }
             if sample.distance >= outer {
                 if decisive || pendingExit != nil {
                     let crossed = leftRadius ?? sample.time
-                    close(end: crossed, basis: crossed < sample.time ? .radiusCircle : .outerCircle)
+                    close(end: crossed, basis: leftAfterGap ? .notObserved : (crossed < sample.time ? .radiusCircle : .outerCircle))
                 } else {
                     pendingExit = sample.time
                 }
