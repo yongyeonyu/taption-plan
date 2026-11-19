@@ -35,6 +35,42 @@ enum LedgerTollRepeat {
         var base: Double?
         /// 배운 길 모양(칸). 예전 규칙이나 위치를 모를 때는 없다.
         var route: [String]?
+        /// 출퇴근 할인이 없는 정액 도로(민자 도로 등, TGT1119A01). 없으면 할인을 적용한다.
+        var flat: Bool?
+    }
+
+    /// 한 출발·도착 쌍에 길별로 두는 규칙 수. 넘으면 가장 오래된 것부터 버린다.
+    static let maximumRoutesPerPair = 4
+
+    /// 이 출발→도착의 규칙들. 첫 길은 `출발→도착`, 다른 길은 `출발→도착#<길 첫 칸>`이다(TGT1119A01).
+    static func candidates(_ rules: [String: Rule], from: String, to: String) -> [(key: String, rule: Rule)] {
+        let base = pair(from, to)
+        return rules.filter { $0.key == base || $0.key.hasPrefix(base + "#") }
+            .sorted { $0.key < $1.key }
+            .map { (key: $0.key, rule: $0.value) }
+    }
+
+    /// 이 이동에 쓸 규칙. 같은 길 규칙이 있으면 그것, 길을 모르는 규칙뿐이면 위치가 충분할 때 카카오에 맡기려고 nil,
+    /// 길이 모두 다르면 nil. 가는 방향 규칙이 없을 때만 되돌아오는 방향을 본다.
+    static func choose(_ drive: Drive, rules: [String: Rule]) -> (rule: Rule, reversed: Bool, match: LedgerTollRoute.Match)? {
+        for reversed in [false, true] {
+            let list = candidates(rules, from: reversed ? drive.to : drive.from, to: reversed ? drive.from : drive.to)
+            guard !list.isEmpty else { continue }
+            let scored = list.map { (rule: $0.rule, match: LedgerTollRoute.match(drive.cells, $0.rule.route)) }
+            if let same = scored.first(where: { $0.match == .same }) { return (same.rule, reversed, .same) }
+            // 길을 모르는 규칙은 이 길의 금액이 아닐 수 있다. 위치가 충분하면 카카오 길찾기에 맡긴다.
+            if let unknown = scored.first(where: { $0.match == .unknown }), drive.cells.count < LedgerTollRoute.minimumCells {
+                return (unknown.rule, reversed, .unknown)
+            }
+            return nil
+        }
+        return nil
+    }
+
+    /// 앱이 넣을 수 있는 금액(배운 금액 그대로, 또는 정가에 할인·할증을 적용한 것).
+    static func ownAmounts(_ rule: Rule, base: (Rule) -> Double, legacyBase: (Rule) -> Double? = { _ in nil }) -> [Double] {
+        let rates = [0, 0.2, 0.3, 0.4, 0.5, -0.05]
+        return [rule.amount] + ([base(rule)] + [legacyBase(rule)].compactMap { $0 }).flatMap { full in rates.map { LedgerTollDiscount.amount(base: full, rate: $0) } }
     }
 
     /// 배운 정가. 칸이 비었으면 금액이 정가다(손으로 넣는 통행료는 정가가 대부분).
@@ -81,28 +117,68 @@ enum LedgerTollRepeat {
     static func pair(_ from: String, _ to: String) -> String { "\(from)→\(to)" }
 
     /// 그 무렵 통행료가 있는 이동에서 길별 통행료와 길 모양을 배운다. 늦게 본 것이 이긴다.
+    /// 길 모양이 다르면 같은 출발·도착이라도 새 규칙으로 따로 둔다(TGT1119A01).
+    /// `unitsKnown`: 영업소 목록을 받아 둔 상태. 도로공사 영업소를 안 지났으면 정액 도로로 본다.
     static func learn(
-        drives: [Drive], entries: [LedgerEntry], into rules: [String: Rule], rate: (Date) -> Double = { _ in 0 }
+        drives: [Drive], entries: [LedgerEntry], into rules: [String: Rule], rate: (Date) -> Double = { _ in 0 }, unitsKnown: Bool = false
     ) -> [String: Rule] {
         var result = rules
         for entry in entries.filter(isToll).sorted(by: { $0.occurredAt < $1.occurredAt }) {
             guard let drive = drives.first(where: { covers($0, entry.occurredAt) }) else { continue }
             let key = pair(drive.from, drive.to)
             let route = LedgerTollRoute.stored(drive.cells)
-            // 앱이 넣은 것(할인 든 금액)에서는 금액을 배우지 않고, 남겨 둔(확인한) 같은 길 통행료면 모르던 길 모양만 배운다.
-            // 지난 톨게이트·카카오 길찾기로 넣은 것은 다른 길일 수 있어 같은 길 규칙의 길 모양으로 쓰지 않는다.
+            let note = entry.note ?? ""
+            // 지난 톨게이트로 넣은 것은 할인이 든 금액이라 배우지 않는다.
+            if LedgerTollGate.notes.contains(where: { note.hasPrefix($0) }) { continue }
             if isAuto(entry) {
-                if autoNotes.contains(where: { (entry.note ?? "").hasPrefix($0) }), let route, let target = [key, pair(drive.to, drive.from)].first(where: { result[$0] != nil }), result[target]?.route == nil {
-                    result[target]?.route = route
+                let ours = autoNotes.contains { note.hasPrefix($0) }
+                let forward = candidates(result, from: drive.from, to: drive.to)
+                let target = forward.isEmpty ? candidates(result, from: drive.to, to: drive.from) : forward
+                // 같은 길로 넣은 것을 그대로 남겼으면 모르던 길 모양만 배운다. 금액을 고쳤으면 그 길의 규칙으로 새로 배운다.
+                if ours, target.contains(where: { ownAmounts($0.rule, base: fullPrice).contains(entry.amount) }) {
+                    if let route, let blank = target.first(where: { $0.rule.route == nil && ownAmounts($0.rule, base: fullPrice).contains(entry.amount) }) {
+                        result[blank.key]?.route = route
+                    }
+                    continue
                 }
+                // 카카오 길찾기로 넣은 것을 확인해 남겼으면 그 금액(정액)을 이 길의 규칙으로 배운다.
+                let kakao = LedgerTollKakao.notes.contains { note.hasPrefix($0) }
+                guard ours || kakao else { continue }
+                store(Rule(amount: entry.amount, currency: entry.currency, title: entry.title, learnedAt: entry.occurredAt,
+                           base: entry.amount, route: route, flat: true), drive: drive, key: key, into: &result)
                 continue
             }
-            if let known = result[key], known.learnedAt > entry.occurredAt { continue }
             // 위치를 모르는 이동에서 배우면 예전 길 모양을 버린다(길이 바뀌었을 수 있다).
-            result[key] = Rule(amount: entry.amount, currency: entry.currency, title: entry.title, learnedAt: entry.occurredAt,
-                               base: base(of: entry, rate: rate), route: route)
+            store(Rule(amount: entry.amount, currency: entry.currency, title: entry.title, learnedAt: entry.occurredAt,
+                       base: base(of: entry, rate: rate), route: route, flat: unitsKnown && drive.passes.isEmpty ? true : nil),
+                  drive: drive, key: key, into: &result)
         }
         return result
+    }
+
+    /// 배운 규칙을 길에 맞는 자리에 둔다: 같은 길이면 갈아 끼우고, 길 모양이 다르면 새 규칙으로 더한다.
+    private static func store(_ rule: Rule, drive: Drive, key: String, into result: inout [String: Rule]) {
+        guard let route = rule.route else {
+            if let known = result[key], known.learnedAt > rule.learnedAt { return }
+            result[key] = rule
+            return
+        }
+        let list = candidates(result, from: drive.from, to: drive.to)
+        if let same = list.first(where: { LedgerTollRoute.match(drive.cells, $0.rule.route) == .same }) {
+            if same.rule.learnedAt <= rule.learnedAt { result[same.key] = rule }
+            return
+        }
+        // 길 모양을 모르던 규칙은 정가가 같을 때만 그 길의 것으로 본다.
+        if let blank = list.first(where: { $0.rule.route == nil && fullPrice($0.rule) == fullPrice(rule) }) {
+            if blank.rule.learnedAt <= rule.learnedAt { result[blank.key] = rule }
+            return
+        }
+        let newKey = list.isEmpty ? key : "\(key)#\(route.first ?? "")"
+        result[newKey] = rule
+        let all = candidates(result, from: drive.from, to: drive.to)
+        for old in all.sorted(by: { $0.rule.learnedAt < $1.rule.learnedAt }).prefix(max(0, all.count - maximumRoutesPerPair)) {
+            result[old.key] = nil
+        }
     }
 
     /// 앱이 넣은 통행료(같은 길·지난 톨게이트). 금액에 할인이 들어 있어 배우지 않는다.
@@ -123,23 +199,16 @@ enum LedgerTollRepeat {
         }
         for drive in merged(drives) where !handled.contains(drive.key) && drive.end <= now.addingTimeInterval(-settle) {
             guard !tolls.contains(where: { covers(drive, $0) }) else { continue }
-            let title: String
-            let rule: Rule
-            if let same = rules[pair(drive.from, drive.to)] {
-                rule = same
-                title = same.title
-            } else if let back = rules[pair(drive.to, drive.from)] {
-                rule = back
-                title = reversed(back.title)
-            } else { continue }
-            // 다른 길(다른 고속도로·일반 도로)로 갔으면 넣지 않는다. 길을 모르면 확인을 받는다(TOL1118A01).
-            let route = LedgerTollRoute.match(drive.cells, rule.route)
-            if route == .different { continue }
+            // 같은 길 규칙이 있을 때만 넣는다. 길이 다르거나, 길 모양을 모르는 규칙은 카카오 길찾기가 이어받는다(TGT1119A01).
+            guard let chosen = choose(drive, rules: rules) else { continue }
+            let rule = chosen.rule
+            let title = chosen.reversed ? reversed(rule.title) : rule.title
+            let route = chosen.match
             // 정가에 이 이동 시각의 할인을 적용한다(TOL1112B01·TOL1118A01).
             let base = fullPrice(rule)
-            let applied = rule.currency == "KRW" ? rate(drive.middle) : LedgerTollDiscount.Applied(rate: 0, reason: .none)
+            let applied = rule.currency == "KRW" && rule.flat != true ? rate(drive.middle) : LedgerTollDiscount.Applied(rate: 0, reason: .none)
             // 출발과 도착의 할인이 다르면 요금소를 언제 지났는지 몰라 확인을 받는다.
-            let suspicious = route == .unknown || (rule.currency == "KRW" && rate(drive.start).rate != rate(drive.end).rate)
+            let suspicious = route == .unknown || (rule.currency == "KRW" && rule.flat != true && rate(drive.start).rate != rate(drive.end).rate)
             var entry = LedgerEntry(occurredAt: drive.end, amount: rule.currency == "KRW" ? LedgerTollDiscount.amount(base: base, rate: applied.rate) : rule.amount, title: title)
             entry.currency = rule.currency
             entry.category = .transport
@@ -186,12 +255,13 @@ enum LedgerTollRepeat {
         let parts = note.components(separatedBy: " · ")
         guard parts.count >= 2 else { return nil }
         let ends = parts[1].components(separatedBy: " → ")
-        guard ends.count == 2, let rule = rules[pair(ends[0], ends[1])] ?? rules[pair(ends[1], ends[0])], rule.currency == "KRW" else { return nil }
+        guard ends.count == 2 else { return nil }
+        let list = candidates(rules, from: ends[0], to: ends[1]) + candidates(rules, from: ends[1], to: ends[0])
+        // 앱이 넣을 수 있는 금액(배운 금액 그대로, 또는 정가에 할인·할증을 적용한 것)일 때만, 그 금액을 낳은 규칙으로 고친다.
+        guard let rule = list.map(\.rule).first(where: { $0.currency == "KRW" && ownAmounts($0, base: base, legacyBase: legacyBase).contains(entry.amount) }) else { return nil }
         let full = base(rule)
-        // 앱이 넣을 수 있는 금액(배운 금액 그대로, 또는 정가에 할인·할증을 적용한 것)일 때만 고친다.
-        let rates = [0, 0.2, 0.3, 0.4, 0.5, -0.05]
-        let own = [rule.amount] + ([full] + [legacyBase(rule)].compactMap { $0 }).flatMap { full in rates.map { LedgerTollDiscount.amount(base: full, rate: $0) } }
-        guard own.contains(entry.amount) else { return nil }
+        let applied = rule.flat == true ? LedgerTollDiscount.Applied(rate: 0, reason: .none) : applied
+        let label = rule.flat == true ? nil : label
         var fixed = entry
         fixed.amount = LedgerTollDiscount.amount(base: full, rate: applied.rate)
         fixed.note = (Array(parts.prefix(2)) + [label].compactMap { $0 }).joined(separator: " · ")
@@ -409,7 +479,7 @@ enum LedgerTollRepeatRunner {
         let stored = defaults.data(forKey: rulesKey).flatMap { try? JSONDecoder().decode([String: LedgerTollRepeat.Rule].self, from: $0) } ?? [:]
         // 예전 규칙에는 정가가 없어 먼저 채운다(TOL1118A01). 한 번 채우면 저장돼 다시 하지 않는다.
         let filled = LedgerTollRepeat.filled(stored, entries: entries, rate: paidRate)
-        let rules = LedgerTollRepeat.learn(drives: drives, entries: entries, into: filled, rate: paidRate)
+        let rules = LedgerTollRepeat.learn(drives: drives, entries: entries, into: filled, rate: paidRate, unitsKnown: !units.isEmpty)
         if rules != stored, let data = try? JSONEncoder().encode(rules) { defaults.set(data, forKey: rulesKey) }
         var handled = defaults.stringArray(forKey: handledKey) ?? []
         let language = MapHomeLanguage.current

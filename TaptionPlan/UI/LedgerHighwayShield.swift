@@ -154,7 +154,21 @@ struct LedgerEntryIcon: View {
         if let toll = LedgerToll.kind(for: entry) {
             LedgerTollIcon(toll: toll, size: size)
         } else {
-            Image(systemName: entry.category.symbol).foregroundStyle(Color.tpAccent)
+            Image(systemName: LedgerEntrySymbol.name(for: entry)).foregroundStyle(Color.tpAccent)
         }
+    }
+}
+
+/// 분류 아이콘 대신 보일 기록별 아이콘(ICN1119A01): 주유는 주유기, 은행은 은행 건물. 그 밖은 분류 아이콘.
+enum LedgerEntrySymbol {
+    /// 「현대오일뱅크」처럼 이름에 「뱅크」가 든 주유소가 은행으로 보이지 않게 주유를 먼저 본다.
+    private static let fuel = ["주유", "오일뱅크", "에스오일", "s-oil", "soil", "gs칼텍스", "칼텍스", "sk에너지", "알뜰주유", "gas station", "fuel"]
+    private static let bank = ["은행", "뱅크", "bank"]
+
+    static func name(for entry: LedgerEntry) -> String {
+        let title = entry.title.lowercased()
+        if entry.transfer == nil, fuel.contains(where: title.contains) { return "fuelpump.fill" }
+        if bank.contains(where: title.contains) { return "building.columns.fill" }
+        return entry.category.symbol
     }
 }
