@@ -20714,6 +20714,83 @@
         }
       }
     },
+    "{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1}分遅れ、新しい出発 {2}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 延误{1}分钟，新出发 {2}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 延誤{1}分鐘，新出發 {2}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} Min. Verspätung, neuer Abflug {2}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} retard de {1} min, nouveau départ {2}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} ritardo di {1} min, nuova partenza {2}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} retraso de {1} min, nueva salida {2}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} atraso de {1} min, nova partida {2}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} trễ {1} phút, khởi hành mới {2}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} terlambat {1} menit, keberangkatan baru {2}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} ล่าช้า {1} นาที ออกใหม่ {2}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} मिनट की देरी, नया प्रस्थान {2}"
+          }
+        }
+      }
+    },
     "{0} {1}을 가계부에 넣었어요.|Added {0} {1} to the ledger." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -226762,6 +226839,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जल्द प्रस्थान {0}"
+          }
+        }
+      }
+    },
+    "곧 출발! 공항에 {0}까지 가요 ✈|Departing soon! Be at the airport by {0} ✈" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まもなく出発！{0}までに空港へ ✈"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "马上出发！请在 {0} 前到机场 ✈"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即將出發！請在 {0} 前到機場 ✈"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gleich Abflug! Sei bis {0} am Flughafen ✈"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Départ imminent ! Soyez à l'aéroport avant {0} ✈"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si parte a breve! Arriva in aeroporto entro le {0} ✈"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Salida pronto! Llega al aeropuerto antes de las {0} ✈"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partida em breve! Chegue ao aeroporto até {0} ✈"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sắp bay! Có mặt ở sân bay trước {0} ✈"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Segera berangkat! Tiba di bandara paling lambat {0} ✈"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใกล้ออกแล้ว! ถึงสนามบินภายใน {0} ✈"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जल्द उड़ान! {0} तक हवाई अड्डे पहुँचें ✈"
           }
         }
       }

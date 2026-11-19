@@ -6217,6 +6217,8 @@
 "출장|Business": "Geschäftlich",
 "확정|Confirmed": "Bestätigt",
 "수하물 {0}|Baggage {0}": "Gepäckband {0}",
-"오늘의 항공편|Today's flights": "Heutige Flüge"
+"오늘의 항공편|Today's flights": "Heutige Flüge",
+"곧 출발! 공항에 {0}까지 가요 ✈|Departing soon! Be at the airport by {0} ✈": "Gleich Abflug! Sei bis {0} am Flughafen ✈",
+"{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}": "{0} {1} Min. Verspätung, neuer Abflug {2}"
 }
 }

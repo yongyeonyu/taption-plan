@@ -356,9 +356,11 @@ struct TravelModeView: View {
         let titles = Dictionary(table(entry).blocks.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
         // 핀이 많으면 이름이 겹치니, 재생 시각에 머무는 곳 하나만 이름을 단다.
         let here = TravelPlayhead.position(at: currentPlayMinute(entry), stops: stops, paths: routes.paths)?.stopID
+        // 환승 공항은 번호 없이 작은 점으로 그린다(FLT1119A01).
+        let layovers = FlightLayoverMarks.layoverItemIDs(in: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id })
         return stops.enumerated().map { index, stop in
             .init(longitude: stop.longitude, latitude: stop.latitude, label: "\(index + 1)", id: stop.id,
-                  title: stops.count <= 5 || stop.id == here ? titles[stop.id] ?? "" : "")
+                  title: stops.count <= 5 || stop.id == here ? titles[stop.id] ?? "" : "", isLayover: layovers.contains(stop.id))
         }
     }
 

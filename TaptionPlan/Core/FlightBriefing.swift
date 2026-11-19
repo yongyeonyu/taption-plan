@@ -131,6 +131,9 @@ extension AppModel {
     /// 예약된 항공 알림을 지금 일정에 맞춘다.
     @MainActor
     func syncFlightBriefings(now: Date = .now) async {
-        await FlightBriefingScheduler.shared.synchronize(items: snapshot.settings.travelTripItems ?? [], now: now)
+        let items = snapshot.settings.travelTripItems ?? []
+        await FlightBriefingScheduler.shared.synchronize(items: items, now: now)
+        // 출발이 가까운 비행은 화랑이 말풍선으로도 알린다.
+        FlightBubble.sync(items: items, now: now)
     }
 }

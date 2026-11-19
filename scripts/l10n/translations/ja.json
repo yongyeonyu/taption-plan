@@ -6217,6 +6217,8 @@
 "출장|Business": "出張",
 "확정|Confirmed": "確定",
 "수하물 {0}|Baggage {0}": "手荷物 {0}",
-"오늘의 항공편|Today's flights": "今日の航空便"
+"오늘의 항공편|Today's flights": "今日の航空便",
+"곧 출발! 공항에 {0}까지 가요 ✈|Departing soon! Be at the airport by {0} ✈": "まもなく出発！{0}までに空港へ ✈",
+"{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}": "{0} {1}分遅れ、新しい出発 {2}"
 }
 }

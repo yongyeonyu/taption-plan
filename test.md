@@ -1171,6 +1171,12 @@
 
 ## 검증 기록
 
+### FLT1119A01 마무리 · 화랑이 말풍선·지구본 환승 점 (2026-11-20, 대표 요청, 시뮬레이터 iPhone 17)
+- 출발 4시간 전부터 출발까지 화랑이 말풍선(「곧 출발! 공항에 06:05까지 가요 ✈」, 지연이면 「AB123 65분 지연, 새 출발 10:10」)을 기존 말풍선 저장소(event)로 넣는다(`FlightBubble`). 사용자가 숨긴 말풍선은 다시 켜지 않고 같은 일정은 같은 id로 갱신한다. 지구본에서 36시간 안에 같은 공항에서 이어 타는 환승 공항은 번호 없는 작은 점으로 그린다(`FlightLayoverMarks`, 지도 핀은 그대로).
+- 앱 전체 `-only-testing:TaptionPlanTests` 3,246건 중 통과 3,220·실패 0·건너뜀 26(`build/validation/FLT1119A01/full4.xcresult`). 번역·구조·경계 통과.
+- TestFlight 355는 올리지 못했다: 아카이브가 서명에서 실패(「No Accounts」, 새 확장 앱 ID `com.taption.plan.share`의 App Groups 프로필 없음). 번호는 되돌려 354 그대로. 대표가 개발자 포털에서 앱 ID 등록(App Groups `group.com.taption.plan`) 뒤 다시 올린다.
+- 눈으로 못 본 것: 말풍선 실제 표시, 지구본 환승 점 모양.
+
 ### FLT1119A01 6단계 · 공유 확장 「BOKKI Plan에 넣기」 (2026-11-20, 대표 「진행」, 시뮬레이터 iPhone 17)
 - 새 타깃 `TaptionPlanShare`(번들 `com.taption.plan.share`, App Group `group.com.taption.plan`)를 앱에 포함. 글·링크·`.pkpass`를 기기 안 보관함(`FlightShareStore`)에만 두고 앱이 `FlightShareIntake`로 읽어 반영한다. 탑승권은 `FlightPassReader`가 `pass.json`에서 편명·공항·날짜·시각만 읽는다.
 - 앱 전체 `-only-testing:TaptionPlanTests` 3,241건 중 통과 3,215·실패 0·건너뜀 26(`build/validation/FLT1119A01/full3.xcresult`), 공유 시험 21건 포함. 빌드 산출물에 `PlugIns/TaptionPlanShare.appex`와 Info.plist(`com.apple.share-services`, 번들 버전 354) 확인. 구조 점검·경계·`check.py` 통과. 시즌 팩 추가분 머지(`d65603dc`)도 같은 시험에 들어 있다.

@@ -1,5 +1,5 @@
 {
- "ui": 5436,
+ "ui": 5438,
  "catalog": 506,
  "unread": [
   {
@@ -904,7 +904,7 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 662,
+   "line": 664,
    "ko": "money.amount",
    "en": "language"
   },

@@ -10,6 +10,8 @@ enum TravelGlobeRenderer {
         /// 그 핀의 일정(누르면 그 일정을 연다)과 이름.
         var id = ""
         var title = ""
+        /// 환승 공항(FLT1119A01): 번호·이름 없이 작은 점으로만 그린다.
+        var isLayover = false
     }
 
     struct Flag {
@@ -189,7 +191,7 @@ enum TravelGlobeRenderer {
 
     /// `route`가 있으면(길찾기로 받은 길) 핀을 곧게 잇는 대신 그 길을 그린다.
     private static func drawPins(_ context: inout GraphicsContext, pins: [Pin], route points: [SIMD2<Double>] = [], camera: TravelGlobeCamera, center: CGPoint) {
-        let places = pins.map { (point(camera, center, $0.longitude, $0.latitude), $0.label) }.filter { $0.0.1 }
+        let places = pins.map { (point(camera, center, $0.longitude, $0.latitude), $0.label, $0.isLayover) }.filter { $0.0.1 }
         guard !places.isEmpty else { return }
         var route = Path()
         if points.count > 1 {
@@ -206,6 +208,12 @@ enum TravelGlobeRenderer {
         }
         context.stroke(route, with: .color(TravelInk.plan), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round, dash: [6, 5]))
         for place in places {
+            if place.2 {
+                let dot = CGRect(x: place.0.0.x - 4, y: place.0.0.y - 4, width: 8, height: 8)
+                context.fill(Path(ellipseIn: dot), with: .color(TravelInk.plan))
+                context.stroke(Path(ellipseIn: dot), with: .color(TravelInk.land), lineWidth: 1)
+                continue
+            }
             let rect = CGRect(x: place.0.0.x - 9, y: place.0.0.y - 9, width: 18, height: 18)
             context.fill(Path(ellipseIn: rect), with: .color(TravelInk.plan))
             context.stroke(Path(ellipseIn: rect), with: .color(TravelInk.land), lineWidth: 1.5)

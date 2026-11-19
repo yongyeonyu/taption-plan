@@ -6217,6 +6217,8 @@
 "출장|Business": "Công tác",
 "확정|Confirmed": "Đã xác nhận",
 "수하물 {0}|Baggage {0}": "Băng chuyền hành lý {0}",
-"오늘의 항공편|Today's flights": "Chuyến bay hôm nay"
+"오늘의 항공편|Today's flights": "Chuyến bay hôm nay",
+"곧 출발! 공항에 {0}까지 가요 ✈|Departing soon! Be at the airport by {0} ✈": "Sắp bay! Có mặt ở sân bay trước {0} ✈",
+"{0} {1}분 지연, 새 출발 {2}|{0} delayed {1} min, new departure {2}": "{0} trễ {1} phút, khởi hành mới {2}"
 }
 }
