@@ -40,33 +40,32 @@ extension HwarangPainter {
                 c.beginPath(); c.move(to: samples[i]); c.addLine(to: samples[i + 1]); c.strokePath()
             }
         }
-        let beam = [P(0, 2), P(2.2, -5), P(4.2, -12), P(6.4, -19), P(8.6, -25), P(9.6, -29.5)]
+        // 통통하고 둥근 뿔: 짧고 굵은 몸통에 뭉툭한 곁가지 둘, 끝마다 동그란 솜방울.
+        let beam = [P(0, 2), P(1.4, -3), P(3.0, -7.5), P(4.8, -11.5)]
         let tines: [([CGPoint], CGFloat, CGFloat)] = [
-            ([P(3.2, -9), P(1.6, -12.5), P(0.2, -16.8)], 2.3, 1),
-            ([P(5.4, -15.5), P(8.4, -17), P(11.6, -17.4), P(13.8, -20)], 2.3, 1),
-            ([P(7.6, -22.4), P(10.2, -24), P(11.6, -26.8)], 1.9, 0.9),
+            ([P(2.3, -5.4), P(0.6, -7.6), P(-0.4, -10.2)], 3.1, 2.7),
+            ([P(3.8, -8.8), P(6.4, -9.4), P(8.2, -11.6)], 3.1, 2.7),
         ]
+        let tipBalls = [P(4.8, -11.5), P(-0.4, -10.2), P(8.2, -11.6)]
         for side: CGFloat in [-1, 1] {
-            let bx = side < 0 ? lerp(-15.5, -12.5, t) : lerp(15.5, 18.5, t)
+            let bx = side < 0 ? lerp(-15, -12.5, t) : lerp(15, 18, t)
             let sx: CGFloat = side < 0 ? 1 : lerp(1, 0.88, t)
-            c.saveGState(); c.translateBy(x: bx, y: -12); c.scaleBy(x: sx * side * 0.86, y: 0.86)
+            c.saveGState(); c.translateBy(x: bx, y: -12); c.scaleBy(x: sx * side, y: 1)
             c.setLineCap(.round); c.setLineJoin(.round)
-            // 1) 겉선 2) 본색 3) 밝은 면 4) 껍질 무늬 5) 밝은 끝.
-            taper(beam, 4, 1.6, grow: 1.9, hex: outline)
-            for (pts, w0, w1) in tines { taper(pts, w0, w1, grow: 1.9, hex: outline) }
-            taper(beam, 4, 1.6, grow: 0, hex: color)
+            taper(beam, 4.4, 3.6, grow: 1.7, hex: outline)
+            for (pts, w0, w1) in tines { taper(pts, w0, w1, grow: 1.7, hex: outline) }
+            for q in tipBalls { fill(outline); c.beginPath(); circle(q.x, q.y, 2.5); c.fillPath() }
+            taper(beam, 4.4, 3.6, grow: 0, hex: color)
             for (pts, w0, w1) in tines { taper(pts, w0, w1, grow: 0, hex: color) }
-            taper(beam.map { P($0.x - 0.7, $0.y) }, 1.2, 0.4, grow: 0, hex: light, alpha: 0.75)
-            stroke(shade, 0.7, 0.8); c.beginPath()
-            for (x, y): (CGFloat, CGFloat) in [(2.0, -4), (3.4, -9.5), (5.4, -15), (7.4, -21)] { c.move(to: P(x - 1.3, y + 0.4)); c.addLine(to: P(x + 1.3, y - 0.5)) }
-            c.strokePath()
-            taper([P(8.6, -25), P(9.6, -29.5)], 1.7, 1.2, grow: 0, hex: tip)
-            taper(Array(tines[0].0.suffix(2)), 1.2, 1, grow: 0, hex: tip)
-            taper(Array(tines[1].0.suffix(2)), 1.3, 1, grow: 0, hex: tip)
-            taper(Array(tines[2].0.suffix(2)), 1.1, 0.9, grow: 0, hex: tip)
+            // 말랑한 하이라이트와 펠트 바느질 점.
+            taper(beam.map { P($0.x - 0.9, $0.y) }, 1.3, 1.0, grow: 0, hex: light, alpha: 0.8)
+            fill(shade, 0.7); c.beginPath()
+            for (x, y): (CGFloat, CGFloat) in [(1.9, -1), (2.6, -4.6), (4.0, -8.4)] { circle(x + 0.9, y, 0.35) }
+            c.fillPath()
+            for q in tipBalls { fill(tip); c.beginPath(); circle(q.x, q.y, 1.85); c.fillPath(); fill(white, 0.7); c.beginPath(); circle(q.x - 0.6, q.y - 0.6, 0.55); c.fillPath() }
             // 뿔 밑동의 작은 금빛 방울과 호랑가시 열매.
-            fill(0xF4C84A); stroke(outline, 0.8); c.beginPath(); circle(-1.6, 2.2, 2.1); c.drawPath(using: .fillStroke)
-            stroke(0xB88A22, 0.5); c.beginPath(); c.move(to: P(-3.4, 2.5)); c.addLine(to: P(0.2, 2.5)); c.strokePath()
+            fill(0xF4C84A); stroke(outline, 0.8); c.beginPath(); circle(-1.5, 2.2, 1.7); c.drawPath(using: .fillStroke)
+            stroke(0xB88A22, 0.5); c.beginPath(); c.move(to: P(-3, 2.4)); c.addLine(to: P(0, 2.4)); c.strokePath()
             fill(white, 0.85); c.beginPath(); circle(-2.3, 1.4, 0.55); c.fillPath()
             fill(0x2F9E58); stroke(outline, 0.6); c.beginPath(); oval(2.2, 3.4, 2.4, 1.1); c.drawPath(using: .fillStroke)
             fill(0xE5392F); c.beginPath(); circle(1.2, 3.6, 0.9); circle(2.4, 3.9, 0.9); c.fillPath()
@@ -77,10 +76,9 @@ extension HwarangPainter {
     /// 코 자리(`mx`, `my`)에 빨간 코를 얹는다. 작은 크기에서도 보이게 분홍 코보다 크게 그린다.
     func drawRedNose(x: CGFloat, y: CGFloat, lineWidth: CGFloat) {
         fill(0xE5392F); stroke(outline, max(lineWidth * 0.55, 0.9))
-        c.beginPath(); circle(x, y - 0.6, 2.4); c.drawPath(using: .fillStroke)
-        fill(0xB82A22); c.beginPath(); oval(x + 0.5, y + 0.6, 1.5, 0.7); c.fillPath()
-        fill(white, 0.9); c.beginPath(); oval(x - 0.9, y - 1.5, 0.8, 0.55); c.fillPath()
-        fill(white, 0.5); c.beginPath(); circle(x + 0.9, y - 0.3, 0.3); c.fillPath()
+        c.beginPath(); circle(x, y - 1.5, 1.95); c.drawPath(using: .fillStroke)
+        fill(0xB82A22); c.beginPath(); oval(x + 0.4, y - 0.5, 1.2, 0.55); c.fillPath()
+        fill(white, 0.9); c.beginPath(); oval(x - 0.7, y - 2.4, 0.65, 0.45); c.fillPath()
     }
 
     private static func darkened(_ hex: UInt32, _ f: CGFloat) -> UInt32 { scaled(hex) { $0 * f } }

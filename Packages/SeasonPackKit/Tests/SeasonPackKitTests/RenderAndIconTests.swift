@@ -75,7 +75,7 @@ struct RenderTests {
         #expect(slots.accessory?.layers.scarf == nil && slots.accessory?.layers.ribbon == nil) // 목도리·리본은 리그가 천으로 그린다
         let costume = slots.costume!
         #expect(costume.redNose == true)
-        #expect(costume.antlers == "8A5A36")
+        #expect(costume.antlers == "B98458")
         #expect(costume.scarf?.base == "D63A3A") // 빨간 목도리
         #expect(costume.ribbon?.base == "2F9E58") // 초록 꼬리 리본
         #expect(slots.outfit == nil) // 겉옷 그림은 없다 — 세 고양이 모두 같은 복장

@@ -188,7 +188,7 @@ def christmas(folder):
             },
             "costume": {
                 "redNose": True,
-                "antlers": "8A5A36",
+                "antlers": "B98458",
                 "scarf": {"base": "D63A3A", "shade": "AD2A2D", "accent": "FFF6EC", "trim": "FFF6EC", "pattern": "bands"},
                 "ribbon": {"base": "2F9E58", "shade": "1F7A41", "accent": "FFF6EC", "trim": "D63A3A", "pattern": "dots"},
             },

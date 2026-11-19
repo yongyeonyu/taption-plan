@@ -116,7 +116,7 @@
     {
       "id": "carol.jingle",
       "path": "audio/jingle-bells.m4a",
-      "sha256": "ee43ee2ab59657c931df6f6c26817d14d9443baf640fb1d3c888d160d399a101",
+      "sha256": "11480e763db9a7832743575209ac0db0acba2635428eadaae7c0d18a2b9a0236",
       "bytes": 355361,
       "kind": "audio"
     }
@@ -395,7 +395,7 @@
     },
     "costume": {
       "redNose": true,
-      "antlers": "8A5A36",
+      "antlers": "B98458",
       "scarf": {
         "base": "D63A3A",
         "shade": "AD2A2D",
