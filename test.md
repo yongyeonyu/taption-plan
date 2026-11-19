@@ -1135,6 +1135,11 @@
 
 ## 검증 기록
 
+### TFB1119A03 외부 · 빌드 353 베타 테스터 릴리즈 (2026-11-19)
+
+- 대표 지시 「베타테스터 릴리즈」: `python3 scripts/testflight/external.py --build 353 --group <TP 지인 테스트> --notes "…"`(테스트할 내용 한국어 5항목: 통행료 길별 규칙·아이콘·지출 줄, 하단 반달, AI 기록 지우기·한 달 보관, 공연/영화 관람, AI 알림 분석). 외부 그룹 「TP 지인 테스트」 연결, 베타 앱 심사 제출. 읽은 상태: `betaReviewState` `APPROVED`·`externalBuildState` `IN_BETA_TESTING`·`internalBuildState` `IN_BETA_TESTING`·그룹 연결 참.
+- 출시 전 점검: 동행 위치 끔(LOC1119A01), PCC 꺼짐·`PRIVACY.md` 짝 맞음(PCC1118A01), IAP 보류 그대로. 푸시·IAP는 건드리지 않음. 지인이 최신 빌드를 실제로 받는지는 TFB1104B06 방식으로 따로 확인.
+
 ### TFB1119A03 · TestFlight 353 (2026-11-19)
 
 - `bash scripts/testflight/release.sh --yes`(빌드 잠금 안, 대표 지시 「베타테스터 릴리즈」): 빌드 번호 352 → 353(pbxproj·앱·위젯·Watch·Watch 위젯 `CFBundleVersion`). 352 대비 동행 실시간 위치 끔(LOC1119A01)·`.gitignore` 정리만 다름. 처리 `VALID`, 내부 그룹 연결 확인, 종료 코드 0. 보고서 `build/validation/TFB1119A04/testflight-report.json`(`TFB1119A03`은 `--preflight`).
