@@ -10,13 +10,16 @@ enum TaptionHwarangPose: String, CaseIterable, Sendable {
     case nap, meditation, salon, cooking, groceries, laundry, dishes, coffee, housework, shower
     case meeting, friends, date, family, phoneCall, bookReading, game, music, video, petCare
     case workDesk, studyDesk, laptopWalk
+    /// 맨 끝에 둔다: 줄 번호가 아틀라스 그림의 줄이라 앞에 끼우면 기존 그림이 어긋난다(ICN1119A06).
+    case performanceMovie
 
     private static let titles: [String: TaptionHwarangPose] = [
         "깊은 수면": .deepSleep, "rem 수면": .remSleep, "회복": .recovery, "투약": .medication, "병원": .hospital,
         "집에서 휴식": .restBox, "낮잠": .nap, "명상": .meditation, "미용실": .salon,
         "요리": .cooking, "장보기": .groceries, "빨래": .laundry, "설거지": .dishes, "커피·티타임": .coffee, "멍때리기": .restBox, "집안일": .housework, "샤워": .shower,
         "회의": .meeting, "친구 만남": .friends, "데이트": .date, "가족": .family, "통화": .phoneCall,
-        "독서": .bookReading, "게임": .game, "음악": .music, "영상 보기": .video, "반려동물 돌보기": .petCare
+        "독서": .bookReading, "게임": .game, "음악": .music, "영상 보기": .video, "반려동물 돌보기": .petCare,
+        "공연/영화 관람": .performanceMovie
     ]
 
     /// 제목이 분명한 상세활동만 고른다. 그 밖에는 기존 동작 그림을 쓴다.

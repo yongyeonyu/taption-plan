@@ -71,6 +71,7 @@ enum HwarangDiagnostics {
         case .music: .music
         case .video: .video
         case .petCare: .petCare
+        case .performanceMovie: .performanceMovie
         }
     }
 
