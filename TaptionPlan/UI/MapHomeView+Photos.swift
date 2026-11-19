@@ -85,7 +85,7 @@ extension MapHomeView {
             ) { self.photoBrowserSelection = nil }
             .id(photoBrowserSelection.startID)
             .transition(.opacity)
-        } else if showsPhotoRingTab {
+        } else if showsPhotoRingTab, isPhotoRingFolded {
             // 접히면 하단 메뉴 위 반달만 남는다(`bottomBar`가 그린다).
             EmptyView()
         } else if !isDayPlaybackRunning, !isScreenRecording, !isPhotoRingCovered, !browsablePhotos.isEmpty {
@@ -104,10 +104,10 @@ extension MapHomeView {
         }
     }
 
-    /// 사진링이 접혀 하단 메뉴 위에 반달이 붙어 있는지(BAR1108A01).
+    /// 하단 메뉴 위에 반달이 붙어 있는지(BAR1108A01). 사진링이 접혔으면 펼치기(︿), 펼쳐졌으면 접기(﹀) 단추다(ICN1119A03).
     var showsPhotoRingTab: Bool {
         photoBrowserSelection == nil && !isDayPlaybackRunning && !isScreenRecording && !isPhotoRingCovered
-            && !browsablePhotos.isEmpty && isPhotoRingFolded
+            && !browsablePhotos.isEmpty
     }
 
     /// 링 밖 지도를 누르면 링을 `집` 단추 위 반달로 접는다(RNG1106A01, 대표 지시). 링 위 터치는 지도에 오지 않는다.

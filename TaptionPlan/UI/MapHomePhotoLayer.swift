@@ -750,7 +750,7 @@ struct MapHomePhotoArcBrowser: View {
     }
 }
 
-/// 접힌 하단 사진링(RNG1106A01). 하단 메뉴 가운데 위로 솟은 반달이고, 누르면 링을 다시 펼친다.
+/// 하단 사진링 반달(RNG1106A01). 하단 메뉴 가운데 위로 솟고, 접혀 있으면 누를 때 링을 펼치고 펼쳐져 있으면 접는다(ICN1119A03).
 /// 반달 바탕·테두리는 하단 메뉴 바탕(`MapHomeBottomBarShape`)이 함께 그린다(BAR1108A01). 여기는 화살표와 누르는 자리만.
 struct MapHomePhotoRingTab: View {
     static let width: CGFloat = 56
@@ -759,11 +759,13 @@ struct MapHomePhotoRingTab: View {
     static let touchExtra: CGFloat = 32
 
     let language: MapHomeLanguage
-    let onOpen: () -> Void
+    /// 사진링이 펼쳐져 있으면 true: 화살표를 뒤집어 접는 단추가 된다(ICN1119A03).
+    var isOpen = false
+    let onToggle: () -> Void
 
     var body: some View {
-        Button(action: onOpen) {
-            Image(systemName: "chevron.up")
+        Button(action: onToggle) {
+            Image(systemName: isOpen ? "chevron.down" : "chevron.up")
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
                 .frame(width: Self.width, height: Self.height)
@@ -771,7 +773,7 @@ struct MapHomePhotoRingTab: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(language.text("사진 펼치기", "Show photos"))
+        .accessibilityLabel(isOpen ? language.text("사진 접기", "Hide photos") : language.text("사진 펼치기", "Show photos"))
     }
 }
 
