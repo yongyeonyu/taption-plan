@@ -6100,6 +6100,16 @@
 "카카오 길찾기로 자동 추가|Added from Kakao directions": "Añadido automáticamente desde rutas de Kakao",
 "카카오 예상 통행료|Kakao estimated toll": "Peaje estimado por Kakao",
 "정상요금 {0}|Normal fare {0}": "Tarifa normal {0}",
-"지난 톨게이트로 자동 추가|Added from the toll plazas passed": "Añadido según las casetas de peaje recorridas"
+"지난 톨게이트로 자동 추가|Added from the toll plazas passed": "Añadido según las casetas de peaje recorridas",
+"기록 지우기|Clear log": "Borrar historial",
+"AI가 한 일 기록을 모두 지울까요?|Clear the whole AI activity log?": "¿Borrar todo el historial de la IA?",
+"지운 기록은 되돌리기를 쓸 수 없어요. 이미 반영된 변경은 그대로 남아요.|Cleared entries can't be undone from here. Changes already applied stay as they are.": "Las entradas borradas ya no se podrán deshacer desde aquí. Los cambios ya aplicados se mantienen.",
+"공연/영화 관람|Show / Movie": "Espectáculo / Cine",
+"AI 알림 분석|AI notification review": "Análisis de notificaciones con IA",
+"가계부가 아닌 알림(예매·예약·배송 등)을 AI에게 보내 일정·메모로 정리해요. 광고·인증 번호는 보내지 않아요.|Sends alerts that aren't payments (bookings, reservations, deliveries) to your AI to file as events or memos. Ads and verification codes are never sent.": "Envía a tu IA las notificaciones que no son pagos (reservas, entregas…) para archivarlas como eventos o notas. Nunca se envían anuncios ni códigos de verificación.",
+"결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "No es un pago, así que se envió a tu IA para revisarlo.",
+"알림 분석|Notification review": "Análisis de notificación",
+"문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "Los SMS solo se usan para los mensajes de pago del libro de gastos. No se usa el análisis de notificaciones con IA.",
+"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "Las notificaciones de apps de mensajería nunca se envían a tu IA."
 }
 }

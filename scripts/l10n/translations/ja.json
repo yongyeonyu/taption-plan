@@ -6100,6 +6100,16 @@
 "카카오 길찾기로 자동 추가|Added from Kakao directions": "Kakaoの経路案内から自動追加",
 "카카오 예상 통행료|Kakao estimated toll": "Kakaoの予想通行料",
 "정상요금 {0}|Normal fare {0}": "通常料金 {0}",
-"지난 톨게이트로 자동 추가|Added from the toll plazas passed": "通過した料金所から自動追加"
+"지난 톨게이트로 자동 추가|Added from the toll plazas passed": "通過した料金所から自動追加",
+"기록 지우기|Clear log": "記録を消去",
+"AI가 한 일 기록을 모두 지울까요?|Clear the whole AI activity log?": "AIの実行記録をすべて消去しますか？",
+"지운 기록은 되돌리기를 쓸 수 없어요. 이미 반영된 변경은 그대로 남아요.|Cleared entries can't be undone from here. Changes already applied stay as they are.": "消去した記録はここから元に戻せません。すでに反映された変更はそのまま残ります。",
+"공연/영화 관람|Show / Movie": "公演・映画鑑賞",
+"AI 알림 분석|AI notification review": "AI通知分析",
+"가계부가 아닌 알림(예매·예약·배송 등)을 AI에게 보내 일정·메모로 정리해요. 광고·인증 번호는 보내지 않아요.|Sends alerts that aren't payments (bookings, reservations, deliveries) to your AI to file as events or memos. Ads and verification codes are never sent.": "決済以外の通知（予約・予約確認・配送など）をAIに送り、予定やメモに整理します。広告や認証番号は送りません。",
+"결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "決済ではない通知なので、AIに確認を任せました。",
+"알림 분석|Notification review": "通知の分析",
+"문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "SMSは決済メッセージだけを家計簿に入れます。AI通知分析は使いません。",
+"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "メッセンジャーアプリの通知はAIに送りません。"
 }
 }

@@ -5853,6 +5853,83 @@
         }
       }
     },
+    "AI 알림 분석|AI notification review" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI通知分析"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 通知分析"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 通知分析"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Mitteilungsanalyse"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analyse des notifications par l’IA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisi notifiche con IA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Análisis de notificaciones con IA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Análise de notificações por IA"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI phân tích thông báo"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisis notifikasi AI"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI วิเคราะห์การแจ้งเตือน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI सूचना विश्लेषण"
+          }
+        }
+      }
+    },
     "AI 앱이 열리면 객관식 질문에 답하며 항공편·숙소·관광지를 정해요. 마지막에 나오는 JSON을 복사해 돌아오세요.|In the AI app, answer multiple-choice questions to pick flights, hotels and places. Copy the JSON it gives you at the end and come back." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7466,6 +7543,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI ने {0} चीज़ें व्यवस्थित कीं"
+          }
+        }
+      }
+    },
+    "AI가 한 일 기록을 모두 지울까요?|Clear the whole AI activity log?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIの実行記録をすべて消去しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要清除全部 AI 操作记录吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要清除全部 AI 操作記錄嗎？"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesamten KI-Verlauf löschen?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer tout l’historique de l’IA ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancellare tutta la cronologia dell’IA?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Borrar todo el historial de la IA?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limpar todo o histórico da IA?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa toàn bộ nhật ký việc AI đã làm?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus seluruh riwayat tindakan AI?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ล้างประวัติการทำงานของ AI ทั้งหมดไหม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI की सारी गतिविधि का इतिहास साफ़ करें?"
           }
         }
       }
@@ -212367,6 +212521,83 @@
         }
       }
     },
+    "가계부가 아닌 알림(예매·예약·배송 등)을 AI에게 보내 일정·메모로 정리해요. 광고·인증 번호는 보내지 않아요.|Sends alerts that aren't payments (bookings, reservations, deliveries) to your AI to file as events or memos. Ads and verification codes are never sent." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決済以外の通知（予約・予約確認・配送など）をAIに送り、予定やメモに整理します。広告や認証番号は送りません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把非支付类通知（预订、预约、配送等）发给 AI，整理成日程或备忘。广告和验证码不会发送。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把非付款類通知（訂位、預約、配送等）傳給 AI，整理成行程或備忘。廣告和驗證碼不會傳送。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schickt Mitteilungen, die keine Zahlungen sind (Buchungen, Reservierungen, Lieferungen), an deine KI, die sie als Termine oder Notizen ablegt. Werbung und Bestätigungscodes werden nie gesendet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoie à votre IA les notifications qui ne sont pas des paiements (réservations, livraisons…) pour les classer en événements ou notes. Les publicités et codes de vérification ne sont jamais envoyés."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia alla tua IA le notifiche che non sono pagamenti (prenotazioni, consegne…) per archiviarle come eventi o note. Pubblicità e codici di verifica non vengono mai inviati."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envía a tu IA las notificaciones que no son pagos (reservas, entregas…) para archivarlas como eventos o notas. Nunca se envían anuncios ni códigos de verificación."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envia à sua IA as notificações que não são pagamentos (reservas, entregas…) para organizá-las como eventos ou notas. Anúncios e códigos de verificação nunca são enviados."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi thông báo không phải thanh toán (đặt chỗ, giao hàng…) cho AI để sắp xếp thành sự kiện hoặc ghi chú. Quảng cáo và mã xác minh không bao giờ được gửi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengirim notifikasi non-pembayaran (pemesanan, reservasi, pengiriman) ke AI untuk dicatat sebagai acara atau memo. Iklan dan kode verifikasi tidak pernah dikirim."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งการแจ้งเตือนที่ไม่ใช่การชำระเงิน (การจอง การนัดหมาย การจัดส่ง) ให้ AI จัดเป็นกิจกรรมหรือบันทึก โฆษณาและรหัสยืนยันจะไม่ถูกส่ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भुगतान न होने वाली सूचनाएँ (बुकिंग, रिज़र्वेशन, डिलीवरी) AI को भेजता है ताकि वह उन्हें इवेंट या मेमो में दर्ज करे। विज्ञापन और वेरिफ़िकेशन कोड कभी नहीं भेजे जाते।"
+          }
+        }
+      }
+    },
     "가계부를 엽니다. 할 일 판 ₩ 줄의 ＋로 지출을 바로 넣을 수도 있습니다.|Opens the ledger. The ＋ on the ₩ row adds spending directly." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -220606,6 +220837,83 @@
         }
       }
     },
+    "결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決済ではない通知なので、AIに確認を任せました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这不是支付通知，已交给 AI 确认。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這不是付款通知，已交給 AI 確認。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Zahlung – wurde zur Prüfung an deine KI gegeben."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce n’est pas un paiement : confié à votre IA pour vérification."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non è un pagamento: affidato alla tua IA per un controllo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No es un pago, así que se envió a tu IA para revisarlo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não é um pagamento, então foi enviado à sua IA para revisão."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đây không phải thanh toán nên đã nhờ AI xem xét."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bukan pembayaran, jadi diserahkan ke AI untuk dicek."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่ใช่การชำระเงิน จึงฝากให้ AI ตรวจสอบ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह भुगतान नहीं है, इसलिए जाँच के लिए AI को सौंपा गया।"
+          }
+        }
+      }
+    },
     "겹쳐 보기|Overlay" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -225992,6 +226300,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पढ़ाई"
+          }
+        }
+      }
+    },
+    "공연/영화 관람|Show / Movie" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公演・映画鑑賞"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "演出/观影"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "演出／觀影"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show / Kino"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spectacle / Cinéma"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spettacolo / Film"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espectáculo / Cine"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show / Cinema"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biểu diễn / Xem phim"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pertunjukan / Film"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ชมการแสดง / ภาพยนตร์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शो / फ़िल्म देखना"
           }
         }
       }
@@ -235309,6 +235694,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "रिकॉर्ड पढ़ना"
+          }
+        }
+      }
+    },
+    "기록 지우기|Clear log" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記録を消去"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除记录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除記錄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verlauf löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer l’historique"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancella cronologia"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borrar historial"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limpar histórico"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa nhật ký"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus riwayat"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ล้างประวัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इतिहास साफ़ करें"
           }
         }
       }
@@ -265882,6 +266344,83 @@
         }
       }
     },
+    "메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メッセンジャーアプリの通知はAIに送りません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即时通讯应用的通知不会发送给 AI。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即時通訊應用程式的通知不會傳送給 AI。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen von Messenger-Apps werden nie an deine KI gesendet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les notifications des applis de messagerie ne sont jamais envoyées à votre IA."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le notifiche delle app di messaggistica non vengono mai inviate alla tua IA."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las notificaciones de apps de mensajería nunca se envían a tu IA."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As notificações de apps de mensagens nunca são enviadas à sua IA."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông báo của ứng dụng nhắn tin không bao giờ được gửi cho AI."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifikasi aplikasi pesan tidak pernah dikirim ke AI."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การแจ้งเตือนจากแอปส่งข้อความจะไม่ถูกส่งให้ AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मैसेजिंग ऐप की सूचनाएँ कभी AI को नहीं भेजी जातीं।"
+          }
+        }
+      }
+    },
     "메일 보내기|Send email" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -267803,6 +268342,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "संदेश (“BOKKI Payment” ऑटोमेशन)"
+          }
+        }
+      }
+    },
+    "문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMSは決済メッセージだけを家計簿に入れます。AI通知分析は使いません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "短信只会把支付短信记入账本，不使用 AI 通知分析。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "簡訊只會把付款簡訊記入帳本，不使用 AI 通知分析。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS werden nur als Zahlungsnachrichten ins Haushaltsbuch übernommen. Die KI-Mitteilungsanalyse wird nicht verwendet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les SMS ne servent qu’aux messages de paiement du budget. L’analyse des notifications par l’IA n’est pas utilisée."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli SMS vengono usati solo per i messaggi di pagamento nel registro spese. L’analisi delle notifiche con IA non viene usata."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los SMS solo se usan para los mensajes de pago del libro de gastos. No se usa el análisis de notificaciones con IA."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os SMS só são usados para mensagens de pagamento no livro de gastos. A análise de notificações por IA não é usada."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tin nhắn SMS chỉ được dùng cho tin nhắn thanh toán trong sổ chi tiêu. Không dùng AI phân tích thông báo."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS hanya dipakai untuk pesan pembayaran di buku keuangan. Analisis notifikasi AI tidak dipakai."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความ SMS ใช้เฉพาะข้อความชำระเงินในบัญชีรายรับรายจ่าย และไม่ใช้ AI วิเคราะห์การแจ้งเตือน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS केवल भुगतान संदेशों के लिए खाते में उपयोग होते हैं। AI सूचना विश्लेषण इस्तेमाल नहीं होता।"
           }
         }
       }
@@ -307073,6 +307689,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अलर्ट टेक्स्ट: इनपुट"
+          }
+        }
+      }
+    },
+    "알림 분석|Notification review" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知の分析"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知分析"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知分析"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungsanalyse"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analyse de notification"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisi notifica"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Análisis de notificación"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Análise de notificação"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phân tích thông báo"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisis notifikasi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วิเคราะห์การแจ้งเตือน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सूचना विश्लेषण"
           }
         }
       }
@@ -373986,6 +374679,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "हटाने पर यह नोट “सिर्फ़ नोट” बन जाएगा और खाते में वापस नहीं आएगा।"
+          }
+        }
+      }
+    },
+    "지운 기록은 되돌리기를 쓸 수 없어요. 이미 반영된 변경은 그대로 남아요.|Cleared entries can't be undone from here. Changes already applied stay as they are." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "消去した記録はここから元に戻せません。すでに反映された変更はそのまま残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除后的记录无法再从这里撤销。已生效的更改会保留。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除後的記錄無法再從這裡復原。已生效的變更會保留。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gelöschte Einträge lassen sich hier nicht mehr rückgängig machen. Bereits übernommene Änderungen bleiben bestehen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les entrées effacées ne pourront plus être annulées ici. Les modifications déjà appliquées restent."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le voci cancellate non si possono più annullare da qui. Le modifiche già applicate restano."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las entradas borradas ya no se podrán deshacer desde aquí. Los cambios ya aplicados se mantienen."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As entradas apagadas não poderão mais ser desfeitas por aqui. As alterações já aplicadas permanecem."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mục đã xóa không thể hoàn tác từ đây. Các thay đổi đã áp dụng vẫn được giữ nguyên."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entri yang dihapus tidak dapat dibatalkan dari sini. Perubahan yang sudah diterapkan tetap ada."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รายการที่ล้างแล้วจะเลิกทำจากที่นี่ไม่ได้ การเปลี่ยนแปลงที่ใช้ไปแล้วจะยังอยู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "साफ़ की गई प्रविष्टियाँ यहाँ से पूर्ववत नहीं हो सकतीं। लागू हो चुके बदलाव जैसे हैं वैसे रहेंगे।"
           }
         }
       }

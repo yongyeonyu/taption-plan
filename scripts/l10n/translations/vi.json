@@ -6100,6 +6100,16 @@
 "카카오 길찾기로 자동 추가|Added from Kakao directions": "Tự động thêm từ chỉ đường Kakao",
 "카카오 예상 통행료|Kakao estimated toll": "Phí cầu đường ước tính của Kakao",
 "정상요금 {0}|Normal fare {0}": "Giá thường {0}",
-"지난 톨게이트로 자동 추가|Added from the toll plazas passed": "Tự động thêm từ các trạm thu phí đã đi qua"
+"지난 톨게이트로 자동 추가|Added from the toll plazas passed": "Tự động thêm từ các trạm thu phí đã đi qua",
+"기록 지우기|Clear log": "Xóa nhật ký",
+"AI가 한 일 기록을 모두 지울까요?|Clear the whole AI activity log?": "Xóa toàn bộ nhật ký việc AI đã làm?",
+"지운 기록은 되돌리기를 쓸 수 없어요. 이미 반영된 변경은 그대로 남아요.|Cleared entries can't be undone from here. Changes already applied stay as they are.": "Mục đã xóa không thể hoàn tác từ đây. Các thay đổi đã áp dụng vẫn được giữ nguyên.",
+"공연/영화 관람|Show / Movie": "Biểu diễn / Xem phim",
+"AI 알림 분석|AI notification review": "AI phân tích thông báo",
+"가계부가 아닌 알림(예매·예약·배송 등)을 AI에게 보내 일정·메모로 정리해요. 광고·인증 번호는 보내지 않아요.|Sends alerts that aren't payments (bookings, reservations, deliveries) to your AI to file as events or memos. Ads and verification codes are never sent.": "Gửi thông báo không phải thanh toán (đặt chỗ, giao hàng…) cho AI để sắp xếp thành sự kiện hoặc ghi chú. Quảng cáo và mã xác minh không bao giờ được gửi.",
+"결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "Đây không phải thanh toán nên đã nhờ AI xem xét.",
+"알림 분석|Notification review": "Phân tích thông báo",
+"문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "Tin nhắn SMS chỉ được dùng cho tin nhắn thanh toán trong sổ chi tiêu. Không dùng AI phân tích thông báo.",
+"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "Thông báo của ứng dụng nhắn tin không bao giờ được gửi cho AI."
 }
 }
