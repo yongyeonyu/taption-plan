@@ -31,6 +31,15 @@ public enum FlightAirportCatalog {
         return a.country == b.country
     }
 
+    /// 알림글에 적힌 도시 이름(「인천」「방콕」「Bangkok」)으로 공항 하나. 이름이 정확히 같거나 「이름 + 공백」으로 시작하는 첫 공항
+    /// (같은 도시의 공항이 여럿이면 표에서 먼저 나오는 큰 공항). 공항 이름의 일부만 같은 것(「서」)은 맞추지 않는다.
+    public static func airport(city name: String) -> FlightAirport? {
+        let text = name.trimmingCharacters(in: .whitespaces)
+        guard text.count >= 2 else { return nil }
+        let lower = text.lowercased()
+        return airports.first { $0.nameKo == text || $0.nameKo.hasPrefix(text + " ") || $0.nameEn.lowercased() == lower || $0.nameEn.lowercased().hasPrefix(lower + " ") }
+    }
+
     /// 코드·한글 이름·영문 이름 일부로 찾는다(대소문자 무시). 코드가 정확히 맞으면 맨 앞.
     public static func search(_ query: String, limit: Int = 20) -> [FlightAirport] {
         let text = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
