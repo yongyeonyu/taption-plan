@@ -1,7 +1,10 @@
 ---
 id: 20261119-1655-r2-public-announcements
 created_at: 2026-11-19T16:55+09:00
-status: pending
+status: done
+request_id: R2PUB1119A01
+finished_at: 2026-11-19T17:20+09:00
+commit: a6e759bb
 title: R2 공용 버킷 — 전체 공지·공용 정적 데이터 조회 엔드포인트
 from: 비야
 basis: 대표 직접 지시 (2026-11-19 채팅 「r2서버 올리자」 — 전체 공지와 도시별 POI 팩·온디바이스 ML 모델을 모두에게 뿌릴 공용 정적 저장소)
@@ -140,3 +143,17 @@ basis: 대표 직접 지시 (2026-11-19 채팅 「r2서버 올리자」 — 전�
 - 관련 기록: `test.md`의 `D1R1119A01`·`D1R1119A02`(저장소 D1 전환·옛 KV 제거), `D1R1119A02`의 「서버 재배포 한 번 남음」.
 - Cloudflare 문서(2026-11-19 확인): R2 Workers API 레퍼런스(`onlyIf`·`range`·`httpEtag`·`writeHttpMetadata`), R2 가격(무료 저장 10GB·Class A 100만·Class B 1,000만·전송료 무료), Workers 한도(무료 하루 10만 요청), Wrangler v4 마이그레이션(`r2 object` 기본이 로컬, 원격은 `--remote`).
 - 이 요청은 「R2 바인딩 + 읽기 전용 공용 길 + 스키마 초안 + 시험」까지입니다. 앱이 공지를 언제 받아 어떻게 보여 줄지, POI 팩·모델 형식은 다음 요청에서 정합니다.
+
+## 클로드 코드 회신
+
+- 처리: 완료(코드·시험까지. 배포·버킷 생성·업로드는 대표 몫이라 하지 않음)
+- 요청 ID: R2PUB1119A01 (`test.md` 「배포·운영·출시」 줄·요청 상세·검증 기록)
+- 시작·끝: 2026-11-19 16:58 ~ 17:20 (KST)
+- 커밋: `a6e759bb` 작업, 문서 이동은 `[비야 브리지] 20261119-1655-r2-public-announcements` 한 건
+- 바꾼 파일: `server/trip-relay/src/public.js`(새), `src/index.js`(`route()`에서 공용 표 바로 뒤·`USER_STATE` 앞에 `publicRoute` 한 줄), `wrangler.toml`(`[[r2_buckets]] PUBLIC_BUCKET`), `test/public.test.mjs`·`test/fixtures/public-announcements.json`(새), `test/fakes.mjs`(`MemoryBucket`), `README.md`(「공용 공지·정적 데이터」 절), `test.md`. 앱(iOS) 소스는 건드리지 않음
+- 검증: `npm test` 271건 실행·통과 271·실패 0·건너뜀 0(기존 257 + 새 14, 새 의존성 없음). 앱 빌드·시험은 서버 전용이라 안 함. 실제 R2·엣지 캐시(`caches.default`)는 Node 시험에 없어 확인 안 함
+- 알아 둘 것 3가지:
+  1. 지시서 모순: 시험 9번은 `/public/assets/packs/`를 400으로, 2-4절은 404로 적어 2-4절대로 404로 했습니다(`//`·`%`·`.`시작 등은 400).
+  2. `/public/assets/packs/../secret`, `%2e%2e/secret`는 URL 해석기가 요청이 코드에 닿기 전에 `..`를 걷어내 `/public/assets/secret`이 되므로 400이 아니라 404(허용 접두어 밖)입니다. R2는 읽지 않습니다. 400 시험은 `..%2fsecret`처럼 슬래시를 인코딩한 형태로 했습니다.
+  3. 공지를 읽기 시작한 R2 객체가 깨졌을 때는 빈 목록(`no-store`)이라, 새 `etag`가 안 생겨 304 순환에 빠지지 않습니다.
+- 남은 것·확인 필요(전부 대표 몫, 아직 안 함): ① `npx wrangler r2 bucket create taption-trip-public` ② `wrangler.local.toml`에 `[[r2_buckets]] PUBLIC_BUCKET` 블록 추가 ③ `npx wrangler deploy --config wrangler.local.toml` ④ 첫 공지 `r2 object put … --remote` 업로드. 순서·명령은 README 「R2 배포·업로드」. 바인딩이 없어도 `/public/announcements`는 200 빈 목록이라 배포 순서가 틀려도 앱이 깨지지 않습니다. iOS 연동은 후속 요청
