@@ -158,7 +158,7 @@ packs/season/<packId>/<version>/<파일…>      ← 그림·소리·라이선�
    - `fromTime`/`toTime`은 `HH:mm`·`sunset`·`sunrise` 중 하나. 창과 시간 조건이 모두 맞아야 활성입니다.
    - `textSlots[].content`는 `year`·`memo`·정적 문자열만. **연도 숫자를 그림에 굽지 않는 이유가 이것입니다** — 해가 바뀌면 앱이 그 해 숫자를 그립니다.
    - `assets[].path`는 팩 폴더 기준 상대 경로, 소문자·영숫자·`.`·`-`·`_`만.
-   - `audio[].license`는 필수입니다(5절 라이선스 규칙).
+   - `audio[].license`는 필수입니다(9-4절 라이선스 규칙).
 
 3-4. **검증(manifest validation)**: 파일 크기 상한(팩 전체 8MB, 그림 400KB, 소리 2MB), `sha256` 정확, 필수 열쇠 존재, 창이 겹치지 않음, `requiresAppBuild`가 지금 빌드보다 크면 **받지 않고** 「나중에」로 표시. 하나라도 어긋나면 그 팩만 버리고 기본 팩으로 갑니다(앱은 절대 죽지 않음).
 
