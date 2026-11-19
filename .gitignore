@@ -48,3 +48,6 @@ server/*/.wrangler/
 # APS1115A01 산출물(다시 만들 수 있음)
 design/APS1115A01/output/
 design/APS1115A01/source/promo-clips/
+
+# wrangler가 저장소 루트에서 실행되면 계정 정보 캐시를 만든다(커밋 금지)
+.wrangler/
