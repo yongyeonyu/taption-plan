@@ -203,6 +203,16 @@ AI·Siri·단축어
 - UI 다듬기(UIR1111A01): 모서리는 `TaptionCorner` 네 단계(8·12·16·24), 17pt 미만 글자는 굵게 → 반굵게·반굵게 → 보통 굵기입니다. 여행 화면도 같은 규칙입니다(대표 결정 2026-11-13). 17pt 이상 제목·큰 숫자·아이콘 비례 크기와 여권·도장 그림은 예외입니다.
 - 화면 확인용 Debug 인자: `-paymentAlertPreview`(뒤에 `inbox`)는 앱별 알림 화면·받은 글 화면을 바로 엽니다.
 
+## 여행 항공편 (FLT1119A01, 2026-11-20)
+
+- **공항 정본**: `Packages/TaptionRouteEngine/.../Travel/FlightAirportCatalog.swift`(좌표·IANA 시간대·이름·나라, 236곳). 앱의 `TravelAirports.coordinate`도 이 표를 읽는다(표를 따로 두지 않는다). 시차·도착·비행 시간은 `FlightTimeMath`만 쓴다.
+- **여정 모델**: `FlightItinerary.swift`(`FlightLeg`·`FlightLayover`·`FlightConnectionRules` 최소 환승 60/90/120분·`FlightAirportArrival` 도착 역산 국제 180·국내 60분, 현장 안내가 앞선다).
+- **알림 파서·병합**: `FlightAlertText`(정규화)·`FlightAlertParser`(8유형)·`FlightAlertMerge`(병합 키 날짜+편명 → 예약번호 → 날짜+노선+항공사 → 날짜+노선(안내형만), 후보 2개 이상은 묻기, 체크인·현장 안내는 새 카드를 만들지 않음, 손으로 적은 값은 덮지 않음). 입력은 6,000자까지이고 긴 글은 정규식 전에 막는다.
+- **앱 연결**: `FlightCardMapping`(카드 ↔ `TravelTripItem` 항공 칸과 기기 전용 `flightLog`), `FlightIngest`(글 → 반영, 보관함 `FlightInbox`), `FlightIntents`(단축어 「항공 알림 넣기」), `FlightPrep`(eSIM·숙소·면세 → `TravelPrepItem`), `FlightBriefing`(출발 전날 20시·4시간 전·지연 즉시 로컬 알림), `FlightDayBoard`(당일 배너).
+- **서버**: `server/trip-relay/src/flights.js`(`/flights/schedule`·`/flights/status`), 상류 응답 칸 이름은 문서로 확인하지 못해 `FIELD` 후보로 읽는다. 키를 받은 뒤 `scripts/flights-probe.mjs`로 칸 이름을 확인한다.
+- **개인정보 선**: 예약번호(`pnrLocal`)·`flightLog`는 기기와 백업 파일에만 둔다. 서버로는 공항 코드·날짜·방향·편명만 보낸다. 파서·병합·로그 어디에도 이름·예약번호를 출력하지 않는다.
+- **UI는 엔진을 직접 import하지 않는다**(`check-app-engine-import-boundary.sh`): 화면은 `FlightPlacement`의 어댑터(`AirportChoice`·`draft(from:)`)를 쓴다.
+
 ## 가계부 통행료 (2026-11-18 기준)
 
 자동차 이동 하나에 통행료는 한 번만 넣습니다(한 이동 한 번·지운 것 다시 넣지 않기는 같은 `handled`). 차례는 ① 지난 톨게이트(도로공사) → ② 같은 길 규칙 → ③ 카카오 길찾기입니다. 앞 단계가 처리한 이동은 뒤 단계가 보지 않습니다. 좌표 예외(카카오)는 `AGENTS.md` 4절.
