@@ -15,7 +15,7 @@ basis: 대표 직접 지시 (2026-11-19 21:29~22:10 통화) · 비야 제안(모
 1. **이번 요청이 만드는 것 두 가지**
    - **① 아키텍처·기반 구축**: 시즌 이벤트 팩 전체를 **앱 본체와 분리한 새 Swift 패키지 `SeasonPackKit`** 으로 처음부터 만듭니다(기존 앱 코드에 끼워 넣지 않음). 4개 층(배급/판정/표현/상호작용), 이벤트 아이콘 레지스트리(지도 위 아이콘 + 눌렀을 때 열리는 메뉴), 악세사리 슬롯, 연도 숫자 런타임 렌더, R2 다운로드·로컬 캐시·만료 폴백, `#if DEBUG` 전용 미리보기, 하루 공유 카드 연동, R2 공지 팝업 연동.
    - **② 첫 실제 팩 = 크리스마스 팩 (12/19~12/30)**: 집 아이콘 트리·일몰 점등·전구 깜빡임·꼭대기 별, 트리 터치 시 캐럴 + 가사 큐 말풍선, 캐릭터 의상·악세사리(산타 모자·목도리·루돌프 뿔), 크리스마스 말풍선 세트, 화면 전체 산타 비행과 산타 터치 시 선물 뿌리기(최초 수신 직후 1회 무조건 시연, 이후 3~5분 간격, 탭하면 멈춤), 하루 공유 카드 반영과 기간 종료 시 자동 원복.
-2. **이번에 만들지 않는 것**: 새해(제야의 종·카운트다운·연도 롤링·새해 목표 메모), 설날(경복궁·한복·갓·족두리·복주머니·까치·세배·세뱃돈), 밸런타인데이, 수능, 식목일, 부처님오신날의 **실제 팩·UI·에셋**은 다음 단계입니다. 이번 요청에서는 **이 구조가 그것들을 앱 본체 수정 없이 받아낼 수 있어야 한다**는 확장성 요건과 검증 기준으로만 남깁니다(4절·8절·12절의 「확장성 시험」).
+2. **이번에 만들지 않는 것**: 새해(제야의 종·카운트다운·연도 롤링·새해 목표 메모), 설날(경복궁·한복·갓·족두리·복주머니·까치·세배·세뱃돈), 밸런타인데이, 수능, 식목일, 부처님오신날의 **실제 팩·UI·에셋**은 다음 단계입니다. 이번 요청에서는 **이 구조가 그것들을 앱 본체 수정 없이 받아낼 수 있어야 한다**는 확장성 요건과 검증 기준으로만 남깁니다(8절 아이콘 레지스트리·10절 확장성 요건·13절 단위 시험).
 
 **1단계 완료 조건(대표님 22:10 지시)**: 매니페스트에 항목만 추가하면 **앱 코드를 고치지 않고** 지도 위 아이콘과 그 아이콘이 여는 메뉴가 붙는다. 이 요청은 그것을 번들 표본 팩(`sample`)으로 증명하고, 매니페스트에서 그 항목을 지우면 아이콘이 사라지는 것까지 확인합니다.
 
@@ -34,7 +34,7 @@ basis: 대표 직접 지시 (2026-11-19 21:29~22:10 통화) · 비야 제안(모
    - 앱 쪽 사용 선례: `TaptionPlan/Core/AnnouncementFeed.swift` — `AnnouncementService`가 `TripRelay.url("/public/announcements")`로 30분 쿨다운·ETag·8초 타임아웃·조용한 실패를 이미 구현했습니다. 시즌 팩의 받기 정책은 이 클래스를 그대로 따릅니다.
    - **아직 배포 전입니다**(`test.md` R2PUB1119A01: 버킷 생성·배포·업로드는 대표 몫, 미완). 그래서 아래 4-6절의 **번들 시드 팩**이 필요합니다.
 
-1-2. **집 아이콘**: 지도 집 마커는 78pt 원형 아바타 안에 `MapHomeEvolutionNNN` 그림을 넣습니다(`TaptionPlan/UI/MapHomeMapAnnotations.swift:160` `homeAvatar(level:)`, `:297` `homeMarkerArtwork(level:)`). 그림 이름은 `MapHomeGrowthPolicy.artworkName(level:)`(`MapHomeGrowthPolicy.swift:404`)이고 레벨 = 그해 몇째 날(`HOM1111A01`). 하루 공유 카드도 같은 그림을 씁니다(`MapHomeDailyCard.swift:271` `homeBadge(level:)`, 그림 렌더는 `MapHomeDailyCardSheet`의 `ImageRenderer` 경로).
+1-2. **집 아이콘**: 지도 집 마커는 78pt 원형 아바타 안에 `MapHomeEvolutionNNN` 그림을 넣습니다(`TaptionPlan/UI/MapHomeMapAnnotations.swift:160` `homeAvatar(level:)`, `:297` `homeMarkerArtwork(level:)`). 그림 이름은 `MapHomeGrowthPolicy.artworkName(level:)`(`MapHomeGrowthPolicy.swift:404`)이고 레벨 = 그해 몇째 날(`HOM1111A01`). 하루 공유 카드도 같은 그림을 씁니다(`MapHomeDailyCard.swift:273` `homeBadge(level:)`, 그림 렌더는 `MapHomeDailyCardSheet`의 `ImageRenderer` 경로).
 
 1-3. **캐릭터**: 화랑이(흰 털)·춘향이(삼색)·윤복이(갈색 줄무늬) 셋이고 `HwarangCoat`(`TaptionPlan/UI/HwarangCoat.swift:3`)가 털·눈을 정합니다. 그림은 코드로 그립니다(`HwarangPainter`). 걸치는 장식은 이미 **세 칸**입니다 — `MapHomeAccessoryKind`(`MapHomeGrowthPolicy.swift:82`: `hat`·`scarf`·`ribbon`), 값은 `MapHomeGrowthSeason.equippedHat`·`equippedScarf`·`equippedRibbon`, 착용 문자열은 `+`로 잇습니다. 모자는 `Hat_*` 자산을 `HwarangSceneView.hatAssetName`(`HwarangRig.swift:1161`) → `UIImage(named:)`(`:1177`)로 머리에 얹고, 스카프·리본은 `HwarangClothStyle`로 코드가 그립니다. 자산 생성 도구는 `tools/generate_hwarang_hats.py`(SVG를 asset catalog에 씀).
 
@@ -371,7 +371,7 @@ packs/season/<packId>/<version>/<파일…>      ← 그림·소리·라이선�
 
 - 아키텍처 원본: 이 지시서 2~10절(대표님 2026-11-19 통화 설계를 문서로 옮긴 것). 저장소 문서로는 15절의 `docs/SEASON_PACK_PLAN.md`.
 - 서버 배급 규격: `server/trip-relay/README.md` 「공용 공지·정적 데이터」, `docs/ACTIVITY_RELAY_API.md`(경로·인증 표 형식).
-- 앱 쪽 선례: `TaptionPlan/Core/AnnouncementFeed.swift`(쿨다운·ETag·조용한 실패), `TaptionPlan/Core/TripShareSidecar.swift`(곁 파일·`Mutex`·주입 디렉터리), `TaptionPlan/Core/OfflineVectorTileCache.swift`(Application Support를 쓰는 이유·연결 종류 판정), `TaptionPlan/Core/VoiceMemoServices.swift:161`(`AVAudioPlayer`), `TaptionPlan/UI/MapHomeHomeSkyMath.swift`(`MapHomeAstronomy.solarDay`), `TaptionPlan/UI/MapHomeMapAnnotations.swift:160·:297·:397`, `TaptionPlan/UI/MapHomeGrowthPolicy.swift:82·:199·:404`, `TaptionPlan/UI/HwarangCoat.swift:3`, `TaptionPlan/UI/HwarangRig.swift`(`HwarangSceneView`)·`:1161`(`hatAssetName`)·`:1177`(`UIImage(named:)`), `TaptionPlan/UI/MapHomeDailyCard.swift:189·:271`, `TaptionPlan/UI/MapHomeDefaultBubblePool.swift:6`, `TaptionPlan/UI/AssistantBubble.swift:121`, `TaptionPlan/UI/AnnouncementBanner.swift`(공지 배너·시트), `TaptionPlan/UI/MapHomeView+Support.swift:215~223`(새로고침 걸린 자리).
+- 앱 쪽 선례: `TaptionPlan/Core/AnnouncementFeed.swift`(쿨다운·ETag·조용한 실패), `TaptionPlan/Core/TripShareSidecar.swift`(곁 파일·`Mutex`·주입 디렉터리), `TaptionPlan/Core/OfflineVectorTileCache.swift`(Application Support를 쓰는 이유·연결 종류 판정), `TaptionPlan/Core/VoiceMemoServices.swift:161`(`AVAudioPlayer`), `TaptionPlan/UI/MapHomeHomeSkyMath.swift`(`MapHomeAstronomy.solarDay`), `TaptionPlan/UI/MapHomeMapAnnotations.swift:160·:297·:397`, `TaptionPlan/UI/MapHomeGrowthPolicy.swift:82·:199·:404`, `TaptionPlan/UI/HwarangCoat.swift:3`, `TaptionPlan/UI/HwarangRig.swift`(`HwarangSceneView`)·`:1161`(`hatAssetName`)·`:1177`(`UIImage(named:)`), `TaptionPlan/UI/MapHomeDailyCard.swift:189`(모자)·`:273`(집 그림), `TaptionPlan/UI/MapHomeDefaultBubblePool.swift:6`, `TaptionPlan/UI/AssistantBubble.swift:121`, `TaptionPlan/UI/AnnouncementBanner.swift`(공지 배너·시트), `TaptionPlan/UI/MapHomeView+Support.swift:215~223`(새로고침 걸린 자리).
 - 패키지 등록: `TaptionPlan.xcodeproj/project.pbxproj`의 `XCLocalSwiftPackageReference`(`TaptionClassifierEngine` 자리), `scripts/check-app-engine-import-boundary.sh`.
 - 자산 생성 선례: `tools/generate_hwarang_hats.py`, `scripts/generate_home_evolution_artwork.py`.
 - 미뤄 둔 숙제: `test.md` `HOM1111A01`(2026-11-11 「나중에」) — 이번이 그 재개입니다.
