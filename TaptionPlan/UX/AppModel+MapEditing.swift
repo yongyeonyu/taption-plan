@@ -207,9 +207,15 @@ extension AppModel {
         let previousSegments = snapshot.travel.filter { ids.contains($0.id) }
         var corrections = snapshot.settings.movementCorrections
         var didChange = false
+        // 정말 바뀐 구간의 「바꾸기 전」 값을 저장 뒤 표본으로 남긴다(MSC1119A01).
+        var changedBefore: [(span: TimeSpan, mode: TravelMode, confidence: ConfidenceLevel, distance: Double)] = []
         for index in snapshot.travel.indices
         where ids.contains(snapshot.travel[index].id) {
             let wasChanged = snapshot.travel[index].mode != mode
+            if wasChanged {
+                let before = snapshot.travel[index]
+                changedBefore.append((before.span, before.mode, before.confidence, before.distanceMeters))
+            }
             corrections = MovementCorrectionEngine.recording(
                 mode: mode,
                 for: snapshot.travel[index],
@@ -236,7 +242,18 @@ extension AppModel {
         snapshot.settings.predictedRouteDecisions.removeAll {
             !$0.isDeleted && $0.route.travelID.map(ids.contains) == true
         }
-        Task { await persist() }
+        Task {
+            guard await persist() else { return }
+            for before in changedBefore {
+                captureMisclassification(
+                    kind: .travel, span: before.span,
+                    predicted: before.mode.rawValue, predictedDetail: nil,
+                    predictedConfidence: before.confidence.rawValue, predictedScore: nil,
+                    corrected: mode.rawValue, correctedDetail: nil, correctedIsCustom: false,
+                    travelDistanceMeters: before.distance
+                )
+            }
+        }
     }
 
     /// 탈것 탑승 질문의 답(BCF1114A01). 수단을 사용자 확인으로 굳히고, 버스 노선을 골랐으면 근거와 기록 이름에 남긴다.

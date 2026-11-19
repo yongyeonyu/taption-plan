@@ -85,6 +85,7 @@
 
 ### 기록·분류·Watch
 
+- MSC1119A01 · 오분류 교정 표본 수집(옵트인·기기 안 저장·내보내기) 코드·시험 끝. 남은 것: 아이폰 11 Pro에서 설정 › 내 데이터 눈 확인, 번역 대기 8문구(`generate.py`는 메인 세션 몫), 서버 전송·모델 학습·배포는 다음 요청(대표 결정) · 실기기, 대표 몫
 - WSN1112A01·WSN1112A02·WSN1112A03 · Watch 센서 기록 점검: 하룻밤 잔 뒤 로그 내보내기, 수면 중 집안일 재확인, 도착 지연·덮인 비율, 예전 103.8시간 기록, 임계값 재검토(며칠치 쌓인 뒤) · 실기기(Watch), 자료. 대표 결정 대기: 앱 화면·AI로 나가는 예전 근거의 기기 이름도 가릴지, 평상시 Watch 라벨을 iPhone 행동 엔진에 잇기(「실제 기록 확인 뒤」로 보류)
 - HSW1114A01 · 집안일 기준을 높인 숫자는 어림, 실제 기록으로 맞추기 · 자료
 - PAY1114A01·SPC1114A01·BCF1114A01·BRV1114A01·BRF1113A01·BSV1113A01·BST1113A01·BRT1113A01·KKP1113A01·MOV1110A01 · 결제 시각으로 머문 곳 확정·카카오 후보·탑승 확인·버스 판정·자동차 오인. 남은 코드: 기록 편집 화면의 후보 고르기(SPC1114A01), 가게 이름을 카카오 장소 검색으로 찾을지(BRF1113A01, 대표 결정), 집 반경 안 가게가 「집」으로 묶이는 문제 · 실기기(실제 이동), 코드, 대표 결정
@@ -152,6 +153,7 @@
 - R2PUB1119A01(비야 브리지 `20261119-1655-r2-public-announcements`): 모두에게 같은 전체 공지·POI 팩·모델을 줄 공용 정적 저장소가 없었다. 해결: R2 바인딩 `PUBLIC_BUCKET`(`taption-trip-public`)과 인증·CORS·속도 제한 앞에서 읽기 전용으로 답하는 `GET /public/announcements`·`GET /public/assets/<announcements|packs|models>/…`(`src/public.js`). 바인딩·파일이 없어도 공지는 200 빈 목록. Worker에는 R2 쓰기·삭제 없음. 검증 기준: `npm test` 전부 통과·기존 시험 수 유지, 304·206·416·400·404·405와 쓰기 0건 확인. 상태: 코드·시험 끝, 배포·버킷 생성·업로드는 대표 몫(수행 안 함). 앱 연동은 별도 후속 요청.
 - ANN1119A01(비야 브리지 `20261119-1828-announcements-ios`): 서버가 주는 공용 공지(`GET /public/announcements`)를 앱이 받아 홈 위쪽에 보여 줘야 한다. 해결: `TaptionPlan/Core/AnnouncementFeed.swift`(모델·거르기·정렬·언어 고르기·30분 쿨다운·ETag·닫은 공지 90일/200개), `TaptionPlan/UI/AnnouncementBanner.swift`(배너 1건+시트, 홈 알림 칸에 공지→여행 가져오기 순서), `MapHomeView+Support.swift`의 기존 두 자리에서 `refresh()`. 목록은 메모리에만, 실패는 조용히, 모달 없음. 검증 기준: 새 `AnnouncementTests` 14건, Debug 빌드, 전체 단위 시험 수치, 구조 점검. 상태: 코드·시험 끝, 대표 몫: 공지 업로드 뒤 실기기 확인, 번역 대기 4건.
 - ENC1119A01(비야 브리지 `20261119-1943-energy-curve-visualizer`): 하루 요약에 시간축 위 곡선이 없어 그날 컨디션과 일정 부담을 한눈에 보기 어렵다(신규 기능). 해결: `TaptionPlan/Core/EnergyCurveEngine.swift`(지난밤 수면 시작값 + 15분 칸 변화량, 순수 계산)·`TaptionPlan/UI/MapHomeEnergyCurveCard.swift`(Canvas 곡선·수면 띠·일정 띠·인사이트)·`MapHomeInfoSheets.swift`/`MapHomeView+Presentation.swift` 연결 두 곳. 검증 기준: `EnergyCurveTests`, Debug 빌드, 전체 단위 시험, 구조 점검. 상태: 코드·시험 끝, 기기 눈 확인과 번역 대기는 후속.
+- MSC1119A01(비야 브리지 `20261119-2104-misclassification-samples`): 활동 분류 개선용으로 사용자가 분류를 손으로 고친 자료(자동 분류 → 사용자 분류)를 모으는 코드가 없다(신규 기능). 해결: 비식별 표본(`MisclassificationSample`: 시간대·요일·길이·분류·확신도·규칙 버전·속도/걸음/거리 등 특징값, 좌표·이름·제목·날짜 없음)을 옵트인(기본 꺼짐) 켠 경우에만 `Application Support/MisclassificationSamples/samples.jsonl`에 쌓고(5,000건 상한·백업 제외), 설정 › 내 데이터의 한 행에서 켜기·요약·내보내기·지우기, 「모든 데이터 삭제」에서 함께 삭제. 교정 5곳(`updateActualActivity`·`correctActualFragment`·`classifyUnconfirmedSpan`·`saveActivitySectionEdit`·`confirmTravel`)에서 정말 바뀐 경우만 저장 뒤 한 건. 검증 기준: `MisclassificationCollectorTests`, 전체 단위 시험, 구조 점검. 상태: 코드·시험 끝, 기기 눈 확인·번역 대기, 서버 엔드포인트는 다음 요청.
 - D1R1119A01: 중계 서버 저장소를 KV(`env.PLANS`)에서 Cloudflare D1(`RELAY_DB`, `taption-trip-relay`)로 전환. 원인: KV 무료 한도(하루 쓰기 1,000)가 사용자 증가의 병목이라 `KV_DAILY_WRITE_BUDGET` 900에서 쓰기가 막힘(REV1110A06). 해결: `src/d1kv.js` KV 호환 어댑터(`handle`에서 `RELAY_DB`가 있으면 `env.PLANS`를 어댑터로 바꿈, 호출부 변경 없음), `migrations/0001_kv_entries.sql`, 쓰기·삭제는 D1만·읽기는 D1 먼저 → 옛 KV에서 남은 TTL로 복사(Dual-Read), 삭제는 옛 KV에 같은 키가 있을 때만 D1 삭제 표식, list는 두 쪽을 합쳐 「마지막 이름」 cursor, 쓰기 예산 서버 전체 80000·주인별 5000. 검증 기준: `npm test` 전부 통과(어댑터 TTL·이관·삭제 표식·list·옛 KV 없음·KV 쓰기 0건 시험 포함). 상태(2026-11-19): 코드·시험 끝. 대표 몫: `wrangler d1 create`·`d1 migrations apply --remote`·배포, 이관 뒤 KV 바인딩 제거(배포·마이그레이션은 에이전트가 하지 않음). 한계: 옛 KV가 붙어 있는 동안 list는 접두어 아래 옛 키를 끝까지 읽음, 읽힌 적 없는 만료 없는 옛 키는 이관 전에 KV를 떼면 사라짐, `metadata` 미지원(호출부 사용 없음), 실제 D1에서의 확인은 배포 뒤(시험은 `node:sqlite` 가짜).
 
 - TGT1118A01: 지난 톨게이트(영업소)를 기기에서 알아내 가계부 통행료에 「인천 영업소 → 서울 영업소 · 900원 · 출퇴근 할인 20%」처럼 남김(대표 결정 2026-11-18 객관식: 요금은 중계 서버가 한국도로공사 OpenAPI에 묻고 앱은 영업소 코드·차종만 보냄 / 확실하면 바로 넣음 / 불확실하면 「확인 필요」). 원인: 같은 길 통행료(TOL1111A01·TOL1118A01)는 어느 요금소를 지났는지 몰라 배운 금액만 되풀이하고, 처음 가는 길이나 다른 출구로 나간 날은 금액을 모름. 해결: 서버에 `GET /ex/units`(영업소 위치 `locationinfoUnit` 모든 쪽을 모아 정리, 오래 캐시)·`GET /ex/fare?from&to&car`(영업소간 통행요금 `bhoinstIntoTollList`, 정상요금만 정리)를 덧붙이고(키는 Worker 비밀값 `EX_API_KEY`, 없으면 503 `ex_key_missing`, 좌표는 받지 않음), 앱은 영업소 목록을 통째로 받아 기기에 캐시(크기 제한, 실패하면 다음에)한 뒤 이동의 정확한 위치(대략 위치·오차 100m 초과 제외)와 견줘 지난 영업소를 순수 함수로 판정. 두 곳 이상이면 처음=입구·끝=출구(폐쇄식), 하나면 본선 영업소(개방식, 같은 코드로 요금 조회). 금액은 정상 1종 요금에 기존 `LedgerTollDiscount`(통과 시각 기준). 확실하면 넣고 아니면 `LedgerReviewStore.add(…, reason: .toll)`, 영업소를 못 알아내거나 요금을 못 받으면 지금의 같은 길 방식. 한 이동 한 번·지운 것 다시 넣지 않음(`handled`)은 그대로. 검증 기준: 서버 `npm test` 3회 통과(새 시험: 쪽 모으기·정리·키 없음·잘못된 코드·상류 실패), 앱 새 단위 시험(판정·확실함·표시·넣기/확인 필요)과 `LedgerTollRepeatTests`, `-only-testing:TaptionPlanTests` 전체 실패 0, 앱 Debug 빌드, 구조 지표 `--check`·import 경계, 번역 `extract.py`·`check.py` 실패 0. 서버 배포·키 발급·실기기 확인은 대표 몫(로그 `build/validation/TGT1118A01/`). 상태(2026-11-18): 서버·앱·시험·번역 점검 끝(`test.md` TGT1118A01: 서버 234건·전체 단위 3,060건 실패 0). 남은 기준: 메인 `generate.py`, 대표가 `npx wrangler secret put EX_API_KEY`·서버 배포, 아이폰 11 실제 고속도로 기록으로 거리 기준(150·80m) 확인. 그 전까지 지우지 않음.
@@ -1094,6 +1096,7 @@
 | MNU1119A01 | 메인 메뉴 › 행동 분류를 펼침 → activity·hobby·health·housework 네 분류에 직접 추가 항목(공연/영화 관람 등)이 모두 보이고 각 줄의 화랑이가 움직임 | 분류마다 8·7·5·5줄, 직접 추가 18개 포함 | |
 | ANN1119A01 | R2에 공지 1건을 올린 뒤(R2PUB1119A01 업로드 선행) 앱 실행 → 홈 위쪽 배너 표시 → X로 닫기 → 앱 종료·재실행 | 배너가 뜨고, 닫으면 사라지고, 재실행해도 다시 안 뜸. 지금은 서버 업로드 전이라 확인 불가 | |
 | ENC1119A01 | 하루 요약 › 연봉 카드 아래 컨디션 에너지 곡선: 곡선·일정 띠·인사이트 1~2줄이 보이고, 기록 없는 날은 한 줄 빈 상태, 날짜를 바꿔도 이전 날 곡선이 남지 않음 | 카드가 보이고 곡선이 시간축에 맞으며 날짜를 바꿔도 이전 날 값이 안 남음. 시뮬레이터로는 눈으로 보지 않음(렌더링 연기 시험만) | |
+| MSC1119A01 | 설정 › 내 데이터 › 분류 개선 데이터 수집: ① 꺼진 채 시간표에서 분류를 한 번 고쳐도 「0건」 ② 켜고 한 번 고치면 「1건」 ③ 「내보내기」 파일을 열어 좌표·장소 이름·연월일이 없고 「바꾸기 전 → 바꾼」 분류가 보이는지 ④ 「지우기」 뒤 「0건」 | 켜기 전 0건, 켠 뒤 고칠 때마다 1건씩, 내보낸 JSON에 개인 정보 없음, 지우면 0건. 시뮬레이터로는 화면을 눈으로 보지 않음(단위 시험만) | |
 
 ### Apple Watch
 
@@ -1143,6 +1146,15 @@
 | COM1016A01·IAP905G002 | 개인정보 라벨, IAP 보류 상태 | 대표 결정대로 | |
 
 ## 검증 기록
+
+### MSC1119A01 · 오분류 교정 표본 수집·옵트인·내보내기 (2026-11-19, 시뮬레이터 iPhone 17, 비야 브리지 `20261119-2104-misclassification-samples`)
+- 새 `MisclassificationCollectorTests` 14건 통과·실패 0(`msc-tests-4.xcresult`): 기본 꺼짐은 폴더조차 안 만듦, 켜면 한 건, 개인정보·좌표 미포함(좌표·가짜 와이파이 이름·날짜 연도 문자열 없음)·JSON 열쇠 집합이 15개/9개로 고정, 사용자 지정 분류는 이름 없이 `custom`, 원본 0건이면 특징값 전부 nil, 반올림·최빈 동수 규칙, 깨진 줄 건너뜀, 상한(오래된 것부터 삭제), 초기화, 요약(종류별·상위 5개), 내보내기 형식(연월일 없음), 자정·다른 시간대, 같은 분류 재선택은 표본 아님, 이동 표본.
+- 시험이 잡은 것: 값이 없는 선택 칸이 JSON에서 빠져 열쇠 집합이 흔들렸다 → 없으면 `null`로 쓰도록 `encode(to:)`를 직접 두었다(읽기는 그대로).
+- 전체 `-only-testing:TaptionPlanTests`(`app-tests.xcresult`): 3,124건 실행, 건너뜀 26, 실패 0(xcresult 통과 3,150). 첫 시도는 「test runner hung before establishing connection」(시험 0건)이라 `hung-app-tests.*`로 보관하고 시뮬레이터를 껐다 켜 다시 돌렸다. 앞선 TIM1119A01 수정으로 `ask_user` 시험도 통과했다.
+- 구조 점검 통과(처음에 주석의 `Task.detached` 글자를 지표가 세어 35>34로 실패 → 주석 문구를 바꿔 해결), 동결 파일·`server/trip-relay` 무변경, 새 파일 217·145·111·251줄.
+- 다국어: 새 문구는 모두 `language.text` 리터럴, 번역 대기 8문구(분류 개선 데이터 수집·안내문·끄면 더 모으지 않아요·기기에 N건 모음·내보내기·모은 데이터를 지울까요·되돌릴 수 없어요·내보낼 파일을 만들지 못했습니다). `check.py`는 de·ja·zh-Hans·zh-Hant에서 누락을 보고한다(ANN·ENC 문구 포함 20문구). 읽지 못한 호출 155건 그대로. 생성물은 되돌려 두었다.
+- 하지 않은 것: 서버 전송·`server/trip-relay`·네트워크 코드, 분류 파이프라인 판정, 실기기·화면 눈 확인. 호출부 중 시간표 구간 편집은 「원래 분류와 다른 조각이 하나일 때」만 담고 자동으로 메운 「미확인」 조각은 세지 않는다.
+
 
 ### TIM1119A01 · `ask_user` 시험의 시간 의존 고침 (2026-11-19, 시뮬레이터 iPhone 17)
 - 원인: `AssistantAppControlTests.testAskUserStoresTheQuestionAnswersUploadAndUndoWithdrawsOnlyUnanswered`가 질문을 `at(11, 12, 9)`(11월 9일 11:12, 인자 순서가 시·분·일)로 만드는데, 운영 코드 `AITaskQueue.add`는 실제 현재 시각으로 7일 지난 질문을 정리(`prune`)해, 11월 16일 이후 질문이 바로 사라져 「duplicate」가 나오지 않고 `Index out of range`로 끝났다(ANN1119A01·ENC1119A01 전체 시험의 실패 1건).

@@ -42,7 +42,10 @@ extension AppModel {
             replaceConfirmedSleepSpans(adding: [previousSpan])
         }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
-        await saveUserEdit(from: previous)
+        let saved = await saveUserEdit(from: previous)
+        if saved {
+            captureActivityMisclassification(from: actual, span: actual.span(asOf: .now), option: option)
+        }
         TaptionPlanDiagnosticsLogger.shared.record(
             "activity_correction_applied",
             fields: [
@@ -189,7 +192,10 @@ extension AppModel {
             storeConfirmedSleepSpan(TimeSpan(start: startAt, end: endAt))
         }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
-        await saveUserEdit(from: previous)
+        let saved = await saveUserEdit(from: previous)
+        if saved, let option {
+            captureActivityMisclassification(from: actual, span: TimeSpan(start: startAt, end: endAt), option: option)
+        }
         TaptionPlanDiagnosticsLogger.shared.record(
             "activity_correction_applied",
             fields: [
@@ -255,7 +261,14 @@ extension AppModel {
         if option.categoryID == "sleep" {
             storeConfirmedSleepSpan(span)
         }
-        await saveUserEdit(from: previous)
+        let saved = await saveUserEdit(from: previous)
+        if saved {
+            captureMisclassification(
+                kind: .activity, span: span,
+                predicted: "unconfirmed", predictedDetail: nil, predictedConfidence: nil, predictedScore: nil,
+                corrected: option.categoryID, correctedDetail: option.behavior, correctedIsCustom: option.isCustom
+            )
+        }
     }
 
     func saveActivitySectionEdit(
@@ -342,6 +355,7 @@ extension AppModel {
             ]
         )
         recordUserEdit(from: previous)
+        captureSectionMisclassification(request)
         return ActivitySectionEditSaveResult(
             recordIDs: records.map(\.id),
             selectedSpan: selectedSpan
@@ -432,5 +446,61 @@ extension AppModel {
         }
 
         await persistOrRollBack(userEditRollback(from: previous))
+    }
+
+    // MARK: 오분류 교정 표본(MSC1119A01)
+
+    /// 사용자가 손으로 고친 분류를 표본으로 남긴다. 옵트인이 꺼져 있거나 삭제 중이면 아무것도 하지 않는다.
+    /// `Task`는 센서 원본을 읽는 동안만 기다린다(분리된 작업은 만들지 않는다).
+    func captureMisclassification(
+        kind: MisclassificationSample.Kind,
+        span: TimeSpan,
+        predicted: String, predictedDetail: String?,
+        predictedConfidence: String?, predictedScore: Double?,
+        corrected: String, correctedDetail: String?, correctedIsCustom: Bool,
+        travelDistanceMeters: Double? = nil
+    ) {
+        let collector = MisclassificationCollector.live
+        guard collector.isEnabled, !isDeletingUserData, span.duration > 0 else { return }
+        Task { [span] in
+            let readings = await sensorReadings(in: span)
+            collector.capture(
+                kind: kind, span: span, readings: readings,
+                predicted: predicted, predictedDetail: predictedDetail,
+                predictedConfidence: predictedConfidence, predictedScore: predictedScore,
+                corrected: corrected, correctedDetail: correctedDetail, correctedIsCustom: correctedIsCustom,
+                travelDistanceMeters: travelDistanceMeters, calendar: .autoupdatingCurrent
+            )
+        }
+    }
+
+    /// 자동 기록 하나를 사용자가 다른 분류로 고쳤을 때. 같은 분류를 다시 고른 경우는 표본이 아니다.
+    func captureActivityMisclassification(from actual: ActualRecord, span: TimeSpan, option: ActivityCorrectionOption) {
+        guard option.isCustom || MisclassificationSample.isChange(
+            predicted: actual.categoryID, predictedDetail: actual.behavior,
+            corrected: option.categoryID, correctedDetail: option.behavior
+        ) else { return }
+        captureMisclassification(
+            kind: .activity, span: span,
+            predicted: actual.categoryID, predictedDetail: actual.behavior,
+            predictedConfidence: actual.confidence.rawValue, predictedScore: actual.classificationScore,
+            corrected: option.categoryID, correctedDetail: option.behavior, correctedIsCustom: option.isCustom
+        )
+    }
+
+    /// 시간표 구간 편집. 원래 분류와 다른 조각이 정확히 하나일 때만 담는다(자동으로 메운 「미확인」 조각은 사용자가 고른 분류가 아니라 세지 않는다).
+    /// 여러 조각을 서로 다른 분류로 한꺼번에 덮은 경우는 한 줄짜리 표본으로 담을 수 없어 넣지 않는다.
+    func captureSectionMisclassification(_ request: ActivitySectionEditRequest) {
+        let original = request.originalOption
+        let changed = ActivitySectionOverrideEngine.pieces(for: request).filter {
+            $0.option.id != ActivitySectionOverrideEngine.unconfirmedOption.id
+                && ($0.option.categoryID != original.categoryID || $0.option.behavior != original.behavior || $0.option.isCustom)
+        }
+        guard changed.count == 1, let piece = changed.first else { return }
+        captureMisclassification(
+            kind: .activity, span: piece.span,
+            predicted: original.categoryID, predictedDetail: original.behavior, predictedConfidence: nil, predictedScore: nil,
+            corrected: piece.option.categoryID, correctedDetail: piece.option.behavior, correctedIsCustom: piece.option.isCustom
+        )
     }
 }

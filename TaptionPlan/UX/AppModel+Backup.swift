@@ -253,6 +253,7 @@ extension AppModel {
     func deleteAllUserData(includingBackups: Bool = false) async {
         guard acceptsDataMutation() || (isStartupSnapshotPartial && allowsRepositoryLoadAttempt()) else { return }
         MapHomeRangeSampleCache.removeAll()
+        MisclassificationCollector.live.removeAll()
         await MapHomeVisitLedgerStore.shared.reset()
         isDeletingUserData = true
         let deletionCutoff = Date.now

@@ -338,6 +338,8 @@
 		A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AIX1114A01000000000001 /* AssistantRuleStore.swift */; };
 		A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PAS1113A01000000000001 /* PaymentAlertSources.swift */; };
 		A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000001 /* LedgerTransitFare.swift */; };
+		A1MSC1119A01000000000001 /* MisclassificationSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119A01000000000001 /* MisclassificationSample.swift */; };
+		A1MSC1119A01000000000002 /* MisclassificationCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119A01000000000002 /* MisclassificationCollector.swift */; };
 		A1ENC1119A01000000000001 /* EnergyCurveEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ENC1119A01000000000001 /* EnergyCurveEngine.swift */; };
 		A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000001 /* AnnouncementFeed.swift */; };
 		A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TGT1118A01000000000001 /* LedgerTollGate.swift */; };
@@ -379,6 +381,7 @@
 		B1A1110A0300000000000001 /* AssistantPINDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0300000000000001 /* AssistantPINDerivation.swift */; };
 		5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B1F /* AppLockAndPIN.swift */; };
 		5BL1110A010000000000000A /* LedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BL1110A010000000000000F /* LedgerTests.swift */; };
+		A1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift */; };
 		A1ENC1119A01000000000003 /* EnergyCurveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ENC1119A01000000000003 /* EnergyCurveTests.swift */; };
 		A1ANN1119A01000000000003 /* AnnouncementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000003 /* AnnouncementTests.swift */; };
 		A1TGT1118A01000000000002 /* LedgerTollGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TGT1118A01000000000002 /* LedgerTollGateTests.swift */; };
@@ -590,6 +593,7 @@
 		C1A1116A01B0000000000000 /* AIConnectNudge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A01F0000000000000 /* AIConnectNudge.swift */; };
 		C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A02F0000000000000 /* TravelPuzzle.swift */; };
 		C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */; };
+		A1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift */; };
 		A1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift */; };
 		A1ANN1119A01000000000002 /* AnnouncementBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000002 /* AnnouncementBanner.swift */; };
 		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
@@ -1179,6 +1183,8 @@
 		F1AIX1114A01000000000001 /* AssistantRuleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRuleStore.swift; sourceTree = "<group>"; };
 		F1PAS1113A01000000000001 /* PaymentAlertSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentAlertSources.swift; sourceTree = "<group>"; };
 		F1TRF1113A01000000000001 /* LedgerTransitFare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTransitFare.swift; sourceTree = "<group>"; };
+		F1MSC1119A01000000000001 /* MisclassificationSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MisclassificationSample.swift; sourceTree = "<group>"; };
+		F1MSC1119A01000000000002 /* MisclassificationCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MisclassificationCollector.swift; sourceTree = "<group>"; };
 		F1ENC1119A01000000000001 /* EnergyCurveEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyCurveEngine.swift; sourceTree = "<group>"; };
 		F1ANN1119A01000000000001 /* AnnouncementFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementFeed.swift; sourceTree = "<group>"; };
 		F1TGT1118A01000000000001 /* LedgerTollGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollGate.swift; sourceTree = "<group>"; };
@@ -1212,6 +1218,7 @@
 		F1B1110A0300000000000001 /* AssistantPINDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINDerivation.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B1F /* AppLockAndPIN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockAndPIN.swift; sourceTree = "<group>"; };
 		5BL1110A010000000000000F /* LedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTests.swift; sourceTree = "<group>"; };
+		F1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MisclassificationCollectorTests.swift; sourceTree = "<group>"; };
 		F1ENC1119A01000000000003 /* EnergyCurveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyCurveTests.swift; sourceTree = "<group>"; };
 		F1ANN1119A01000000000003 /* AnnouncementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementTests.swift; sourceTree = "<group>"; };
 		F1TGT1118A01000000000002 /* LedgerTollGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollGateTests.swift; sourceTree = "<group>"; };
@@ -1421,6 +1428,7 @@
 		C1A1116A01F0000000000000 /* AIConnectNudge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConnectNudge.swift; sourceTree = "<group>"; };
 		C1A1116A02F0000000000000 /* TravelPuzzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzle.swift; sourceTree = "<group>"; };
 		C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleDrawer.swift; sourceTree = "<group>"; };
+		F1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeClassificationDataRow.swift; sourceTree = "<group>"; };
 		F1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeEnergyCurveCard.swift; sourceTree = "<group>"; };
 		F1ANN1119A01000000000002 /* AnnouncementBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
@@ -1887,6 +1895,7 @@
 				F40000000000000000000008 /* TaptionStoreColumnCodingTests.swift */,
 				F40000000000000000000006 /* SensorDayStoreTests.swift */,
 				5BL1110A010000000000000F /* LedgerTests.swift */,
+				F1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift */,
 				F1ENC1119A01000000000003 /* EnergyCurveTests.swift */,
 				F1ANN1119A01000000000003 /* AnnouncementTests.swift */,
 				F1TGT1118A01000000000002 /* LedgerTollGateTests.swift */,
@@ -2051,6 +2060,7 @@
 				C1A1116A01F0000000000000 /* AIConnectNudge.swift */,
 				C1A1116A02F0000000000000 /* TravelPuzzle.swift */,
 				C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */,
+				F1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift */,
 				F1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift */,
 				F1ANN1119A01000000000002 /* AnnouncementBanner.swift */,
 				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
@@ -2378,6 +2388,8 @@
 				F1AIX1114A01000000000001 /* AssistantRuleStore.swift */,
 				F1PAS1113A01000000000001 /* PaymentAlertSources.swift */,
 				F1TRF1113A01000000000001 /* LedgerTransitFare.swift */,
+				F1MSC1119A01000000000001 /* MisclassificationSample.swift */,
+				F1MSC1119A01000000000002 /* MisclassificationCollector.swift */,
 				F1ENC1119A01000000000001 /* EnergyCurveEngine.swift */,
 				F1ANN1119A01000000000001 /* AnnouncementFeed.swift */,
 				F1TGT1118A01000000000001 /* LedgerTollGate.swift */,
@@ -3088,6 +3100,7 @@
 				C1A1116A01B0000000000000 /* AIConnectNudge.swift in Sources */,
 				C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */,
 				C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */,
+				A1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift in Sources */,
 				A1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift in Sources */,
 				A1ANN1119A01000000000002 /* AnnouncementBanner.swift in Sources */,
 				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
@@ -3354,6 +3367,8 @@
 				A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */,
 				A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */,
 				A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */,
+				A1MSC1119A01000000000001 /* MisclassificationSample.swift in Sources */,
+				A1MSC1119A01000000000002 /* MisclassificationCollector.swift in Sources */,
 				A1ENC1119A01000000000001 /* EnergyCurveEngine.swift in Sources */,
 				A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */,
 				A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */,
@@ -3532,6 +3547,7 @@
 				A4000000000000000000000E /* TaptionStoreColumnCodingTests.swift in Sources */,
 				A40000000000000000000008 /* SensorDayStoreTests.swift in Sources */,
 				5BL1110A010000000000000A /* LedgerTests.swift in Sources */,
+				A1MSC1119A01000000000004 /* MisclassificationCollectorTests.swift in Sources */,
 				A1ENC1119A01000000000003 /* EnergyCurveTests.swift in Sources */,
 				A1ANN1119A01000000000003 /* AnnouncementTests.swift in Sources */,
 				A1TGT1118A01000000000002 /* LedgerTollGateTests.swift in Sources */,
