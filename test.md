@@ -54,6 +54,7 @@
 
 ### 여행·공유
 
+- FLT1119A01 · 여행 모드 항공편(국내 공항 무료 조회·다구간 환승·알림 파서·병합·준비물 카드). 비야 지시서 `20261119-2330-travel-flight-and-alert-parser`, 대표 직접 지시. 1~5단계 진행 중(메인 세션), 6단계 공유 확장은 새 타깃이라 대표에게 먼저 알린 뒤 별도 커밋. 서버 배포·키 발급은 대표 몫 · 실기기 확인 목록 참고
 - TSH1114A26 · 여행 공유 1차. 남은 것: 두 기기(아이폰 11 + 다른 기기)로 실제 WebSocket 왕복·화면 눈 확인. 대표 결정(2026-11-15)으로 「공유 여행의 일정 상태 바꾸기」는 기기 확인 뒤 열기 · 실기기(두 기기) · `docs/TRIP_SHARE_PROTOCOL.md`
 - LOC1116S01 · 동행 실시간 위치. 위치정보법 검토·신고 전에는 배포하지 않음(내부 TestFlight는 켜 둔 채 가능, 외부 시험·출시 전 `TripLiveLocationService.isAvailable` 끄기) · 대표 몫(법 검토·신고), 실기기(두 기기) · `docs/TRIP_LIVE_LOCATION_PLAN.md`
 - TVM1117A02 · 여행 결함 일곱 고침 끝. 남은 것: 아이폰 11에서 여행 화면 스크롤·재생 헤드 끌기 체감, 지도 접기·손잡이 막대·확대·축소 단추의 넓힌 자리 눈 확인 · 실기기
@@ -839,6 +840,13 @@
 
 ##### HLT1106A01 · 새 설치는 설치 시각부터 건강 기록 (2026-11-06)
 - 남은 일: 새 설치 기기에서 설치 전 건강 기록이 안 들어오는지, 기존 기기 기록이 그대로인지 확인.
+
+### FLT1119A01 · 여행 모드 항공편 조회·다구간 환승·알림 파서 (2026-11-20, 비야 지시서 20261119-2330)
+- 원인: 여행 계획에서 항공편 시간을 사람이 직접 적어야 하고, 항공사 알림(알림톡·SMS)이 와도 앱이 읽지 못한다. `FlightTimeMath`는 앱에 연결되지 않았고 `TravelAirports`는 시간대가 없다.
+- 해결(커밋 순서): ① `FlightAirportCatalog`(공항 좌표·IANA 시간대·이름)·`FlightItinerary`(Leg·환승·도착 역산) ② `server/trip-relay` `/flights/schedule`·`/flights/status`(공공데이터, 캐시·일 호출 예산, 키 없으면 503) ③ 앱 조회 클라이언트·`FlightPickerSheet`·`TravelTripItem` 선택 필드 ④ `FlightAlertParser`·`FlightAlertMerge`(7유형, 병합 키)·`FlightIntents`·붙여넣기 ⑤ 지구본·지도 다구간 항로·당일 배너·로컬 알림·`TravelPrepItem` 준비물 카드 ⑥ 공유 확장 타깃(대표에게 먼저 알림).
+- 경계: 0원(유료 API·가격·예약 없음), 예약번호·이름·전화번호는 기기 안에만(서버·AI·분석·로그로 보내지 않음), 파서는 읽기만 하고 모호하면 확인 팝업, 계획표 열 12종 불변, `FlightTimeMath`·`GreatCircle` 재사용.
+- 검증 기준: `TaptionRouteEngine` 파서 7유형·병합·환승·역산·시간대 시험, 저장 호환(선택 필드 nil이면 예전 바이트), `npm test`(실행 수·실패 수 실측), 앱 Debug 빌드·`TaptionPlanTests` 전체, 구조 점검, 번역 12개 언어.
+- 상태: 진행 중. 배포(`wrangler secret put ICN_API_KEY`·`KAC_API_KEY`, `wrangler deploy`)·공공데이터 키 발급은 대표 몫.
 
 ## 실기기 확인 목록
 
