@@ -20,14 +20,20 @@ public struct SeasonPackHouseView: View {
             ZStack {
                 layer(pack, state.baseAsset)
                 if state.litAsset != nil {
-                    TimelineView(.animation(minimumInterval: 1.0 / 20, paused: state.blink == .none)) { context in
+                    let bulbs = pack.manifest.slots?.house?.bulbs
+                    TimelineView(.animation(minimumInterval: 1.0 / 20, paused: state.blink == .none || bulbs != nil)) { context in
                         ZStack {
+                            // 전구 시퀀스가 있으면 그림은 고정이고 불빛만 차례로 깜빡인다.
                             layer(pack, state.litAsset)
-                                .opacity(state.isLit ? SeasonPackRenderer.blinkLevel(state.blink, at: context.date) : 0)
+                                .opacity(state.isLit ? (bulbs != nil ? 1 : SeasonPackRenderer.blinkLevel(state.blink, at: context.date)) : 0)
                             layer(pack, state.glowAsset).opacity(state.isLit ? 1 : 0)
                         }
                     }
                     .animation(.easeInOut(duration: 1.5), value: state.isLit)
+                    if let bulbs, state.isLit {
+                        SeasonPackBulbsView(bulbs: bulbs, animated: !center.motion.isReduced)
+                            .transition(.opacity)
+                    }
                 }
             }
             .frame(width: size, height: size)

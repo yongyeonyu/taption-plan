@@ -109,11 +109,38 @@ public struct SeasonPackManifest: Codable, Sendable, Equatable {
                 public var from: String
                 public var image: String
             }
+            /// 트리 전구 한 알. 좌표는 집 그림 안 0...1이고 `group`이 같은 알이 함께 켜진다.
+            public struct Bulb: Codable, Sendable, Equatable {
+                public var x: Double
+                public var y: Double
+                public var color: String
+                public var group: Int
+            }
+            /// 전구가 차례로 번지며 깜빡이는(시퀀스) 점등. `stepMs`는 한 묶음이 켜져 있는 시간.
+            public struct Bulbs: Codable, Sendable, Equatable {
+                public var points: [Bulb]
+                public var groups: Int
+                public var stepMs: Int
+            }
             public var base: String
             public var lit: String?
             public var glow: String?
             public var lights: Lights?
+            public var bulbs: Bulbs?
             public var stages: [Stage]?
+        }
+        /// 집 그림이 나와 있는 동안 화면 전체에 내리는 효과.
+        public struct Effects: Codable, Sendable, Equatable {
+            /// 날씨와 상관없이 내리는 눈꽃송이.
+            public struct Snow: Codable, Sendable, Equatable {
+                public var count: Int
+                public var minSize: Double
+                public var maxSize: Double
+                /// 초당 떨어지는 점(pt) 범위.
+                public var minSpeed: Double
+                public var maxSpeed: Double
+            }
+            public var snow: Snow?
         }
         public struct Accessory: Codable, Sendable, Equatable {
             public var hat: Layer?
@@ -129,8 +156,26 @@ public struct SeasonPackManifest: Codable, Sendable, Equatable {
             public var house: String?
             public var outfit: Bool?
         }
+        /// 화랑이 리그가 모든 동작에 직접 그리는 복장(그림 파일 없이 색만 준다). 고양이 셋 모두에 같게 입힌다.
+        public struct Costume: Codable, Sendable, Equatable {
+            /// 천 장식(목도리·꼬리 리본)의 색. 색은 `RRGGBB` 16진수다.
+            public struct Cloth: Codable, Sendable, Equatable {
+                public var base: String
+                public var shade: String
+                public var accent: String
+                public var trim: String
+                public var pattern: String?
+            }
+            public var redNose: Bool?
+            /// 사슴뿔 머리띠 색(RRGGBB). 있으면 머리 양옆에 뿔이 솟는다.
+            public var antlers: String?
+            public var scarf: Cloth?
+            public var ribbon: Cloth?
+        }
         public var house: House?
         public var outfit: [String: [Layer]]?
+        public var costume: Costume?
+        public var effects: Effects?
         public var accessory: Accessory?
         public var bubbles: Bubbles?
         public var shareCard: ShareCard?

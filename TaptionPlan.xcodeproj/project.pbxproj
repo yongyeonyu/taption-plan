@@ -364,6 +364,7 @@
 		A10000000000000000CA2001 /* HwarangPoseAtlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA2001 /* HwarangPoseAtlas.swift */; };
 		A10000000000000000CA2002 /* HwarangPoseAtlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA2001 /* HwarangPoseAtlas.swift */; };
 		A10000000000000000CA2003 /* HwarangCoat.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA2003 /* HwarangCoat.swift */; };
+		A1SEA1119A01000000000010 /* HwarangSeasonLook.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1SEA1119A01000000000010 /* HwarangSeasonLook.swift */; };
 		A10000000000000000000040 /* CatAnimationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000040 /* CatAnimationShared.swift */; };
 		A10000000000000000000041 /* CatAnimationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000040 /* CatAnimationShared.swift */; };
 		A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000041 /* ScreenTimeUsageService.swift */; };
@@ -1209,6 +1210,7 @@
 		F10000000000000000CA2004 /* SubwayAlighting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayAlighting.swift; sourceTree = "<group>"; };
 		F10000000000000000CA2001 /* HwarangPoseAtlas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangPoseAtlas.swift; sourceTree = "<group>"; };
 		F10000000000000000CA2003 /* HwarangCoat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangCoat.swift; sourceTree = "<group>"; };
+		F1SEA1119A01000000000010 /* HwarangSeasonLook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangSeasonLook.swift; sourceTree = "<group>"; };
 		F10000000000000000000040 /* CatAnimationShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatAnimationShared.swift; sourceTree = "<group>"; };
 		F10000000000000000000041 /* ScreenTimeUsageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeUsageService.swift; sourceTree = "<group>"; };
 		F10000000000000000000072 /* WatchSensorQueryPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlan.swift; sourceTree = "<group>"; };
@@ -2092,6 +2094,7 @@
 				F1000000000000000CC30001 /* MapHomePlaybackStaticLayers.swift */,
 				F1000000000000000B1101C1 /* HwarangRig.swift */,
 				F10000000000000000CA2003 /* HwarangCoat.swift */,
+				F1SEA1119A01000000000010 /* HwarangSeasonLook.swift */,
 				F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */,
 				F1000000000000000B1102E2 /* FirstRunTutorialView.swift */,
 				F1000000000000000B1104E1 /* FirstRunTutorialGuides.swift */,
@@ -3344,6 +3347,7 @@
 				A10000000000000000CA2001 /* HwarangPoseAtlas.swift in Sources */,
 				A10000000000000000CA2004 /* SubwayAlighting.swift in Sources */,
 				A10000000000000000CA2003 /* HwarangCoat.swift in Sources */,
+				A1SEA1119A01000000000010 /* HwarangSeasonLook.swift in Sources */,
 				A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */,
 				A1000000000000000000001E /* WidgetShared.swift in Sources */,
 				F32C48963B1D5E07B587FC7D /* WidgetSharedStore.swift in Sources */,

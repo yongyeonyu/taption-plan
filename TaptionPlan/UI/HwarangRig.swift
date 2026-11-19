@@ -499,7 +499,7 @@ struct HwarangPainter {
     let c: CGContext
     let small: Bool
     var hatImage: UIImage?
-    var scarf: HwarangClothStyle? = nil, ribbon: HwarangClothStyle? = nil
+    var scarf: HwarangClothStyle? = nil, ribbon: HwarangClothStyle? = nil, seasonLook: HwarangSeasonLook? = nil // 시즌 팩 복장(SEA1119A01)
     var lineScale: CGFloat = 1
     var toes: [CGPoint] = []
     /// 스카프 끝이 따라올 지난 머리 속도(최근 것부터)와 달리는 바람, 펄럭임 위상.
@@ -669,6 +669,7 @@ struct HwarangPainter {
         fill(coat.fur); stroke(outline, lineWidth); headPath(); c.drawPath(using: .fillStroke)
         paintPatches(coat.headPatches) { headPath() }
         if !coat.headPatches.isEmpty { stroke(outline, lineWidth); headPath(); c.strokePath() }
+        if let antlers = seasonLook?.antlers { drawAntlerHeadband(antlers, turn: t, lineWidth: lineWidth) }
         if !small {
             stroke(outline, 1, 0.28); c.beginPath()
             let fx = lerp(0, 4, t)
@@ -695,6 +696,7 @@ struct HwarangPainter {
         let mx = lerp(look * 0.7, 7.4, t), my: CGFloat = 6.2
         fill(0xF2758F); c.beginPath(); c.move(to: P(mx - 1.3, my)); quad(mx, my - 0.5, mx + 1.3, my); quad(mx + 0.6, my + 1.5, mx, my + 1.5); quad(mx - 0.6, my + 1.5, mx - 1.3, my); c.fillPath()
         stroke(outline, 1.05)
+        if seasonLook?.redNose == true { drawRedNose(x: mx, y: my, lineWidth: lineWidth) }
         if o.mouthOpen > 0.05 {
             // 위턱을 코 밑에 두고 아래로만 벌린다.
             let ry = 0.8 + o.mouthOpen * 2
@@ -1162,7 +1164,7 @@ struct HwarangSceneView: View {
     /// 시즌 팩이 파일로 준 모자. 있으면 `hatAssetName` 대신 이것을 씌운다(SEA1119A01).
     var hatImage: UIImage? = nil
     var scarf: HwarangClothStyle? = nil
-    var ribbon: HwarangClothStyle? = nil
+    var ribbon: HwarangClothStyle? = nil, seasonLook: HwarangSeasonLook? = nil
     var showsBackdrop = true
     /// 캣휠 안 화랑이도 다른 장면과 같은 몸통 크기로 그린다. 좁은 메뉴 칸에서는 끈다.
     var keepsBodySize = true
@@ -1188,7 +1190,7 @@ struct HwarangSceneView: View {
                 let k = size.width / Self.worldWidth
                 cg.scaleBy(x: k, y: k)
                 cg.translateBy(x: 14, y: headroom - 8)
-                var painter = HwarangPainter(c: cg, small: small, hatImage: hat, scarf: scarf, ribbon: ribbon, coat: coat)
+                var painter = HwarangPainter(c: cg, small: small, hatImage: hat, scarf: scarf, ribbon: ribbon, seasonLook: seasonLook, coat: coat)
                 painter.render(scene, sec: CGFloat(sec), facesLeft: facesLeft, showsBackdrop: showsBackdrop)
             }
         }

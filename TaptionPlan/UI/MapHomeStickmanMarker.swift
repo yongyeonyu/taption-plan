@@ -212,8 +212,9 @@ struct MapHomeStickmanGlyph: View {
         let seasonHat = usesSeasonPack ? SeasonPackAdapter.hatImage() : nil
         let seasonLayers = usesSeasonPack ? SeasonPackAdapter.characterLayers() : []
         let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
-        let scarf = MapHomeGrowthAccessoryCatalog.scarfStyle(for: equippedAccessoryID)
-        let ribbon = MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
+        let seasonLook = usesSeasonPack ? SeasonPackAdapter.look() : nil
+        let scarf = seasonLook?.scarf ?? MapHomeGrowthAccessoryCatalog.scarfStyle(for: equippedAccessoryID)
+        let ribbon = seasonLook?.ribbon ?? MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
         // 같은 화면의 화랑이들이 동시에 같은 자세로 겹치지 않게 분류별로 시작을 어긋낸다.
         let offset = Double(MapHomeStickmanAction.allCases.firstIndex(of: action) ?? 0) * 3.7
         TimelineView(.animation(minimumInterval: 1.0 / 24, paused: isStatic || MapHomeLiveGate.shared.isCovered)) { context in
@@ -226,6 +227,7 @@ struct MapHomeStickmanGlyph: View {
                 hatImage: seasonHat,
                 scarf: scarf,
                 ribbon: ribbon,
+                seasonLook: seasonLook,
                 showsBackdrop: size >= 36,
                 keepsBodySize: false, rendersAsynchronously: rendersAsynchronously
             )

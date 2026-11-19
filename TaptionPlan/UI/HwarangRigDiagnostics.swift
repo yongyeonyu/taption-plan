@@ -79,7 +79,8 @@ enum HwarangDiagnostics {
     /// `world`는 비트맵 가로에 담을 세계 폭으로, 작은 크기 그림(`small`)도 같은 틀에서 본다.
     static func frame(
         scene: HwarangScene, sec: Double, side: CGFloat = 438, small: Bool = false,
-        hat: UIImage? = nil, scarf: HwarangClothStyle? = nil, ribbon: HwarangClothStyle? = nil, coat: HwarangCoat = .white
+        hat: UIImage? = nil, scarf: HwarangClothStyle? = nil, ribbon: HwarangClothStyle? = nil, coat: HwarangCoat = .white,
+        seasonLook: HwarangSeasonLook? = nil
     ) -> UIImage {
         let headroom = hat == nil ? 0 : HwarangSceneView.hatHeadroom
         return UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { renderer in
@@ -87,7 +88,7 @@ enum HwarangDiagnostics {
             let k = side / (146 + headroom)
             context.scaleBy(x: k, y: k)
             context.translateBy(x: 14 + headroom / 2, y: headroom - 8)
-            var painter = HwarangPainter(c: context, small: small, hatImage: hat, scarf: scarf, ribbon: ribbon, coat: coat)
+            var painter = HwarangPainter(c: context, small: small, hatImage: hat, scarf: scarf, ribbon: ribbon, seasonLook: seasonLook, coat: coat)
             painter.render(scene, sec: CGFloat(sec), facesLeft: false, showsBackdrop: false)
         }
     }

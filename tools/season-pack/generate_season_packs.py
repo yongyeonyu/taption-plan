@@ -21,7 +21,7 @@ from pathlib import Path
 
 import numpy as np
 
-from season_images import (antlers, bell_icon, coat, gift, santa_actor, santa_hat, scarf, star_glow, star_icon, tree)
+from season_images import (BULB_POINTS, antlers, bell_icon, coat, gift, santa_actor, santa_hat, scarf, star_glow, star_icon, tree)
 
 import os
 
@@ -180,13 +180,20 @@ def christmas(folder):
         "assets": assets,
         "slots": {
             "house": {"base": "house.tree", "lit": "house.tree.lit", "glow": "house.tree.star",
-                      "lights": {"on": "sunset", "off": "sunrise", "blink": {"periodMs": 1400, "fastPeriodMs": 220}}},
-            "outfit": {c: [{"asset": "outfit.coat", "anchor": "body", "scale": 0.62, "offset": [0, 0.02], "z": 0}] for c in ("white", "calico", "mackerel")},
+                      "lights": {"on": "sunset", "off": "sunrise", "blink": {"periodMs": 1400, "fastPeriodMs": 220}},
+                      "bulbs": {"points": list(BULB_POINTS), "groups": 4, "stepMs": 300}},
+            # 산타 복장은 그림 파일 대신 화랑이 리그가 모든 동작에 직접 그린다(모자만 그림 파일).
             "accessory": {
                 "hat": {"asset": "accessory.santaHat", "anchor": "head", "scale": 0.42, "offset": [0.02, -0.1], "z": 3},
-                "scarf": {"asset": "accessory.scarf", "anchor": "head", "scale": 0.5, "offset": [0, 0.13], "z": 2},
-                "ribbon": {"asset": "accessory.antlers", "anchor": "head", "scale": 0.62, "offset": [0, -0.1], "z": 1},
             },
+            "costume": {
+                "redNose": True,
+                "antlers": "8A5A36",
+                "scarf": {"base": "D63A3A", "shade": "AD2A2D", "accent": "FFF6EC", "trim": "FFF6EC", "pattern": "bands"},
+                "ribbon": {"base": "2F9E58", "shade": "1F7A41", "accent": "FFF6EC", "trim": "D63A3A", "pattern": "dots"},
+            },
+            # 트리가 나와 있는 동안 날씨와 무관하게 눈꽃송이가 사르르 내린다.
+            "effects": {"snow": {"count": 34, "minSize": 7, "maxSize": 17, "minSpeed": 14, "maxSpeed": 30}},
             "bubbles": {"pool": [{"ko": ko, "en": en} for ko, en in pool]},
             "shareCard": {"house": "house.tree", "outfit": True},
         },

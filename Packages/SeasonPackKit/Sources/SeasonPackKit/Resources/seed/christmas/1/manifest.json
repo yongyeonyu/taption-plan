@@ -39,8 +39,8 @@
     {
       "id": "house.tree.lit",
       "path": "house-tree-lit.png",
-      "sha256": "2dc08f9a104bf9668705e6d96b81b1fdbbd7b5b7786f83a8fb7390d6a4d7c25f",
-      "bytes": 233892,
+      "sha256": "8f3609bc2748726caa2c2011a051ed3c4b97c609ad339375af587cc2df7b89fa",
+      "bytes": 213016,
       "kind": "image"
     },
     {
@@ -116,7 +116,7 @@
     {
       "id": "carol.jingle",
       "path": "audio/jingle-bells.m4a",
-      "sha256": "52188a0c80086f4d32bd500c60d3115de7db76246c855a00f5d3dea406a19dd6",
+      "sha256": "ee43ee2ab59657c931df6f6c26817d14d9443baf640fb1d3c888d160d399a101",
       "bytes": 355361,
       "kind": "audio"
     }
@@ -133,45 +133,253 @@
           "periodMs": 1400,
           "fastPeriodMs": 220
         }
+      },
+      "bulbs": {
+        "points": [
+          {
+            "x": 0.2274,
+            "y": 0.7649,
+            "color": "FFCE5A",
+            "group": 1
+          },
+          {
+            "x": 0.288,
+            "y": 0.775,
+            "color": "6EBEFF",
+            "group": 2
+          },
+          {
+            "x": 0.3486,
+            "y": 0.7834,
+            "color": "82DC8C",
+            "group": 3
+          },
+          {
+            "x": 0.4091,
+            "y": 0.7894,
+            "color": "FFA0D2",
+            "group": 0
+          },
+          {
+            "x": 0.4697,
+            "y": 0.7926,
+            "color": "FF5A50",
+            "group": 1
+          },
+          {
+            "x": 0.5303,
+            "y": 0.7926,
+            "color": "FFCE5A",
+            "group": 2
+          },
+          {
+            "x": 0.5909,
+            "y": 0.7894,
+            "color": "6EBEFF",
+            "group": 3
+          },
+          {
+            "x": 0.6514,
+            "y": 0.7834,
+            "color": "82DC8C",
+            "group": 0
+          },
+          {
+            "x": 0.712,
+            "y": 0.775,
+            "color": "FFA0D2",
+            "group": 1
+          },
+          {
+            "x": 0.7726,
+            "y": 0.7649,
+            "color": "FF5A50",
+            "group": 2
+          },
+          {
+            "x": 0.2746,
+            "y": 0.6019,
+            "color": "6EBEFF",
+            "group": 2
+          },
+          {
+            "x": 0.3247,
+            "y": 0.6131,
+            "color": "82DC8C",
+            "group": 3
+          },
+          {
+            "x": 0.3748,
+            "y": 0.6223,
+            "color": "FFA0D2",
+            "group": 0
+          },
+          {
+            "x": 0.4249,
+            "y": 0.6289,
+            "color": "FF5A50",
+            "group": 1
+          },
+          {
+            "x": 0.475,
+            "y": 0.6324,
+            "color": "FFCE5A",
+            "group": 2
+          },
+          {
+            "x": 0.525,
+            "y": 0.6324,
+            "color": "6EBEFF",
+            "group": 3
+          },
+          {
+            "x": 0.5751,
+            "y": 0.6289,
+            "color": "82DC8C",
+            "group": 0
+          },
+          {
+            "x": 0.6252,
+            "y": 0.6223,
+            "color": "FFA0D2",
+            "group": 1
+          },
+          {
+            "x": 0.6753,
+            "y": 0.6131,
+            "color": "FF5A50",
+            "group": 2
+          },
+          {
+            "x": 0.7254,
+            "y": 0.6019,
+            "color": "FFCE5A",
+            "group": 3
+          },
+          {
+            "x": 0.3244,
+            "y": 0.439,
+            "color": "82DC8C",
+            "group": 3
+          },
+          {
+            "x": 0.3634,
+            "y": 0.4511,
+            "color": "FFA0D2",
+            "group": 0
+          },
+          {
+            "x": 0.4025,
+            "y": 0.4612,
+            "color": "FF5A50",
+            "group": 1
+          },
+          {
+            "x": 0.4415,
+            "y": 0.4684,
+            "color": "FFCE5A",
+            "group": 2
+          },
+          {
+            "x": 0.4805,
+            "y": 0.4722,
+            "color": "6EBEFF",
+            "group": 3
+          },
+          {
+            "x": 0.5195,
+            "y": 0.4722,
+            "color": "82DC8C",
+            "group": 0
+          },
+          {
+            "x": 0.5585,
+            "y": 0.4684,
+            "color": "FFA0D2",
+            "group": 1
+          },
+          {
+            "x": 0.5975,
+            "y": 0.4612,
+            "color": "FF5A50",
+            "group": 2
+          },
+          {
+            "x": 0.6366,
+            "y": 0.4511,
+            "color": "FFCE5A",
+            "group": 3
+          },
+          {
+            "x": 0.6756,
+            "y": 0.439,
+            "color": "6EBEFF",
+            "group": 0
+          },
+          {
+            "x": 0.3716,
+            "y": 0.2838,
+            "color": "82DC8C",
+            "group": 0
+          },
+          {
+            "x": 0.4001,
+            "y": 0.297,
+            "color": "FFA0D2",
+            "group": 1
+          },
+          {
+            "x": 0.4287,
+            "y": 0.3079,
+            "color": "FF5A50",
+            "group": 2
+          },
+          {
+            "x": 0.4572,
+            "y": 0.3157,
+            "color": "FFCE5A",
+            "group": 3
+          },
+          {
+            "x": 0.4857,
+            "y": 0.3198,
+            "color": "6EBEFF",
+            "group": 0
+          },
+          {
+            "x": 0.5143,
+            "y": 0.3198,
+            "color": "82DC8C",
+            "group": 1
+          },
+          {
+            "x": 0.5428,
+            "y": 0.3157,
+            "color": "FFA0D2",
+            "group": 2
+          },
+          {
+            "x": 0.5713,
+            "y": 0.3079,
+            "color": "FF5A50",
+            "group": 3
+          },
+          {
+            "x": 0.5999,
+            "y": 0.297,
+            "color": "FFCE5A",
+            "group": 0
+          },
+          {
+            "x": 0.6284,
+            "y": 0.2838,
+            "color": "6EBEFF",
+            "group": 1
+          }
+        ],
+        "groups": 4,
+        "stepMs": 300
       }
-    },
-    "outfit": {
-      "white": [
-        {
-          "asset": "outfit.coat",
-          "anchor": "body",
-          "scale": 0.62,
-          "offset": [
-            0,
-            0.02
-          ],
-          "z": 0
-        }
-      ],
-      "calico": [
-        {
-          "asset": "outfit.coat",
-          "anchor": "body",
-          "scale": 0.62,
-          "offset": [
-            0,
-            0.02
-          ],
-          "z": 0
-        }
-      ],
-      "mackerel": [
-        {
-          "asset": "outfit.coat",
-          "anchor": "body",
-          "scale": 0.62,
-          "offset": [
-            0,
-            0.02
-          ],
-          "z": 0
-        }
-      ]
     },
     "accessory": {
       "hat": {
@@ -183,26 +391,33 @@
           -0.1
         ],
         "z": 3
-      },
+      }
+    },
+    "costume": {
+      "redNose": true,
+      "antlers": "8A5A36",
       "scarf": {
-        "asset": "accessory.scarf",
-        "anchor": "head",
-        "scale": 0.5,
-        "offset": [
-          0,
-          0.13
-        ],
-        "z": 2
+        "base": "D63A3A",
+        "shade": "AD2A2D",
+        "accent": "FFF6EC",
+        "trim": "FFF6EC",
+        "pattern": "bands"
       },
       "ribbon": {
-        "asset": "accessory.antlers",
-        "anchor": "head",
-        "scale": 0.62,
-        "offset": [
-          0,
-          -0.1
-        ],
-        "z": 1
+        "base": "2F9E58",
+        "shade": "1F7A41",
+        "accent": "FFF6EC",
+        "trim": "D63A3A",
+        "pattern": "dots"
+      }
+    },
+    "effects": {
+      "snow": {
+        "count": 34,
+        "minSize": 7,
+        "maxSize": 17,
+        "minSpeed": 14,
+        "maxSpeed": 30
       }
     },
     "bubbles": {
