@@ -4,7 +4,7 @@
 `Packages/SeasonPackKit/Sources/SeasonPackKit/Resources/` 아래에 표본 팩(`seed-debug/sample/1`)과
 크리스마스 팩(`seed/christmas/1`)의 PNG·소리·manifest.json을 만든다. 같은 입력이면 같은 파일이 나온다.
 
-- 그림: Pillow로 4배로 그린 뒤 줄여 PNG로 저장(SVG는 다운로드 자산으로 쓸 수 없다).
+- 그림: `season_art.py`·`season_images.py`가 Pillow로 4배로 그려(그라데이션·그림자·질감) 줄여 PNG로 저장한다(SVG는 다운로드 자산으로 쓸 수 없다).
 - 소리: 「Jingle Bells」(1857, 퍼블릭 도메인 멜로디)를 오르골 음색으로 코드 합성해 afconvert로 AAC 96kbps 모노 m4a로 만든다.
   가사 큐 시각은 합성한 음표 시각에서 그대로 계산한다(별도 녹음 없음).
 
@@ -20,219 +20,13 @@ import wave
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+
+from season_images import (antlers, bell_icon, coat, gift, santa_actor, santa_hat, scarf, star_glow, star_icon, tree)
+
+import os
 
 ROOT = Path(__file__).resolve().parents[2]
-RES = ROOT / "Packages/SeasonPackKit/Sources/SeasonPackKit/Resources"
-SS = 4  # 슈퍼샘플
-
-
-def canvas(w, h):
-    return Image.new("RGBA", (w * SS, h * SS), (0, 0, 0, 0))
-
-
-def finish(img, w, h):
-    return img.resize((w, h), Image.LANCZOS)
-
-
-def s(v):
-    return int(round(v * SS))
-
-
-def poly(d, pts, fill, outline=None, width=0):
-    d.polygon([(s(x), s(y)) for x, y in pts], fill=fill, outline=outline, width=s(width) if width else 0)
-
-
-def ell(d, box, fill, outline=None, width=0):
-    d.ellipse([s(box[0]), s(box[1]), s(box[2]), s(box[3])], fill=fill, outline=outline, width=s(width) if width else 0)
-
-
-def rect(d, box, fill, radius=0):
-    if radius:
-        d.rounded_rectangle([s(box[0]), s(box[1]), s(box[2]), s(box[3])], radius=s(radius), fill=fill)
-    else:
-        d.rectangle([s(box[0]), s(box[1]), s(box[2]), s(box[3])], fill=fill)
-
-
-def star(d, cx, cy, r, fill, inner=0.45):
-    pts = []
-    for i in range(10):
-        a = -math.pi / 2 + i * math.pi / 5
-        rr = r if i % 2 == 0 else r * inner
-        pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
-    poly(d, pts, fill)
-
-
-ORN = [(214, 48, 49), (240, 180, 41), (64, 120, 210), (214, 48, 49), (240, 180, 41), (64, 120, 210), (214, 48, 49)]
-ORN_POS = [(256, 168), (214, 222), (300, 238), (178, 300), (260, 306), (338, 318), (210, 392), (310, 396)]
-
-
-def tree(lit):
-    img = canvas(512, 512)
-    d = ImageDraw.Draw(img)
-    ell(d, (40, 410, 472, 500), (238, 244, 252, 255))  # 눈 쌓인 땅
-    ell(d, (90, 428, 422, 496), (255, 255, 255, 255))
-    rect(d, (232, 400, 280, 450), (120, 80, 52, 255), 6)  # 줄기
-    greens = [(46, 125, 72), (36, 110, 62), (28, 96, 54)]
-    tiers = [(256, 70, 150, 190), (256, 150, 190, 290), (256, 240, 225, 410)]
-    for (cx, top, half, bottom), g in zip(tiers, reversed(greens)):
-        poly(d, [(cx, top), (cx - half, bottom), (cx + half, bottom)], g + (255,))
-        poly(d, [(cx, top), (cx - half * 0.15, bottom), (cx - half, bottom)], tuple(max(0, c - 14) for c in g) + (255,))
-    # 갈란드(별 모양 줄)
-    for y, half in ((180, 78), (270, 120), (372, 160)):
-        d.line([(s(256 - half), s(y + 26)), (s(256), s(y)), (s(256 + half), s(y + 26))], fill=(250, 236, 200, 255), width=s(5))
-    # 전구/장식
-    for i, (x, y) in enumerate(ORN_POS):
-        base = ORN[i % len(ORN)]
-        if lit:
-            glow = Image.new("RGBA", img.size, (0, 0, 0, 0))
-            gd = ImageDraw.Draw(glow)
-            ell(gd, (x - 22, y - 22, x + 22, y + 22), (255, 226, 120, 190))
-            glow = glow.filter(ImageFilter.GaussianBlur(s(9)))
-            img = Image.alpha_composite(img, glow)
-            d = ImageDraw.Draw(img)
-            ell(d, (x - 10, y - 10, x + 10, y + 10), (255, 244, 190, 255))
-            ell(d, (x - 5, y - 6, x, y - 1), (255, 255, 255, 230))
-        else:
-            ell(d, (x - 10, y - 10, x + 10, y + 10), base + (255,))
-            ell(d, (x - 5, y - 6, x - 1, y - 2), (255, 255, 255, 170))
-    if lit:
-        star(d, 256, 62, 44, (255, 236, 120, 255))
-    else:
-        star(d, 256, 62, 40, (232, 188, 60, 255))
-    return finish(img, 512, 512)
-
-
-def star_glow():
-    img = canvas(512, 512)
-    halo = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    gd = ImageDraw.Draw(halo)
-    ell(gd, (256 - 70, 62 - 70, 256 + 70, 62 + 70), (255, 238, 150, 200))
-    halo = halo.filter(ImageFilter.GaussianBlur(s(22)))
-    img = Image.alpha_composite(img, halo)
-    d = ImageDraw.Draw(img)
-    star(d, 256, 62, 50, (255, 244, 170, 255))
-    for dx, dy, r in ((-60, 14, 9), (62, 4, 7), (-30, -34, 6), (40, -40, 8)):
-        star(d, 256 + dx, 62 + dy, r, (255, 255, 255, 235), 0.3)
-    return finish(img, 512, 512)
-
-
-def bell_icon():
-    img = canvas(96, 96)
-    d = ImageDraw.Draw(img)
-    poly(d, [(48, 14), (26, 56), (70, 56)], (240, 186, 48, 255))
-    ell(d, (26, 24, 70, 64), (240, 186, 48, 255))
-    rect(d, (20, 54, 76, 66), (222, 160, 30, 255), 6)
-    ell(d, (42, 62, 54, 76), (170, 110, 24, 255))
-    ell(d, (42, 8, 54, 20), (214, 48, 49, 255))
-    poly(d, [(48, 16), (28, 8), (30, 24)], (214, 48, 49, 255))
-    poly(d, [(48, 16), (68, 8), (66, 24)], (214, 48, 49, 255))
-    return finish(img, 96, 96)
-
-
-def gift(color):
-    img = canvas(96, 96)
-    d = ImageDraw.Draw(img)
-    rect(d, (14, 34, 82, 84), color + (255,), 6)
-    rect(d, (10, 26, 86, 42), tuple(min(255, c + 24) for c in color) + (255,), 4)
-    rect(d, (42, 26, 54, 84), (250, 236, 200, 255))
-    ell(d, (28, 8, 50, 30), (250, 236, 200, 255))
-    ell(d, (46, 8, 68, 30), (250, 236, 200, 255))
-    ell(d, (40, 20, 56, 34), (230, 214, 170, 255))
-    return finish(img, 96, 96)
-
-
-def santa_hat():
-    w, h = 360, 300
-    img = canvas(w, h)
-    d = ImageDraw.Draw(img)
-    poly(d, [(60, 230), (180, 40), (300, 230)], (214, 48, 49, 255))
-    poly(d, [(110, 230), (180, 40), (150, 230)], (186, 36, 40, 255))
-    ell(d, (150, 10, 214, 70), (255, 255, 255, 255))
-    rect(d, (36, 216, 324, 284), (255, 255, 255, 255), 30)
-    return finish(img, w, h)
-
-
-def scarf():
-    w, h = 360, 150
-    img = canvas(w, h)
-    d = ImageDraw.Draw(img)
-    rect(d, (10, 20, 350, 90), (214, 48, 49, 255), 34)
-    for x in range(40, 330, 56):
-        rect(d, (x, 22, x + 20, 88), (255, 255, 255, 255))
-    rect(d, (60, 70, 130, 146), (214, 48, 49, 255), 14)
-    for y in (96, 118):
-        rect(d, (60, y, 130, y + 10), (255, 255, 255, 255))
-    return finish(img, w, h)
-
-
-def antlers():
-    w, h = 420, 260
-    img = canvas(w, h)
-    d = ImageDraw.Draw(img)
-    brown = (140, 92, 58, 255)
-    for sign in (-1, 1):
-        cx = 210 + sign * 118
-        d.line([(s(210 + sign * 70), s(250)), (s(cx), s(130)), (s(cx + sign * 18), s(30))], fill=brown, width=s(18), joint="curve")
-        d.line([(s(cx), s(130)), (s(cx + sign * 60), s(90))], fill=brown, width=s(14))
-        d.line([(s(cx + sign * 8), s(80)), (s(cx - sign * 40), s(50))], fill=brown, width=s(12))
-        ell(d, (cx + sign * 18 - 12, 18, cx + sign * 18 + 12, 42), brown)
-    return finish(img, w, h)
-
-
-def coat():
-    w, h = 400, 300
-    img = canvas(w, h)
-    d = ImageDraw.Draw(img)
-    ell(d, (20, 10, 380, 330), (214, 48, 49, 255))
-    rect(d, (176, 10, 224, 300), (255, 255, 255, 255))
-    for y in (80, 160, 240):
-        ell(d, (190, y, 210, y + 20), (40, 40, 40, 255))
-    rect(d, (30, 236, 370, 292), (255, 255, 255, 255), 24)
-    return finish(img, w, h)
-
-
-def santa_actor():
-    w, h = 768, 480
-    img = canvas(w, h)
-    d = ImageDraw.Draw(img)
-    brown = (140, 92, 58, 255)
-    # 루돌프 두 마리
-    for ox in (0, 150):
-        ell(d, (60 + ox, 210, 190 + ox, 290), brown)
-        for lx in (80, 110, 150, 170):
-            d.line([(s(lx + ox), s(280)), (s(lx + ox - 6), s(350))], fill=brown, width=s(11))
-        d.line([(s(172 + ox), s(222)), (s(206 + ox), s(172))], fill=brown, width=s(18))
-        ell(d, (190 + ox, 150, 244 + ox, 196), brown)
-        ell(d, (236 + ox, 168, 254 + ox, 186), (214, 48, 49, 255) if ox == 0 else (60, 40, 30, 255))
-        d.line([(s(206 + ox), s(152)), (s(196 + ox), s(110)), (s(214 + ox), s(84))], fill=(110, 72, 44, 255), width=s(9))
-        d.line([(s(222 + ox), s(152)), (s(236 + ox), s(110)), (s(222 + ox), s(84))], fill=(110, 72, 44, 255), width=s(9))
-    d.line([(s(250), s(250)), (s(380), s(290))], fill=(90, 60, 40, 255), width=s(6))
-    # 썰매
-    poly(d, [(380, 250), (700, 250), (680, 340), (420, 340)], (176, 38, 44, 255))
-    rect(d, (380, 330, 740, 346), (232, 200, 90, 255), 8)
-    d.arc([s(350), s(300), s(430), s(400)], 180, 300, fill=(232, 200, 90, 255), width=s(10))
-    # 산타
-    ell(d, (470, 140, 640, 290), (214, 48, 49, 255))
-    ell(d, (500, 90, 600, 190), (250, 220, 190, 255))
-    poly(d, [(488, 110), (550, 20), (616, 110)], (214, 48, 49, 255))
-    ell(d, (536, 4, 566, 34), (255, 255, 255, 255))
-    rect(d, (484, 100, 620, 122), (255, 255, 255, 255), 10)
-    ell(d, (500, 140, 600, 220), (255, 255, 255, 255))
-    ell(d, (526, 130, 538, 142), (40, 40, 40, 255))
-    ell(d, (562, 130, 574, 142), (40, 40, 40, 255))
-    # 선물 자루
-    ell(d, (640, 170, 740, 290), (120, 80, 52, 255))
-    return finish(img, w, h)
-
-
-def star_icon():
-    img = canvas(96, 96)
-    d = ImageDraw.Draw(img)
-    star(d, 48, 50, 38, (240, 186, 48, 255))
-    return finish(img, 96, 96)
-
-
+RES = Path(os.environ["SEASON_PACK_OUT"]) if os.environ.get("SEASON_PACK_OUT") else ROOT / "Packages/SeasonPackKit/Sources/SeasonPackKit/Resources"
 # ---- 소리 ---------------------------------------------------------------------------------
 NOTE = {"C": 261.63, "D": 293.66, "E": 329.63, "F": 349.23, "G": 392.00}
 BPM = 120
@@ -331,9 +125,9 @@ def christmas(folder):
     img("house.tree.star", "house-tree-star.png", star_glow())
     img("icon.bell", "icon-bell.png", bell_icon())
     img("actor.santa", "actor-santa.png", santa_actor())
-    img("gift.a", "gift-a.png", gift((214, 48, 49)))
-    img("gift.b", "gift-b.png", gift((46, 125, 72)))
-    img("gift.c", "gift-c.png", gift((64, 120, 210)))
+    img("gift.a", "gift-a.png", gift("a"))
+    img("gift.b", "gift-b.png", gift("b"))
+    img("gift.c", "gift-c.png", gift("c"))
     img("accessory.santaHat", "accessory-santa-hat.png", santa_hat())
     img("accessory.scarf", "accessory-scarf.png", scarf())
     img("accessory.antlers", "accessory-antlers.png", antlers())

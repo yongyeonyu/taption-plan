@@ -182,6 +182,8 @@ final class AnnouncementService {
     static let dismissedKey = "announcement.dismissedAt"
 
     private(set) var all: [AppAnnouncement] = []
+    /// 시즌 팩이 켜질 때 공지 시트를 한 번 열어 달라는 요청(SEA1119A01). 배너가 값이 바뀔 때마다 시트를 연다.
+    private(set) var sheetRequest = 0
     private(set) var dismissed: [String: Double]
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -213,6 +215,8 @@ final class AnnouncementService {
     var visible: [AppAnnouncement] {
         AnnouncementPolicy.visible(all, now: now(), build: build(), dismissed: Set(dismissed.keys))
     }
+
+    func requestSheet() { sheetRequest &+= 1 }
 
     func dismiss(_ id: String) {
         guard dismissed[id] == nil else { return }

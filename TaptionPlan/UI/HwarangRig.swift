@@ -1159,6 +1159,8 @@ struct HwarangSceneView: View {
     var anchorHeight: CGFloat
     var facesLeft = false
     var hatAssetName: String? = nil
+    /// 시즌 팩이 파일로 준 모자. 있으면 `hatAssetName` 대신 이것을 씌운다(SEA1119A01).
+    var hatImage: UIImage? = nil
     var scarf: HwarangClothStyle? = nil
     var ribbon: HwarangClothStyle? = nil
     var showsBackdrop = true
@@ -1174,7 +1176,7 @@ struct HwarangSceneView: View {
     static let hatHeadroom: CGFloat = 40
 
     var body: some View {
-        let hat = hatAssetName.flatMap { UIImage(named: $0) }
+        let hat = hatImage ?? hatAssetName.flatMap { UIImage(named: $0) }
         let small = width < 70
         let headroom = hat == nil ? 0 : Self.hatHeadroom
         let isWheel = scene == .wheel, coat = HwarangCoat.selected

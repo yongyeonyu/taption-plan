@@ -8,7 +8,7 @@ import Synchronization
 @MainActor
 @Observable
 public final class SeasonPackCenter {
-    public static let shared = SeasonPackCenter()
+    public static let shared = SeasonPackCenter(publishesPhrases: true)
 
     public struct Configuration: Sendable {
         public var storeRoot: URL
@@ -41,8 +41,13 @@ public final class SeasonPackCenter {
     @ObservationIgnored private var previewBase: (device: Date, event: Date)?
     @ObservationIgnored private var lastAnnounced: String?
     @ObservationIgnored private let versionBook = SeasonPackVersionBook()
+    @ObservationIgnored private let phraseBook = SeasonPackPhraseBook()
 
-    public init() {}
+    @ObservationIgnored private let publishesPhrases: Bool
+
+    public init() { publishesPhrases = false }
+
+    private init(publishesPhrases: Bool) { self.publishesPhrases = publishesPhrases }
 
     /// 판정에 쓰는 달력(기기 시간대). 시험이 시간대를 고정할 때 바꾼다.
     @ObservationIgnored public var calendar: Calendar = .current
@@ -134,6 +139,8 @@ public final class SeasonPackCenter {
         eventDate = date
         let changed = chosen?.id != active?.id || chosen?.version != active?.version
         active = chosen
+        phraseBook.set(chosen?.manifest.slots?.bubbles?.pool ?? [])
+        if publishesPhrases { SeasonPackPhraseBook.shared.set(chosen?.manifest.slots?.bubbles?.pool ?? []) }
         if changed { stage.activePackChanged() }
         if let chosen { store?.touch(id: chosen.id, version: chosen.version, now: host?.now() ?? Date()) }
         announceIfNeeded()
@@ -192,9 +199,9 @@ public final class SeasonPackCenter {
         return SeasonPackRenderer.houseState(pack: active, now: eventDate, windows: windows, motion: motion, fastUntil: stage.fastBlinkUntil)
     }
 
-    /// 기본 대사 풀 앞에 둘 이벤트 대사(기간 밖이면 빈 목록).
-    public func bubblePhrases(language: String) -> [String] {
-        (active?.manifest.slots?.bubbles?.pool ?? []).map { $0.resolve(language: language) }.filter { !$0.isEmpty }
+    /// 기본 대사 풀 앞에 둘 이벤트 대사(기간 밖이면 빈 목록). 어느 스레드에서든 부를 수 있다.
+    public nonisolated func bubblePhrases(language: String) -> [String] {
+        phraseBook.texts().map { $0.resolve(language: language) }.filter { !$0.isEmpty }
     }
 
     public func placedIcons(origin: CGPoint = .zero, bounds: CGRect? = nil) -> [SeasonPackPlacedIcon] {
@@ -209,17 +216,29 @@ public final class SeasonPackCenter {
     }
 
     /// 카드·지도에서 캐릭터 위에 얹을 팩 레이어(의상 → 악세사리, z 순).
-    public func characterLayers(characterID: String? = nil, includeOutfit: Bool = true) -> [(image: CGImage, layer: SeasonPackManifest.Layer)] {
+    public func characterLayers(characterID: String? = nil, includeOutfit: Bool = true, includeHat: Bool = true) -> [(image: CGImage, layer: SeasonPackManifest.Layer)] {
         guard let active, let slots = active.manifest.slots else { return [] }
         let character = characterID ?? host?.characterID ?? "white"
         var layers = includeOutfit && (slots.shareCard?.outfit ?? true) ? (slots.outfit?[character] ?? []) : []
-        if let accessory = slots.accessory { layers += [accessory.hat, accessory.scarf, accessory.ribbon].compactMap { $0 } }
+        if let accessory = slots.accessory { layers += [includeHat ? accessory.hat : nil, accessory.scarf, accessory.ribbon].compactMap { $0 } }
         return layers.sorted { $0.z < $1.z }.compactMap { layer in
             SeasonPackImageCache.shared.image(pack: active, asset: layer.asset).map { ($0, layer) }
         }
     }
 
     public var shareCardUsesOutfit: Bool { active?.manifest.slots?.shareCard?.outfit ?? false }
+
+    /// 모자·목도리·리본 칸의 팩 그림(읽어 둔 것, 디스크를 다시 읽지 않는다). 앱의 `HwarangSceneView`가 모자를 이 그림으로 얹는다.
+    public func accessoryImage(_ slot: String) -> CGImage? {
+        guard let active, let accessory = active.manifest.slots?.accessory else { return nil }
+        let layer: SeasonPackManifest.Layer? = switch slot {
+        case "hat": accessory.hat
+        case "scarf": accessory.scarf
+        case "ribbon": accessory.ribbon
+        default: nil
+        }
+        return layer.flatMap { SeasonPackImageCache.shared.image(pack: active, asset: $0.asset) }
+    }
 
     /// 모자 칸의 팩 그림 바이트(앱의 `HwarangSceneView`가 `hatImage`로 얹는다).
     public func accessoryImageData(_ slot: String) -> Data? {
@@ -255,4 +274,18 @@ final class SeasonPackVersionBook: Sendable {
     private let versions = Mutex<[String: Int]>([:])
     func version(of id: String) -> Int { versions.withLock { $0[id] ?? 0 } }
     func set(_ new: [String: Int]) { versions.withLock { $0 = new } }
+}
+
+final class SeasonPackPhraseBook: Sendable {
+    static let shared = SeasonPackPhraseBook()
+    private let pool = Mutex<[SeasonPackText]>([])
+    func texts() -> [SeasonPackText] { pool.withLock { $0 } }
+    func set(_ new: [SeasonPackText]) { pool.withLock { $0 = new } }
+}
+
+/// 앱의 대사 풀이 어느 스레드에서든 읽는 이벤트 대사(`SeasonPackCenter.shared`가 켜진 팩 기준으로 채운다).
+public enum SeasonPackPhrases {
+    public static func current(language: String) -> [String] {
+        SeasonPackPhraseBook.shared.texts().map { $0.resolve(language: language) }.filter { !$0.isEmpty }
+    }
 }

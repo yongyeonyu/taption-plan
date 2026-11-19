@@ -1,4 +1,5 @@
 import Foundation
+import SeasonPackKit
 import SwiftUI
 
 enum MapHomeStickmanAnimationEngine {
@@ -201,11 +202,15 @@ struct MapHomeStickmanGlyph: View {
     var size: CGFloat = 30
     var equippedAccessoryID: String? = nil
     var rendersAsynchronously = false
+    /// 집에 있는 화랑이만 시즌 팩의 모자·의상을 입는다(SEA1119A01).
+    var usesSeasonPack = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
         let isStatic = reduceMotion || isLuminanceReduced || !action.animatesPresentation
+        let seasonHat = usesSeasonPack ? SeasonPackAdapter.hatImage() : nil
+        let seasonLayers = usesSeasonPack ? SeasonPackAdapter.characterLayers() : []
         let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
         let scarf = MapHomeGrowthAccessoryCatalog.scarfStyle(for: equippedAccessoryID)
         let ribbon = MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
@@ -218,6 +223,7 @@ struct MapHomeStickmanGlyph: View {
                 width: size * 1.6,
                 anchorHeight: size,
                 hatAssetName: hat,
+                hatImage: seasonHat,
                 scarf: scarf,
                 ribbon: ribbon,
                 showsBackdrop: size >= 36,
@@ -225,6 +231,7 @@ struct MapHomeStickmanGlyph: View {
             )
         }
         .frame(width: size, height: size)
+        .overlay { if !seasonLayers.isEmpty { SeasonPackCharacterLayersView(layers: seasonLayers).frame(width: size * 1.6, height: size * 1.6) } }
         .accessibilityHidden(true)
     }
 }

@@ -32,92 +32,92 @@
     {
       "id": "house.tree",
       "path": "house-tree.png",
-      "sha256": "8017d5acd893276cd8d1ab9274b89f7331288215f0cf88c5c1271983466c4312",
-      "bytes": 45032,
+      "sha256": "8cbe2a007458d885af025b666ec9e49feb5c51d82033c6043678abb199de0926",
+      "bytes": 192089,
       "kind": "image"
     },
     {
       "id": "house.tree.lit",
       "path": "house-tree-lit.png",
-      "sha256": "89f94ac67afad7a1cc43e6240ede4402a50931bb782a1463536a2e824c4e02e7",
-      "bytes": 78442,
+      "sha256": "2dc08f9a104bf9668705e6d96b81b1fdbbd7b5b7786f83a8fb7390d6a4d7c25f",
+      "bytes": 233892,
       "kind": "image"
     },
     {
       "id": "house.tree.star",
       "path": "house-tree-star.png",
-      "sha256": "b027d13a946a5d4e4250b32a703929106573ae577f9da4b433258c3d942ef61c",
-      "bytes": 43073,
+      "sha256": "f46195dc403d336ba7ae48b41094d82352fadb1bf154b55fb6941413ff91ce8f",
+      "bytes": 50627,
       "kind": "image"
     },
     {
       "id": "icon.bell",
       "path": "icon-bell.png",
-      "sha256": "7a7502b7501a5d80f5625070fc9833ef22e4393370712cda4617c049be697a42",
-      "bytes": 4108,
+      "sha256": "a94e8811085bfa4ab4dad955e5d889d9e81e1c0fc9eeffb5a12659af7d7ef09f",
+      "bytes": 7556,
       "kind": "image"
     },
     {
       "id": "actor.santa",
       "path": "actor-santa.png",
-      "sha256": "b103b0437fad673a7dda3c2daeffddabdcf5bc147def0b619c50ae5197fa6e88",
-      "bytes": 44393,
+      "sha256": "34f2f200095275e5c73442ebcfb95788efa01cdbc31f081cac8ed335c81b708f",
+      "bytes": 131998,
       "kind": "image"
     },
     {
       "id": "gift.a",
       "path": "gift-a.png",
-      "sha256": "c7567d7d7b1d99dd2543bb2f66c6b7caddf974d7ab3acf606fb56c5b0453584d",
-      "bytes": 2795,
+      "sha256": "1bf435884fc708c52894559f1afb00b651be1c9203c999d0051a5d9796f7fa21",
+      "bytes": 4532,
       "kind": "image"
     },
     {
       "id": "gift.b",
       "path": "gift-b.png",
-      "sha256": "5b5cae4fdfe907895f18b99f5eed9f5bc0fe9d6897428b7c8cc787e46e4ba85f",
-      "bytes": 2878,
+      "sha256": "cca969c68a04f710e63e5a76f9c5c83bc45dce82523ab8aa09cce63c50f78e57",
+      "bytes": 4447,
       "kind": "image"
     },
     {
       "id": "gift.c",
       "path": "gift-c.png",
-      "sha256": "a56121bd888d3f4b63755ae4ba95cc286155eb97f5ddea0f4202fb0332aed502",
-      "bytes": 2897,
+      "sha256": "4682ddc411a54b8b63507b5c5843dea137dabd6dd927690c02c36543f4586597",
+      "bytes": 4326,
       "kind": "image"
     },
     {
       "id": "accessory.santaHat",
       "path": "accessory-santa-hat.png",
-      "sha256": "f73374001d46f5712d0484a8b96533da5bb75af02d40ebb2d755ec12bc125f33",
-      "bytes": 7328,
+      "sha256": "106643d2017dfb512d02ae29f9d4ac34e0879720e799f9c3d3ea3246d9b38eee",
+      "bytes": 41574,
       "kind": "image"
     },
     {
       "id": "accessory.scarf",
       "path": "accessory-scarf.png",
-      "sha256": "71bf95271c95c78a75ee3d2f4169d831a39d2c8a234bf61f2767f8efeec94abc",
-      "bytes": 4799,
+      "sha256": "d2e15e9d546a9e48a982d84e2af9e448e55efdc5f8237630b3690ef25da3531e",
+      "bytes": 30684,
       "kind": "image"
     },
     {
       "id": "accessory.antlers",
       "path": "accessory-antlers.png",
-      "sha256": "59ac05ebb937530cdcdda0124a44ae20a85280269439768b938fe046874a79f4",
-      "bytes": 10991,
+      "sha256": "29d2c7ce000a90977a0b89ea464b6b022f4bc42bb437eb4f5d2008da7db77d3c",
+      "bytes": 33429,
       "kind": "image"
     },
     {
       "id": "outfit.coat",
       "path": "outfit-coat.png",
-      "sha256": "a3d66de3e165113205a27cffbe6f58526187de1193e21679d6273b216efe621f",
-      "bytes": 13538,
+      "sha256": "55a76aefc804f38c6bee8e322ff03851d8846b8262609057f1cdafaa4e0697dc",
+      "bytes": 48367,
       "kind": "image"
     },
     {
       "id": "carol.jingle",
       "path": "audio/jingle-bells.m4a",
-      "sha256": "41f392f69e6dbf89f0e78476b7b81d23fdef89ad9410e03296c13697a048f46f",
-      "bytes": 355355,
+      "sha256": "52188a0c80086f4d32bd500c60d3115de7db76246c855a00f5d3dea406a19dd6",
+      "bytes": 355361,
       "kind": "audio"
     }
   ],

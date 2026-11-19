@@ -1,6 +1,7 @@
 import CoreMotion
 import MapKit
 import Photos
+import SeasonPackKit
 import SwiftUI
 import UserNotifications
 
@@ -173,6 +174,8 @@ enum MapHomeCardMetricSelection {
 struct MapHomeDailyCardCat: View {
     let seedText: String
     let accessoryID: String?
+    /// 이벤트 기간의 시즌 모자·의상 레이어(없으면 nil, SEA1119A01).
+    var seasonArt: SeasonCardArt? = nil
 
     private var seed: Int {
         seedText.utf8.reduce(5381) { ($0 &* 33 &+ Int($1)) & 0xFFFF_FFFF }
@@ -187,11 +190,13 @@ struct MapHomeDailyCardCat: View {
             width: 128,
             anchorHeight: 96,
             hatAssetName: MapHomeGrowthAccessoryCatalog.hatAssetName(for: accessoryID),
+            hatImage: seasonArt?.hat,
             scarf: MapHomeGrowthAccessoryCatalog.scarfStyle(for: accessoryID),
             ribbon: MapHomeGrowthAccessoryCatalog.ribbonStyle(for: accessoryID),
             showsBackdrop: false
         )
         .frame(width: 96, height: 96)
+        .overlay { if let layers = seasonArt?.layers, !layers.isEmpty { SeasonPackCharacterLayersView(layers: layers).frame(width: 154, height: 154) } }
     }
 }
 
@@ -202,6 +207,8 @@ struct MapHomeDailyCardView: View {
     let language: MapHomeLanguage
     /// 배경으로 깐 지도(경로 포함). 위에 밝은 막을 씌워 디밍한다.
     var mapImage: UIImage?
+    /// 이벤트 기간의 집 그림·캐릭터 레이어. nil이면 지금과 완전히 같은 그림이다(SEA1119A01).
+    var seasonArt: SeasonCardArt? = nil
 
     var body: some View {
         ZStack {
@@ -223,7 +230,7 @@ struct MapHomeDailyCardView: View {
                     }
                     Spacer()
                     if let level = data.homeLevel { homeBadge(level: level) }
-                    MapHomeDailyCardCat(seedText: data.dateText, accessoryID: data.accessoryID)
+                    MapHomeDailyCardCat(seedText: data.dateText, accessoryID: data.accessoryID, seasonArt: seasonArt)
                 }
                 if !data.metrics.isEmpty {
                     // 사용자가 고른 항목(최대 4개)을 카드 윗부분에 그대로 보여 준다.
@@ -270,8 +277,9 @@ struct MapHomeDailyCardView: View {
 
     private func homeBadge(level: Int) -> some View {
         VStack(spacing: 2) {
-            Image(MapHomeGrowthPolicy.artworkName(level: level))
-                .resizable()
+            Group {
+                if let house = seasonArt?.house { Image(uiImage: house).resizable() } else { Image(MapHomeGrowthPolicy.artworkName(level: level)).resizable() }
+            }
                 .scaledToFit()
                 .frame(width: 78, height: 78)
             Text(MapHomeGrowthPolicy.dayLabel(level: level, language: language))
@@ -600,7 +608,7 @@ struct MapHomeDailyCardSheet: View {
 
     @MainActor
     static func render(data: MapHomeDailyCardData, language: MapHomeLanguage, mapImage: UIImage?) -> UIImage? {
-        let renderer = ImageRenderer(content: MapHomeDailyCardView(data: data, language: language, mapImage: mapImage))
+        let renderer = ImageRenderer(content: MapHomeDailyCardView(data: data, language: language, mapImage: mapImage, seasonArt: SeasonPackAdapter.cardArt()))
         renderer.scale = 2
         renderer.proposedSize = ProposedViewSize(width: MapHomeDailyCardView.side, height: MapHomeDailyCardView.side)
         return renderer.uiImage
