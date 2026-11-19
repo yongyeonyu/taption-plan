@@ -165,7 +165,12 @@ npm test
 npx wrangler deploy --config wrangler.local.toml
 ```
 
-옛 KV 바인딩(`[[kv_namespaces]] PLANS`)은 이관이 끝날 때까지 `wrangler.local.toml`에 그대로 둡니다. 가장 긴 만료(연결 클라이언트 365일)가 지나거나 옛 KV에 남은 키가 없음을 확인한 뒤 두 toml에서 그 블록을 지우고 다시 배포합니다. 그 전에 떼면 아직 옮기지 않은 값(예: 읽힌 적 없는 만료 없는 키)이 사라집니다.
+**옛 KV 바인딩 제거(D1R1119A02, 2026-11-19)**: 기다리지 않고 `scripts/kv-to-d1.mjs`로 옛 KV에 남은 키 133개를 D1로 일괄 복사(`INSERT OR IGNORE`라 D1의 새 값·삭제 표식은 안 덮음, 값은 출력하지 않음)한 뒤, 모든 키가 D1에 있음을 확인하고 두 toml에서 `[[kv_namespaces]] PLANS` 블록을 지웠다. `wrangler.local.toml`을 새로 만들 때는 KV 블록 없이 `[[d1_databases]]`만 둔다. 이 스크립트는 옛 KV가 다시 필요한 때(되돌리기)에만 쓴다.
+
+```sh
+node scripts/kv-to-d1.mjs --config wrangler.local.toml --out /tmp/kv-to-d1.sql          # SQL만 만든다(읽기만)
+node scripts/kv-to-d1.mjs --config wrangler.local.toml --out /tmp/kv-to-d1.sql --apply  # D1에도 적용
+```
 
 ## 여행 공유 방(TSH1114A26)
 

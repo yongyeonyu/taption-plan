@@ -19,13 +19,7 @@ database_name = "taption-trip-relay"
 database_id = "REPLACE_WITH_D1_DATABASE_ID"
 migrations_dir = "migrations"
 
-# 옛 KV: 이관(Dual-Read)용 읽기 전용. 코드는 여기에 쓰지 않는다. 쓰던 값이 D1로 다 옮겨 가거나
-# 만료된 뒤(가장 긴 만료 365일, 만료 없는 연결 키는 앱이 다시 읽을 때 옮겨짐) 이 블록과 id를 지운다.
-# 바인딩이 없어도 서버는 동작한다(D1만 씀).
-[[kv_namespaces]]
-binding = "PLANS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-
+# 옛 KV(PLANS) 바인딩은 D1R1119A02에서 뗐다(2026-11-19, 남은 키 133개를 D1로 복사한 뒤). 코드는 `env.PLANS`가 없어도 D1만으로 돈다.
 # IP당 1분에 POST 20번까지(REV1110A02, SEC1110A03에서 5 → 20: 첫 실행의 등록·PIN·키·업로드가 한 번에 온다).
 # 무료 저장소(D1) 쓰기 한도를 한 사람이 다 쓰지 못하게 한다.
 [[ratelimits]]
