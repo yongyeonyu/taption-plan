@@ -1135,6 +1135,10 @@
 
 ## 검증 기록
 
+### TFB1119A03 · TestFlight 353 (2026-11-19)
+
+- `bash scripts/testflight/release.sh --yes`(빌드 잠금 안, 대표 지시 「베타테스터 릴리즈」): 빌드 번호 352 → 353(pbxproj·앱·위젯·Watch·Watch 위젯 `CFBundleVersion`). 352 대비 동행 실시간 위치 끔(LOC1119A01)·`.gitignore` 정리만 다름. 처리 `VALID`, 내부 그룹 연결 확인, 종료 코드 0. 보고서 `build/validation/TFB1119A04/testflight-report.json`(`TFB1119A03`은 `--preflight`).
+
 ### LOC1119A01 · 외부 시험 전 동행 위치 끄기 (2026-11-19, 시뮬레이터·맥)
 
 - 대표 지시 「베타테스터 릴리즈」 + 대표 결정(2026-11-17): 외부 시험·출시 전 `TripLiveLocationService.isAvailable`을 끈다. `static let isAvailable = false`(시험이 켤 수 있게 `static var`). `TripLiveLocationTests`는 시험 안에서만 켜고 끝나면 되돌리며(`@MainActor`), 배포 값이 꺼져 있는지 지키는 `testShippedBuildKeepsLiveLocationOff`를 더함. PCC는 `isPrivateCloudComputeEnabled = false`·`PRIVACY.md`에 PCC 줄 없음(짝 맞음, PCC1118A01).
