@@ -1135,6 +1135,10 @@
 
 ## 검증 기록
 
+### 푸시 (2026-11-19, 대표 승인)
+
+- `origin/main`에 `43123ee9..56bb8623` 푸시(커밋 21개). 푸시 전 diff에서 계정·키·기기 번호·도메인·좌표를 grep해 걸리는 것 없음을 확인. 에이전트 워크트리 16개(모두 `main`에 합쳐져 있고 변경 없음)와 그 브랜치를 지움. 남은 워크트리: `mode-transition-style-a1b5ac`·`perf-iphone11-bench-d2e0c6`·`refactor-top20-2ae8cb`·`/Volumes/TaptionPlanBuild/src-KDR1118A01`(대표 확인 뒤).
+
 ### 정리 묶음 (2026-11-19, 대표 승인: 푸시·에이전트 워크트리·옛 KV 바인딩·번역 검수·자세 그림·통행료 거리·카카오)
 
 - **D1R1119A02 · 옛 KV 바인딩 제거**: `scripts/kv-to-d1.mjs`로 옛 KV(PLANS)의 남은 키 133개(만료 0)를 읽기만 해 SQL로 만들고(최대 문장 56KB) D1에 `INSERT OR IGNORE`로 적용(129건 새로 들어감, 4건은 이미 있어 그대로, 값은 출력하지 않음). 확인: KV 133개 모두 D1에 있음(D1 146행). 그 뒤 `wrangler.toml`·`wrangler.local.toml`에서 `[[kv_namespaces]]` 블록을 지우고 README에 적음. 서버 `npm test` 250건 통과, `wrangler deploy --dry-run` 바인딩에 `PLANS` 없음·`RELAY_DB` 있음. **서버 재배포(대표, 터미널)가 한 번 남음**: 지금 떠 있는 버전은 아직 KV가 붙어 있고, 재배포해야 KV가 떨어짐. 되돌리려면 같은 스크립트와 KV id로 블록을 다시 넣음.
