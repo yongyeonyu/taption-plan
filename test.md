@@ -1149,6 +1149,13 @@
 
 ## 검증 기록
 
+### TFB1119A04 · TestFlight 354 (2026-11-19, 대표 선택 「지금 354 빌드 올리기」)
+- `scripts/testflight/release.sh --yes --request-id TFB1119A04`를 빌드 잠금 안에서 실행해 종료 코드 0. 빌드 번호 353 → 354, 산출물의 앱·위젯·Watch·Watch 위젯 네 번들이 모두 354(`pbxproj`의 `CURRENT_PROJECT_VERSION`과 네 `Info.plist` 일치).
+- 처리 `VALID`, 내부 그룹 「TP Taption Plan 내부 테스트」 연결, 그룹 화면의 빌드 354 노출, 테스터 1명 노출(`build/validation/TFB1119A04/testflight-report.json`, git 무시 대상).
+- 담긴 것: 공지 배너(ANN1119A01)·에너지 곡선 카드(ENC1119A01)·분류 개선 데이터 설정 행(MSC1119A01)·12개 언어 번역(TRN1119A01)·`ask_user` 시험 수정(TIM1119A01). 서버 변경(CLS1119A01·R2PUB1119A01)은 앱 빌드와 무관하며 배포 전.
+- 한계: 설치·실행·화면 확인은 하지 않았다(업로드·처리·그룹 연결까지). 외부 테스터 그룹(TP 지인 테스트)에는 연결하지 않았다. 공지는 R2 업로드 전이라 보이는 것이 없다.
+
+
 ### CLS1119A01 · 오분류 교정 표본 서버 엔드포인트 (2026-11-19, 맥 Node `node --test`, 서버 코드만, 앱·Xcode 시험 없음)
 - `cd server/trip-relay && npm test`: 280건 실행, 통과 280, 실패 0, 건너뜀 0(기존 271건 + 새 `test/classifier.test.mjs` 9건, 가짜 D1 `FakeD1`은 `0002` 마이그레이션도 실행·`batch` 추가). 새 의존성 없음.
 - 확인한 것: 정상 업로드와 `accepted/duplicates/rejected`·같은 id 무시, 허용 목록 검사(모르는 열쇠·한글·긴 글·범위 밖·좌표 열쇠·사용자 지정은 `custom`만), 형식·버전·건수(200)·1MB(413), 주인 키 필요(401)·표에 주인 키 원문 없음·주인 키로 읽기 405, 하루 2,000건(429·`retry-after: 3600`)·다른 주인 영향 없음·25시간 뒤 재개, 1년 지난 표본 삭제, `DELETE`는 내 표본만, 운영자 읽기(토큰·`since`/`limit`·owner·받은 시각 미노출·토큰 없으면 503), D1 바인딩 없으면 503.
