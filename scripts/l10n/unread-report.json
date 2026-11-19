@@ -1,7 +1,13 @@
 {
- "ui": 5369,
+ "ui": 5401,
  "catalog": 504,
  "unread": [
+  {
+   "file": "TaptionPlan/UI/FlightPickerSheet.swift",
+   "line": 82,
+   "ko": "airport.nameKo",
+   "en": "airport.nameEn"
+  },
   {
    "file": "Packages/SeasonPackKit/Sources/SeasonPackKit/Icons/SeasonPackMenu.swift",
    "line": 6,
@@ -898,7 +904,7 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 652,
+   "line": 660,
    "ko": "money.amount",
    "en": "language"
   },

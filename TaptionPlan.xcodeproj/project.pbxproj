@@ -226,6 +226,8 @@
 		A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */; };
 		D16A1114A160000000000001 /* AssistantDirectActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D16F1114A160000000000001 /* AssistantDirectActionTests.swift */; };
 		A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000002 /* TripItemStatusTests.swift */; };
+		A1FLT1119A0100000000005 /* FlightPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000005 /* FlightPlacementTests.swift */; };
+		A1FLT1119A0100000000004 /* FlightLookupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000004 /* FlightLookupTests.swift */; };
 		A1D131114000000000000004 /* PlanRealityGapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D131114000000000000004 /* PlanRealityGapTests.swift */; };
 		A1P1111S0200000000000031 /* LedgerReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1P1111S0200000000000031 /* LedgerReviewTests.swift */; };
 		A1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift */; };
@@ -344,6 +346,8 @@
 		A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000001 /* AnnouncementFeed.swift */; };
 		A1SEA1119A01000000000001 /* SeasonPackAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1SEA1119A01000000000001 /* SeasonPackAdapter.swift */; };
 		A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TGT1118A01000000000001 /* LedgerTollGate.swift */; };
+		A1FLT1119A0100000000002 /* FlightPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000002 /* FlightPlacement.swift */; };
+		A1FLT1119A0100000000001 /* FlightLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000001 /* FlightLookup.swift */; };
 		A1TRF1113A01000000000002 /* BusRideRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000002 /* BusRideRecognizer.swift */; };
 		A1BST1113A01000000000001 /* BusStopCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1BST1113A01000000000001 /* BusStopCheck.swift */; };
 		A1R1111A0200000000000001 /* MapHomeTripPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */; };
@@ -739,6 +743,7 @@
 		T5H1114A26000000000B0006 /* TripShareMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0006 /* TripShareMembersView.swift */; };
 		T5H1114A26000000000B0007 /* TripShareOwnerActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0007 /* TripShareOwnerActions.swift */; };
 		T5H1114A26000000000B0008 /* TripSharePlanEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */; };
+		A1FLT1119A0100000000003 /* FlightPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FLT1119A0100000000003 /* FlightPickerSheet.swift */; };
 		T5H1114A26000000000B0009 /* TripSharePlanProjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0009 /* TripSharePlanProjector.swift */; };
 		T5H1114A26000000000B0010 /* TripShareLockBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0010 /* TripShareLockBadge.swift */; };
 		L0C1116S01000000000B0003 /* TripLiveLocationBand.swift in Sources */ = {isa = PBXBuildFile; fileRef = L0C1116S01000000000F0003 /* TripLiveLocationBand.swift */; };
@@ -1087,6 +1092,8 @@
 		F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantReviewFixTests.swift; sourceTree = "<group>"; };
 		D16F1114A160000000000001 /* AssistantDirectActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDirectActionTests.swift; sourceTree = "<group>"; };
 		F1C1110A0900000000000002 /* TripItemStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatusTests.swift; sourceTree = "<group>"; };
+		F1FLT1119A0100000000005 /* FlightPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightPlacementTests.swift; sourceTree = "<group>"; };
+		F1FLT1119A0100000000004 /* FlightLookupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightLookupTests.swift; sourceTree = "<group>"; };
 		F1D131114000000000000004 /* PlanRealityGapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRealityGapTests.swift; sourceTree = "<group>"; };
 		F1P1111S0200000000000031 /* LedgerReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerReviewTests.swift; sourceTree = "<group>"; };
 		F1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMessageAccuracyTests.swift; sourceTree = "<group>"; };
@@ -1195,6 +1202,8 @@
 		F1ANN1119A01000000000001 /* AnnouncementFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementFeed.swift; sourceTree = "<group>"; };
 		F1SEA1119A01000000000001 /* SeasonPackAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonPackAdapter.swift; sourceTree = "<group>"; };
 		F1TGT1118A01000000000001 /* LedgerTollGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollGate.swift; sourceTree = "<group>"; };
+		F1FLT1119A0100000000002 /* FlightPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightPlacement.swift; sourceTree = "<group>"; };
+		F1FLT1119A0100000000001 /* FlightLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightLookup.swift; sourceTree = "<group>"; };
 		F1TRF1113A01000000000002 /* BusRideRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusRideRecognizer.swift; sourceTree = "<group>"; };
 		F1BST1113A01000000000001 /* BusStopCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusStopCheck.swift; sourceTree = "<group>"; };
 		F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTripPlayback.swift; sourceTree = "<group>"; };
@@ -1565,6 +1574,7 @@
 		T5H1114A26000000000F0006 /* TripShareMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareMembersView.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0007 /* TripShareOwnerActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareOwnerActions.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSharePlanEditor.swift; sourceTree = "<group>"; };
+		F1FLT1119A0100000000003 /* FlightPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightPickerSheet.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0009 /* TripSharePlanProjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSharePlanProjector.swift; sourceTree = "<group>"; };
 		T5H1114A26000000000F0010 /* TripShareLockBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareLockBadge.swift; sourceTree = "<group>"; };
 		L0C1116S01000000000F0003 /* TripLiveLocationBand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLiveLocationBand.swift; sourceTree = "<group>"; };
@@ -1849,6 +1859,8 @@
 				F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */,
 				D16F1114A160000000000001 /* AssistantDirectActionTests.swift */,
 				F1C1110A0900000000000002 /* TripItemStatusTests.swift */,
+				F1FLT1119A0100000000005 /* FlightPlacementTests.swift */,
+				F1FLT1119A0100000000004 /* FlightLookupTests.swift */,
 				F1D131114000000000000004 /* PlanRealityGapTests.swift */,
 				F1P1111S0200000000000031 /* LedgerReviewTests.swift */,
 				F1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift */,
@@ -2171,6 +2183,7 @@
 				T5H1114A26000000000F0006 /* TripShareMembersView.swift */,
 				T5H1114A26000000000F0007 /* TripShareOwnerActions.swift */,
 				T5H1114A26000000000F0008 /* TripSharePlanEditor.swift */,
+				F1FLT1119A0100000000003 /* FlightPickerSheet.swift */,
 				T5H1114A26000000000F0009 /* TripSharePlanProjector.swift */,
 				T5H1114A26000000000F0010 /* TripShareLockBadge.swift */,
 				L0C1116S01000000000F0003 /* TripLiveLocationBand.swift */,
@@ -2410,6 +2423,8 @@
 				F1ANN1119A01000000000001 /* AnnouncementFeed.swift */,
 				F1SEA1119A01000000000001 /* SeasonPackAdapter.swift */,
 				F1TGT1118A01000000000001 /* LedgerTollGate.swift */,
+				F1FLT1119A0100000000002 /* FlightPlacement.swift */,
+				F1FLT1119A0100000000001 /* FlightLookup.swift */,
 				F1TRF1113A01000000000002 /* BusRideRecognizer.swift */,
 				F1BST1113A01000000000001 /* BusStopCheck.swift */,
 				F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */,
@@ -3214,6 +3229,7 @@
 				T5H1114A26000000000B0006 /* TripShareMembersView.swift in Sources */,
 				T5H1114A26000000000B0007 /* TripShareOwnerActions.swift in Sources */,
 				T5H1114A26000000000B0008 /* TripSharePlanEditor.swift in Sources */,
+				A1FLT1119A0100000000003 /* FlightPickerSheet.swift in Sources */,
 				T5H1114A26000000000B0009 /* TripSharePlanProjector.swift in Sources */,
 				T5H1114A26000000000B0010 /* TripShareLockBadge.swift in Sources */,
 				L0C1116S01000000000B0003 /* TripLiveLocationBand.swift in Sources */,
@@ -3395,6 +3411,8 @@
 				A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */,
 				A1SEA1119A01000000000001 /* SeasonPackAdapter.swift in Sources */,
 				A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */,
+				A1FLT1119A0100000000002 /* FlightPlacement.swift in Sources */,
+				A1FLT1119A0100000000001 /* FlightLookup.swift in Sources */,
 				A1TRF1113A01000000000002 /* BusRideRecognizer.swift in Sources */,
 				A1BST1113A01000000000001 /* BusStopCheck.swift in Sources */,
 				A1R1111A0200000000000001 /* MapHomeTripPlayback.swift in Sources */,
@@ -3512,6 +3530,8 @@
 				A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */,
 				D16A1114A160000000000001 /* AssistantDirectActionTests.swift in Sources */,
 				A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */,
+				A1FLT1119A0100000000005 /* FlightPlacementTests.swift in Sources */,
+				A1FLT1119A0100000000004 /* FlightLookupTests.swift in Sources */,
 				A1D131114000000000000004 /* PlanRealityGapTests.swift in Sources */,
 				A1P1111S0200000000000031 /* LedgerReviewTests.swift in Sources */,
 				A1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift in Sources */,

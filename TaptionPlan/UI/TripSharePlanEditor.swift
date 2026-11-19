@@ -127,22 +127,24 @@ enum TripSharePlanEditor {
 
     static func addItem(
         model: AppModel, tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int, endOffsetSeconds: Int? = nil,
-        place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil, parentItemID: String? = nil
+        place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil, parentItemID: String? = nil,
+        flight: TravelFlightFields? = nil
     ) async -> String? {
         guard model.isSharedTrip(tripID) else {
             return await model.addTripItem(
                 tripID: tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: offsetSeconds, endOffsetSeconds: endOffsetSeconds, place: place, note: note,
-                colorHex: colorHex, plannedSpendKRW: plannedSpendKRW, parentItemID: parentItemID
+                colorHex: colorHex, plannedSpendKRW: plannedSpendKRW, parentItemID: parentItemID, flight: flight
             )
         }
         guard end > start else { return nil }
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
         // 방에서 처음 만드는 일정은 방 항목 id가 곧 로컬 번호다.
-        let item = TravelTripItem(
+        var item = TravelTripItem(
             tripID: tripID, itemID: ShareIdentifiers.itemID(), kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
             startOffsetSeconds: offsetSeconds, endOffsetSeconds: endOffsetSeconds ?? offsetSeconds, planID: nil, note: AppModel.cleanTripNote(note),
             colorHex: TravelTripItem.cleanColorHex(colorHex), plannedSpendKRW: TravelTripItem.cleanPlannedSpend(plannedSpendKRW), parentItemID: parentItemID
         )
+        if let flight { item.apply(flight) }
         guard await commit(model: model, tripID: tripID, upserts: [item], places: [item.itemID: place?.name]) else { return nil }
         if let place { await pin(model: model, item: item, kind: kind, place: place) }
         return item.itemID

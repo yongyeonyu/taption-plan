@@ -287,3 +287,43 @@ struct TravelTripsTests {
         #expect(try JSONDecoder().decode(TravelTrip.self, from: Self.encoder().encode(wish)) == wish)
     }
 }
+
+/// 항공 구간 선택 필드(FLT1119A01): 없으면 예전 바이트 그대로, 있으면 왕복.
+struct TravelTripItemFlightFieldsTests {
+    static func plain() -> TravelTripItem {
+        TravelTripsTests.item("t1", "i1", hour: 9)
+    }
+
+    @Test func itemWithoutFlightFieldsKeepsItsOldBytes() throws {
+        let item = Self.plain()
+        let text = String(decoding: try TravelTripsTests.encoder().encode(item), as: UTF8.self)
+        for key in ["flightNumber", "originCode", "destinationCode", "terminal", "gate", "baggageClaim", "legIndex", "itineraryID", "pnrLocal"] {
+            #expect(!text.contains(key), "\(key)는 nil이면 쓰지 않는다")
+        }
+        #expect(!item.isFlight)
+        // 옛 JSON(항공 키 없음)을 읽어 그대로 다시 쓰면 같은 바이트다.
+        let decoded = try TravelTripsTests.decoder().decode(TravelTripItem.self, from: Data(text.utf8))
+        #expect(String(decoding: try TravelTripsTests.encoder().encode(decoded), as: UTF8.self) == text)
+    }
+
+    @Test func flightFieldsRoundTripAndClearFlightRemovesThem() throws {
+        var item = Self.plain()
+        item.flightNumber = "AB123"; item.originCode = "ICN"; item.destinationCode = "BKK"
+        item.terminal = "2"; item.gate = "252"; item.baggageClaim = "7"; item.legIndex = 0; item.itineraryID = "it-1"; item.pnrLocal = "ABC123"
+        #expect(item.isFlight)
+        let back = try TravelTripsTests.decoder().decode(TravelTripItem.self, from: try TravelTripsTests.encoder().encode(item))
+        #expect(back == item)
+        item.clearFlight()
+        #expect(!item.isFlight)
+        #expect(String(decoding: try TravelTripsTests.encoder().encode(item), as: UTF8.self) == String(decoding: try TravelTripsTests.encoder().encode(Self.plain()), as: UTF8.self))
+    }
+
+    @Test func settingsWithFlightItemRoundTripThroughFullSnapshotSettings() throws {
+        var settings = AppFeatureSettings.defaults
+        var item = Self.plain()
+        item.flightNumber = "AB123"; item.originCode = "ICN"; item.destinationCode = "BKK"
+        settings.travelTripItems = [item]
+        let back = try TravelTripsTests.decoder().decode(AppFeatureSettings.self, from: try TravelTripsTests.encoder().encode(settings))
+        #expect(back.travelTripItems == [item])
+    }
+}

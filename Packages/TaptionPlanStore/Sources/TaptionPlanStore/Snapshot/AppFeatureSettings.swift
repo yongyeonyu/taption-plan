@@ -581,8 +581,23 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public var plannedSpendKRW: Double?
     /// 세부 계획이 딸린 코스 곳의 일정 번호(TVV1113A01 C4). 없으면 굵은 코스 곳이고 키를 쓰지 않는다.
     public var parentItemID: String?
+    /// 항공 구간 정보(FLT1119A01). 비행 일정이 아니면 모두 nil이라 키를 쓰지 않아 예전 바이트가 그대로다.
+    /// 편명(`AB123`)과 출발·도착 공항 IATA 코드.
+    public var flightNumber: String?
+    public var originCode: String?
+    public var destinationCode: String?
+    public var terminal: String?
+    public var gate: String?
+    public var baggageClaim: String?
+    /// 여러 구간 여정에서 몇 번째 구간인지(0부터)와 같은 여정을 묶는 번호.
+    public var legIndex: Int?
+    public var itineraryID: String?
+    /// 예약번호. **기기 표시용**이라 백업 파일 안에만 있고 서버·AI·분석으로 보내지 않는다. 값은 화면에도 가려서 보인다.
+    public var pnrLocal: String?
 
-    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil, colorHex: String? = nil, plannedSpendKRW: Double? = nil, parentItemID: String? = nil) {
+    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil, colorHex: String? = nil, plannedSpendKRW: Double? = nil, parentItemID: String? = nil,
+                flightNumber: String? = nil, originCode: String? = nil, destinationCode: String? = nil, terminal: String? = nil, gate: String? = nil, baggageClaim: String? = nil,
+                legIndex: Int? = nil, itineraryID: String? = nil, pnrLocal: String? = nil) {
         self.tripID = tripID
         self.itemID = itemID
         self.kind = kind
@@ -597,6 +612,31 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
         self.colorHex = colorHex
         self.plannedSpendKRW = plannedSpendKRW
         self.parentItemID = parentItemID
+        self.flightNumber = flightNumber
+        self.originCode = originCode
+        self.destinationCode = destinationCode
+        self.terminal = terminal
+        self.gate = gate
+        self.baggageClaim = baggageClaim
+        self.legIndex = legIndex
+        self.itineraryID = itineraryID
+        self.pnrLocal = pnrLocal
+    }
+
+    /// 비행 구간 정보를 한 번에 넣는다.
+    public mutating func apply(_ flight: TravelFlightFields) {
+        flightNumber = flight.flightNumber; originCode = flight.originCode; destinationCode = flight.destinationCode
+        terminal = flight.terminal; gate = flight.gate; baggageClaim = flight.baggageClaim
+        legIndex = flight.legIndex; itineraryID = flight.itineraryID; pnrLocal = flight.pnrLocal
+    }
+
+    /// 비행 일정이면 true(편명이나 공항 코드가 하나라도 있으면).
+    public var isFlight: Bool { flightNumber != nil || originCode != nil || destinationCode != nil }
+
+    /// 그 구간 정보를 모두 지운다(비행이 아니게 된 일정).
+    public mutating func clearFlight() {
+        flightNumber = nil; originCode = nil; destinationCode = nil; terminal = nil; gate = nil
+        baggageClaim = nil; legIndex = nil; itineraryID = nil; pnrLocal = nil
     }
 
     /// 그 코스 곳에 딸린 세부 일정들(같은 여행, 자기 자신 제외).
@@ -615,6 +655,32 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public static func cleanPlannedSpend(_ value: Double?) -> Double? {
         guard let value, value.isFinite, value >= 0.5 else { return nil }
         return value.rounded()
+    }
+}
+
+/// 비행 구간 정보 묶음(FLT1119A01). `TravelTripItem`의 항공 선택 필드와 같은 칸이다.
+public struct TravelFlightFields: Hashable, Sendable {
+    public var flightNumber: String?
+    public var originCode: String?
+    public var destinationCode: String?
+    public var terminal: String?
+    public var gate: String?
+    public var baggageClaim: String?
+    public var legIndex: Int?
+    public var itineraryID: String?
+    public var pnrLocal: String?
+
+    public init(flightNumber: String? = nil, originCode: String? = nil, destinationCode: String? = nil, terminal: String? = nil, gate: String? = nil,
+                baggageClaim: String? = nil, legIndex: Int? = nil, itineraryID: String? = nil, pnrLocal: String? = nil) {
+        self.flightNumber = flightNumber
+        self.originCode = originCode
+        self.destinationCode = destinationCode
+        self.terminal = terminal
+        self.gate = gate
+        self.baggageClaim = baggageClaim
+        self.legIndex = legIndex
+        self.itineraryID = itineraryID
+        self.pnrLocal = pnrLocal
     }
 }
 

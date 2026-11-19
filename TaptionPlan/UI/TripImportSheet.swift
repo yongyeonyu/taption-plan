@@ -194,7 +194,7 @@ extension AppModel {
     func addTripItem(
         tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int, endOffsetSeconds: Int? = nil,
         place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil,
-        itemID restoredID: String? = nil, parentItemID: String? = nil
+        itemID restoredID: String? = nil, parentItemID: String? = nil, flight: TravelFlightFields? = nil
     ) async -> String? {
         guard acceptsDataMutation(), !tripID.isEmpty, end > start else { return nil }
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -205,13 +205,15 @@ extension AppModel {
         // 되살릴 때는 지워진 일정의 번호를 그대로 쓴다(같은 번호가 이미 있으면 새 번호).
         let taken = (snapshot.settings.travelTripItems ?? []).contains { $0.tripID == tripID && $0.itemID == restoredID }
         let itemID = restoredID.flatMap { taken || $0.isEmpty ? nil : $0 } ?? "m-" + UUID().uuidString.prefix(8).lowercased()
-        let items = (snapshot.settings.travelTripItems ?? []) + [TravelTripItem(
+        var added = TravelTripItem(
             tripID: tripID, itemID: itemID, kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
             startOffsetSeconds: offsetSeconds, endOffsetSeconds: endOffsetSeconds ?? offsetSeconds, planID: planID,
             note: Self.cleanTripNote(note),
             colorHex: TravelTripItem.cleanColorHex(colorHex), plannedSpendKRW: TravelTripItem.cleanPlannedSpend(plannedSpendKRW),
             parentItemID: parentItemID
-        )]
+        )
+        if let flight { added.apply(flight) }
+        let items = (snapshot.settings.travelTripItems ?? []) + [added]
         snapshot.settings.travelTripItems = items
         if let place, let item = items.last { setTripItemPlace(place, for: item) }
         if let trips = snapshot.settings.travelTrips {
