@@ -12,6 +12,7 @@ public struct SeasonPackOverlay: View {
     public var body: some View {
         ZStack {
             if center.active != nil {
+                if let snow = center.activeSnow { SeasonPackSnowLayer(config: snow, motion: center.motion) }
                 SeasonPackActorLayer(center: center)
                 SeasonPackIconLayer(center: center, origin: homeOrigin)
                 if let cue = center.stage.lyricText {

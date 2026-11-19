@@ -226,6 +226,15 @@ public final class SeasonPackCenter {
         }
     }
 
+    /// 활성 팩의 복장(빨간 코·귀마개·목도리·리본 색). 팩이 없거나 기간 밖이면 nil.
+    public var costume: SeasonPackManifest.Slots.Costume? { active?.manifest.slots?.costume }
+
+    /// 집 그림(트리)이 나와 있을 때만 눈꽃송이 설정을 돌려준다(날씨와 무관).
+    public var activeSnow: SeasonPackManifest.Slots.Effects.Snow? {
+        guard houseState() != nil else { return nil }
+        return active?.manifest.slots?.effects?.snow
+    }
+
     public var shareCardUsesOutfit: Bool { active?.manifest.slots?.shareCard?.outfit ?? false }
 
     /// 모자·목도리·리본 칸의 팩 그림(읽어 둔 것, 디스크를 다시 읽지 않는다). 앱의 `HwarangSceneView`가 모자를 이 그림으로 얹는다.

@@ -173,14 +173,14 @@ struct CenterTests {
         #expect(center.houseState() == nil)
     }
 
-    @Test func costumeLayersCoverOutfitAndThreeAccessorySlotsPerCharacter() async {
+    @Test func everyCatGetsTheSameCostumeAndOnlyTheHatIsAFile() async {
         for character in ["white", "calico", "mackerel"] {
             let (center, _) = await make(at: Fixture.date(2026, 12, 25, 21), character: character)
-            let layers = center.characterLayers()
-            #expect(layers.count == 4)
-            #expect(layers.map(\.layer.z) == layers.map(\.layer.z).sorted())
+            #expect(center.characterLayers(includeHat: false).isEmpty) // 겉옷·목도리 그림 없음: 리그가 직접 그린다
             #expect(center.accessoryImageData("hat") != nil)
-            #expect(center.accessoryImageData("scarf") != nil)
+            #expect(center.costume?.redNose == true && center.costume?.antlers != nil)
+            #expect(center.costume?.scarf != nil && center.costume?.ribbon != nil)
+            #expect(center.activeSnow != nil) // 트리가 나오면 눈꽃도 같이
         }
     }
 

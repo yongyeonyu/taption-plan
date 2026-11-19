@@ -69,11 +69,60 @@ struct RenderTests {
         #expect(own == SeasonPackAccessorySlots(hat: "tophat", scarf: "plaid", ribbon: nil)) // 원본은 지워지지 않았다
     }
 
-    @Test func christmasHasThreeAccessorySlotsAndSeparateOutfit() {
+    @Test func christmasDressesAllCatsWithHatNoseAntlersScarfAndRibbon() {
         let slots = christmas.manifest.slots!
-        #expect(slots.accessory?.layers.hat != nil && slots.accessory?.layers.scarf != nil && slots.accessory?.layers.ribbon != nil)
-        #expect(Set(slots.outfit?.keys.map { $0 } ?? []) == ["white", "calico", "mackerel"])
-        #expect(slots.outfit?["white"]?.first?.asset == "outfit.coat") // 의상과 악세사리는 다른 슬롯
+        #expect(slots.accessory?.layers.hat != nil) // 모자만 그림 파일
+        #expect(slots.accessory?.layers.scarf == nil && slots.accessory?.layers.ribbon == nil) // 목도리·리본은 리그가 천으로 그린다
+        let costume = slots.costume!
+        #expect(costume.redNose == true)
+        #expect(costume.antlers == "8A5A36")
+        #expect(costume.scarf?.base == "D63A3A") // 빨간 목도리
+        #expect(costume.ribbon?.base == "2F9E58") // 초록 꼬리 리본
+        #expect(slots.outfit == nil) // 겉옷 그림은 없다 — 세 고양이 모두 같은 복장
+    }
+
+    @Test func christmasTreeHasBulbSequenceAndSnow() {
+        let slots = christmas.manifest.slots!
+        let bulbs = slots.house!.bulbs!
+        #expect(bulbs.points.count >= 30 && bulbs.groups == 4)
+        #expect(bulbs.points.allSatisfy { (0...1).contains($0.x) && (0...1).contains($0.y) && (0..<4).contains($0.group) })
+        #expect(Set(bulbs.points.map(\.group)).count == 4) // 네 묶음이 모두 있다
+        let snow = slots.effects!.snow!
+        #expect(snow.count > 0 && snow.minSize < snow.maxSize && snow.minSpeed < snow.maxSpeed)
+    }
+
+    @Test func bulbSequenceChasesThenAlternatesThenPulses() {
+        let L = SeasonPackBulbSequence.self
+        // 추격: 0.15초에는 0묶음이 켜져 있고 2묶음은 어둡다. 한 칸(300ms) 뒤에는 1묶음이 켜진다.
+        #expect(L.level(group: 0, groups: 4, stepMs: 300, at: 0.15) == 1)
+        #expect(L.level(group: 2, groups: 4, stepMs: 300, at: 0.15) < 0.6)
+        #expect(L.level(group: 1, groups: 4, stepMs: 300, at: 0.45) == 1)
+        #expect(L.level(group: 0, groups: 4, stepMs: 300, at: 0.45) < 1) // 지나간 묶음은 잔광
+        // 홀짝 교대: 같은 순간 홀수·짝수 묶음은 하나만 켜진다.
+        let t = L.chaseSeconds + 0.2
+        let on = (0..<4).filter { L.level(group: $0, groups: 4, stepMs: 300, at: t) == 1 }
+        #expect(on.count == 2 && Set(on.map { $0 % 2 }).count == 1)
+        // 모든 값은 바닥~1 사이, 주기는 11초.
+        for i in 0..<400 {
+            let v = L.level(group: i % 4, groups: 4, stepMs: 300, at: Double(i) * 0.037)
+            #expect(v >= L.floor - 1e-9 && v <= 1 + 1e-9)
+        }
+        #expect(L.level(group: 1, groups: 4, stepMs: 300, at: 1.3) == L.level(group: 1, groups: 4, stepMs: 300, at: 1.3 + L.cycleSeconds))
+    }
+
+    @Test func snowflakesFallDriftAndWrapDeterministically() {
+        let config = christmas.manifest.slots!.effects!.snow!
+        let a = SeasonPackSnowflake.make(index: 3, count: config.count, config: config, at: 10, height: 800)
+        let b = SeasonPackSnowflake.make(index: 3, count: config.count, config: config, at: 10, height: 800)
+        #expect(a == b) // 시각만으로 정해진다
+        let later = SeasonPackSnowflake.make(index: 3, count: config.count, config: config, at: 10.5, height: 800)
+        #expect(later.y > a.y || later.y < 0.1) // 내려가거나(맨 위로 돌아가거나)
+        #expect((config.minSize...config.maxSize).contains(a.size))
+        // 모든 송이가 한 주기 동안 화면 안팎을 오가며 크기가 범위 안이다.
+        for i in 0..<config.count {
+            let f = SeasonPackSnowflake.make(index: i, count: config.count, config: config, at: 123.4, height: 800)
+            #expect((config.minSize...config.maxSize).contains(f.size) && (0.4...1).contains(f.opacity))
+        }
     }
 
     @Test func yearTextSlotDrawsTheRuntimeYearAndRollsWhenTheYearChanges() {

@@ -393,3 +393,12 @@ packs/season/<packId>/<version>/<파일…>      ← 그림·소리·라이선�
   3. 실기기: `test.md` 아이폰 11 Pro 표의 SEA1119A01 줄. 이미지는 레퍼런스 검색(스톡 목록 위주라 구체 이미지는 못 봄) 뒤 그라데이션·그림자·질감·빛 번짐으로 다시 그림(`tools/season-pack/season_art.py`).
 - 번역 대기(12개 언어, `generate.py`는 메인 세션 몫): 앱 문구 「시즌 팩 음원 출처 / Season pack music credits」 1건. 패키지 안 문구(`SeasonPackText.ui`)와 팩 문구(대사 14줄·메뉴·가사)는 ko/en뿐.
 - 대표 몫(실행하지 않음): R2 업로드 명령·순서는 `docs/SEASON_PACK_PLAN.md` 9절(팩 파일 먼저, `index.json` 마지막, 공지 `christmas-2026` 추가).
+
+### 추가 회신 (2026-11-20, 대표 요청 반영)
+
+- 커밋: `c9322c4c` — 크리스마스 복장·전구 시퀀스·눈꽃송이. (이전 회신의 「의상·목도리·뿔 레이어는 고정 앵커」 문단은 이것으로 대체됨: 겉옷·목도리·뿔 그림 레이어는 더는 쓰지 않음.)
+- 복장: 화랑이·춘향이·윤복이 모두 같게, **모든 동작**에서 산타 모자(그림 파일)·빨간 코·사슴뿔 머리띠(금 방울·호랑가시)·빨간 목도리·초록 꼬리 리본. 앱 리그가 직접 그리므로 자세와 어긋나지 않음(`slots.costume`, `TaptionPlan/UI/HwarangSeasonLook.swift`, 시뮬레이터 렌더로 3마리×6동작 확인). 귀마개는 만들어 보았으나 대표 지시로 사슴뿔 머리띠로 교체.
+- 트리 전구: 꺼진 전구 그림 + 매니페스트 `bulbs`(40알, 4묶음)로 런타임에서 추격 6초→홀짝 3초→숨쉬기 2초(11초 주기) 시퀀스. 동작 줄이기·저전력은 정지 밝기.
+- 눈꽃송이: 트리가 보이는 동안 날씨와 무관하게 여섯 갈래 눈꽃이 사르르 내림(`effects.snow`, 동작 줄이기는 정지, 저전력은 절반·12fps, 터치 통과).
+- 검증: `swift test` 80건 통과 / 앱 Debug 빌드 성공 / `-only-testing:TaptionPlanTests` 통과 3,150·실패 0·건너뜀 26 / `architecture-metrics.py --check docs/architecture-baseline.json` 통과(HwarangRig.swift 1,200줄 예산 끝) / 엔진 경계 점검 통과. 눈꽃·전구의 실제 화면 움직임은 시뮬레이터에서 보지 않았고 아이폰 11 Pro 확인 대상(`test.md` SEA1119A01 줄에 항목 추가).
+- 푸시하지 않음. 브랜치 `season-pack-sea1119a01`을 메인 세션이 병합.

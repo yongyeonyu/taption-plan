@@ -191,8 +191,9 @@ struct MapHomeDailyCardCat: View {
             anchorHeight: 96,
             hatAssetName: MapHomeGrowthAccessoryCatalog.hatAssetName(for: accessoryID),
             hatImage: seasonArt?.hat,
-            scarf: MapHomeGrowthAccessoryCatalog.scarfStyle(for: accessoryID),
-            ribbon: MapHomeGrowthAccessoryCatalog.ribbonStyle(for: accessoryID),
+            scarf: seasonArt?.look?.scarf ?? MapHomeGrowthAccessoryCatalog.scarfStyle(for: accessoryID),
+            ribbon: seasonArt?.look?.ribbon ?? MapHomeGrowthAccessoryCatalog.ribbonStyle(for: accessoryID),
+            seasonLook: seasonArt?.look,
             showsBackdrop: false
         )
         .frame(width: 96, height: 96)

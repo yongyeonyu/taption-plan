@@ -24,7 +24,11 @@ ORNAMENTS = [
 TIERS = [(250, 416, 208, 8), (178, 334, 172, 7), (112, 252, 134, 6), (58, 174, 98, 4)]
 
 
-def _swag(art, x0, x1, y, sag, lit, rng):
+# 점등 그림에서 꺼진 채 그려 둔 전구의 위치(0..1)와 색·묶음. 매니페스트의 `bulbs`가 되어 앱이 불빛을 시퀀스로 켠다.
+BULB_POINTS = []
+
+
+def _swag(art, x0, x1, y, sag, lit, rng, tier=0):
     """가지 층을 가로지르는 구슬 줄(낮) / 전구 줄(점등)."""
     n = 11
     pts = [(x0 + (x1 - x0) * i / n, y + sag * math.sin(math.pi * i / n)) for i in range(n + 1)]
@@ -32,7 +36,12 @@ def _swag(art, x0, x1, y, sag, lit, rng):
     for i, (px, py) in enumerate(pts[1:-1], 1):
         color = BULB_COLORS[(i + int(y)) % len(BULB_COLORS)]
         if lit:
-            bulb(art, px, py + 4, color, True)
+            # 꺼진 전구 몸통(빛은 런타임이 그린다).
+            dark = tuple(int(c * 0.5) for c in color)
+            art.ellipse((px - 4, py, px + 4, py + 10), ("v", tuple(int(c * 0.7) for c in color), dark, py, py + 10))
+            art.ellipse((px - 2.2, py + 1.5, px + 0.4, py + 4), (255, 255, 255, 110))
+            BULB_POINTS.append({"x": round(px / 512, 4), "y": round((py + 6) / 512, 4), "color": "%02X%02X%02X" % color,
+                                "group": (i + tier) % 4})
         else:
             art.ellipse((px - 3.2, py - 3.2, px + 3.2, py + 3.2), ("r", px - 1, py - 1, 5, (255, 244, 200), (214, 160, 50)))
 
@@ -51,6 +60,8 @@ def _gift(art, x, y, w, h, body, ribbon, lit):
 
 
 def tree(lit):
+    if lit:
+        BULB_POINTS.clear()
     art = Art(512, 512)
     rng = random.Random(7)
     day_green = ((92, 176, 108), (34, 112, 70))
@@ -92,7 +103,7 @@ def tree(lit):
                 sy = apex + (base - apex) * frac - 4
                 snow_clump(art, sx, sy, 20 + 12 * frac, snow_lo, snow_hi, alpha=0.9)
         # 구슬/전구 줄
-        _swag(art, 256 - half * 0.82, 256 + half * 0.82, base - 36 - index * 2, 20 + index * 2, lit, rng)
+        _swag(art, 256 - half * 0.82, 256 + half * 0.82, base - 36 - index * 2, 20 + index * 2, lit, rng, index)
 
     # 장식 구슬
     for x, y, r, (c0, c1) in ORNAMENTS:

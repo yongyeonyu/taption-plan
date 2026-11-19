@@ -79,6 +79,31 @@ final class SeasonPackAdapter: SeasonPackHost {
         SeasonPackCenter.shared.accessoryImage("hat").map { UIImage(cgImage: $0, scale: 3, orientation: .up) }
     }
 
+    /// 팩이 주는 복장(빨간 코·귀마개·목도리·리본). 리그가 모든 동작에 같게 그린다. 없으면 nil이라 기존 모습 그대로다.
+    @MainActor static func look() -> HwarangSeasonLook? {
+        guard let c = SeasonPackCenter.shared.costume else { return nil }
+        func cloth(_ v: SeasonPackManifest.Slots.Costume.Cloth?) -> HwarangClothStyle? {
+            guard let v, let base = hex(v.base), let shade = hex(v.shade), let accent = hex(v.accent), let trim = hex(v.trim) else { return nil }
+            let pattern: HwarangClothPattern = switch v.pattern {
+            case "bands": .bands
+            case "dots": .dots
+            case "waves": .waves
+            case "check": .check
+            case "diamonds": .diamonds
+            case "zigzag": .zigzag
+            case "scales": .scales
+            default: .stripes
+            }
+            return HwarangClothStyle(base: base, shade: shade, accent: accent, trim: trim, pattern: pattern)
+        }
+        let look = HwarangSeasonLook(redNose: c.redNose ?? false, antlers: c.antlers.flatMap(hex), scarf: cloth(c.scarf), ribbon: cloth(c.ribbon))
+        return look.isEmpty ? nil : look
+    }
+
+    private static func hex(_ text: String) -> UInt32? {
+        text.count == 6 ? UInt32(text, radix: 16) : nil
+    }
+
     /// 하루 공유 카드에 쓸 이벤트 그림(이벤트가 없으면 nil이라 카드는 지금과 똑같다). 그림은 미리 읽어 둔 것이라 렌더 중 디스크를 읽지 않는다.
     @MainActor static func cardArt() -> SeasonCardArt? {
         let center = SeasonPackCenter.shared
@@ -86,6 +111,7 @@ final class SeasonPackAdapter: SeasonPackHost {
         return SeasonCardArt(
             house: center.shareCardHouseImage().map { UIImage(cgImage: $0) },
             hat: hatImage(),
+            look: look(),
             layers: center.characterLayers(includeOutfit: center.shareCardUsesOutfit, includeHat: false)
         )
     }
@@ -105,5 +131,6 @@ final class SeasonPackAdapter: SeasonPackHost {
 struct SeasonCardArt {
     let house: UIImage?
     let hat: UIImage?
+    let look: HwarangSeasonLook?
     let layers: [(image: CGImage, layer: SeasonPackManifest.Layer)]
 }
