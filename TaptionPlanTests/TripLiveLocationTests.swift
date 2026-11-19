@@ -4,9 +4,29 @@ import XCTest
 import TaptionTripShare
 
 /// 여행 중 동행 위치(LOC1116S01): 보낼지 판단·기본 기간·동의 상태.
+@MainActor
 final class TripLiveLocationTests: XCTestCase {
     private typealias Policy = TripLiveLocationPolicy
     private let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private var wasAvailable = TripLiveLocationService.isAvailable
+
+    /// 서비스 시험은 스위치를 켠 채로 돈다. 배포 값은 `testShippedBuildKeepsLiveLocationOff`가 지킨다.
+    override func setUp() async throws {
+        try await super.setUp()
+        wasAvailable = TripLiveLocationService.isAvailable
+        TripLiveLocationService.isAvailable = true
+    }
+
+    override func tearDown() async throws {
+        TripLiveLocationService.isAvailable = wasAvailable
+        try await super.tearDown()
+    }
+
+    /// 외부 시험·출시 전에는 동행 위치를 꺼 둔다(대표 결정 2026-11-17, LOC1116S01). 켜려면 이 시험의 기대값도 대표가 바꾼다.
+    func testShippedBuildKeepsLiveLocationOff() {
+        XCTAssertFalse(wasAvailable, "배포 값이 켜져 있다: 외부 시험·출시 전 `TripLiveLocationService.isAvailable`을 끈다")
+    }
 
     private func fix(_ lat: Double, _ lon: Double, accuracy: Double = 10, after seconds: TimeInterval = 0) -> Policy.Fix {
         .init(latitude: lat, longitude: lon, accuracy: accuracy, at: t0.addingTimeInterval(seconds))

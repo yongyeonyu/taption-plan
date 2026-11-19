@@ -1135,6 +1135,12 @@
 
 ## 검증 기록
 
+### LOC1119A01 · 외부 시험 전 동행 위치 끄기 (2026-11-19, 시뮬레이터·맥)
+
+- 대표 지시 「베타테스터 릴리즈」 + 대표 결정(2026-11-17): 외부 시험·출시 전 `TripLiveLocationService.isAvailable`을 끈다. `static let isAvailable = false`(시험이 켤 수 있게 `static var`). `TripLiveLocationTests`는 시험 안에서만 켜고 끝나면 되돌리며(`@MainActor`), 배포 값이 꺼져 있는지 지키는 `testShippedBuildKeepsLiveLocationOff`를 더함. PCC는 `isPrivateCloudComputeEnabled = false`·`PRIVACY.md`에 PCC 줄 없음(짝 맞음, PCC1118A01).
+- 시험: `TripLiveLocationTests`·`TripShareFoundationTests` 32건 실패 0·건너뜀 0. 앞선 실행은 스위치를 끈 채라 2건 실패(켜 있다고 가정)해 시험을 고침, 이어서 시뮬레이터 멈춤(「test runner hung」, 0건)으로 `hung-tests.log`, 사용자 중단 `stopped-tests.log`를 남기고 시뮬레이터를 껐다 켠 뒤 통과. 로그 `build/validation/LOC1119A01/`.
+- 서버(D1·`notification_review`·`detailId`) 배포(대표, 터미널, 2026-11-19): `d1 migrations apply --remote` 성공(`0001_kv_entries.sql`), `wrangler deploy` 성공(현재 버전 `c2b0e4ef`, `RELAY_DB`·`PLANS`·`KV_DAILY_WRITE_BUDGET=80000` 바인딩 확인). 이 배포에서 옛 KV는 이관용 읽기 전용으로 붙어 있음.
+
 ### TFB1119A02 · TestFlight 352 (2026-11-19)
 
 - `bash scripts/testflight/release.sh --yes`(빌드 잠금 안, 대표 지시 「커밋·병합 뒤 TestFlight 빌드업」): 빌드 번호 351 → 352(pbxproj·앱·위젯·Watch·Watch 위젯 `CFBundleVersion` 갱신). 포함: TGT1119A01·ICN1119A01~A06·NTR1119A02·NTR1119A03(앱 쪽)과 서버 브랜치 병합분. 처리 `VALID`, 내부 그룹 연결 확인, 테스터 노출 1명, 종료 코드 0. 보고서 `build/validation/TFB1119A02/testflight-report.json`(첫 점검 `TFB1119A01`은 `--preflight`만). 시험은 `--with-tests` 없이 관련 단위 시험(각 요청 기록)만 돌림, 전체 단위 시험은 이번에 돌리지 않음.

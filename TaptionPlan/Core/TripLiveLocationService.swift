@@ -35,8 +35,8 @@ enum TripLiveLocationFeed {
 final class TripLiveLocationService {
     /// 앱 전체가 쓰는 서비스. 시험은 따로 만든 것으로 바꿔 넣고 끝나면 되돌린다.
     static var shared = TripLiveLocationService()
-    /// 법 검토(위치정보법)가 끝나기 전에 끄려면 false로 한다.
-    static let isAvailable = true
+    /// 법 검토(위치정보법)가 끝나기 전에 끄려면 false로 한다. 외부 시험·출시 전에는 꺼 둔다(대표 결정 2026-11-17, LOC1116S01). 내부 시험에서 다시 켤 때만 true.
+    static var isAvailable = false
 
     private(set) var consents: [String: TripLiveLocationConsent]
     /// 여행 번호 → 받은 동행 위치와 기간 창.
