@@ -244,6 +244,9 @@ extension AppModel {
         // Siri 동작이 앱을 열지 않고 바로 반영할 모델, 꺼져 있을 때 받은 메모 반영(SIR1111A01).
         AppModel.live = self
         await SiriInbox.drain(into: self)
+        // 여행이 없어 보류했던 항공 알림을 다시 붙인다(FLT1119A01).
+        await FlightInbox.drain(into: self)
+        await syncFlightBriefings()
         #if DEBUG
         await exportRawOnLaunchIfRequested()
         #endif

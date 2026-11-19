@@ -148,7 +148,13 @@ public enum FlightAlertMerge {
             if !hit.isEmpty { return hit }
         }
         if let pnr {
-            var hit = indices { $0.pnr == pnr }
+            // 예약번호는 같아도 편명이나 날짜가 서로 다르면 다른 구간이다(한 예약에 출국편과 귀국편이 함께 있다).
+            var hit = indices { card in
+                guard card.pnr == pnr else { return false }
+                if let flight, let known = card.flight, known != flight { return false }
+                if let date, let known = card.date, known != date { return false }
+                return true
+            }
             // 한 예약번호가 출국·귀국 두 카드를 가질 수 있다. 날짜나 노선을 알면 좁힌다.
             if hit.count > 1 {
                 let narrowed = hit.filter { cards[$0].date == date || (origin != nil && cards[$0].origin == origin && cards[$0].destination == destination) }

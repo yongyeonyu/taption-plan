@@ -40047,6 +40047,172 @@
           }
         }
       }
+    },
+    "항공 알림 넣기" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Flight Notice"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "航空便の通知を追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加航班通知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增航班通知"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flugbenachrichtigung hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter une notification de vol"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi avviso di volo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir aviso de vuelo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar aviso de voo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm thông báo chuyến bay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah pemberitahuan penerbangan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มการแจ้งเตือนเที่ยวบิน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "उड़ान सूचना जोड़ें"
+          }
+        }
+      }
+    },
+    "항공사 문자·알림톡을 읽어 BOKKI Plan 여행의 항공편 카드에 붙여요. 읽기만 하고 예약·결제는 하지 않아요." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reads an airline text or notice and attaches it to the flight card of a BOKKI Plan trip. It only reads: it never books or pays."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "航空会社のメッセージや通知を読み取り、BOKKI Planの旅行の航空便カードに付けます。読み取るだけで、予約や決済はしません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取航空公司的短信或通知，并附到 BOKKI Plan 行程的航班卡片上。只读取，不会预订或付款。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讀取航空公司的簡訊或通知，並附到 BOKKI Plan 行程的航班卡片上。只讀取，不會訂位或付款。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liest eine SMS oder Benachrichtigung der Airline und hängt sie an die Flugkarte einer BOKKI-Plan-Reise. Es wird nur gelesen: nichts wird gebucht oder bezahlt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lit un SMS ou une notification de la compagnie et l'ajoute à la carte de vol d'un voyage BOKKI Plan. Lecture seule : aucune réservation ni paiement."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legge un SMS o un avviso della compagnia aerea e lo collega alla scheda del volo di un viaggio BOKKI Plan. Solo lettura: non prenota né paga."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lee un SMS o aviso de la aerolínea y lo añade a la tarjeta de vuelo de un viaje de BOKKI Plan. Solo lee: no reserva ni paga."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lê uma mensagem ou aviso da companhia aérea e anexa ao cartão de voo de uma viagem do BOKKI Plan. Apenas lê: não reserva nem paga."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đọc tin nhắn hoặc thông báo của hãng bay rồi gắn vào thẻ chuyến bay của chuyến đi BOKKI Plan. Chỉ đọc: không đặt chỗ hay thanh toán."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membaca SMS atau pemberitahuan maskapai dan melampirkannya ke kartu penerbangan perjalanan BOKKI Plan. Hanya membaca: tidak memesan atau membayar."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อ่านข้อความหรือการแจ้งเตือนจากสายการบินแล้วแนบกับการ์ดเที่ยวบินของทริป BOKKI Plan อ่านอย่างเดียว ไม่จองหรือชำระเงิน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एयरलाइन का संदेश या सूचना पढ़कर BOKKI Plan यात्रा के उड़ान कार्ड से जोड़ता है। केवल पढ़ता है: बुकिंग या भुगतान नहीं करता।"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

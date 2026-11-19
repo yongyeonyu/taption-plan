@@ -86,6 +86,16 @@ final class FlightPlacementTests: XCTestCase {
         XCTAssertNil(FlightPlacement.draft(for: FlightLeg(origin: "ICN", destination: "BKK")))
     }
 
+    func testDraftCarriesTheArrivalAirportPin() throws {
+        let leg = try XCTUnwrap(FlightPlacement.leg(from: listing(), day: "2027-03-07", direction: .dep, durationMinutes: 330))
+        let draft = try XCTUnwrap(FlightPlacement.draft(for: leg))
+        XCTAssertEqual(draft.arrivalPlace?.name, "방콕 수완나품 (BKK)")
+        XCTAssertEqual(draft.arrivalPlace?.latitude ?? 0, 13.69, accuracy: 0.001)
+        XCTAssertNil(FlightPlacement.arrivalPlace("ZZZ"))
+        XCTAssertEqual(FlightPlacement.koreanAirports.first?.code, "ICN")
+        XCTAssertEqual(FlightPlacement.searchAirports("다낭").first?.code, "DAD")
+    }
+
     func testTitleWithoutFlightNumber() {
         XCTAssertEqual(FlightPlacement.title(for: FlightLeg(origin: "ICN", destination: "DAD")), "ICN → DAD")
     }

@@ -17,6 +17,8 @@ enum FlightPlacement {
         var isEstimated: Bool
         /// 도착 현지 날짜가 출발 현지 날짜보다 며칠 뒤인가.
         var arrivalDayOffset: Int
+        /// 지도·지구본에 찍을 도착 공항 핀(이름·좌표). 구간이 이어지면 도착 공항끼리 대권 선으로 이어진다.
+        var arrivalPlace: TravelItemPlace?
     }
 
     /// 거리로 어림한 비행 시간(분): 순항 800km/h + 이착륙·활주 30분. 가까운 곳도 최소 45분.
@@ -82,8 +84,13 @@ enum FlightPlacement {
                 flightNumber: leg.flight, originCode: leg.origin, destinationCode: leg.destination, terminal: leg.terminal.flatMap(nonEmpty),
                 gate: leg.gate.flatMap(nonEmpty), baggageClaim: leg.baggage.flatMap(nonEmpty), legIndex: legIndex, itineraryID: itineraryID
             ),
-            isEstimated: estimated, arrivalDayOffset: dayOffset(from: start, originZone, to: end, destinationZone)
+            isEstimated: estimated, arrivalDayOffset: dayOffset(from: start, originZone, to: end, destinationZone), arrivalPlace: arrivalPlace(leg.destination)
         )
+    }
+
+    /// 도착 공항의 지도 핀. 카탈로그에 없으면 nil.
+    static func arrivalPlace(_ code: String) -> TravelItemPlace? {
+        FlightAirportCatalog.airport(code).map { TravelItemPlace(name: "\($0.nameKo) (\($0.code))", latitude: $0.latitude, longitude: $0.longitude) }
     }
 
     /// 출발 현지 날짜에서 도착 현지 날짜까지 날 수.

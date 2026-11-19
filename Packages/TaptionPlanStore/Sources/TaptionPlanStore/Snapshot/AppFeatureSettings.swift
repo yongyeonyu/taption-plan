@@ -24,6 +24,9 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
     /// 여행 단위(TVA1111A01): 이름·기간·여행지·통화. 일정·핀·가계부 여행 장부가 같은 번호를 쓴다.
     /// 없으면 nil이라 저장하지 않는다(예전 기록·백업 바이트를 그대로 둔다).
     public var travelTrips: [TravelTrip]?
+    /// 여행 준비물 카드(FLT1119A01): eSIM·숙소 예약·면세 주문. 계획표 열이 아니라 여행 상세의 별도 카드다.
+    /// 없으면 nil이라 저장하지 않는다(예전 기록·백업 바이트를 그대로 둔다).
+    public var travelPrepItems: [TravelPrepItem]?
     /// Optional user-selected overrides for the automatic major
     /// categories. Missing values intentionally keep the shared defaults.
     public var mapCategoryColors: [String: String]
@@ -230,6 +233,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         case travelPlanStops
         case travelTripItems
         case travelTrips
+        case travelPrepItems
         case mapCategoryColors
         case mapUserActivityCategories
         case mapDisplayStyle
@@ -310,6 +314,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         travelPlanStops = try values.decodeIfPresent([TravelPlanStop].self, forKey: .travelPlanStops) ?? []
         travelTripItems = try values.decodeIfPresent([TravelTripItem].self, forKey: .travelTripItems)
         travelTrips = try values.decodeIfPresent([TravelTrip].self, forKey: .travelTrips)
+        travelPrepItems = try values.decodeIfPresent([TravelPrepItem].self, forKey: .travelPrepItems)
         mapCategoryColors = Self.normalizedMapCategoryColors(
             try values.decodeIfPresent(
                 [String: String].self,
@@ -594,10 +599,12 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public var itineraryID: String?
     /// 예약번호. **기기 표시용**이라 백업 파일 안에만 있고 서버·AI·분석으로 보내지 않는다. 값은 화면에도 가려서 보인다.
     public var pnrLocal: String?
+    /// 알림 병합 기록(출처·지연 이력·체크인·메모, JSON 글). 예약번호와 같이 기기 안에서만 쓴다. 없으면 키를 쓰지 않는다.
+    public var flightLog: String?
 
     public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil, colorHex: String? = nil, plannedSpendKRW: Double? = nil, parentItemID: String? = nil,
                 flightNumber: String? = nil, originCode: String? = nil, destinationCode: String? = nil, terminal: String? = nil, gate: String? = nil, baggageClaim: String? = nil,
-                legIndex: Int? = nil, itineraryID: String? = nil, pnrLocal: String? = nil) {
+                legIndex: Int? = nil, itineraryID: String? = nil, pnrLocal: String? = nil, flightLog: String? = nil) {
         self.tripID = tripID
         self.itemID = itemID
         self.kind = kind
@@ -621,6 +628,7 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
         self.legIndex = legIndex
         self.itineraryID = itineraryID
         self.pnrLocal = pnrLocal
+        self.flightLog = flightLog
     }
 
     /// 비행 구간 정보를 한 번에 넣는다.
@@ -636,7 +644,7 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     /// 그 구간 정보를 모두 지운다(비행이 아니게 된 일정).
     public mutating func clearFlight() {
         flightNumber = nil; originCode = nil; destinationCode = nil; terminal = nil; gate = nil
-        baggageClaim = nil; legIndex = nil; itineraryID = nil; pnrLocal = nil
+        baggageClaim = nil; legIndex = nil; itineraryID = nil; pnrLocal = nil; flightLog = nil
     }
 
     /// 그 코스 곳에 딸린 세부 일정들(같은 여행, 자기 자신 제외).
@@ -655,6 +663,55 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public static func cleanPlannedSpend(_ value: Double?) -> Double? {
         guard let value, value.isFinite, value >= 0.5 else { return nil }
         return value.rounded()
+    }
+}
+
+/// 여행 준비물 카드 한 장(FLT1119A01). 비행·숙소 일정과 달리 계획표에 놓이지 않고 여행 상세의 준비물 목록에 보인다.
+/// `refCode`(숙소 예약번호·면세 주문번호)는 같은 건의 다음 알림을 1:1로 찾는 열쇠이고 기기 안(백업 파일 안)에서만 쓴다.
+public struct TravelPrepItem: Codable, Hashable, Sendable, Identifiable {
+    /// `esim`·`lodging`·`dutyFree`·`other`.
+    public var id: String
+    public var tripID: String
+    public var kind: String
+    public var title: String
+    /// 한 줄 설명(이용일수·인도장·유효 조건 등).
+    public var detail: String?
+    /// 개통·바우처 링크(https만).
+    public var linkURL: String?
+    /// 유효 기한 `YYYY-MM-DD`.
+    public var validUntil: String?
+    /// `tentative`(접수)·`booked`(확정)·`received`(수령). 상태가 없는 것은 nil.
+    public var orderStatus: String?
+    public var checked: Bool?
+    public var refCode: String?
+    /// 출장 예약(개인 경비와 섞지 않는다).
+    public var isBusiness: Bool?
+    /// 연도가 없는 기간이라 체크인·체크아웃 날짜를 확인해야 한다.
+    public var needsDateConfirmation: Bool?
+    public var createdAt: Date?
+
+    public init(id: String, tripID: String, kind: String, title: String, detail: String? = nil, linkURL: String? = nil, validUntil: String? = nil, orderStatus: String? = nil,
+                checked: Bool? = nil, refCode: String? = nil, isBusiness: Bool? = nil, needsDateConfirmation: Bool? = nil, createdAt: Date? = nil) {
+        self.id = id
+        self.tripID = tripID
+        self.kind = kind
+        self.title = title
+        self.detail = detail
+        self.linkURL = linkURL
+        self.validUntil = validUntil
+        self.orderStatus = orderStatus
+        self.checked = checked
+        self.refCode = refCode
+        self.isBusiness = isBusiness
+        self.needsDateConfirmation = needsDateConfirmation
+        self.createdAt = createdAt
+    }
+
+    /// 저장할 링크: https이고 길이가 300자 이하인 것만. 그 밖은 nil.
+    public static func cleanLink(_ text: String?) -> String? {
+        guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), text.count <= 300, text.lowercased().hasPrefix("https://"),
+              let url = URL(string: text), url.host?.isEmpty == false else { return nil }
+        return text
     }
 }
 

@@ -119,10 +119,11 @@ struct AnnouncementSheet: View {
 }
 
 extension MapHomeView {
-    /// 홈 위쪽 알림 칸: 공지 → 여행 계획 가져오기 순서.
+    /// 홈 위쪽 알림 칸: 공지 → 항공 알림 결과 → 여행 계획 가져오기 순서.
     @ViewBuilder var homeTopNotices: some View {
         VStack(spacing: 8) {
             AnnouncementBanner(language: language)
+            FlightAlertNotice(model: model, language: language)
             tripClipboardBanner
         }
     }

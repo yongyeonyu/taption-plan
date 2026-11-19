@@ -297,7 +297,7 @@ struct TravelTripItemFlightFieldsTests {
     @Test func itemWithoutFlightFieldsKeepsItsOldBytes() throws {
         let item = Self.plain()
         let text = String(decoding: try TravelTripsTests.encoder().encode(item), as: UTF8.self)
-        for key in ["flightNumber", "originCode", "destinationCode", "terminal", "gate", "baggageClaim", "legIndex", "itineraryID", "pnrLocal"] {
+        for key in ["flightNumber", "originCode", "destinationCode", "terminal", "gate", "baggageClaim", "legIndex", "itineraryID", "pnrLocal", "flightLog"] {
             #expect(!text.contains(key), "\(key)는 nil이면 쓰지 않는다")
         }
         #expect(!item.isFlight)
@@ -309,7 +309,7 @@ struct TravelTripItemFlightFieldsTests {
     @Test func flightFieldsRoundTripAndClearFlightRemovesThem() throws {
         var item = Self.plain()
         item.flightNumber = "AB123"; item.originCode = "ICN"; item.destinationCode = "BKK"
-        item.terminal = "2"; item.gate = "252"; item.baggageClaim = "7"; item.legIndex = 0; item.itineraryID = "it-1"; item.pnrLocal = "ABC123"
+        item.terminal = "2"; item.gate = "252"; item.baggageClaim = "7"; item.legIndex = 0; item.itineraryID = "it-1"; item.pnrLocal = "ABC123"; item.flightLog = #"{"notes":["a"]}"#
         #expect(item.isFlight)
         let back = try TravelTripsTests.decoder().decode(TravelTripItem.self, from: try TravelTripsTests.encoder().encode(item))
         #expect(back == item)
@@ -325,5 +325,32 @@ struct TravelTripItemFlightFieldsTests {
         settings.travelTripItems = [item]
         let back = try TravelTripsTests.decoder().decode(AppFeatureSettings.self, from: try TravelTripsTests.encoder().encode(settings))
         #expect(back.travelTripItems == [item])
+    }
+}
+
+/// 여행 준비물 카드 저장 호환(FLT1119A01).
+struct TravelPrepItemTests {
+    @Test func settingsWithoutPrepItemsKeepTheirBytesAndItemsRoundTrip() throws {
+        var settings = AppFeatureSettings.defaults
+        let before = try TravelTripsTests.encoder().encode(settings)
+        #expect(!String(decoding: before, as: UTF8.self).contains("travelPrepItems"), "없으면 키를 쓰지 않아 옛 저장 바이트가 그대로다")
+        #expect(try TravelTripsTests.decoder().decode(AppFeatureSettings.self, from: before).travelPrepItems == nil)
+        let item = TravelPrepItem(id: "p1", tripID: "t1", kind: "esim", title: "베트남 eSIM", detail: "4일", linkURL: "https://example.com/voucher", validUntil: "2027-04-06",
+                                  orderStatus: "booked", checked: false, refCode: "ABC123", isBusiness: true, needsDateConfirmation: true, createdAt: TravelTripsTests.base)
+        settings.travelPrepItems = [item]
+        let back = try TravelTripsTests.decoder().decode(AppFeatureSettings.self, from: try TravelTripsTests.encoder().encode(settings))
+        #expect(back.travelPrepItems == [item])
+    }
+
+    @Test func optionalKeysAreNotWrittenAndLinksMustBeHTTPS() throws {
+        let bare = TravelPrepItem(id: "p1", tripID: "t1", kind: "lodging", title: "숙소")
+        let text = String(decoding: try TravelTripsTests.encoder().encode(bare), as: UTF8.self)
+        for key in ["detail", "linkURL", "validUntil", "orderStatus", "checked", "refCode", "isBusiness", "needsDateConfirmation", "createdAt"] { #expect(!text.contains(key), "\(key)") }
+        #expect(TravelPrepItem.cleanLink("https://example.com/voucher") == "https://example.com/voucher")
+        #expect(TravelPrepItem.cleanLink("http://example.com") == nil)
+        #expect(TravelPrepItem.cleanLink("javascript:alert(1)") == nil)
+        #expect(TravelPrepItem.cleanLink("https://") == nil)
+        #expect(TravelPrepItem.cleanLink(String(repeating: "https://a.co/", count: 30)) == nil)
+        #expect(TravelPrepItem.cleanLink(nil) == nil)
     }
 }

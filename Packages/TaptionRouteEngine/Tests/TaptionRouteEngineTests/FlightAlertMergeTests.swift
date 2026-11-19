@@ -208,4 +208,16 @@ struct FlightAlertMergeTests {
         let result = FlightAlertMerge.apply(alert, to: [], receivedAt: day(3, 1), calendar: calendar)
         #expect(result.cards.isEmpty && result.outcomes == [.deferred(.noMatchingCard)])
     }
+
+    @Test func sameReservationNumberDoesNotMergeADifferentFlightOrDate() {
+        let ids = IDs()
+        // 한 예약번호로 출국편(03/07 AB123)과 귀국편(03/11 AB124)이 한 글에 온다: 두 카드가 생겨야 한다.
+        let result = apply("[가상항공] HONG/GILDONG 예약번호 ABC123 03/07 AB123 ICN -> BKK, 03/11 AB124 BKK -> ICN", to: [], at: day(3, 1), ids: ids)
+        #expect(result.cards.count == 2)
+        #expect(result.cards.map(\.pnr) == ["ABC123", "ABC123"])
+        #expect(result.outcomes == [.created(cardID: "c1"), .created(cardID: "c2")])
+        // 편명이 다른 지연 글은 같은 예약번호의 다른 카드에 붙지 않는다.
+        let other = apply("[가상항공] 예약번호 ABC123 편명 AB999 기존 14:20 변경 15:25 +65분", to: result.cards, at: day(3, 5))
+        #expect(other.outcomes == [.deferred(.noMatchingCard)])
+    }
 }

@@ -31,6 +31,7 @@ struct TravelModeView: View {
     @State private var planSelectedID: String?
     @State private var columnsTrip: TravelTrip?
     @State private var flightTrip: TravelTrip?
+    @State private var prepTrip: TravelTrip?
     /// 계획표를 먼저 보기로 고른 여행 번호들(쉼표로 이음, 기기에 기억). 고르지 않은 여행은 코스가 먼저 열린다(TVV1113A01 C1).
     @AppStorage("travelPlanTableTrips") private var tableTrips = ""
     @State private var courseAdding: TravelTripDirectory.Entry?
@@ -204,6 +205,7 @@ struct TravelModeView: View {
                 .presentationDetents([.large])
         }
         .sheet(item: $columnsTrip) { TravelColumnEditorSheet(model: model, language: language, trip: $0) }
+        .sheet(item: $prepTrip) { TravelPrepSheet(model: model, language: language, trip: $0) }
         .sheet(item: $flightTrip) { trip in
             FlightPickerSheet(model: model, language: language, trip: trip) { itemID in
                 if let added = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == trip.id && $0.itemID == itemID }) {
@@ -825,6 +827,7 @@ struct TravelModeView: View {
         return TravelTripFooter(items: items, tripID: entry.id, language: language, actions: [
             .init(language.text("일정 넣기", "Add plan"), "calendar.badge.plus") { addEntry(entry, cell: planCell) },
             .init(language.text("항공편 찾기", "Find a flight"), "airplane") { flightTrip = entry.trip },
+            .init(language.text("준비물", "Prep items"), "checklist") { prepTrip = entry.trip },
             .init(language.text("곳 더하기", "Add a stop"), "mappin.and.ellipse") { courseAdding = entry },
             .init(language.text("열 편집", "Edit columns"), "rectangle.split.3x1") { columnsTrip = entry.trip },
             .init(language.text("AI로 만들기", "Plan with AI"), "sparkles") { isImportPresented = true },

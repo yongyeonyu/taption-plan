@@ -77,12 +77,18 @@ public struct FlightAlertChange: Hashable, Sendable {
     public var to: FlightAlertTime?
     public var delayMinutes: Int?
     public var reason: String?
+    public init(flight: String? = nil, from: FlightAlertTime? = nil, to: FlightAlertTime? = nil, delayMinutes: Int? = nil, reason: String? = nil) {
+        self.flight = flight; self.from = from; self.to = to; self.delayMinutes = delayMinutes; self.reason = reason
+    }
 }
 
 public struct FlightAlertCheckIn: Hashable, Sendable {
     public var isOpen: Bool
     /// 마감: 출발 몇 분 전.
     public var deadlineMinutesBeforeDeparture: Int?
+    public init(isOpen: Bool, deadlineMinutesBeforeDeparture: Int? = nil) {
+        self.isOpen = isOpen; self.deadlineMinutesBeforeDeparture = deadlineMinutesBeforeDeparture
+    }
 }
 
 public struct FlightAlertOnsite: Hashable, Sendable {
@@ -92,6 +98,10 @@ public struct FlightAlertOnsite: Hashable, Sendable {
     public var congestedAfterHour: Int?
     /// 수속 마감: 출발 몇 분 전.
     public var counterCloseMinutesBeforeDeparture: Int?
+    public init(arriveMinutesBeforeDeparture: Int? = nil, congestedAfterHour: Int? = nil, counterCloseMinutesBeforeDeparture: Int? = nil) {
+        self.arriveMinutesBeforeDeparture = arriveMinutesBeforeDeparture; self.congestedAfterHour = congestedAfterHour
+        self.counterCloseMinutesBeforeDeparture = counterCloseMinutesBeforeDeparture
+    }
 }
 
 public struct FlightAlertExtra: Hashable, Sendable {
@@ -142,6 +152,13 @@ public struct FlightAlert: Hashable, Sendable {
     public var notes: [String]
     /// 예약번호 자리에 전화번호 뒷자리가 와서 버렸는가(SMS 사전 안내).
     public var droppedPhoneAsPNR: Bool
+
+    public init(kind: FlightAlertKind, marker: String? = nil, segments: [FlightAlertSegment] = [], pnr: String? = nil, passengerName: String? = nil, airlineName: String? = nil,
+                change: FlightAlertChange? = nil, checkIn: FlightAlertCheckIn? = nil, onsite: FlightAlertOnsite? = nil, extra: FlightAlertExtra? = nil,
+                notes: [String] = [], droppedPhoneAsPNR: Bool = false) {
+        self.kind = kind; self.marker = marker; self.segments = segments; self.pnr = pnr; self.passengerName = passengerName; self.airlineName = airlineName
+        self.change = change; self.checkIn = checkIn; self.onsite = onsite; self.extra = extra; self.notes = notes; self.droppedPhoneAsPNR = droppedPhoneAsPNR
+    }
 }
 
 public enum FlightAlertResult: Hashable, Sendable {

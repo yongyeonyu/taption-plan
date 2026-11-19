@@ -23,6 +23,7 @@ struct FlightPickerSheet: View {
     @State private var hasLoaded = false
     @State private var isSaving = false
     @State private var didFail = false
+    @State private var pasteUnreadable = false
     @State private var manualFlight = ""
     @State private var manualTime = Date(timeIntervalSince1970: 9 * 3_600)
     @State private var manualDuration = ""
@@ -123,6 +124,8 @@ struct FlightPickerSheet: View {
                     }
                 }
 
+                pasteSection
+
                 manualSection
 
                 if didFail {
@@ -140,6 +143,33 @@ struct FlightPickerSheet: View {
             }
         }
         .accessibilityIdentifier("flightPickerSheet")
+    }
+
+    // MARK: 알림 붙여넣기
+
+    /// 항공사 알림톡·문자를 복사해 와서 붙이면 읽어 카드에 붙인다. 시스템 붙여넣기 단추만 쓰고 클립보드를 직접 읽지 않는다.
+    private var pasteSection: some View {
+        Section {
+            PasteButton(payloadType: String.self) { strings in
+                guard let text = strings.first else { return }
+                Task { @MainActor in
+                    let reply = await model.ingestFlightAlert(text, source: .paste)
+                    // 읽지 못한 글만 이 화면에 남고, 나머지는 홈 위쪽에서 결과를 보여 주거나 어느 카드인지 묻는다.
+                    if case .unreadable = reply { pasteUnreadable = true; return }
+                    pasteUnreadable = false
+                    FlightAlertCenter.shared.show(reply)
+                    dismiss()
+                }
+            }
+            .accessibilityIdentifier("flightPasteAlert")
+            if pasteUnreadable {
+                Text(language.text("항공편 알림으로 읽지 못했어요.", "Could not read this as a flight notice.")).font(.callout).foregroundStyle(.orange)
+            }
+        } header: {
+            Text(language.text("항공사 알림 붙여넣기", "Paste an airline notice"))
+        } footer: {
+            Text(language.text("항공사 문자나 알림톡을 복사한 뒤 붙이면 읽어서 이 여행의 항공편 카드에 붙입니다. 이름·예약번호는 이 기기 안에서만 쓰고 보내지 않습니다.", "Copy an airline text or notice, then paste it: it is read and attached to this trip's flight card. Names and booking numbers stay on this device and are never sent."))
+        }
     }
 
     // MARK: 직접 넣기
@@ -258,10 +288,11 @@ struct FlightPickerSheet: View {
         defer { isSaving = false }
         let id = await TripSharePlanEditor.addItem(
             model: model, tripID: trip.id, kind: .flight, title: draft.title, start: draft.start, end: draft.end,
-            offsetSeconds: draft.startOffsetSeconds, endOffsetSeconds: draft.endOffsetSeconds, flight: draft.fields
+            offsetSeconds: draft.startOffsetSeconds, endOffsetSeconds: draft.endOffsetSeconds, place: draft.arrivalPlace, flight: draft.fields
         )
         didFail = id == nil
         if let id {
+            await model.syncFlightBriefings()
             onAdded(id)
             dismiss()
         }
