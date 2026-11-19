@@ -43,6 +43,7 @@
 | `POST /pin` · `GET /pin` · `POST /pin/reset` | 앱(주인 키만) | 13장 | 13장 |
 | `POST /oauth/code` | 앱 | 없음 | 14장 |
 | `GET /kakao/keyword?query=…` | 검색 키·앱 | 카카오 검색 중계 | 키마다 하루 500번(15장) |
+| `GET /flights/schedule`·`GET /flights/status` | 검색 키·앱 | 국내 공항 무료 항공편 조회(공공데이터, FLT1119A01). 공항·날짜·방향·편명만 받음 | 카카오와 같은 IP별 한도 + 서버 전체 하루 예산(`FLIGHT_DAILY_CALLS`, 기본 400) |
 | `/.well-known/oauth-*`, `/oauth/register`·`/oauth/authorize`·`/oauth/token` | 누구나·AI 앱 | OAuth 2.1 | 14장 |
 | `POST /mcp` | AI·읽기(도구마다 범위) | JSON-RPC 2.0 | 9장 |
 | `GET /openapi.json` | 누구나(인증 없음) | 없음 | OpenAPI 3.1(10장) |

@@ -105,6 +105,42 @@ npx wrangler secret put EX_API_KEY --config wrangler.local.toml
 
 비밀값이 없으면 두 경로 모두 `503 {"error":"ex_key_missing"}`을 돌려주고, 앱은 지금의 같은 길 통행료만 씁니다.
 
+## 국내 공항 무료 항공편 조회(FLT1119A01)
+
+공공데이터포털(data.go.kr)의 인천국제공항공사·한국공항공사 OpenAPI를 대신 부릅니다. 값은 한 모양으로 맞춥니다. 사용자의 항공편·예약번호·이름·전화번호는 받지도 저장하지도 않고, 받는 것은 공항 코드·날짜·방향·편명 같은 공개 값뿐입니다. 검색 키로 부르고 카카오와 같은 IP별 하루 한도를 씁니다.
+
+```
+GET /flights/schedule?airport=ICN&date=YYYY-MM-DD&direction=dep|arr[&flight=AB123][&airline=AB]
+GET /flights/status?airport=ICN&date=YYYY-MM-DD&direction=dep|arr[&flight=AB123]
+```
+
+- 응답 `{ airport, date, direction, source: "season"|"status", updatedAt, flights: [{ flight, airline, origin, destination, time, dayOffset, terminal, gate, codeshare, master, season, validFrom, validTo, status }] }`. `schedule`은 정기 스케줄(요일·유효 기간을 그 날짜에 맞춰 거릅니다), `status`는 당일 운항현황이고 `status` 칸에 `{ state: ontime|delayed|departed|arrived|cancelled, scheduled, expected, delayMinutes, terminal, gate, baggage }`가 들어갑니다. 앱은 운항현황이 없으면 「정기 스케줄 기준」이라고 표시합니다.
+- 당일 운항현황은 인천만 연결합니다. 다른 공항은 `{ available: false, flights: [] }`입니다. 운항현황 날짜는 D-3~D+6만 받고 밖이면 `422 date_out_of_range`입니다.
+- 오류: 인자 틀림 `400 bad_query`, 비밀값 없음 `503 {"error":"flight_key_missing"}`(그 소스만), 상류 실패 `502 {"error":"upstream_failed"}`(상류 원문·키는 돌려주지 않음), 하루 예산 소진 `429 flight_daily_limit` + `Retry-After`.
+- 캐시(`caches.default`): 정기 스케줄 7일, 당일 운항현황 90초. 편명·항공사 필터는 응답에서만 적용해 같은 캐시를 씁니다. 응답의 `updatedAt`을 앱이 보여 줍니다.
+- 호출 예산: 상류를 부를 때마다 서버 전체 하루 예산을 1씩 세고(Durable Object `global:flights`) 캐시가 맞으면 세지 않습니다. 기본 400회, 환경 변수 `FLIGHT_DAILY_CALLS`로 조정합니다(개발계정 일 500회 안의 안전선).
+
+**상류에서 확인한 것과 못 한 것(2026-11-20).** 공공데이터포털 상세 페이지로 확인한 것: 정기운항편 서비스 `apis.data.go.kr/B551177/StatusOfPaxFltSched`, 도착 조회 `getPaxFltSchedArrivalsDeOdp`, 요청 변수 `serviceKey`·`pageNo`·`numOfRows`·`type`·`airport`(인천 오는 편의 출발 공항)·`lang`, 개발계정 일 500회, 오류 코드 22(일 한도)·23(초당 한도). **응답 칸 이름은 그 페이지에 비어 있어 확인하지 못했습니다.** 그래서 `src/flights.js`의 `FIELD`에 후보 이름(대소문자 무시)을 두고 읽습니다. 출발 조회 이름, 당일 운항현황(`StatusOfPassengerFlightsOdp`), 한국공항공사 주소는 같은 계열을 따른 추정입니다. 키를 받은 뒤 아래 점검을 한 번 돌려, 없는 칸이 나오면 `FIELD`·`SOURCES`만 고칩니다.
+
+```sh
+ICN_API_KEY=<키> node scripts/flights-probe.mjs icnSchedule dep
+ICN_API_KEY=<키> node scripts/flights-probe.mjs icnStatus dep
+KAC_API_KEY=<키> node scripts/flights-probe.mjs kacSchedule dep GMP
+```
+
+점검 스크립트는 키를 출력하지 않고 값도 보여 주지 않습니다(칸 이름·줄 수·결과 코드·기대하는 칸이 있는지만).
+
+### 배포 (대표님이 하는 일 — 아직 안 했습니다)
+
+공공데이터포털에서 두 API 활용 신청으로 키를 받아 넣고 배포합니다. 키가 없는 소스는 503이 되고 앱은 「직접 입력 + 편명으로 검색」으로 넘어갑니다.
+
+```sh
+cd server/trip-relay
+npx wrangler secret put ICN_API_KEY --config wrangler.local.toml
+npx wrangler secret put KAC_API_KEY --config wrangler.local.toml
+npx wrangler deploy --config wrangler.local.toml
+```
+
 ## 등록·PIN·Durable Object·OAuth (SEC1110A02·AIR1110A03)
 
 - `POST /register`: 앱이 만든 키만 등록(서로 다른 글자 20개 미만은 422). 등록하지 않은 키는 모든 경로에서 401.
