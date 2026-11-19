@@ -1085,7 +1085,7 @@
 | WCH1106A01 · Watch 반복 충돌, 시계 페이스 위젯 없음 | 남은 일: 284 이후 Watch 충돌 기록이 더 생기지 않는지 확인. | |
 | WCH1106A01 · Watch 반복 충돌, 시계 페이스 위젯 없음 | 남은 일: Watch를 Mac에 연결해 `chronod`·WidgetKit 로그와 충돌·Jetsam 기록을 받아 위젯 갤러리 미등록 원인 찾기. | |
 | HLT1106A01 · 새 설치는 설치 시각부터 건강 기록 | 남은 일: 새 설치 기기에서 설치 전 건강 기록이 안 들어오는지, 기존 기기 기록이 그대로인지 확인. | |
-
+| MNU1119A01 | 메인 메뉴 › 행동 분류를 펼침 → activity·hobby·health·housework 네 분류에 직접 추가 항목(공연/영화 관람 등)이 모두 보이고 각 줄의 화랑이가 움직임 | 분류마다 8·7·5·5줄, 직접 추가 18개 포함 | |
 ### Apple Watch
 
 | ID | 할 일(손 순서) | 기대 결과 | 결과 |
@@ -1134,6 +1134,13 @@
 | COM1016A01·IAP905G002 | 개인정보 라벨, IAP 보류 상태 | 대표 결정대로 | |
 
 ## 검증 기록
+
+### MNU1119A01 · 메인 메뉴 「행동 분류」에 직접 추가 상세 18개 표시 (2026-11-19, 시뮬레이터 iPhone 17, 비야 브리지 `20261119-1609-menu-activity-useradded-details`)
+- 원인: `MapHomeCategoryDetailRows.details(for:)`가 `userAdded` 상세를 빼서, 메인 메뉴 펼침에 직접 추가 18개(activity 6·hobby 5·health 3·housework 4)가 안 보였다.
+- 수정: 메뉴 전용 `menuDetails(for:)`(분류표 순서 그대로, 구역 머리 없음)를 더하고 펼침 화살표 조건과 본문 `ForEach`만 바꿨다. `details(for:)`·`userAddedDetails(for:)`, 기록 수정 화면, JSON 플래그는 그대로.
+- 시험: `testCategoryMenuListsUserAddedDetailsToo`(분류별 8·7·5·5, 중복 없음, 대표 항목 포함, 기본 목록은 직접 추가 계속 제외, unconfirmed 빈 목록), `testUserAddedDetailsHaveTheirOwnActionsAndScenes`(18개 전수 동작·장면, 지시서 표와 빌드 결과가 모두 같아 정정 없음) 추가.
+- 검증: `MapHomeStickmanTests`·`TimeScaleTests` 254건 중 통과 249·실패 0·건너뜀 5(xcresult, `build/validation/MNU1119A01/menu.xcresult`). `TimeScaleTests`의 기본/직접 추가 나눔 확인 줄 통과. 시험 빌드가 앱을 Debug로 빌드했다. 전체 `TaptionPlanTests`는 돌리지 않았다(대표가 전체 단위 시험을 나중으로 미룸). 기기 화면은 보지 않았다 — `## 실기기 확인 목록`의 MNU1119A01 줄.
+
 
 ### TGT1119A02 · 12:22 로그·원본으로 통행료 다시 시험 (2026-11-19, 시뮬레이터·맥, 실기기 확인 전)
 

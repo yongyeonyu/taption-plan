@@ -715,7 +715,7 @@ extension MapHomeView {
                                 Text(category.localizedTitle(language))
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                                 Spacer()
-                                if !MapHomeCategoryDetailRows.details(for: category.id).isEmpty {
+                                if !MapHomeCategoryDetailRows.menuDetails(for: category.id).isEmpty {
                                     Button {
                                         if expandedCategoryDetails.insert(category.id).inserted == false {
                                             expandedCategoryDetails.remove(category.id)

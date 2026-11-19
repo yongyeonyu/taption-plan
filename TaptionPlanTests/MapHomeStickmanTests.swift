@@ -29,6 +29,50 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "eating.cooking", label: "요리"), .cooking)
     }
 
+    /// 메인 메뉴 펼침에는 「직접 추가」 상세 18개도 분류표 순서대로 함께 보인다(MNU1119A01).
+    /// 기록 수정 화면이 쓰는 `details(for:)`·`userAddedDetails(for:)`의 나눔은 그대로다.
+    func testCategoryMenuListsUserAddedDetailsToo() {
+        let counts = ["activity": 8, "hobby": 7, "health": 5, "housework": 5]
+        let samples = ["activity": "activity.performanceMovie", "hobby": "hobby.reading", "health": "health.medication", "housework": "housework.dishes"]
+        var userAdded = 0
+        for (category, count) in counts {
+            let menu = MapHomeCategoryDetailRows.menuDetails(for: category).map(\.id)
+            XCTAssertEqual(menu.count, count, category)
+            XCTAssertEqual(Set(menu).count, menu.count, "\(category) 중복")
+            XCTAssertTrue(menu.contains(samples[category]!), category)
+            XCTAssertEqual(menu, RecordClassificationCatalog.categories.first { $0.id == category }?.details.map(\.id), "분류표 순서")
+            let extra = MapHomeCategoryDetailRows.userAddedDetails(for: category).map(\.id)
+            XCTAssertTrue(extra.allSatisfy(menu.contains), category)
+            XCTAssertTrue(MapHomeCategoryDetailRows.details(for: category).allSatisfy { !extra.contains($0.id) }, "기본 목록은 계속 직접 추가를 뺀다")
+            userAdded += extra.count
+        }
+        XCTAssertEqual(userAdded, 18)
+        XCTAssertTrue(MapHomeCategoryDetailRows.menuDetails(for: "unconfirmed").isEmpty)
+    }
+
+    /// 직접 추가 18개 모두 화랑이 동작과 장면이 정해져 있다(MNU1119A01).
+    func testUserAddedDetailsHaveTheirOwnActionsAndScenes() {
+        let expected: [(String, String, MapHomeStickmanAction, HwarangScene)] = [
+            ("activity.zoningOut", "멍때리기", .restBox, .restBox), ("activity.friends", "친구 만남", .friends, .friends),
+            ("activity.date", "데이트", .date, .date), ("activity.family", "가족", .family, .family),
+            ("activity.phoneCall", "통화", .phoneCall, .phoneCall), ("activity.performanceMovie", "공연/영화 관람", .performanceMovie, .performanceMovie),
+            ("hobby.reading", "독서", .bookReading, .readBook), ("hobby.game", "게임", .game, .game),
+            ("hobby.music", "음악", .music, .music), ("hobby.video", "영상 보기", .video, .video),
+            ("hobby.pet", "반려동물 돌보기", .petCare, .petCare), ("health.recovery", "회복", .recovery, .recoverySuperman),
+            ("health.medication", "투약", .medication, .medicated), ("health.meditation", "명상", .meditation, .meditate),
+            ("housework.laundry", "빨래", .laundry, .laundry), ("housework.groceries", "장보기", .groceries, .groceries),
+            ("housework.cooking", "요리", .cooking, .cook), ("housework.dishes", "설거지", .dishes, .dishes),
+        ]
+        let found = ["activity", "hobby", "health", "housework"].flatMap { MapHomeCategoryDetailRows.userAddedDetails(for: $0) }
+        XCTAssertEqual(Set(found.map(\.id)), Set(expected.map(\.0)))
+        for (id, title, action, scene) in expected {
+            XCTAssertEqual(found.first { $0.id == id }?.title, title, id)
+            let resolved = MapHomeStickmanActionResolver.action(for: id, label: title)
+            XCTAssertEqual(resolved, action, id)
+            XCTAssertEqual(resolved.hwarangScene, scene, id)
+        }
+    }
+
     /// `TAPTION_RIG_SHEET=<폴더>`일 때 그루밍 장면을 시트 한 장으로 쓴다. 자세를 눈으로 보려는 도구다.
     /// 장면 22종을 각 8프레임씩 그린 검토 시트. 장식을 걸친 큰 그림·지도 마커 크기 그림·장식 도감을 쓴다(ACC1102A01).
     /// 위젯 에셋을 다시 만든다. `TAPTION_POSE_ATLAS=<TaptionPlanWidget/Assets.xcassets 경로>`로 켠다.

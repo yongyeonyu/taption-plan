@@ -140,13 +140,15 @@ struct MapHomeCategoryDetailRows: View {
     /// 기본 상세 목록과, 센서로 정할 수 없어 「직접 추가」로 따로 둔 상세(DTL1111A01).
     static func details(for categoryID: String) -> [RecordClassificationDetail] { allDetails(categoryID).filter { $0.userAdded != true } }
     static func userAddedDetails(for categoryID: String) -> [RecordClassificationDetail] { allDetails(categoryID).filter { $0.userAdded == true } }
+    /// 메인 메뉴 「행동 분류」 펼침 목록. 「직접 추가」 상세도 구역 머리 없이 분류표 순서대로 함께 보인다(MNU1119A01).
+    static func menuDetails(for categoryID: String) -> [RecordClassificationDetail] { allDetails(categoryID) }
     private static func allDetails(_ categoryID: String) -> [RecordClassificationDetail] {
         categoryID == "unconfirmed" ? [] : RecordClassificationCatalog.categories.first { $0.id == categoryID }?.details ?? []
     }
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 2) {
-            ForEach(Self.details(for: categoryID)) { detail in
+            ForEach(Self.menuDetails(for: categoryID)) { detail in
                 HStack(spacing: 8) {
                     MapHomeStickmanGlyph(
                         action: MapHomeStickmanActionResolver.action(for: detail.id, label: detail.title),
