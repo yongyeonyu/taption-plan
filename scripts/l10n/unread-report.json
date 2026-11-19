@@ -1,7 +1,43 @@
 {
- "ui": 5352,
+ "ui": 5353,
  "catalog": 504,
  "unread": [
+  {
+   "file": "Packages/SeasonPackKit/Sources/SeasonPackKit/Icons/SeasonPackMenu.swift",
+   "line": 6,
+   "ko": "String",
+   "en": "String?"
+  },
+  {
+   "file": "Packages/SeasonPackKit/Sources/SeasonPackKit/Icons/SeasonPackMenu.swift",
+   "line": 14,
+   "ko": "let id",
+   "en": "_"
+  },
+  {
+   "file": "Packages/SeasonPackKit/Sources/SeasonPackKit/Icons/SeasonPackMenu.swift",
+   "line": 43,
+   "ko": "raw.id",
+   "en": "label.isEmpty ? nil : label"
+  },
+  {
+   "file": "Packages/SeasonPackKit/Sources/SeasonPackKit/Icons/SeasonPackMenuView.swift",
+   "line": 40,
+   "ko": "_",
+   "en": "let label"
+  },
+  {
+   "file": "Packages/SeasonPackKit/Sources/SeasonPackKit/Render/SeasonPackRenderer.swift",
+   "line": 106,
+   "ko": "for slot: SeasonPackManifest.TextSlot",
+   "en": "Int"
+  },
+  {
+   "file": "Packages/SeasonPackKit/Sources/SeasonPackKit/Render/SeasonPackTextSlot.swift",
+   "line": 15,
+   "ko": "slot",
+   "en": "year"
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -514,7 +550,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeDailyCard.swift",
-   "line": 165,
+   "line": 166,
    "ko": "number",
    "en": ".current"
   },
@@ -628,7 +664,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeMapAnnotations.swift",
-   "line": 130,
+   "line": 131,
    "ko": "FloorLabel.korean(floor ?? 1)",
    "en": "FloorLabel.english(floor ?? 1)"
   },
@@ -694,19 +730,19 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 972,
+   "line": 973,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 980,
+   "line": 981,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 1029,
+   "line": 1030,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
   },

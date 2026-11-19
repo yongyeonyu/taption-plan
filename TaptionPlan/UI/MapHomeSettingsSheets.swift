@@ -401,6 +401,7 @@ struct MapHomeSecuritySheet: View {
                 card(language.text("내 데이터", "My data")) {
                     MapHomeDataControlsRow(model: model, language: language)
                     MapHomeClassificationDataRow(model: model, language: language)
+                    SeasonPackCreditsRow(language: language)
                 }
 
                 if let message {

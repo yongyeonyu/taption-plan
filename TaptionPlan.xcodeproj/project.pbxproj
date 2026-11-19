@@ -342,6 +342,7 @@
 		A1MSC1119A01000000000002 /* MisclassificationCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119A01000000000002 /* MisclassificationCollector.swift */; };
 		A1ENC1119A01000000000001 /* EnergyCurveEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ENC1119A01000000000001 /* EnergyCurveEngine.swift */; };
 		A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000001 /* AnnouncementFeed.swift */; };
+		A1SEA1119A01000000000001 /* SeasonPackAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1SEA1119A01000000000001 /* SeasonPackAdapter.swift */; };
 		A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TGT1118A01000000000001 /* LedgerTollGate.swift */; };
 		A1TRF1113A01000000000002 /* BusRideRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000002 /* BusRideRecognizer.swift */; };
 		A1BST1113A01000000000001 /* BusStopCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1BST1113A01000000000001 /* BusStopCheck.swift */; };
@@ -594,6 +595,7 @@
 		C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A02F0000000000000 /* TravelPuzzle.swift */; };
 		C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */; };
 		A1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift */; };
+		A1SEA1119A01000000000002 /* SeasonPackCreditsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1SEA1119A01000000000002 /* SeasonPackCreditsRow.swift */; };
 		A1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift */; };
 		A1ANN1119A01000000000002 /* AnnouncementBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1ANN1119A01000000000002 /* AnnouncementBanner.swift */; };
 		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
@@ -758,6 +760,7 @@
 		REV1117A0100000000000B02 /* TravelTimeZonesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = REV1117A0100000000000F02 /* TravelTimeZonesTests.swift */; };
 		T5H1114A26000000000B0024 /* TripShareLedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T5H1114A26000000000F0024 /* TripShareLedgerTests.swift */; };
 		T5H1114A260000000000P004 /* TaptionTripShare in Frameworks */ = {isa = PBXBuildFile; productRef = T5H1114A260000000000P002 /* TaptionTripShare */; };
+		SEA1119A010000000000B001 /* SeasonPackKit in Frameworks */ = {isa = PBXBuildFile; productRef = SEA1119A010000000000B003 /* SeasonPackKit */; };
 		T5H1114A260000000000P005 /* TaptionTripShareTesting in Frameworks */ = {isa = PBXBuildFile; productRef = T5H1114A260000000000P003 /* TaptionTripShareTesting */; };
 		B1080700000000000000010A /* ne-cities.tsv in Resources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000A /* ne-cities.tsv */; };
 		B1080700000000000000010B /* TravelMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000B /* TravelMapTests.swift */; };
@@ -1187,6 +1190,7 @@
 		F1MSC1119A01000000000002 /* MisclassificationCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MisclassificationCollector.swift; sourceTree = "<group>"; };
 		F1ENC1119A01000000000001 /* EnergyCurveEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyCurveEngine.swift; sourceTree = "<group>"; };
 		F1ANN1119A01000000000001 /* AnnouncementFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementFeed.swift; sourceTree = "<group>"; };
+		F1SEA1119A01000000000001 /* SeasonPackAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonPackAdapter.swift; sourceTree = "<group>"; };
 		F1TGT1118A01000000000001 /* LedgerTollGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollGate.swift; sourceTree = "<group>"; };
 		F1TRF1113A01000000000002 /* BusRideRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusRideRecognizer.swift; sourceTree = "<group>"; };
 		F1BST1113A01000000000001 /* BusStopCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusStopCheck.swift; sourceTree = "<group>"; };
@@ -1429,6 +1433,7 @@
 		C1A1116A02F0000000000000 /* TravelPuzzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzle.swift; sourceTree = "<group>"; };
 		C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPuzzleDrawer.swift; sourceTree = "<group>"; };
 		F1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeClassificationDataRow.swift; sourceTree = "<group>"; };
+		F1SEA1119A01000000000002 /* SeasonPackCreditsRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonPackCreditsRow.swift; sourceTree = "<group>"; };
 		F1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeEnergyCurveCard.swift; sourceTree = "<group>"; };
 		F1ANN1119A01000000000002 /* AnnouncementBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
@@ -1652,6 +1657,7 @@
 				C0FFEE0000000000000000A7 /* TaptionAssistantKit in Frameworks */,
 				C0FFEE0000000000000000B3 /* TaptionLedgerCore in Frameworks */,
 				T5H1114A260000000000P004 /* TaptionTripShare in Frameworks */,
+				SEA1119A010000000000B001 /* SeasonPackKit in Frameworks */,
 				C0FFEE0000000000000000A5 /* TaptionAssistantProtocol in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2061,6 +2067,7 @@
 				C1A1116A02F0000000000000 /* TravelPuzzle.swift */,
 				C1A1116A03F0000000000000 /* TravelPuzzleDrawer.swift */,
 				F1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift */,
+				F1SEA1119A01000000000002 /* SeasonPackCreditsRow.swift */,
 				F1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift */,
 				F1ANN1119A01000000000002 /* AnnouncementBanner.swift */,
 				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
@@ -2392,6 +2399,7 @@
 				F1MSC1119A01000000000002 /* MisclassificationCollector.swift */,
 				F1ENC1119A01000000000001 /* EnergyCurveEngine.swift */,
 				F1ANN1119A01000000000001 /* AnnouncementFeed.swift */,
+				F1SEA1119A01000000000001 /* SeasonPackAdapter.swift */,
 				F1TGT1118A01000000000001 /* LedgerTollGate.swift */,
 				F1TRF1113A01000000000002 /* BusRideRecognizer.swift */,
 				F1BST1113A01000000000001 /* BusStopCheck.swift */,
@@ -2576,6 +2584,7 @@
 				C0FFEE0000000000000000A6 /* TaptionAssistantKit */,
 				C0FFEE0000000000000000B2 /* TaptionLedgerCore */,
 				T5H1114A260000000000P002 /* TaptionTripShare */,
+				SEA1119A010000000000B003 /* SeasonPackKit */,
 				C0FFEE0000000000000000A4 /* TaptionAssistantProtocol */,
 				X50000000000000000000002 /* MapLibre */,
 				X50000000000000000000006 /* KakaoMapsSDK_SPM */,
@@ -2788,6 +2797,7 @@
 				T5H1114A260000000000P001 /* XCLocalSwiftPackageReference "TaptionTripShare" */,
 				C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */,
 				X80000000000000000000001 /* XCLocalSwiftPackageReference "TaptionClassifierEngine" */,
+				SEA1119A010000000000B002 /* XCLocalSwiftPackageReference "SeasonPackKit" */,
 				X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 				X50000000000000000000005 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */,
 			);
@@ -3101,6 +3111,7 @@
 				C1A1116A02B0000000000000 /* TravelPuzzle.swift in Sources */,
 				C1A1116A03B0000000000000 /* TravelPuzzleDrawer.swift in Sources */,
 				A1MSC1119A01000000000003 /* MapHomeClassificationDataRow.swift in Sources */,
+				A1SEA1119A01000000000002 /* SeasonPackCreditsRow.swift in Sources */,
 				A1ENC1119A01000000000002 /* MapHomeEnergyCurveCard.swift in Sources */,
 				A1ANN1119A01000000000002 /* AnnouncementBanner.swift in Sources */,
 				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
@@ -3371,6 +3382,7 @@
 				A1MSC1119A01000000000002 /* MisclassificationCollector.swift in Sources */,
 				A1ENC1119A01000000000001 /* EnergyCurveEngine.swift in Sources */,
 				A1ANN1119A01000000000001 /* AnnouncementFeed.swift in Sources */,
+				A1SEA1119A01000000000001 /* SeasonPackAdapter.swift in Sources */,
 				A1TGT1118A01000000000001 /* LedgerTollGate.swift in Sources */,
 				A1TRF1113A01000000000002 /* BusRideRecognizer.swift in Sources */,
 				A1BST1113A01000000000001 /* BusStopCheck.swift in Sources */,
@@ -4157,6 +4169,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TaptionClassifierEngine;
 		};
+		SEA1119A010000000000B002 /* XCLocalSwiftPackageReference "SeasonPackKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/SeasonPackKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -4243,6 +4259,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C0FFEE0000000000000000A1 /* XCLocalSwiftPackageReference "TaptionAssistant" */;
 			productName = TaptionAssistantProtocol;
+		};
+		SEA1119A010000000000B003 /* SeasonPackKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SEA1119A010000000000B002 /* XCLocalSwiftPackageReference "SeasonPackKit" */;
+			productName = SeasonPackKit;
 		};
 		C0FFEE000000000000000004 /* TaptionWatchSync */ = {
 			isa = XCSwiftPackageProductDependency;

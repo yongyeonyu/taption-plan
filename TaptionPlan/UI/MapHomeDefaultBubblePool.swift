@@ -65,7 +65,8 @@ enum MapHomeDefaultBubblePool {
     /// 그 시각의 문구. 30분 칸과 대분류로 고르므로 기기·실행마다 같다(무작위 생성기를 쓰지 않는다).
     static func phrase(for action: MapHomeStickmanAction, at time: Date, language: MapHomeLanguage) -> String? {
         guard let group = group(for: action) else { return nil }
-        let list = phrases(group, language: language)
+        // 시즌 팩이 켜져 있으면 그 대사를 기본 풀 앞에 둔다(기본 풀은 그대로, 순서만).
+        let list = SeasonPackAdapter.eventPhrases(languageCode: AnnouncementPolicy.languageCode(language: language)) + phrases(group, language: language)
         let slot = Int((time.timeIntervalSinceReferenceDate / block).rounded(.down))
         let salt = group.rawValue.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
         let index = ((slot &+ salt) % list.count + list.count) % list.count

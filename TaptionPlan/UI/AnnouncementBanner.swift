@@ -41,6 +41,7 @@ struct AnnouncementBanner: View {
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
             .sheet(isPresented: $isSheetPresented) { AnnouncementSheet(language: language) }
+            .onChange(of: service.sheetRequest) { _, _ in isSheetPresented = true }
         }
     }
 

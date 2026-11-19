@@ -254,6 +254,7 @@ extension AppModel {
         guard acceptsDataMutation() || (isStartupSnapshotPartial && allowsRepositoryLoadAttempt()) else { return }
         MapHomeRangeSampleCache.removeAll()
         MisclassificationCollector.live.removeAll()
+        SeasonPackAdapter.deleteAll()
         await MapHomeVisitLedgerStore.shared.reset()
         isDeletingUserData = true
         let deletionCutoff = Date.now

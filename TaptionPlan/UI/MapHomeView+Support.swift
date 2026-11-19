@@ -2,6 +2,7 @@ import CoreLocation
 import MapKit
 import Observation
 import OSLog
+import SeasonPackKit
 import SwiftUI
 import UIKit
 import TaptionPlanCore
@@ -218,9 +219,11 @@ extension MapHomeView {
             refreshTripClipboardOffer()
             Task { await checkTripRelay() }
             Task { await AnnouncementService.shared.refresh() }
+            Task { await SeasonPackAdapter.refresh() }
         }
         .task { await checkTripRelay() }
         .task { await AnnouncementService.shared.refresh() }
+        .task { SeasonPackAdapter.sync(model: model); await SeasonPackAdapter.refresh() }
         // 켜져 있는 동안 AI 비서 명령을 받는다(SYN1111A03). AI와 대화 중이면 10초, 아니면 5분.
         // 10초마다 깨어 간격만 다시 본다(네트워크 없음). 직접 새로고침하면 다음 깸에 바로 빨라진다.
         .task(id: scenePhase == .active) {
@@ -236,6 +239,8 @@ extension MapHomeView {
             }
         }
         .overlay(alignment: .top) { ArrivalCardHost(model: model, language: language) { homeTopNotices } }
+        .overlay { SeasonPackOverlay() }
+        .simultaneousGesture(TapGesture().onEnded { SeasonPackCenter.shared.noteUserTouch() }, including: SeasonPackCenter.shared.stage.flight == nil ? .subviews : .all) // 산타가 날 때만 어디를 눌러도 그 회차를 멈춘다(그 밖에는 지도 제스처에 아무 영향 없음)
         .mapHomeAssistant(self)
         .task(id: model.selectedDate) { await loadPhotoMoments(asksPermission: showsPhotosOnMap && FirstRunTutorialStore().allowsUnaskedPermissionPrompts) }
         .task(id: MapHomeDayCalendarLoader.key(day: model.selectedDate)) { await loadDayCalendarEvents() }

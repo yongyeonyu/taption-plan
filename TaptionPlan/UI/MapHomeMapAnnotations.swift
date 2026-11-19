@@ -2,6 +2,7 @@ import CoreLocation
 import MapKit
 import Observation
 import OSLog
+import SeasonPackKit
 import SwiftUI
 import UIKit
 import TaptionPlanCore
@@ -297,13 +298,17 @@ struct MapHomePlacePin: View {
     private func homeMarkerArtwork(level: Int) -> some View {
         let art = ZStack {
             homeSkyArt
-            Image(MapHomeGrowthPolicy.artworkName(level: level))
-                .resizable()
-                .scaledToFit()
-                .frame(
-                    width: MapHomePlacePinLayout.artworkSize,
-                    height: MapHomePlacePinLayout.artworkSize
-                )
+            if SeasonPackHouseView.replacesHouse() {
+                SeasonPackHouseView(size: MapHomePlacePinLayout.artworkSize)
+            } else {
+                Image(MapHomeGrowthPolicy.artworkName(level: level))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(
+                        width: MapHomePlacePinLayout.artworkSize,
+                        height: MapHomePlacePinLayout.artworkSize
+                    )
+            }
             homeWeatherArt
         }
         if !PerfBenchBefore.has("art") {
@@ -337,7 +342,8 @@ extension MapHomePlacePin {
             action: catAction,
             size: size,
             equippedAccessoryID: equippedAccessoryID,
-            rendersAsynchronously: true
+            rendersAsynchronously: true,
+            usesSeasonPack: true
         )
         if !PerfBenchBefore.has("art") {
             // 그림이 칸 밖(가로 1.6배·모자 자리)으로 나가므로 넉넉한 판에 그리고 가운데를 맞춘다(PRF1117A02).

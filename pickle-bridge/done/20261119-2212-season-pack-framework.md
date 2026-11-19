@@ -1,7 +1,9 @@
 ---
 id: 20261119-2212-season-pack-framework
 created_at: 2026-11-19T22:12+09:00
-status: pending
+status: done
+finished_at: 2026-11-19T23:30+09:00
+commit: 802696a3
 title: 시즌 이벤트 팩 프레임워크(새 패키지 SeasonPackKit)와 첫 팩(크리스마스)
 from: 비야
 request_id: SEA1119A01
@@ -376,3 +378,18 @@ packs/season/<packId>/<version>/<파일…>      ← 그림·소리·라이선�
 - 자산 생성 선례: `tools/generate_hwarang_hats.py`, `scripts/generate_home_evolution_artwork.py`.
 - 미뤄 둔 숙제: `test.md` `HOM1111A01`(2026-11-11 「나중에」) — 이번이 그 재개입니다.
 - 음원 후보 조사(2026-11-19, 라이선스·길이 확인): MJvGent 「Jingle Bells on a Music Box」 47.612s CC0 1.0; mhtaylor67 「Music Box – Joy To The World」 51.413s CC0; Ihaksi 「Deck The Halls – bells」 7.594s CC0; thulitt 「symphonion O Christmas Tree」 34.150s CC0; mhtaylor67 「Musical Snow Globe – We Wish You A Merry Christmas」 83.033s CC0; 까치(설날용) naturenotesuk 「Eurasian Magpie Calling」 43.970s CC0. 모두 Freesound 페이지에서 라이선스 CC0 1.0을 확인했습니다.
+
+## 클로드 코드 회신
+
+- 처리: 완료(아래 「확인 필요」 제외). 푸시하지 않음 — 워크트리 브랜치 `season-pack-sea1119a01`을 메인 세션이 검토·병합.
+- 요청 ID: SEA1119A01 (`test.md` 「남은 작업」 홈·UI 한 줄 유지: 실기기 눈 확인 남음)
+- 커밋: `923875d1` test.md 요청 기록, `027943ab` 패키지·시드 팩, `c4f85d21` 앱 연결·문서·이미지, `802696a3` 검증 기록. 문서 이동 커밋은 이 회신 바로 뒤(`[비야 브리지] 20261119-2212-season-pack-framework`).
+- 바꾼 파일: 새 `Packages/SeasonPackKit/`(소스·시험 5개·시드 팩 `seed/christmas/1`·DEBUG 전용 `seed-debug/sample/1`), `tools/season-pack/`(생성기 3개), `TaptionPlan/Core/SeasonPackAdapter.swift`, `TaptionPlan/UI/SeasonPackCreditsRow.swift`; 얇게 수정: `MapHomeView+Support.swift`·`MapHomeMapAnnotations.swift`·`MapHomeStickmanMarker.swift`·`HwarangRig.swift`·`MapHomeDailyCard.swift`·`MapHomeDefaultBubblePool.swift`·`AnnouncementFeed.swift`·`AnnouncementBanner.swift`·`AppModel+Backup.swift`·`MapHomeSettingsSheets.swift`; `project.pbxproj`, `docs/SEASON_PACK_PLAN.md`(새)·`DEVELOPMENT.md`·`PRIVACY.md`·`test.md`·`scripts/l10n/source.json`·`unread-report.json`(extract 결과).
+- 검증(시뮬레이터 iPhone 17): `swift test` 77건 통과 0 실패 / 앱 Debug 빌드 성공 / `-only-testing:TaptionPlanTests` xcresult 통과 3,150·실패 0·건너뜀 26(새로 깨진 시험 없음) / `architecture-metrics.py --check` 통과 / `check-app-engine-import-boundary.sh` 통과 / `l10n/check.py`는 번역 누락만 보고. 동결 파일 5개·`server/trip-relay`·`PlaceBook_kr_sungnyemun.svg` 무변경. Release 오브젝트에 날짜 조작·미리보기 문자열 없음. 로그 `build/validation/SEA1119A01/`.
+- 12절 아이콘 레지스트리 증명: 표본 팩 `sample`로 ① 아이콘이 뜬다 ② 메뉴가 열린다(메뉴 모델) ③ 항목을 지우면 아이콘이 사라진다(더하면 붙음) ④ 앱 코드 수정 없음 — 단위 시험 `IconRegistryTests`가 고정. 화면으로 눈 확인한 것은 아님.
+- 확인 필요·대표 결정:
+  1. **음원**: Freesound CC0 녹음은 내려받을 수 없어(외부 내려받기·로그인) 쓰지 않고, 퍼블릭 도메인 멜로디 「Jingle Bells」(1857)를 오르골 음색으로 코드 합성한 m4a(34초, 약 350KB)를 넣었고 가사 큐 시각은 합성 음표에서 계산했습니다(표기 「Public-domain melody; original synthesis」). 지시서의 MJvGent 음원으로 바꿀지 대표 결정(바꾸면 파일·`assets`·`audio`·`lyrics` 시각만 교체, 앱 코드 그대로).
+  2. **지시서와 다른 곳**: 호스트 프로토콜에서 `showBubble`은 뺐고(가사는 패키지 말풍선), `presentAnnouncement`는 Bool을 돌려줍니다. 시계의 단조 시간은 잠잘 때도 흐르는 `CLOCK_MONOTONIC`입니다(`systemUptime`은 잠잘 때 멈춤). 아이콘은 집 핀의 화면 좌표를 세 지도 엔진에서 얻을 수 없어 화면 오른쪽 가운데 기준입니다(`SeasonPackOverlay(homeOrigin:)`로 연결 가능). 의상·목도리·뿔 레이어는 고정 앵커라 자세별로 어긋날 수 있고(모자는 리그가 직접 씌워 정확) 기기 눈 확인 대상입니다.
+  3. 실기기: `test.md` 아이폰 11 Pro 표의 SEA1119A01 줄. 이미지는 레퍼런스 검색(스톡 목록 위주라 구체 이미지는 못 봄) 뒤 그라데이션·그림자·질감·빛 번짐으로 다시 그림(`tools/season-pack/season_art.py`).
+- 번역 대기(12개 언어, `generate.py`는 메인 세션 몫): 앱 문구 「시즌 팩 음원 출처 / Season pack music credits」 1건. 패키지 안 문구(`SeasonPackText.ui`)와 팩 문구(대사 14줄·메뉴·가사)는 ko/en뿐.
+- 대표 몫(실행하지 않음): R2 업로드 명령·순서는 `docs/SEASON_PACK_PLAN.md` 9절(팩 파일 먼저, `index.json` 마지막, 공지 `christmas-2026` 추가).

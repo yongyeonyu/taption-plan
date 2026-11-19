@@ -1,0 +1,85 @@
+{
+  "format": "bokki-season-pack",
+  "schema": 1,
+  "id": "sample",
+  "version": 1,
+  "priority": 0,
+  "event": {
+    "id": "sample",
+    "kind": "sample",
+    "title": {
+      "ko": "표본",
+      "en": "Sample"
+    },
+    "windows": [
+      {
+        "from": {
+          "month": 1,
+          "day": 1
+        },
+        "to": {
+          "month": 1,
+          "day": 1
+        },
+        "year": 1970
+      }
+    ]
+  },
+  "assets": [
+    {
+      "id": "icon.star",
+      "path": "icon-star.png",
+      "sha256": "82b60b73d179b2330ae1a366d2e48f22020a699782d300f20e6313515acb8b90",
+      "bytes": 14482,
+      "kind": "image"
+    }
+  ],
+  "menuIcons": [
+    {
+      "id": "sample.icon",
+      "icon": "icon.star",
+      "label": {
+        "ko": "표본 아이콘",
+        "en": "Sample icon"
+      },
+      "anchor": {
+        "dx": 46,
+        "dy": -30
+      },
+      "priority": 1,
+      "menu": {
+        "title": {
+          "ko": "표본 메뉴",
+          "en": "Sample menu"
+        },
+        "sections": [
+          {
+            "title": {
+              "ko": "안내",
+              "en": "Info"
+            },
+            "items": [
+              {
+                "id": "hello",
+                "kind": "text",
+                "text": {
+                  "ko": "매니페스트에 항목만 넣어도 아이콘과 메뉴가 붙습니다.",
+                  "en": "Adding a manifest entry is enough to get an icon and a menu."
+                }
+              },
+              {
+                "id": "note",
+                "kind": "memo",
+                "label": {
+                  "ko": "메모",
+                  "en": "Note"
+                },
+                "maxLength": 100
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

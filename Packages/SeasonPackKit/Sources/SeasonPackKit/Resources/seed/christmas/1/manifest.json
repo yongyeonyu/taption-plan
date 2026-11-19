@@ -1,0 +1,470 @@
+{
+  "format": "bokki-season-pack",
+  "schema": 1,
+  "id": "christmas",
+  "version": 1,
+  "requiresAppBuild": 1,
+  "priority": 10,
+  "event": {
+    "id": "christmas",
+    "kind": "holiday",
+    "announcementId": "christmas-2026",
+    "title": {
+      "ko": "크리스마스",
+      "en": "Christmas"
+    },
+    "windows": [
+      {
+        "from": {
+          "month": 12,
+          "day": 19
+        },
+        "to": {
+          "month": 12,
+          "day": 30
+        },
+        "fromTime": "00:00",
+        "toTime": "23:59"
+      }
+    ]
+  },
+  "assets": [
+    {
+      "id": "house.tree",
+      "path": "house-tree.png",
+      "sha256": "8cbe2a007458d885af025b666ec9e49feb5c51d82033c6043678abb199de0926",
+      "bytes": 192089,
+      "kind": "image"
+    },
+    {
+      "id": "house.tree.lit",
+      "path": "house-tree-lit.png",
+      "sha256": "2dc08f9a104bf9668705e6d96b81b1fdbbd7b5b7786f83a8fb7390d6a4d7c25f",
+      "bytes": 233892,
+      "kind": "image"
+    },
+    {
+      "id": "house.tree.star",
+      "path": "house-tree-star.png",
+      "sha256": "f46195dc403d336ba7ae48b41094d82352fadb1bf154b55fb6941413ff91ce8f",
+      "bytes": 50627,
+      "kind": "image"
+    },
+    {
+      "id": "icon.bell",
+      "path": "icon-bell.png",
+      "sha256": "a94e8811085bfa4ab4dad955e5d889d9e81e1c0fc9eeffb5a12659af7d7ef09f",
+      "bytes": 7556,
+      "kind": "image"
+    },
+    {
+      "id": "actor.santa",
+      "path": "actor-santa.png",
+      "sha256": "34f2f200095275e5c73442ebcfb95788efa01cdbc31f081cac8ed335c81b708f",
+      "bytes": 131998,
+      "kind": "image"
+    },
+    {
+      "id": "gift.a",
+      "path": "gift-a.png",
+      "sha256": "1bf435884fc708c52894559f1afb00b651be1c9203c999d0051a5d9796f7fa21",
+      "bytes": 4532,
+      "kind": "image"
+    },
+    {
+      "id": "gift.b",
+      "path": "gift-b.png",
+      "sha256": "cca969c68a04f710e63e5a76f9c5c83bc45dce82523ab8aa09cce63c50f78e57",
+      "bytes": 4447,
+      "kind": "image"
+    },
+    {
+      "id": "gift.c",
+      "path": "gift-c.png",
+      "sha256": "4682ddc411a54b8b63507b5c5843dea137dabd6dd927690c02c36543f4586597",
+      "bytes": 4326,
+      "kind": "image"
+    },
+    {
+      "id": "accessory.santaHat",
+      "path": "accessory-santa-hat.png",
+      "sha256": "106643d2017dfb512d02ae29f9d4ac34e0879720e799f9c3d3ea3246d9b38eee",
+      "bytes": 41574,
+      "kind": "image"
+    },
+    {
+      "id": "accessory.scarf",
+      "path": "accessory-scarf.png",
+      "sha256": "d2e15e9d546a9e48a982d84e2af9e448e55efdc5f8237630b3690ef25da3531e",
+      "bytes": 30684,
+      "kind": "image"
+    },
+    {
+      "id": "accessory.antlers",
+      "path": "accessory-antlers.png",
+      "sha256": "29d2c7ce000a90977a0b89ea464b6b022f4bc42bb437eb4f5d2008da7db77d3c",
+      "bytes": 33429,
+      "kind": "image"
+    },
+    {
+      "id": "outfit.coat",
+      "path": "outfit-coat.png",
+      "sha256": "55a76aefc804f38c6bee8e322ff03851d8846b8262609057f1cdafaa4e0697dc",
+      "bytes": 48367,
+      "kind": "image"
+    },
+    {
+      "id": "carol.jingle",
+      "path": "audio/jingle-bells.m4a",
+      "sha256": "52188a0c80086f4d32bd500c60d3115de7db76246c855a00f5d3dea406a19dd6",
+      "bytes": 355361,
+      "kind": "audio"
+    }
+  ],
+  "slots": {
+    "house": {
+      "base": "house.tree",
+      "lit": "house.tree.lit",
+      "glow": "house.tree.star",
+      "lights": {
+        "on": "sunset",
+        "off": "sunrise",
+        "blink": {
+          "periodMs": 1400,
+          "fastPeriodMs": 220
+        }
+      }
+    },
+    "outfit": {
+      "white": [
+        {
+          "asset": "outfit.coat",
+          "anchor": "body",
+          "scale": 0.62,
+          "offset": [
+            0,
+            0.02
+          ],
+          "z": 0
+        }
+      ],
+      "calico": [
+        {
+          "asset": "outfit.coat",
+          "anchor": "body",
+          "scale": 0.62,
+          "offset": [
+            0,
+            0.02
+          ],
+          "z": 0
+        }
+      ],
+      "mackerel": [
+        {
+          "asset": "outfit.coat",
+          "anchor": "body",
+          "scale": 0.62,
+          "offset": [
+            0,
+            0.02
+          ],
+          "z": 0
+        }
+      ]
+    },
+    "accessory": {
+      "hat": {
+        "asset": "accessory.santaHat",
+        "anchor": "head",
+        "scale": 0.42,
+        "offset": [
+          0.02,
+          -0.1
+        ],
+        "z": 3
+      },
+      "scarf": {
+        "asset": "accessory.scarf",
+        "anchor": "head",
+        "scale": 0.5,
+        "offset": [
+          0,
+          0.13
+        ],
+        "z": 2
+      },
+      "ribbon": {
+        "asset": "accessory.antlers",
+        "anchor": "head",
+        "scale": 0.62,
+        "offset": [
+          0,
+          -0.1
+        ],
+        "z": 1
+      }
+    },
+    "bubbles": {
+      "pool": [
+        {
+          "ko": "트리 불 켜 볼까요? 🎄",
+          "en": "Shall we light the tree? 🎄"
+        },
+        {
+          "ko": "메리 크리스마스! 🎄",
+          "en": "Merry Christmas! 🎄"
+        },
+        {
+          "ko": "산타가 지나갔어요!",
+          "en": "Santa just flew by!"
+        },
+        {
+          "ko": "오늘 하루도 수고했어요",
+          "en": "You did great today"
+        },
+        {
+          "ko": "트리가 반짝반짝해요 ✨",
+          "en": "The tree is sparkling ✨"
+        },
+        {
+          "ko": "눈이 오면 좋겠다",
+          "en": "I hope it snows"
+        },
+        {
+          "ko": "따뜻한 코코아 한 잔 어때요?",
+          "en": "How about some hot cocoa?"
+        },
+        {
+          "ko": "선물은 마음이 제일이에요",
+          "en": "The best gift is the thought"
+        },
+        {
+          "ko": "밤하늘에 썰매 소리가 나요",
+          "en": "I hear sleigh bells tonight"
+        },
+        {
+          "ko": "집이 포근해요",
+          "en": "Home feels so cozy"
+        },
+        {
+          "ko": "오늘 하루를 기록해 둘까요?",
+          "en": "Shall we jot down today?"
+        },
+        {
+          "ko": "산타 모자 어울리죠?",
+          "en": "Doesn't the Santa hat suit me?"
+        },
+        {
+          "ko": "눈사람 만들러 갈까요?",
+          "en": "Want to build a snowman?"
+        },
+        {
+          "ko": "연말까지 조금만 더 힘내요",
+          "en": "Just a little more until year's end"
+        }
+      ]
+    },
+    "shareCard": {
+      "house": "house.tree",
+      "outfit": true
+    }
+  },
+  "textSlots": [
+    {
+      "id": "year",
+      "rect": [
+        0.3,
+        0.86,
+        0.4,
+        0.1
+      ],
+      "align": "center",
+      "font": {
+        "size": 11,
+        "weight": "bold",
+        "design": "rounded"
+      },
+      "color": "#C23B3B",
+      "content": "year",
+      "transition": "roll"
+    }
+  ],
+  "menuIcons": [
+    {
+      "id": "christmas.info",
+      "icon": "icon.bell",
+      "label": {
+        "ko": "크리스마스 안내",
+        "en": "Christmas info"
+      },
+      "anchor": {
+        "dx": 46,
+        "dy": -30
+      },
+      "priority": 10,
+      "visibleFrom": "2026-12-19T00:00",
+      "visibleTo": "2026-12-30T23:59",
+      "menu": {
+        "title": {
+          "ko": "크리스마스",
+          "en": "Christmas"
+        },
+        "sections": [
+          {
+            "title": {
+              "ko": "이벤트 소개",
+              "en": "About this event"
+            },
+            "items": [
+              {
+                "id": "intro",
+                "kind": "text",
+                "text": {
+                  "ko": "12월 19일부터 30일까지 집이 트리로 바뀌어요. 해가 지면 불이 켜지고, 트리를 누르면 캐럴이 나와요.",
+                  "en": "From Dec 19 to 30 your home becomes a tree. It lights up at sunset, and tapping it plays a carol."
+                }
+              }
+            ]
+          },
+          {
+            "title": {
+              "ko": "음원 출처",
+              "en": "Music credits"
+            },
+            "items": [
+              {
+                "id": "credits",
+                "kind": "credits"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "audio": [
+    {
+      "id": "carol",
+      "asset": "carol.jingle",
+      "durationMs": 34600,
+      "loop": false,
+      "license": {
+        "title": "Jingle Bells (music box rendition)",
+        "creator": "BOKKI Plan (synthesized)",
+        "license": "Public-domain melody (J. Pierpont, 1857); original synthesis",
+        "source": "https://en.wikipedia.org/wiki/Jingle_Bells"
+      }
+    }
+  ],
+  "lyrics": [
+    {
+      "audio": "carol",
+      "cues": [
+        {
+          "atMs": 400,
+          "ko": "딸랑딸랑, 종이 울려요",
+          "en": "Jingle bells, jingle bells,"
+        },
+        {
+          "atMs": 4400,
+          "ko": "눈길을 신나게 달려요!",
+          "en": "Jingle all the way!"
+        },
+        {
+          "atMs": 8400,
+          "ko": "썰매를 타면 얼마나 신나는지",
+          "en": "Oh, what fun it is to ride"
+        },
+        {
+          "atMs": 12400,
+          "ko": "말 한 마리 썰매를 타고!",
+          "en": "In a one-horse open sleigh!"
+        },
+        {
+          "atMs": 16400,
+          "ko": "딸랑딸랑, 종이 울려요",
+          "en": "Jingle bells, jingle bells,"
+        },
+        {
+          "atMs": 20400,
+          "ko": "눈길을 신나게 달려요!",
+          "en": "Jingle all the way!"
+        },
+        {
+          "atMs": 24400,
+          "ko": "썰매를 타면 얼마나 신나는지",
+          "en": "Oh, what fun it is to ride"
+        },
+        {
+          "atMs": 28400,
+          "ko": "말 한 마리 썰매를 타고!",
+          "en": "In a one-horse open sleigh!"
+        },
+        {
+          "atMs": 32400,
+          "ko": "메리 크리스마스!",
+          "en": "Merry Christmas!"
+        }
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "id": "santa",
+      "image": "actor.santa",
+      "flight": {
+        "seconds": 9,
+        "start": [
+          -0.2,
+          0.3
+        ],
+        "end": [
+          1.2,
+          0.18
+        ]
+      },
+      "intervalSeconds": [
+        180,
+        300
+      ],
+      "tap": {
+        "burst": {
+          "images": [
+            "gift.a",
+            "gift.b",
+            "gift.c"
+          ],
+          "count": 18
+        }
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "id": "tree.tap",
+      "target": "house",
+      "on": "tap",
+      "actions": [
+        {
+          "kind": "blink",
+          "seconds": 6
+        },
+        {
+          "kind": "playAudio",
+          "audio": "carol"
+        },
+        {
+          "kind": "lyrics",
+          "audio": "carol"
+        }
+      ]
+    }
+  ],
+  "credits": [
+    {
+      "ko": "음원: 「Jingle Bells」 오르골 편곡(멜로디 1857, 퍼블릭 도메인) · 앱에서 합성",
+      "en": "Music: Jingle Bells, music-box rendition (melody 1857, public domain), synthesized for the app"
+    }
+  ]
+}
