@@ -6110,6 +6110,26 @@
 "결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "Bukan pembayaran, jadi diserahkan ke AI untuk dicek.",
 "알림 분석|Notification review": "Analisis pemberitahuan",
 "문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "SMS hanya dipakai untuk pesan pembayaran di catatan keuangan. Analisis pemberitahuan AI tidak dipakai.",
-"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "Pemberitahuan aplikasi pesan tidak pernah dikirim ke AI."
+"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "Pemberitahuan aplikasi pesan tidak pernah dikirim ke AI.",
+"{0} 무렵 가장 낮아요 · 에너지 {1}%|Lowest around {0} · energy {1}%": "Terendah sekitar pukul {0} · energi {1}%",
+"가장 낮은 때 {0} {1}%|Lowest at {0}, {1}%": "Titik terendah pukul {0}, {1}%",
+"공지|Announcements": "Pengumuman",
+"그 무렵 일정 {0}건({1})이 겹쳐요|{0} events ({1}) overlap around then": "Pada waktu itu {0} acara ({1}) tumpang tindih",
+"기기에 {0}건 모음|{0} collected on this device": "{0} terkumpul di perangkat ini",
+"끄면 더 모으지 않아요. 이미 모은 {0}건은 그대로 두고, 지우려면 「지우기」를 누르세요.|Turning it off stops collecting. The {0} already collected stay until you tap Delete.": "Jika dimatikan, pengumpulan berhenti. {0} yang sudah terkumpul tetap ada sampai Anda mengetuk “Hapus”.",
+"내보내기|Export": "Ekspor",
+"내보낼 파일을 만들지 못했습니다.|Couldn't create the export file.": "Tidak dapat membuat file ekspor.",
+"되돌릴 수 없어요.|This can't be undone.": "Tindakan ini tidak dapat dibatalkan.",
+"모은 분류 개선 데이터를 지울까요?|Delete the collected classification data?": "Hapus data peningkatan klasifikasi yang terkumpul?",
+"분류 개선 데이터 수집|Collect classification improvement data": "Kumpulkan data peningkatan klasifikasi",
+"새 공지가 없습니다|No new announcements": "Tidak ada pengumuman baru",
+"어젯밤 {0} 밤잠이라 시작이 낮아요|Only {0} of sleep last night, so the start is low": "Tidur semalam hanya {0}, jadi awalnya rendah",
+"어젯밤 수면 기록이 없어 기본값으로 그렸어요|No sleep record last night, so the default start is used": "Tidak ada catatan tidur semalam, sehingga digambar dengan nilai awal bawaan",
+"이 공지 닫기|Dismiss": "Tutup pengumuman ini",
+"이 날은 그릴 기록이 없어요|Nothing to draw for this day": "Tidak ada yang bisa digambar untuk hari ini",
+"일정 {0}건|{0} events": "{0} acara",
+"자세히|Details": "Detail",
+"컨디션 에너지 곡선|Condition energy curve": "Kurva energi",
+"켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export.": "Jika diaktifkan, setiap kali Anda memperbaiki klasifikasi, hanya waktu dalam sehari, durasi, kecepatan rata-rata, jumlah langkah, serta klasifikasi sebelum → sesudah beserta tingkat keyakinannya yang disimpan di perangkat ini. Koordinat, nama tempat, judul acara, dan tanggal tidak pernah disertakan. Tidak ada yang dikirim otomatis; file hanya keluar saat Anda mengetuk “Ekspor”."
 }
 }

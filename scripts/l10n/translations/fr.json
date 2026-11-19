@@ -6110,6 +6110,26 @@
 "결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "Ce n’est pas un paiement : confié à votre IA pour vérification.",
 "알림 분석|Notification review": "Analyse de notification",
 "문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "Les SMS ne servent qu’aux messages de paiement du budget. L’analyse des notifications par l’IA n’est pas utilisée.",
-"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "Les notifications des applis de messagerie ne sont jamais envoyées à votre IA."
+"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "Les notifications des applis de messagerie ne sont jamais envoyées à votre IA.",
+"{0} 무렵 가장 낮아요 · 에너지 {1}%|Lowest around {0} · energy {1}%": "Plus bas vers {0} · énergie {1} %",
+"가장 낮은 때 {0} {1}%|Lowest at {0}, {1}%": "Point bas : {0}, {1} %",
+"공지|Announcements": "Annonces",
+"그 무렵 일정 {0}건({1})이 겹쳐요|{0} events ({1}) overlap around then": "{0} événements ({1}) se chevauchent à ce moment",
+"기기에 {0}건 모음|{0} collected on this device": "{0} collectés sur cet appareil",
+"끄면 더 모으지 않아요. 이미 모은 {0}건은 그대로 두고, 지우려면 「지우기」를 누르세요.|Turning it off stops collecting. The {0} already collected stay until you tap Delete.": "Si vous le désactivez, la collecte s’arrête. Les {0} déjà collectés sont conservés jusqu’à ce que vous touchiez « Supprimer ».",
+"내보내기|Export": "Exporter",
+"내보낼 파일을 만들지 못했습니다.|Couldn't create the export file.": "Impossible de créer le fichier d’export.",
+"되돌릴 수 없어요.|This can't be undone.": "Cette action est irréversible.",
+"모은 분류 개선 데이터를 지울까요?|Delete the collected classification data?": "Supprimer les données d’amélioration de la classification collectées ?",
+"분류 개선 데이터 수집|Collect classification improvement data": "Collecter des données d’amélioration de la classification",
+"새 공지가 없습니다|No new announcements": "Aucune nouvelle annonce",
+"어젯밤 {0} 밤잠이라 시작이 낮아요|Only {0} of sleep last night, so the start is low": "Seulement {0} de sommeil cette nuit, le départ est donc bas",
+"어젯밤 수면 기록이 없어 기본값으로 그렸어요|No sleep record last night, so the default start is used": "Aucun enregistrement de sommeil cette nuit : la courbe part de la valeur par défaut",
+"이 공지 닫기|Dismiss": "Fermer cette annonce",
+"이 날은 그릴 기록이 없어요|Nothing to draw for this day": "Rien à tracer pour ce jour",
+"일정 {0}건|{0} events": "{0} événements",
+"자세히|Details": "Détails",
+"컨디션 에너지 곡선|Condition energy curve": "Courbe d’énergie",
+"켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export.": "Si cette option est activée, à chaque correction de classification, seuls l’heure de la journée, la durée, la vitesse moyenne, le nombre de pas et la classification avant → après avec sa confiance sont conservés sur cet appareil. Les coordonnées, noms de lieux, titres d’événements et dates ne sont jamais inclus. Rien n’est envoyé automatiquement ; un fichier ne sort que lorsque vous touchez « Exporter »."
 }
 }

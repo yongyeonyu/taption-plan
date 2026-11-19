@@ -22254,6 +22254,83 @@
         }
       }
     },
+    "{0} 무렵 가장 낮아요 · 에너지 {1}%|Lowest around {0} · energy {1}%" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}ごろが最も低め・エネルギー {1}%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}前后最低 · 能量 {1}%"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}前後最低 · 能量 {1}%"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Am niedrigsten gegen {0} · Energie {1} %"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus bas vers {0} · énergie {1} %"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Più basso verso le {0} · energia {1}%"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más bajo hacia las {0} · energía {1} %"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mais baixo por volta de {0} · energia {1}%"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thấp nhất quanh {0} · năng lượng {1}%"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terendah sekitar pukul {0} · energi {1}%"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต่ำสุดช่วง {0} · พลังงาน {1}%"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लगभग {0} बजे सबसे कम · ऊर्जा {1}%"
+          }
+        }
+      }
+    },
     "{0} 미확인|{0} unconfirmed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -213599,6 +213676,83 @@
         }
       }
     },
+    "가장 낮은 때 {0} {1}%|Lowest at {0}, {1}%" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最も低い時間 {0} {1}%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最低时段 {0} {1}%"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最低時段 {0} {1}%"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiefpunkt {0}, {1} %"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Point bas : {0}, {1} %"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Punto più basso: {0}, {1}%"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Punto más bajo: {0}, {1} %"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ponto mais baixo: {0}, {1}%"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thấp nhất lúc {0}, {1}%"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titik terendah pukul {0}, {1}%"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จุดต่ำสุด {0} · {1}%"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सबसे कम समय {0}, {1}%"
+          }
+        }
+      }
+    },
     "가족|Family" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -227536,6 +227690,83 @@
         }
       }
     },
+    "공지|Announcements" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お知らせ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公告"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annonces"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvisi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avisos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avisos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông báo"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengumuman"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ประกาศ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "घोषणाएँ"
+          }
+        }
+      }
+    },
     "공지|Notices" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -231386,6 +231617,83 @@
         }
       }
     },
+    "그 무렵 일정 {0}건({1})이 겹쳐요|{0} events ({1}) overlap around then" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "そのころ予定が{0}件({1})重なっています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "那时有 {0} 个日程（{1}）重叠"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "那時有 {0} 個行程（{1}）重疊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um diese Zeit überschneiden sich {0} Termine ({1})"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} événements ({1}) se chevauchent à ce moment"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In quel momento si sovrappongono {0} eventi ({1})"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A esa hora se solapan {0} eventos ({1})"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nesse horário, {0} eventos ({1}) se sobrepõem"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khoảng đó có {0} sự kiện ({1}) chồng lên nhau"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pada waktu itu {0} acara ({1}) tumpang tindih"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ช่วงนั้นมี {0} กำหนดการ ({1}) ซ้อนกัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "उस समय {0} कार्यक्रम ({1}) आपस में टकरा रहे हैं"
+          }
+        }
+      }
+    },
     "그 밖의 수입|Other income" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -234616,6 +234924,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "डिवाइस कैलेंडर"
+          }
+        }
+      }
+    },
+    "기기에 {0}건 모음|{0} collected on this device" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この端末に{0}件を保存"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本设备已收集 {0} 条"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本裝置已收集 {0} 筆"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} auf diesem Gerät gesammelt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} collectés sur cet appareil"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} raccolti su questo dispositivo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} recopilados en este dispositivo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} coletados neste aparelho"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã thu thập {0} mục trên thiết bị này"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} terkumpul di perangkat ini"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เก็บไว้ในอุปกรณ์นี้ {0} รายการ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस डिवाइस पर {0} एकत्र"
           }
         }
       }
@@ -239082,6 +239467,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पौधे"
+          }
+        }
+      }
+    },
+    "끄면 더 모으지 않아요. 이미 모은 {0}건은 그대로 두고, 지우려면 「지우기」를 누르세요.|Turning it off stops collecting. The {0} already collected stay until you tap Delete." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフにすると収集を止めます。すでに集めた{0}件は残るので、消すには「削除」を押してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭后将不再收集。已收集的 {0} 条会保留，如需清除请点“删除”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉後將不再收集。已收集的 {0} 筆會保留，如需清除請點「刪除」。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du es ausschaltest, wird nichts mehr gesammelt. Die bereits gesammelten {0} bleiben, bis du auf „Löschen“ tippst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si vous le désactivez, la collecte s’arrête. Les {0} déjà collectés sont conservés jusqu’à ce que vous touchiez « Supprimer »."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se lo disattivi, la raccolta si ferma. I {0} già raccolti restano finché non tocchi «Elimina»."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si lo desactivas, deja de recopilar. Los {0} ya recopilados se conservan hasta que toques «Eliminar»."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se você desativar, a coleta para. Os {0} já coletados ficam até você tocar em “Apagar”."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nếu tắt, ứng dụng sẽ ngừng thu thập. {0} mục đã thu thập vẫn được giữ cho đến khi bạn nhấn “Xóa”."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika dimatikan, pengumpulan berhenti. {0} yang sudah terkumpul tetap ada sampai Anda mengetuk “Hapus”."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อปิด ระบบจะหยุดเก็บข้อมูล {0} รายการที่เก็บไว้แล้วจะยังอยู่จนกว่าคุณจะแตะ “ลบ”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बंद करने पर संग्रह रुक जाता है। पहले से एकत्र किए गए {0} तब तक रहेंगे जब तक आप “हटाएँ” पर नहीं टैप करते।"
           }
         }
       }
@@ -246401,6 +246863,83 @@
         }
       }
     },
+    "내보내기|Export" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エクスポート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯出"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esporta"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xuất"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekspor"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งออก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "निर्यात करें"
+          }
+        }
+      }
+    },
     "내보내기|Remove" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -246551,6 +247090,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "हटाए गए व्यक्ति को इनवाइट लिंक और पासवर्ड पता है। पासवर्ड बदलने पर वह दोबारा नहीं आ पाएगा।"
+          }
+        }
+      }
+    },
+    "내보낼 파일을 만들지 못했습니다.|Couldn't create the export file." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エクスポート用のファイルを作成できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法创建导出文件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法建立匯出檔案。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Exportdatei konnte nicht erstellt werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de créer le fichier d’export."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile creare il file di esportazione."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo crear el archivo de exportación."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível criar o arquivo de exportação."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể tạo tệp xuất."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak dapat membuat file ekspor."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างไฟล์ส่งออกไม่ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "निर्यात फ़ाइल नहीं बन सकी।"
           }
         }
       }
@@ -257797,6 +258413,83 @@
         }
       }
     },
+    "되돌릴 수 없어요.|This can't be undone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この操作は取り消せません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此操作无法撤销。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此操作無法還原。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das lässt sich nicht rückgängig machen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette action est irréversible."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa azione non può essere annullata."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta acción no se puede deshacer."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não é possível desfazer."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể hoàn tác."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tindakan ini tidak dapat dibatalkan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ย้อนกลับไม่ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इसे वापस नहीं किया जा सकता।"
+          }
+        }
+      }
+    },
     "되돌릴 수 있는 것 {0}건|{0} can be undone" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -267495,6 +268188,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ब्राउज़ करें"
+          }
+        }
+      }
+    },
+    "모은 분류 개선 데이터를 지울까요?|Delete the collected classification data?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "収集した分類改善データを削除しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要删除已收集的分类改进数据吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除已收集的分類改進資料嗎？"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesammelte Daten zur Klassifizierungsverbesserung löschen?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer les données d’amélioration de la classification collectées ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminare i dati raccolti per migliorare la classificazione?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Eliminar los datos recopilados para mejorar la clasificación?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagar os dados coletados para melhorar a classificação?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa dữ liệu cải thiện phân loại đã thu thập?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus data peningkatan klasifikasi yang terkumpul?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบข้อมูลปรับปรุงการจัดหมวดหมู่ที่เก็บไว้หรือไม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एकत्र किया गया वर्गीकरण सुधार डेटा हटाएँ?"
           }
         }
       }
@@ -280820,6 +281590,83 @@
         }
       }
     },
+    "분류 개선 데이터 수집|Collect classification improvement data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分類改善データを収集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收集分类改进数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收集分類改進資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daten zur Klassifizierungsverbesserung sammeln"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collecter des données d’amélioration de la classification"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raccogli dati per migliorare la classificazione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recopilar datos para mejorar la clasificación"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coletar dados para melhorar a classificação"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thu thập dữ liệu cải thiện phân loại"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kumpulkan data peningkatan klasifikasi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เก็บข้อมูลปรับปรุงการจัดหมวดหมู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "वर्गीकरण सुधार डेटा एकत्र करें"
+          }
+        }
+      }
+    },
     "분류 고치기|Edit categories" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -289286,6 +290133,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "स्थिति"
+          }
+        }
+      }
+    },
+    "새 공지가 없습니다|No new announcements" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいお知らせはありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有新的公告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有新的公告"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine neuen Mitteilungen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune nouvelle annonce"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessun nuovo avviso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay avisos nuevos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhum aviso novo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có thông báo mới"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada pengumuman baru"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่มีประกาศใหม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कोई नई घोषणा नहीं"
           }
         }
       }
@@ -313002,6 +313926,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "रॉ अपलोड करें (2 दिन)"
+          }
+        }
+      }
+    },
+    "어젯밤 {0} 밤잠이라 시작이 낮아요|Only {0} of sleep last night, so the start is low" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨夜の睡眠は{0}で、スタートが低めです"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨晚只睡了 {0}，所以起点偏低"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨晚只睡了 {0}，所以起點偏低"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur {0} Schlaf letzte Nacht, daher startet die Kurve niedrig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seulement {0} de sommeil cette nuit, le départ est donc bas"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo {0} di sonno stanotte, quindi si parte bassi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo {0} de sueño anoche, así que se empieza bajo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apenas {0} de sono na noite passada, então o início é baixo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đêm qua chỉ ngủ {0} nên điểm bắt đầu thấp"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidur semalam hanya {0}, jadi awalnya rendah"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อคืนนอนแค่ {0} จุดเริ่มต้นจึงต่ำ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कल रात सिर्फ़ {0} नींद ली, इसलिए शुरुआत कम है"
+          }
+        }
+      }
+    },
+    "어젯밤 수면 기록이 없어 기본값으로 그렸어요|No sleep record last night, so the default start is used" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨夜の睡眠記録がないため、初期値で描いています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨晚没有睡眠记录，已按默认值绘制"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨晚沒有睡眠記錄，已依預設值繪製"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Schlafaufzeichnung letzte Nacht – es wird der Standardstart gezeichnet"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun enregistrement de sommeil cette nuit : la courbe part de la valeur par défaut"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessuna registrazione del sonno stanotte: si usa il valore di partenza predefinito"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay registro de sueño de anoche: se usa el valor inicial predeterminado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sem registro de sono na noite passada: usando o início padrão"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có bản ghi giấc ngủ đêm qua nên dùng giá trị mặc định"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada catatan tidur semalam, sehingga digambar dengan nilai awal bawaan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่มีบันทึกการนอนเมื่อคืน จึงวาดจากค่าเริ่มต้น"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कल रात की नींद का रिकॉर्ड नहीं है, इसलिए डिफ़ॉल्ट शुरुआत से बनाया गया"
           }
         }
       }
@@ -340110,6 +341188,83 @@
         }
       }
     },
+    "이 공지 닫기|Dismiss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このお知らせを閉じる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭此公告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉此公告"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Mitteilung schließen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer cette annonce"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiudi questo avviso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerrar este aviso"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fechar este aviso"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đóng thông báo này"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutup pengumuman ini"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปิดประกาศนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस घोषणा को बंद करें"
+          }
+        }
+      }
+    },
     "이 구간만 자세히|Edit this one" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -342647,6 +343802,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "इस दिन कोई नियोजित मार्ग नहीं है, इसलिए केवल वास्तविक मार्ग दिखाया गया है।"
+          }
+        }
+      }
+    },
+    "이 날은 그릴 기록이 없어요|Nothing to draw for this day" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この日は描ける記録がありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这一天没有可绘制的记录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這一天沒有可繪製的記錄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für diesen Tag gibt es nichts zu zeichnen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien à tracer pour ce jour"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niente da disegnare per questo giorno"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay nada que dibujar para este día"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não há nada para desenhar neste dia"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngày này không có gì để vẽ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada yang bisa digambar untuk hari ini"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่มีข้อมูลให้วาดสำหรับวันนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस दिन के लिए बनाने को कुछ नहीं है"
           }
         }
       }
@@ -352430,6 +353662,83 @@
         }
       }
     },
+    "일정 {0}건|{0} events" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "予定 {0}件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 个日程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 個行程"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Termine"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} événements"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} eventi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} eventos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} eventos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} sự kiện"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} acara"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} กำหนดการ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} कार्यक्रम"
+          }
+        }
+      }
+    },
     "일정 고치기|Edit plans by chatting" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -357277,6 +358586,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "बाँटना रद्द करें"
+          }
+        }
+      }
+    },
+    "자세히|Details" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "详情"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細資訊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Détails"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dettagli"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detalles"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detalhes"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chi tiết"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detail"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รายละเอียด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "विवरण"
           }
         }
       }
@@ -386926,6 +388312,83 @@
         }
       }
     },
+    "컨디션 에너지 곡선|Condition energy curve" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コンディション・エネルギー曲線"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态能量曲线"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "狀態能量曲線"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energiekurve"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Courbe d’énergie"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Curva dell’energia"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Curva de energía"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Curva de energia"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đường cong năng lượng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurva energi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กราฟพลังงาน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऊर्जा वक्र"
+          }
+        }
+      }
+    },
     "켜기|Turn on" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -386999,6 +388462,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "चालू करें"
+          }
+        }
+      }
+    },
+    "켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オンにすると、分類を修正するたびに、時間帯・長さ・平均速度・歩数・修正前の分類→修正後の分類と確信度だけが端末に蓄積されます。座標・場所の名前・予定のタイトル・日付は含まれません。自動では送信せず、「エクスポート」を押したときだけファイルとして出力されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开启后，每次修改分类时，只会在设备上保存时间段、时长、平均速度、步数，以及修改前→修改后的分类和置信度。不包含坐标、地点名称、日程标题和日期。不会自动发送，只有点击“导出”时才会生成文件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟後，每次修改分類時，只會在裝置上儲存時段、時長、平均速度、步數，以及修改前→修改後的分類和信心度。不包含座標、地點名稱、行程標題和日期。不會自動傳送，只有點選「匯出」時才會產生檔案。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn aktiviert, werden bei jeder Korrektur einer Klassifizierung nur Tageszeit, Dauer, Durchschnittsgeschwindigkeit, Schritte sowie die Klassifizierung davor → danach mit Konfidenz auf diesem Gerät gespeichert. Koordinaten, Ortsnamen, Termintitel und Datumsangaben sind nie enthalten. Nichts wird automatisch gesendet; eine Datei verlässt das Gerät nur, wenn du auf „Exportieren“ tippst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si cette option est activée, à chaque correction de classification, seuls l’heure de la journée, la durée, la vitesse moyenne, le nombre de pas et la classification avant → après avec sa confiance sont conservés sur cet appareil. Les coordonnées, noms de lieux, titres d’événements et dates ne sont jamais inclus. Rien n’est envoyé automatiquement ; un fichier ne sort que lorsque vous touchez « Exporter »."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se attivo, a ogni correzione di una classificazione vengono salvati su questo dispositivo solo fascia oraria, durata, velocità media, numero di passi e la classificazione prima → dopo con la sua affidabilità. Coordinate, nomi di luoghi, titoli di eventi e date non sono mai inclusi. Non viene inviato nulla in automatico; un file esce dal dispositivo solo quando tocchi «Esporta»."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si lo activas, cada vez que corrijas una clasificación solo se guardan en este dispositivo la franja horaria, la duración, la velocidad media, los pasos y la clasificación anterior → nueva con su confianza. Nunca se incluyen coordenadas, nombres de lugares, títulos de eventos ni fechas. No se envía nada automáticamente; un archivo solo sale cuando tocas «Exportar»."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ativado, a cada correção de classificação somente o horário, a duração, a velocidade média, os passos e a classificação antes → depois com a confiança ficam guardados neste aparelho. Coordenadas, nomes de lugares, títulos de eventos e datas nunca são incluídos. Nada é enviado automaticamente; um arquivo só sai quando você toca em “Exportar”."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi bật, mỗi lần bạn sửa phân loại, chỉ khung giờ, thời lượng, tốc độ trung bình, số bước chân và phân loại trước → sau kèm độ tin cậy được lưu trên thiết bị. Tọa độ, tên địa điểm, tiêu đề sự kiện và ngày không bao giờ được đưa vào. Không gì được gửi tự động; tệp chỉ rời thiết bị khi bạn nhấn “Xuất”."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika diaktifkan, setiap kali Anda memperbaiki klasifikasi, hanya waktu dalam sehari, durasi, kecepatan rata-rata, jumlah langkah, serta klasifikasi sebelum → sesudah beserta tingkat keyakinannya yang disimpan di perangkat ini. Koordinat, nama tempat, judul acara, dan tanggal tidak pernah disertakan. Tidak ada yang dikirim otomatis; file hanya keluar saat Anda mengetuk “Ekspor”."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อเปิด ทุกครั้งที่คุณแก้การจัดหมวดหมู่ จะเก็บเฉพาะช่วงเวลา ระยะเวลา ความเร็วเฉลี่ย จำนวนก้าว และหมวดหมู่ก่อน → หลังพร้อมความมั่นใจไว้ในอุปกรณ์ จะไม่รวมพิกัด ชื่อสถานที่ ชื่อกำหนดการ และวันที่ ระบบไม่ส่งอัตโนมัติ ไฟล์จะออกจากอุปกรณ์ก็ต่อเมื่อคุณแตะ “ส่งออก”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चालू करने पर, हर बार वर्गीकरण सुधारने पर केवल दिन का समय, अवधि, औसत गति, कदमों की संख्या और पहले → बाद का वर्गीकरण भरोसे के स्तर के साथ इस डिवाइस पर रखा जाता है। निर्देशांक, जगहों के नाम, कार्यक्रम के शीर्षक और तारीखें कभी शामिल नहीं होतीं। कुछ भी अपने आप नहीं भेजा जाता; फ़ाइल तभी बाहर जाती है जब आप “निर्यात करें” पर टैप करते हैं।"
           }
         }
       }

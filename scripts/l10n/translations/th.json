@@ -6110,6 +6110,26 @@
 "결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "ไม่ใช่การชำระเงิน จึงฝากให้ AI ตรวจสอบ",
 "알림 분석|Notification review": "วิเคราะห์การแจ้งเตือน",
 "문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "ข้อความ SMS ใช้เฉพาะข้อความชำระเงินในบัญชีรายรับรายจ่าย และไม่ใช้ AI วิเคราะห์การแจ้งเตือน",
-"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "การแจ้งเตือนจากแอปส่งข้อความจะไม่ถูกส่งให้ AI"
+"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "การแจ้งเตือนจากแอปส่งข้อความจะไม่ถูกส่งให้ AI",
+"{0} 무렵 가장 낮아요 · 에너지 {1}%|Lowest around {0} · energy {1}%": "ต่ำสุดช่วง {0} · พลังงาน {1}%",
+"가장 낮은 때 {0} {1}%|Lowest at {0}, {1}%": "จุดต่ำสุด {0} · {1}%",
+"공지|Announcements": "ประกาศ",
+"그 무렵 일정 {0}건({1})이 겹쳐요|{0} events ({1}) overlap around then": "ช่วงนั้นมี {0} กำหนดการ ({1}) ซ้อนกัน",
+"기기에 {0}건 모음|{0} collected on this device": "เก็บไว้ในอุปกรณ์นี้ {0} รายการ",
+"끄면 더 모으지 않아요. 이미 모은 {0}건은 그대로 두고, 지우려면 「지우기」를 누르세요.|Turning it off stops collecting. The {0} already collected stay until you tap Delete.": "เมื่อปิด ระบบจะหยุดเก็บข้อมูล {0} รายการที่เก็บไว้แล้วจะยังอยู่จนกว่าคุณจะแตะ “ลบ”",
+"내보내기|Export": "ส่งออก",
+"내보낼 파일을 만들지 못했습니다.|Couldn't create the export file.": "สร้างไฟล์ส่งออกไม่ได้",
+"되돌릴 수 없어요.|This can't be undone.": "ย้อนกลับไม่ได้",
+"모은 분류 개선 데이터를 지울까요?|Delete the collected classification data?": "ลบข้อมูลปรับปรุงการจัดหมวดหมู่ที่เก็บไว้หรือไม่",
+"분류 개선 데이터 수집|Collect classification improvement data": "เก็บข้อมูลปรับปรุงการจัดหมวดหมู่",
+"새 공지가 없습니다|No new announcements": "ไม่มีประกาศใหม่",
+"어젯밤 {0} 밤잠이라 시작이 낮아요|Only {0} of sleep last night, so the start is low": "เมื่อคืนนอนแค่ {0} จุดเริ่มต้นจึงต่ำ",
+"어젯밤 수면 기록이 없어 기본값으로 그렸어요|No sleep record last night, so the default start is used": "ไม่มีบันทึกการนอนเมื่อคืน จึงวาดจากค่าเริ่มต้น",
+"이 공지 닫기|Dismiss": "ปิดประกาศนี้",
+"이 날은 그릴 기록이 없어요|Nothing to draw for this day": "ไม่มีข้อมูลให้วาดสำหรับวันนี้",
+"일정 {0}건|{0} events": "{0} กำหนดการ",
+"자세히|Details": "รายละเอียด",
+"컨디션 에너지 곡선|Condition energy curve": "กราฟพลังงาน",
+"켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export.": "เมื่อเปิด ทุกครั้งที่คุณแก้การจัดหมวดหมู่ จะเก็บเฉพาะช่วงเวลา ระยะเวลา ความเร็วเฉลี่ย จำนวนก้าว และหมวดหมู่ก่อน → หลังพร้อมความมั่นใจไว้ในอุปกรณ์ จะไม่รวมพิกัด ชื่อสถานที่ ชื่อกำหนดการ และวันที่ ระบบไม่ส่งอัตโนมัติ ไฟล์จะออกจากอุปกรณ์ก็ต่อเมื่อคุณแตะ “ส่งออก”"
 }
 }

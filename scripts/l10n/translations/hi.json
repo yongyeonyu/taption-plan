@@ -6110,6 +6110,26 @@
 "결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "यह भुगतान नहीं है, इसलिए जाँच के लिए AI को सौंपा गया।",
 "알림 분석|Notification review": "सूचना विश्लेषण",
 "문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "SMS केवल भुगतान संदेशों के लिए खर्च खाते में उपयोग होते हैं। AI सूचना विश्लेषण इस्तेमाल नहीं होता।",
-"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "मैसेजिंग ऐप की सूचनाएँ कभी AI को नहीं भेजी जातीं।"
+"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "मैसेजिंग ऐप की सूचनाएँ कभी AI को नहीं भेजी जातीं।",
+"{0} 무렵 가장 낮아요 · 에너지 {1}%|Lowest around {0} · energy {1}%": "लगभग {0} बजे सबसे कम · ऊर्जा {1}%",
+"가장 낮은 때 {0} {1}%|Lowest at {0}, {1}%": "सबसे कम समय {0}, {1}%",
+"공지|Announcements": "घोषणाएँ",
+"그 무렵 일정 {0}건({1})이 겹쳐요|{0} events ({1}) overlap around then": "उस समय {0} कार्यक्रम ({1}) आपस में टकरा रहे हैं",
+"기기에 {0}건 모음|{0} collected on this device": "इस डिवाइस पर {0} एकत्र",
+"끄면 더 모으지 않아요. 이미 모은 {0}건은 그대로 두고, 지우려면 「지우기」를 누르세요.|Turning it off stops collecting. The {0} already collected stay until you tap Delete.": "बंद करने पर संग्रह रुक जाता है। पहले से एकत्र किए गए {0} तब तक रहेंगे जब तक आप “हटाएँ” पर नहीं टैप करते।",
+"내보내기|Export": "निर्यात करें",
+"내보낼 파일을 만들지 못했습니다.|Couldn't create the export file.": "निर्यात फ़ाइल नहीं बन सकी।",
+"되돌릴 수 없어요.|This can't be undone.": "इसे वापस नहीं किया जा सकता।",
+"모은 분류 개선 데이터를 지울까요?|Delete the collected classification data?": "एकत्र किया गया वर्गीकरण सुधार डेटा हटाएँ?",
+"분류 개선 데이터 수집|Collect classification improvement data": "वर्गीकरण सुधार डेटा एकत्र करें",
+"새 공지가 없습니다|No new announcements": "कोई नई घोषणा नहीं",
+"어젯밤 {0} 밤잠이라 시작이 낮아요|Only {0} of sleep last night, so the start is low": "कल रात सिर्फ़ {0} नींद ली, इसलिए शुरुआत कम है",
+"어젯밤 수면 기록이 없어 기본값으로 그렸어요|No sleep record last night, so the default start is used": "कल रात की नींद का रिकॉर्ड नहीं है, इसलिए डिफ़ॉल्ट शुरुआत से बनाया गया",
+"이 공지 닫기|Dismiss": "इस घोषणा को बंद करें",
+"이 날은 그릴 기록이 없어요|Nothing to draw for this day": "इस दिन के लिए बनाने को कुछ नहीं है",
+"일정 {0}건|{0} events": "{0} कार्यक्रम",
+"자세히|Details": "विवरण",
+"컨디션 에너지 곡선|Condition energy curve": "ऊर्जा वक्र",
+"켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export.": "चालू करने पर, हर बार वर्गीकरण सुधारने पर केवल दिन का समय, अवधि, औसत गति, कदमों की संख्या और पहले → बाद का वर्गीकरण भरोसे के स्तर के साथ इस डिवाइस पर रखा जाता है। निर्देशांक, जगहों के नाम, कार्यक्रम के शीर्षक और तारीखें कभी शामिल नहीं होतीं। कुछ भी अपने आप नहीं भेजा जाता; फ़ाइल तभी बाहर जाती है जब आप “निर्यात करें” पर टैप करते हैं।"
 }
 }

@@ -6110,6 +6110,26 @@
 "결제가 아닌 알림이라 AI에게 확인을 맡겼어요.|Not a payment, so it was sent to your AI to review.": "这不是支付通知，已交给 AI 确认。",
 "알림 분석|Notification review": "通知分析",
 "문자는 결제 문자만 가계부에 넣어요. AI 알림 분석은 쓰지 않아요.|Texts are only used for payment messages in the ledger. AI notification review isn't used.": "短信只会把支付短信记入账本，不使用 AI 通知分析。",
-"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "即时通讯应用的通知不会发送给 AI。"
+"메신저 앱의 알림은 AI에게 보내지 않아요.|Messenger app alerts are never sent to your AI.": "即时通讯应用的通知不会发送给 AI。",
+"{0} 무렵 가장 낮아요 · 에너지 {1}%|Lowest around {0} · energy {1}%": "{0}前后最低 · 能量 {1}%",
+"가장 낮은 때 {0} {1}%|Lowest at {0}, {1}%": "最低时段 {0} {1}%",
+"공지|Announcements": "公告",
+"그 무렵 일정 {0}건({1})이 겹쳐요|{0} events ({1}) overlap around then": "那时有 {0} 个日程（{1}）重叠",
+"기기에 {0}건 모음|{0} collected on this device": "本设备已收集 {0} 条",
+"끄면 더 모으지 않아요. 이미 모은 {0}건은 그대로 두고, 지우려면 「지우기」를 누르세요.|Turning it off stops collecting. The {0} already collected stay until you tap Delete.": "关闭后将不再收集。已收集的 {0} 条会保留，如需清除请点“删除”。",
+"내보내기|Export": "导出",
+"내보낼 파일을 만들지 못했습니다.|Couldn't create the export file.": "无法创建导出文件。",
+"되돌릴 수 없어요.|This can't be undone.": "此操作无法撤销。",
+"모은 분류 개선 데이터를 지울까요?|Delete the collected classification data?": "要删除已收集的分类改进数据吗？",
+"분류 개선 데이터 수집|Collect classification improvement data": "收集分类改进数据",
+"새 공지가 없습니다|No new announcements": "没有新的公告",
+"어젯밤 {0} 밤잠이라 시작이 낮아요|Only {0} of sleep last night, so the start is low": "昨晚只睡了 {0}，所以起点偏低",
+"어젯밤 수면 기록이 없어 기본값으로 그렸어요|No sleep record last night, so the default start is used": "昨晚没有睡眠记录，已按默认值绘制",
+"이 공지 닫기|Dismiss": "关闭此公告",
+"이 날은 그릴 기록이 없어요|Nothing to draw for this day": "这一天没有可绘制的记录",
+"일정 {0}건|{0} events": "{0} 个日程",
+"자세히|Details": "详情",
+"컨디션 에너지 곡선|Condition energy curve": "状态能量曲线",
+"켜면 분류를 고칠 때마다 시간대·길이·평균 속도·걸음 수·바꾸기 전 분류 → 바꾼 분류·확신도만 기기에 쌓아요. 좌표·장소 이름·일정 제목·날짜는 넣지 않아요. 자동으로 보내지 않고, 「내보내기」를 누를 때만 파일로 나가요.|When on, each time you fix a classification only the time of day, length, average speed, step count and the classification before → after with its confidence are kept on this device. Coordinates, place names, event titles and dates are never included. Nothing is sent automatically; a file leaves only when you tap Export.": "开启后，每次修改分类时，只会在设备上保存时间段、时长、平均速度、步数，以及修改前→修改后的分类和置信度。不包含坐标、地点名称、日程标题和日期。不会自动发送，只有点击“导出”时才会生成文件。"
 }
 }
