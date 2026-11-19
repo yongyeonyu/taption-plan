@@ -110,7 +110,7 @@ function chargeBudget(budget, entry, now) {
 }
 
 const TASK_OPEN = new Set(["waiting", "processing", "asked"]);
-const TASK_PRIORITY = ["payment_text", "receipt_text", "payment_rule"];
+const TASK_PRIORITY = ["payment_text", "receipt_text", "payment_rule", "notification_review"];
 const taskRank = (kind) => { const i = TASK_PRIORITY.indexOf(kind); return i < 0 ? TASK_PRIORITY.length : i; };
 
 // 시간이 지난 일을 정리하고 남은 것을 돌려준다. 가져간 지 오래된 것은 대기로, 여러 번 넘긴 것은 실패로,

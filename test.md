@@ -16,6 +16,7 @@
 
 ### AI·PCC
 
+- NTR1119A01 · 서버 `notification_review` 일 종류 추가(앱이 가계부로 읽지 않은 일반 알림을 AI가 일정·메모로 처리) · 대표 몫(서버 배포 `npx wrangler deploy`) · 앱 쪽 업로드는 별도 ID(메인 세션)
 - PCC1118A01 · PCC는 entitlement 승인 전까지 꺼 둠(`AppleModelEnvironment.isPrivateCloudComputeEnabled = false`). 승인 뒤 entitlement 넣기·스위치 켜기·`PRIVACY.md` 한 줄(초안: 메모 다듬기 등 일부 글은 Apple Private Cloud Compute에서 처리될 수 있고, 좌표가 든 글은 보내지 않으며, Apple은 처리 뒤 보관하지 않음)을 **같은 커밋**에 넣고 지원 기기에서 확인. 지출·일정 초안·하루 요약은 라우터에 아직 잇지 않음 · 승인(PCC entitlement), 대표 몫(Apple Small Business Program 가입 신청함 — 접수되면 대표가 알려 줌), 코드(초안·요약 연결) · `docs/APPLE_FOUNDATION_MODELS.md`
 - CRV1118A01 후속 ① · 메모 저장 상한(`TaptionPlanMemoRecord.maximumTextLength` 1,000자)이 다듬기 상한(기기 1,500 / PCC 12,000)보다 작아, 1,500자 넘는 메모를 연결된 AI로 넘기는 길은 저장되지 않음 · 대표 결정(상한을 어떻게 맞출지)
 - CRV1118A01 후속 ② · 사용자가 직접 「연결된 AI에게 맡기기」를 고르면 좌표가 든 메모도 중계로 감(예전 동작) · 대표 결정(막을지)
@@ -128,6 +129,12 @@
 - COM1016A01 개인정보 라벨·해외 대기질·Watch iCloud, IAP 재개, 앱 스토어 메타데이터, Cloudflare 유료, UI 자동화 다시 시도
 
 ### 요청 상세
+
+#### NTR1119A01 · 서버 notification_review 일 종류
+- 원인: 앱이 받은 글 중 가계부로 처리되지 않는 일반 알림(예매·예약·배송)은 서버 일 종류에 없어 AI가 처리할 길이 없었다.
+- 해결: `server/trip-relay`의 `TASK_KINDS`·`TASK_PRIORITY`(결제 계열 뒤)에 `notification_review` 추가, MCP `INSTRUCTIONS`·`get_ai_tasks` 설명(공연·영화는 `addSchedule`+`setCalendarTitleDetail` `activity.performanceMovie`, 일시 있는 예약은 일정, 단순 기록은 메모, 광고는 ignored 완료), openapi 설명, `docs/ACTIVITY_RELAY_API.md` 9.1.
+- 검증 기준: `npm test` 전체 통과, 업로드 검증·MCP/`GET /tasks`의 kind·context·지침 문구 시험.
+- 상태: 코드·단위 시험 끝(검증 기록 참고). 한계: 서버 배포는 대표 몫, 배포 전에는 앱이 올려도 서버가 모르는 종류로 거절한다.
 
 2026-11-18(DOC1118A01)에 `temp.md`에서 내용을 바꾸지 않고 옮겼습니다. 제목 단계만 낮췄고, 「대표 실기기 확인」 목록은 `## 실기기 확인 목록` 「2026-11-11 이전 목록」 표로 옮겼습니다. 요청을 닫을 때는 여기 절과 위 색인 줄을 함께 지우고 결과를 `## 검증 기록`에 남깁니다.
 
@@ -1167,6 +1174,11 @@
 - `cd server/trip-relay && npm test`: 247건 실행, 통과 247, 실패 0, 건너뜀 0(새 `test/d1kv.test.mjs` 10건 포함). 로그 `build/validation/D1R1119A01/npm-test-1.log`(첫 실행 `npm-test.log`는 시험 코드의 키 이름 오타 1건 실패, 고친 뒤 재실행).
 - 새 시험이 확인한 것: TTL(ms 저장·만료 get null·list 제외·행 삭제), 옛 KV에서 읽으면 D1로 복사·남은 TTL 유지·다음엔 D1에서 읽힘, 옛 KV 없는 환경, 삭제 표식으로 옛 키 비부활(영구·TTL·덮어쓴 뒤 만료), list의 prefix·limit·cursor·list_complete와 양쪽 합치기·중복 제거, 서버 요청 전체에서 옛 KV 쓰기 0건.
 - 확인하지 못한 것: 실제 Cloudflare D1(시험 D1은 `node:sqlite` 위의 가짜), 배포·마이그레이션 적용(대표 몫).
+### NTR1119A01 · 서버 notification_review (2026-11-19, 서버 단위 시험만, 앱·실기기 없음)
+
+- `cd server/trip-relay && npm test`: 240건 통과·실패 0·건너뜀 0(새 `test/notification-review.test.mjs` 3건 포함). 로그 `build/validation/NTR1119A01/npm-test.log`.
+- 확인한 것: `isTaskUpload`가 context 있음/없음을 받고 모르는 kind를 거절, `POST /tasks`로 올린 일이 `GET /tasks`와 `get_ai_tasks`에 kind·context 그대로 나옴(MCP에서 `sourceApp`은 `untrusted_user_text`로 감싸임), 결제 글이 먼저, INSTRUCTIONS·도구 설명에 `notification_review`·`activity.performanceMovie`.
+- 한계: 서버 배포·실제 AI 왕복은 하지 않음(대표 몫).
 
 ### TFB1118A02 · TestFlight 351 (2026-11-18)
 
