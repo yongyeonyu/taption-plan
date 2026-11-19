@@ -1200,6 +1200,12 @@
 - `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과. Release 오브젝트에 `-seasonPackDate`·`-seasonPackPreview` 문자열 없음(DEBUG 전용 확인).
 - 시뮬레이터에서 눈으로 보지 않은 것: 트리·산타·의상 렌더, 아이콘 위치, 캐럴·가사 시각. 아이폰 11 Pro 확인은 `## 실기기 확인 목록`의 SEA1119A01 줄. 로그 `build/validation/SEA1119A01/`.
 
+### MRG1119B01 · 시즌 팩(SEA1119A01)·표본 보내기(MSC1119B01) 머지 검증 (2026-11-19, 메인 세션, 시뮬레이터 iPhone 17)
+- 시즌 팩만 합친 main: `SeasonPackKit` 패키지 77건 통과, import 경계·구조 점검 통과, 앱 전체 단위 시험 3,176건 중 실패 0·건너뜀 26(`build/validation/SEA1119V01/unit2.xcresult`). 첫 실행은 시험 실행기가 연결 전에 멈춰 코드 실패가 아니었고, 시뮬레이터를 껐다 켜서 다시 돌려 통과.
+- 표본 보내기까지 합친 main: 서버 `npm test` 292건 통과, 구조 점검 통과, `check.py` 실패 0(시즌 팩의 「시즌 팩 음원 출처」 12개 언어 번역을 메인 세션이 채움). 앱 전체 단위 시험 3,184건 중 3,157 통과·실패 1·건너뜀 26(`build/validation/SEA1119V02/unit3.xcresult`).
+- 실패 1건은 `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`(위 PRF1117A02 기록에도 있는 `UIWindowScene` 없음 간헐 실패). 이 시험만 2회 다시 돌려 1회 통과·1회 실패라 이번 머지와 무관한 간헐 실패로 본다.
+- 눈으로 못 본 것: 시즌 팩 트리·산타·의상·캐럴 화면, 표본 「서버로 보내기」 시트. 아이폰 11 Pro 확인은 대표 몫.
+
 ### TFB1119A04 · TestFlight 354 (2026-11-19, 대표 선택 「지금 354 빌드 올리기」)
 - `scripts/testflight/release.sh --yes --request-id TFB1119A04`를 빌드 잠금 안에서 실행해 종료 코드 0. 빌드 번호 353 → 354, 산출물의 앱·위젯·Watch·Watch 위젯 네 번들이 모두 354(`pbxproj`의 `CURRENT_PROJECT_VERSION`과 네 `Info.plist` 일치).
 - 처리 `VALID`, 내부 그룹 「TP Taption Plan 내부 테스트」 연결, 그룹 화면의 빌드 354 노출, 테스터 1명 노출(`build/validation/TFB1119A04/testflight-report.json`, git 무시 대상).
