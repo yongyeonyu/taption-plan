@@ -128,6 +128,28 @@ final class LedgerTollGateTests: XCTestCase {
         XCTAssertEqual(LedgerTollGate.plaza("가짜", language: .english), "가짜 toll plaza")
     }
 
+    /// 아이폰 18 11/20: 「인천 영업소 통행료」로 들어가 고속도로 표지 없이 기차 아이콘이 붙었다(TGT1120A01).
+    func testTitleNamesTheHighwaySoTheRouteShieldShows() throws {
+        var incheon = pass(north, 9.5)
+        incheon.name = "인천"
+        incheon.route = "경인선"
+        let single = try XCTUnwrap(addition(try XCTUnwrap(LedgerTollGate.trip([incheon])), .known(normal: 900, distanceKm: 10)))
+        XCTAssertEqual(single.entry.title, "경인고속도로 통행료")
+        XCTAssertEqual(single.entry.note, "지난 톨게이트로 자동 추가 · 인천 영업소 · 정상요금 900원", "09:30은 출근 할인(07~09시) 뒤라 정상요금")
+        XCTAssertEqual(LedgerHighway.number(for: single.entry), 120)
+
+        var entry = pass(north, 8.1), exit = pass(south, 8.5)
+        entry.route = "수도권제1순환선"; exit.route = "수도권제1순환선"
+        let closed = try XCTUnwrap(addition(try XCTUnwrap(LedgerTollGate.trip([entry, exit])), .known(normal: 900, distanceKm: 13)))
+        XCTAssertEqual(closed.entry.title, "수도권제1순환고속도로 통행료")
+        XCTAssertEqual(LedgerHighway.number(for: closed.entry), 100)
+        exit.route = "경인선"
+        XCTAssertEqual(addition(try XCTUnwrap(LedgerTollGate.trip([entry, exit])), .known(normal: 900, distanceKm: 13))?.entry.title,
+                       "가짜북 영업소 → 가짜남 영업소 통행료", "노선이 바뀌면 영업소 이름으로")
+        XCTAssertNil(LedgerTollGate.highway("  ", language: .korean))
+        XCTAssertEqual(LedgerTollGate.highway("경인고속도로", language: .korean), "경인고속도로")
+    }
+
     func testCandidatesKeepHandledPaidUnsettledAndUnmatchedDrivesOut() {
         var drive = LedgerTollRepeat.Drive(from: "집", to: "회사", start: at(8), end: at(8.6))
         drive.passes = [pass(north, 8.1), pass(south, 8.5)]
@@ -176,6 +198,26 @@ final class LedgerTollGateTests: XCTestCase {
         XCTAssertNil(TollUnitStore.decode(Data("{\"error\":\"ex_key_missing\"}".utf8)))
         let many = Array(repeating: one, count: TollUnitStore.maximumUnits + 5).joined(separator: ",")
         XCTAssertEqual(TollUnitStore.decode(Data("{\"units\":[\(many)]}".utf8))?.count, TollUnitStore.maximumUnits)
+    }
+
+    /// TGT1120A02: 등록 안 한 곳(영화관)에서 집으로 온 차 이동도 지난 톨게이트로는 본다. 같은 길 방식에는 넣지 않는다.
+    func testUnnamedStartDriveIsKeptForGatesOnly() {
+        func move(_ from: String?, _ to: String?, _ start: String, _ end: String) -> AssistantActivityDay.Move {
+            AssistantActivityDay.Move(from: from, to: to, mode: "car", start: start, end: end, minutes: 40)
+        }
+        let day = AssistantActivityDay(
+            date: "2026-11-19", timeZone: "Asia/Seoul",
+            summary: .init(categories: [], recordedMinutes: 0, steps: nil, plansScheduled: 0, plansCompleted: 0),
+            records: [], memos: [],
+            moves: [move("집", "회사", "2026-11-19T09:31+09:00", "2026-11-19T10:08+09:00"),
+                    move("머문 곳", "집", "2026-11-19T20:58+09:00", "2026-11-19T21:42+09:00"),
+                    move(nil, "집", "2026-11-19T22:00+09:00", "2026-11-19T22:10+09:00")]
+        )
+        let named = LedgerTollRepeatRunner.carDrives(day, language: .korean)
+        XCTAssertEqual(named.map(\.from), ["집"])
+        let all = LedgerTollRepeatRunner.carDrives(day, language: .korean, includeUnnamed: true)
+        XCTAssertEqual(all.count, 3)
+        XCTAssertEqual(all.map(\.named), [true, false, false])
     }
 }
 

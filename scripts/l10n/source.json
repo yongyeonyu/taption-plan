@@ -3706,7 +3706,7 @@
    "ko": "{0} → {1} 통행료",
    "en": "Toll: {0} → {1}",
    "files": [
-    "LedgerTollGate.swift:211"
+    "LedgerTollGate.swift:216"
    ],
    "args": [
     "from",
@@ -4125,7 +4125,7 @@
    "ko": "{0} 영업소",
    "en": "{0} toll plaza",
    "files": [
-    "LedgerTollGate.swift:229"
+    "LedgerTollGate.swift:246"
    ],
    "args": [
     "name"
@@ -4384,11 +4384,12 @@
    "ko": "{0} 통행료",
    "en": "Toll: {0}",
    "files": [
-    "LedgerTollGate.swift:216",
-    "LedgerTollGate.swift:427"
+    "LedgerTollGate.swift:214",
+    "LedgerTollGate.swift:223",
+    "LedgerTollGate.swift:444"
    ],
    "args": [
-    "route"
+    "road"
    ],
    "targets": [
     "TaptionPlan"
@@ -4688,6 +4689,20 @@
    ],
    "args": [
     "value"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0}고속도로|{0} Expressway",
+   "ko": "{0}고속도로",
+   "en": "{0} Expressway",
+   "files": [
+    "LedgerTollGate.swift:242"
+   ],
+   "args": [
+    "base"
    ],
    "targets": [
     "TaptionPlan"
@@ -36641,7 +36656,7 @@
    "ko": "고속도로",
    "en": "Expressway",
    "files": [
-    "LedgerTollGate.swift:426"
+    "LedgerTollGate.swift:443"
    ],
    "args": [],
    "targets": [
@@ -60680,7 +60695,7 @@
    "ko": "정상요금 {0}",
    "en": "Normal fare {0}",
    "files": [
-    "LedgerTollGate.swift:223"
+    "LedgerTollGate.swift:230"
    ],
    "args": [
     "money"
@@ -61706,7 +61721,7 @@
    "ko": "지난 톨게이트로 자동 추가",
    "en": "Added from the toll plazas passed",
    "files": [
-    "LedgerTollGate.swift:222"
+    "LedgerTollGate.swift:229"
    ],
    "args": [],
    "targets": [
@@ -64142,7 +64157,7 @@
    "ko": "카카오 길찾기로 자동 추가",
    "en": "Added from Kakao directions",
    "files": [
-    "LedgerTollGate.swift:429"
+    "LedgerTollGate.swift:446"
    ],
    "args": [],
    "targets": [
@@ -64154,7 +64169,7 @@
    "ko": "카카오 예상 통행료",
    "en": "Kakao estimated toll",
    "files": [
-    "LedgerTollGate.swift:430"
+    "LedgerTollGate.swift:447"
    ],
    "args": [],
    "targets": [
@@ -64987,11 +65002,11 @@
    ]
   },
   {
-   "key": "통행료 차종|Toll vehicle",
-   "ko": "통행료 차종",
-   "en": "Toll vehicle",
+   "key": "통행료 금액 확인 필요|Check the toll amount",
+   "ko": "통행료 금액 확인 필요",
+   "en": "Check the toll amount",
    "files": [
-    "AssistantDataCommands.swift:686"
+    "LedgerReviewBand.swift:88"
    ],
    "args": [],
    "targets": [
@@ -64999,11 +65014,11 @@
    ]
   },
   {
-   "key": "통행료 할인 시간에 걸침|Toll near a discount time",
-   "ko": "통행료 할인 시간에 걸침",
-   "en": "Toll near a discount time",
+   "key": "통행료 차종|Toll vehicle",
+   "ko": "통행료 차종",
+   "en": "Toll vehicle",
    "files": [
-    "LedgerReviewBand.swift:88"
+    "AssistantDataCommands.swift:686"
    ],
    "args": [],
    "targets": [

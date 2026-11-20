@@ -1,5 +1,5 @@
 {
- "ui": 5453,
+ "ui": 5454,
  "catalog": 509,
  "unread": [
   {
@@ -160,7 +160,7 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerTollGate.swift",
-   "line": 221,
+   "line": 228,
    "ko": "normal",
    "en": "language"
   },

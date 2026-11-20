@@ -1310,79 +1310,79 @@
         }
       }
     },
-    "1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요.\n2. Muse에서 커스텀 커넥터(MCP 서버)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Muse 화면을 따라 주세요. 주소만 받는 화면이면 「연결 안내 한 번에 복사」 안내에 든 키 포함 주소를 써요.\n5. 저장한 뒤 Muse에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.|1. Pick access and period above, then tap Make a Muse key.\n2. In Muse, open the screen for adding a custom connector (MCP server).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Muse's screen. If it only takes a URL, use the key URL in the setup from Copy everything at once.\n5. Save, then ask Muse something like \"read today's records\" to check." : {
+    "1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요. 연결 안내가 복사돼요.\n2. Muse 채팅에 연결 안내를 붙여 넣고, 원격 MCP 서버에 연결하는 맞춤 커넥터를 만들어 달라고 요청해요.\n3. Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.\n4. 「오늘 기록 읽어 줘」처럼 물어 확인해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|1. Pick access and period above, then tap Make a Muse key. The setup is copied.\n2. Paste the setup into the Muse chat and ask it to create a custom connector to the remote MCP server.\n3. When Muse asks for the key, enter the connection key in Muse's secure input, not in the chat text.\n4. Ask something like \"read today's records\" to check. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. 上で権限と期間を選び、「Muse接続キーを作成」をタップします。\n2. Museでカスタムコネクタ（MCPサーバー）を追加する画面を開きます。\n3. サーバーアドレスにMCP URLを貼り付けます。\n4. 認証欄（リクエストヘッダー）にAuthorization: Bearerに続けて接続キーを貼り付けます。欄の名前はMuseの画面に合わせてください。URLだけを受け付ける画面なら、「接続案内をまとめてコピー」の案内に含まれるキー入りURLを使います。\n5. 保存したら、Museに「今日の記録を読んで」のように聞いて確認します。"
+            "value" : "1. 上で権限と期間を選び、「Muse 接続キーを作成」をタップします。接続の案内がコピーされます。\n2. Muse のチャットに接続の案内を貼り付け、リモート MCP サーバーに接続するカスタムコネクタを作るよう頼みます。\n3. Muse がキーを尋ねたら、チャット本文ではなく Muse のセキュア入力欄に接続キーを入力します。\n4. 「今日の記録を読んで」のように尋ねて確認します。韓国の App Store にはまだ Muse アプリがないので、アプリがなければウェブ版を使います。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. 在上方选择权限和期限，然后点按“创建 Muse 连接密钥”。\n2. 在 Muse 中打开添加自定义连接器（MCP 服务器）的页面。\n3. 将 MCP 地址粘贴到服务器地址栏。\n4. 在认证栏（请求头）中输入 Authorization: Bearer，后面接连接密钥。栏位名称以 Muse 页面为准。如果只接受地址，请使用“一次复制全部连接说明”中带密钥的地址。\n5. 保存后，向 Muse 提问“读取今天的记录”之类的内容来确认。"
+            "value" : "1. 在上方选择权限和期限，然后点按“创建 Muse 连接密钥”。连接说明会被复制。\n2. 将连接说明粘贴到 Muse 聊天中，并请它创建连接远程 MCP 服务器的自定义连接器。\n3. 当 Muse 询问密钥时，请把连接密钥填入 Muse 的安全输入框，而不是聊天正文。\n4. 问一句“读取今天的记录”之类的内容来确认。韩国 App Store 暂时没有 Muse 应用，没有应用时请使用网页版。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. 在上方選擇權限和期限，然後點一下「建立 Muse 連線金鑰」。\n2. 在 Muse 中開啟新增自訂連接器（MCP 伺服器）的畫面。\n3. 將 MCP 網址貼到伺服器位址欄。\n4. 在驗證欄（請求標頭）中輸入 Authorization: Bearer，後面接連線金鑰。欄位名稱以 Muse 畫面為準。如果只接受網址，請使用「一次複製全部連線說明」中含金鑰的網址。\n5. 儲存後，向 Muse 詢問「讀取今天的紀錄」之類的內容來確認。"
+            "value" : "1. 在上方選擇權限和期限，然後點按「建立 Muse 連線金鑰」。連線說明會被複製。\n2. 將連線說明貼到 Muse 聊天中，並請它建立連接遠端 MCP 伺服器的自訂連接器。\n3. 當 Muse 詢問金鑰時，請把連線金鑰輸入 Muse 的安全輸入框，而不是聊天內文。\n4. 問一句「讀取今天的記錄」之類的內容來確認。韓國 App Store 目前沒有 Muse App，沒有 App 時請使用網頁版。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Wähle oben Zugriff und Zeitraum und tippe auf „Muse-Schlüssel erstellen“.\n2. Öffne in Muse den Bildschirm zum Hinzufügen eines benutzerdefinierten Connectors (MCP-Server).\n3. Füge die MCP-URL als Serveradresse ein.\n4. Gib im Authentifizierungsfeld (Request-Header) Authorization: Bearer gefolgt vom Verbindungsschlüssel ein. Die Feldnamen richten sich nach dem Muse-Bildschirm. Wenn nur eine URL akzeptiert wird, nimm die URL mit Schlüssel aus der Anleitung von „Alles auf einmal kopieren“.\n5. Speichere und frage Muse dann zur Kontrolle etwas wie „Lies die heutigen Einträge vor“."
+            "value" : "1. Wähle oben Berechtigung und Zeitraum und tippe auf „Muse-Verbindungsschlüssel erstellen“. Die Verbindungsanleitung wird kopiert.\n2. Füge die Anleitung in den Muse-Chat ein und bitte Muse, einen benutzerdefinierten Connector zum Remote-MCP-Server zu erstellen.\n3. Wenn Muse nach dem Schlüssel fragt, gib den Verbindungsschlüssel in Muses sicherem Eingabefeld ein, nicht im Chattext.\n4. Frage zur Kontrolle z. B. „Lies die heutigen Einträge“. Muse ist noch nicht im koreanischen App Store, nutze ohne App die Webversion."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Ci-dessus, choisissez l'accès et la période, puis touchez « Créer une clé Muse ».\n2. Dans Muse, ouvrez l'écran d'ajout d'un connecteur personnalisé (serveur MCP).\n3. Collez l'URL MCP comme adresse du serveur.\n4. Dans le champ d'authentification (en-tête de requête), saisissez Authorization: Bearer suivi de la clé de connexion. Les noms des champs suivent l'écran de Muse. Si seule une URL est acceptée, utilisez l'URL avec clé des instructions de « Tout copier d'un coup ».\n5. Enregistrez, puis demandez à Muse par exemple « lis les enregistrements d'aujourd'hui » pour vérifier."
+            "value" : "1. Choisissez ci-dessus l’accès et la durée, puis touchez « Créer une clé Muse ». Les instructions de connexion sont copiées.\n2. Collez-les dans le chat Muse et demandez de créer un connecteur personnalisé vers le serveur MCP distant.\n3. Quand Muse demande la clé, saisissez la clé de connexion dans le champ de saisie sécurisé de Muse, pas dans le texte du chat.\n4. Vérifiez en demandant par exemple « lis les enregistrements d’aujourd’hui ». Muse n’est pas encore sur l’App Store coréen : sans l’app, utilisez la version web."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Qui sopra scegli accesso e periodo, poi tocca «Crea chiave Muse».\n2. In Muse apri la schermata per aggiungere un connettore personalizzato (server MCP).\n3. Incolla l'URL MCP come indirizzo del server.\n4. Nel campo di autenticazione (header della richiesta) inserisci Authorization: Bearer seguito dalla chiave di connessione. I nomi dei campi seguono la schermata di Muse. Se accetta solo un URL, usa l'URL con chiave delle istruzioni di «Copia tutto in una volta».\n5. Salva, poi chiedi a Muse qualcosa come «leggi i record di oggi» per verificare."
+            "value" : "1. Scegli sopra accesso e durata, poi tocca «Crea chiave Muse». Le istruzioni di connessione vengono copiate.\n2. Incollale nella chat di Muse e chiedi di creare un connettore personalizzato verso il server MCP remoto.\n3. Quando Muse chiede la chiave, inserisci la chiave di connessione nel campo di inserimento sicuro di Muse, non nel testo della chat.\n4. Verifica chiedendo, per esempio, «leggi i record di oggi». Muse non è ancora sull’App Store coreano: senza l’app usa la versione web."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Arriba, elige el acceso y el periodo y toca «Crear clave de Muse».\n2. En Muse, abre la pantalla para añadir un conector personalizado (servidor MCP).\n3. Pega la URL de MCP como dirección del servidor.\n4. En el campo de autenticación (encabezado de la solicitud), escribe Authorization: Bearer seguido de la clave de conexión. Los nombres de los campos dependen de la pantalla de Muse. Si solo admite una URL, usa la URL con clave de las instrucciones de «Copiar todo de una vez».\n5. Guarda y pregúntale a Muse algo como «lee los registros de hoy» para comprobarlo."
+            "value" : "1. Elige arriba el acceso y el periodo, y toca «Crear clave de Muse». Se copian las instrucciones de conexión.\n2. Pégalas en el chat de Muse y pídele que cree un conector personalizado al servidor MCP remoto.\n3. Cuando Muse pida la clave, introduce la clave de conexión en el campo de entrada seguro de Muse, no en el texto del chat.\n4. Comprueba preguntando, por ejemplo, «lee los registros de hoy». Muse aún no está en la App Store de Corea: sin la app, usa la versión web."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Acima, escolha o acesso e o período e toque em \"Criar chave do Muse\".\n2. No Muse, abra a tela para adicionar um conector personalizado (servidor MCP).\n3. Cole a URL do MCP como endereço do servidor.\n4. No campo de autenticação (cabeçalho da requisição), digite Authorization: Bearer seguido da chave de conexão. Os nomes dos campos seguem a tela do Muse. Se ela aceitar só uma URL, use a URL com chave das instruções de \"Copiar tudo de uma vez\".\n5. Salve e pergunte ao Muse algo como \"leia os registros de hoje\" para conferir."
+            "value" : "1. Escolha acima o acesso e o período e toque em “Criar chave do Muse”. As instruções de conexão são copiadas.\n2. Cole as instruções no chat do Muse e peça para criar um conector personalizado para o servidor MCP remoto.\n3. Quando o Muse pedir a chave, digite a chave de conexão no campo de entrada seguro do Muse, não no texto do chat.\n4. Confirme perguntando, por exemplo, “leia os registros de hoje”. O Muse ainda não está na App Store coreana: sem o app, use a versão web."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Ở trên, chọn quyền truy cập và thời hạn, rồi chạm \"Tạo khóa Muse\".\n2. Trong Muse, mở màn hình thêm trình kết nối tùy chỉnh (máy chủ MCP).\n3. Dán URL MCP vào ô địa chỉ máy chủ.\n4. Trong ô xác thực (header yêu cầu), nhập Authorization: Bearer rồi đến khóa kết nối. Tên ô theo màn hình của Muse. Nếu chỉ nhận URL, hãy dùng URL có khóa trong hướng dẫn của \"Sao chép tất cả một lần\".\n5. Lưu lại, rồi hỏi Muse thử như \"đọc ghi chép hôm nay\" để kiểm tra."
+            "value" : "1. Chọn quyền và thời hạn ở trên rồi nhấn “Tạo khóa Muse”. Hướng dẫn kết nối sẽ được sao chép.\n2. Dán hướng dẫn vào cuộc trò chuyện Muse và nhờ Muse tạo trình kết nối tùy chỉnh tới máy chủ MCP từ xa.\n3. Khi Muse hỏi khóa, hãy nhập khóa kết nối vào ô nhập bảo mật của Muse, không nhập vào nội dung trò chuyện.\n4. Hỏi thử kiểu “đọc các bản ghi hôm nay” để kiểm tra. Muse chưa có trên App Store Hàn Quốc, nếu chưa có ứng dụng hãy dùng bản web."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Di atas, pilih akses dan periode, lalu ketuk \"Buat kunci Muse\".\n2. Di Muse, buka layar untuk menambahkan konektor kustom (server MCP).\n3. Tempel URL MCP sebagai alamat server.\n4. Di kolom autentikasi (header permintaan), masukkan Authorization: Bearer diikuti kunci koneksi. Nama kolom mengikuti layar Muse. Jika hanya menerima URL, gunakan URL berisi kunci dari panduan \"Salin semuanya sekaligus\".\n5. Simpan, lalu tanyakan sesuatu seperti \"baca catatan hari ini\" ke Muse untuk memeriksa."
+            "value" : "1. Pilih akses dan jangka waktu di atas, lalu ketuk “Buat kunci Muse”. Panduan koneksi akan disalin.\n2. Tempel panduan ke obrolan Muse dan minta Muse membuat konektor kustom ke server MCP jarak jauh.\n3. Saat Muse meminta kunci, masukkan kunci koneksi ke kolom input aman Muse, bukan ke teks obrolan.\n4. Periksa dengan bertanya, misalnya “bacakan catatan hari ini”. Muse belum ada di App Store Korea, jadi jika belum punya aplikasinya, gunakan versi web."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. เลือกสิทธิ์และช่วงเวลาด้านบน แล้วแตะ \"สร้างคีย์ Muse\"\n2. ใน Muse ให้เปิดหน้าจอสำหรับเพิ่มคอนเนกเตอร์แบบกำหนดเอง (เซิร์ฟเวอร์ MCP)\n3. วาง URL ของ MCP เป็นที่อยู่เซิร์ฟเวอร์\n4. ในช่องการยืนยันตัวตน (เฮดเดอร์ของคำขอ) ให้ใส่ Authorization: Bearer ตามด้วยคีย์การเชื่อมต่อ ชื่อช่องให้ตามหน้าจอของ Muse ถ้ารับได้เฉพาะ URL ให้ใช้ URL ที่มีคีย์ในคำแนะนำของ \"คัดลอกทั้งหมดในครั้งเดียว\"\n5. บันทึก แล้วลองถาม Muse เช่น \"อ่านบันทึกของวันนี้\" เพื่อตรวจสอบ"
+            "value" : "1. เลือกสิทธิ์และระยะเวลาด้านบน แล้วแตะ “สร้างคีย์ Muse” ระบบจะคัดลอกคำแนะนำการเชื่อมต่อ\n2. วางคำแนะนำลงในแชต Muse แล้วขอให้ Muse สร้างตัวเชื่อมต่อแบบกำหนดเองไปยังเซิร์ฟเวอร์ MCP ระยะไกล\n3. เมื่อ Muse ขอคีย์ ให้ใส่คีย์การเชื่อมต่อในช่องป้อนข้อมูลที่ปลอดภัยของ Muse ไม่ใช่ในข้อความแชต\n4. ลองถามเช่น “อ่านบันทึกของวันนี้” เพื่อตรวจสอบ Muse ยังไม่มีใน App Store เกาหลี หากยังไม่มีแอปให้ใช้เวอร์ชันเว็บ"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. ऊपर एक्सेस और अवधि चुनें, फिर \"Muse कुंजी बनाएँ\" पर टैप करें।\n2. Muse में कस्टम कनेक्टर (MCP सर्वर) जोड़ने वाली स्क्रीन खोलें।\n3. सर्वर पते के रूप में MCP URL पेस्ट करें।\n4. ऑथ फ़ील्ड (रिक्वेस्ट हेडर) में Authorization: Bearer के बाद कनेक्शन कुंजी डालें। फ़ील्ड के नाम Muse की स्क्रीन के अनुसार रखें। अगर सिर्फ़ URL लेती है, तो \"सब कुछ एक साथ कॉपी करें\" की गाइड में दिया कुंजी वाला URL इस्तेमाल करें।\n5. सेव करें, फिर जाँचने के लिए Muse से \"आज के रिकॉर्ड पढ़ो\" जैसा कुछ पूछें।"
+            "value" : "1. ऊपर पहुँच और अवधि चुनें, फिर “Muse कनेक्शन कुंजी बनाएँ” पर टैप करें। कनेक्शन निर्देश कॉपी हो जाएँगे।\n2. निर्देशों को Muse की चैट में चिपकाएँ और रिमोट MCP सर्वर से जुड़ने वाला कस्टम कनेक्टर बनाने को कहें।\n3. जब Muse कुंजी माँगे, तो कनेक्शन कुंजी चैट के टेक्स्ट में नहीं, बल्कि Muse के सुरक्षित इनपुट बॉक्स में डालें।\n4. जाँचने के लिए पूछें, जैसे “आज के रिकॉर्ड पढ़ो”। Muse अभी कोरियाई App Store में नहीं है, इसलिए ऐप न हो तो वेब संस्करण इस्तेमाल करें।"
           }
         }
       }
@@ -14477,83 +14477,6 @@
         }
       }
     },
-    "MCP 주소 복사|Copy the MCP URL" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MCP URLをコピー"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复制 MCP 地址"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "複製 MCP 網址"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MCP-URL kopieren"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copier l'URL MCP"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copia URL MCP"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copiar URL de MCP"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copiar URL do MCP"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sao chép URL MCP"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salin URL MCP"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "คัดลอก URL ของ MCP"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MCP URL कॉपी करें"
-          }
-        }
-      }
-    },
     "MCP 주소|MCP URL" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -14708,156 +14631,387 @@
         }
       }
     },
-    "Muse 설정에서 커스텀 커넥터(MCP 서버)를 추가하고, 이 화면의 MCP 주소와 연결 키를 넣어 주세요. 복사한 안내 주소를 열면 같은 내용을 다시 볼 수 있어요.|In Muse settings, add a custom connector (MCP server) and enter the MCP URL and connection key from this screen. Open the copied link to see the same instructions." : {
+    "Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해 주세요. 키는 채팅 본문이 아니라 Muse의 보안 입력창에 넣어요. 안내 주소를 Muse가 열게 해도 돼요.|Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Enter the key in Muse's secure input, not in the chat text. You can also have Muse open the link." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Museの設定でカスタムコネクタ（MCPサーバー）を追加し、この画面のMCP URLと接続キーを入力してください。コピーした案内のリンクを開くと、同じ内容をもう一度確認できます。"
+            "value" : "Muse のチャットに貼り付け、リモート MCP サーバーへのカスタムコネクタを作るよう頼んでください。キーはチャット本文ではなく Muse のセキュア入力欄に入力します。案内のリンクを Muse に開かせてもかまいません。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 Muse 设置中添加自定义连接器（MCP 服务器），并填入此页面上的 MCP 地址和连接密钥。打开复制的说明链接可再次查看相同内容。"
+            "value" : "请粘贴到 Muse 聊天中，并请它创建连接远程 MCP 服务器的自定义连接器。密钥请填入 Muse 的安全输入框，而不是聊天正文。也可以让 Muse 打开说明链接。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 Muse 設定中新增自訂連接器（MCP 伺服器），並填入此畫面上的 MCP 網址和連線金鑰。開啟複製的說明連結可再次查看相同內容。"
+            "value" : "請貼到 Muse 聊天中，並請它建立連接遠端 MCP 伺服器的自訂連接器。金鑰請輸入 Muse 的安全輸入框，而不是聊天內文。也可以讓 Muse 開啟說明連結。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füge in den Muse-Einstellungen einen benutzerdefinierten Connector (MCP-Server) hinzu und gib die MCP-URL und den Verbindungsschlüssel von diesem Bildschirm ein. Über den kopierten Link siehst du dieselbe Anleitung noch einmal."
+            "value" : "Füge sie in den Muse-Chat ein und bitte Muse, einen benutzerdefinierten Connector zum Remote-MCP-Server zu erstellen. Gib den Schlüssel in Muses sicherem Eingabefeld ein, nicht im Chattext. Muse darf auch den Link öffnen."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dans les réglages de Muse, ajoutez un connecteur personnalisé (serveur MCP) et saisissez l'URL MCP et la clé de connexion de cet écran. Le lien copié affiche les mêmes instructions."
+            "value" : "Collez-les dans le chat Muse et demandez de créer un connecteur personnalisé vers le serveur MCP distant. Saisissez la clé dans le champ sécurisé de Muse, pas dans le texte du chat. Muse peut aussi ouvrir le lien."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nelle impostazioni di Muse aggiungi un connettore personalizzato (server MCP) e inserisci l'URL MCP e la chiave di connessione di questa schermata. Aprendo il link copiato rivedi le stesse istruzioni."
+            "value" : "Incollale nella chat di Muse e chiedi di creare un connettore personalizzato verso il server MCP remoto. Inserisci la chiave nel campo sicuro di Muse, non nel testo della chat. Puoi anche far aprire il link a Muse."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "En los ajustes de Muse, añade un conector personalizado (servidor MCP) e introduce la URL de MCP y la clave de conexión de esta pantalla. Si abres el enlace copiado, verás las mismas instrucciones."
+            "value" : "Pégalas en el chat de Muse y pídele que cree un conector personalizado al servidor MCP remoto. Introduce la clave en el campo seguro de Muse, no en el texto del chat. También puedes hacer que Muse abra el enlace."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nas configurações do Muse, adicione um conector personalizado (servidor MCP) e insira a URL do MCP e a chave de conexão desta tela. Abrir o link copiado mostra as mesmas instruções."
+            "value" : "Cole no chat do Muse e peça para criar um conector personalizado para o servidor MCP remoto. Digite a chave no campo seguro do Muse, não no texto do chat. Você também pode pedir que o Muse abra o link."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trong cài đặt của Muse, hãy thêm trình kết nối tùy chỉnh (máy chủ MCP) và nhập URL MCP cùng khóa kết nối từ màn hình này. Mở liên kết đã sao chép để xem lại cùng hướng dẫn."
+            "value" : "Hãy dán vào cuộc trò chuyện Muse và nhờ Muse tạo trình kết nối tùy chỉnh tới máy chủ MCP từ xa. Nhập khóa vào ô nhập bảo mật của Muse, không nhập vào nội dung trò chuyện. Bạn cũng có thể để Muse mở liên kết."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Di pengaturan Muse, tambahkan konektor kustom (server MCP) dan masukkan URL MCP serta kunci koneksi dari layar ini. Buka tautan yang disalin untuk melihat petunjuk yang sama lagi."
+            "value" : "Tempel ke obrolan Muse dan minta Muse membuat konektor kustom ke server MCP jarak jauh. Masukkan kunci ke kolom input aman Muse, bukan ke teks obrolan. Anda juga bisa meminta Muse membuka tautannya."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ในการตั้งค่าของ Muse ให้เพิ่มคอนเนกเตอร์แบบกำหนดเอง (เซิร์ฟเวอร์ MCP) แล้วใส่ URL ของ MCP และคีย์การเชื่อมต่อจากหน้าจอนี้ เปิดลิงก์ที่คัดลอกไว้เพื่อดูคำแนะนำเดิมได้อีกครั้ง"
+            "value" : "วางลงในแชต Muse แล้วขอให้ Muse สร้างตัวเชื่อมต่อแบบกำหนดเองไปยังเซิร์ฟเวอร์ MCP ระยะไกล ใส่คีย์ในช่องป้อนข้อมูลที่ปลอดภัยของ Muse ไม่ใช่ในข้อความแชต คุณยังให้ Muse เปิดลิงก์ได้ด้วย"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muse की सेटिंग में कस्टम कनेक्टर (MCP सर्वर) जोड़ें और इस स्क्रीन का MCP URL और कनेक्शन कुंजी डालें। कॉपी किया गया लिंक खोलने पर यही निर्देश दोबारा दिखेंगे।"
+            "value" : "Muse की चैट में चिपकाएँ और रिमोट MCP सर्वर से जुड़ने वाला कस्टम कनेक्टर बनाने को कहें। कुंजी चैट के टेक्स्ट में नहीं, Muse के सुरक्षित इनपुट बॉक्स में डालें। आप चाहें तो Muse से लिंक भी खुलवा सकते हैं।"
           }
         }
       }
     },
-    "Muse에서 커스텀 커넥터(MCP 서버)를 추가하는 화면의 서버 주소 칸에 붙여 넣어요.|Paste it into the server URL field when adding a custom connector (MCP server) in Muse." : {
+    "Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Museでカスタムコネクタ（MCPサーバー）を追加する画面の、サーバーURL欄に貼り付けます。"
+            "value" : "Muse のチャットに貼り付け、リモート MCP サーバーへのカスタムコネクタを作るよう頼みます。韓国の App Store にはまだ Muse アプリがないので、アプリがなければウェブ版を使います。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "添加 Muse 的自定义连接器（MCP 服务器）时，粘贴到服务器地址栏。"
+            "value" : "粘贴到 Muse 聊天中，并请它创建连接远程 MCP 服务器的自定义连接器。韩国 App Store 暂时没有 Muse 应用，没有应用时请使用网页版。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新增 Muse 的自訂連接器（MCP 伺服器）時，貼到伺服器網址欄。"
+            "value" : "貼到 Muse 聊天中，並請它建立連接遠端 MCP 伺服器的自訂連接器。韓國 App Store 目前沒有 Muse App，沒有 App 時請使用網頁版。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füge sie beim Hinzufügen eines benutzerdefinierten Connectors (MCP-Server) in Muse in das Feld für die Server-URL ein."
+            "value" : "Füge sie in den Muse-Chat ein und bitte Muse, einen benutzerdefinierten Connector zum Remote-MCP-Server zu erstellen. Muse ist noch nicht im koreanischen App Store, nutze ohne App die Webversion."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Collez-la dans le champ d'URL du serveur lors de l'ajout d'un connecteur personnalisé (serveur MCP) dans Muse."
+            "value" : "Collez-les dans le chat Muse et demandez de créer un connecteur personnalisé vers le serveur MCP distant. Muse n’est pas encore sur l’App Store coréen : sans l’app, utilisez la version web."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Incollalo nel campo URL del server quando aggiungi un connettore personalizzato (server MCP) in Muse."
+            "value" : "Incollale nella chat di Muse e chiedi di creare un connettore personalizzato verso il server MCP remoto. Muse non è ancora sull’App Store coreano: senza l’app usa la versione web."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pégala en el campo de URL del servidor al añadir un conector personalizado (servidor MCP) en Muse."
+            "value" : "Pégalas en el chat de Muse y pídele que cree un conector personalizado al servidor MCP remoto. Muse aún no está en la App Store de Corea: sin la app, usa la versión web."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cole no campo de URL do servidor ao adicionar um conector personalizado (servidor MCP) no Muse."
+            "value" : "Cole no chat do Muse e peça para criar um conector personalizado para o servidor MCP remoto. O Muse ainda não está na App Store coreana: sem o app, use a versão web."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dán vào ô URL máy chủ khi thêm trình kết nối tùy chỉnh (máy chủ MCP) trong Muse."
+            "value" : "Dán vào cuộc trò chuyện Muse và nhờ Muse tạo trình kết nối tùy chỉnh tới máy chủ MCP từ xa. Muse chưa có trên App Store Hàn Quốc, nếu chưa có ứng dụng hãy dùng bản web."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tempel ke kolom URL server saat menambahkan konektor kustom (server MCP) di Muse."
+            "value" : "Tempel ke obrolan Muse dan minta Muse membuat konektor kustom ke server MCP jarak jauh. Muse belum ada di App Store Korea, jadi jika belum punya aplikasinya, gunakan versi web."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "วางลงในช่อง URL ของเซิร์ฟเวอร์ตอนเพิ่มคอนเนกเตอร์แบบกำหนดเอง (เซิร์ฟเวอร์ MCP) ใน Muse"
+            "value" : "วางลงในแชต Muse แล้วขอให้ Muse สร้างตัวเชื่อมต่อแบบกำหนดเองไปยังเซิร์ฟเวอร์ MCP ระยะไกล Muse ยังไม่มีใน App Store เกาหลี หากยังไม่มีแอปให้ใช้เวอร์ชันเว็บ"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muse में कस्टम कनेक्टर (MCP सर्वर) जोड़ते समय इसे सर्वर URL वाले फ़ील्ड में पेस्ट करें।"
+            "value" : "Muse की चैट में चिपकाएँ और रिमोट MCP सर्वर से जुड़ने वाला कस्टम कनेक्टर बनाने को कहें। Muse अभी कोरियाई App Store में नहीं है, इसलिए ऐप न हो तो वेब संस्करण इस्तेमाल करें।"
+          }
+        }
+      }
+    },
+    "Muse 채팅에 붙여 넣기|Paste into the Muse chat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muse のチャットに貼り付ける"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "粘贴到 Muse 聊天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "貼到 Muse 聊天"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In den Muse-Chat einfügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coller dans le chat Muse"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incolla nella chat di Muse"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pegar en el chat de Muse"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colar no chat do Muse"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dán vào cuộc trò chuyện Muse"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempel ke obrolan Muse"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วางลงในแชต Muse"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muse चैट में चिपकाएँ"
+          }
+        }
+      }
+    },
+    "Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.|When Muse asks for the key, enter it in Muse's secure input, not in the chat text." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muse がキーを尋ねたら、チャット本文ではなく Muse のセキュア入力欄に接続キーを入力します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当 Muse 询问密钥时，请把连接密钥填入 Muse 的安全输入框，而不是聊天正文。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當 Muse 詢問金鑰時，請把連線金鑰輸入 Muse 的安全輸入框，而不是聊天內文。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn Muse nach dem Schlüssel fragt, gib den Verbindungsschlüssel in Muses sicherem Eingabefeld ein, nicht im Chattext."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand Muse demande la clé, saisissez la clé de connexion dans le champ de saisie sécurisé de Muse, pas dans le texte du chat."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando Muse chiede la chiave, inseriscila nel campo di inserimento sicuro di Muse, non nel testo della chat."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando Muse pida la clave, introdúcela en el campo de entrada seguro de Muse, no en el texto del chat."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando o Muse pedir a chave, digite-a no campo de entrada seguro do Muse, não no texto do chat."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi Muse hỏi khóa, hãy nhập khóa kết nối vào ô nhập bảo mật của Muse, không nhập vào nội dung trò chuyện."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat Muse meminta kunci, masukkan kunci koneksi ke kolom input aman Muse, bukan ke teks obrolan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อ Muse ขอคีย์ ให้ใส่คีย์การเชื่อมต่อในช่องป้อนข้อมูลที่ปลอดภัยของ Muse ไม่ใช่ในข้อความแชต"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जब Muse कुंजी माँगे, तो कनेक्शन कुंजी चैट के टेक्स्ट में नहीं, बल्कि Muse के सुरक्षित इनपुट बॉक्स में डालें।"
+          }
+        }
+      }
+    },
+    "Muse에 연결|Connect to Muse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muse に接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接到 Muse"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連線到 Muse"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Muse verbinden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se connecter à Muse"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connetti a Muse"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar con Muse"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar ao Muse"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết nối với Muse"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan ke Muse"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อกับ Muse"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muse से जुड़ें"
           }
         }
       }
@@ -27024,6 +27178,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} कदम"
+          }
+        }
+      }
+    },
+    "{0}고속도로|{0} Expressway" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}高速道路"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}高速公路"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}高速公路"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Autobahn"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autoroute {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autostrada {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autopista {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rodovia {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cao tốc {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jalan Tol {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ทางด่วน {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} एक्सप्रेसवे"
           }
         }
       }
@@ -282591,6 +282822,83 @@
         }
       }
     },
+    "보안 입력창에 키 넣기|Enter the key securely" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セキュア入力欄にキーを入力"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在安全输入框中填入密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在安全輸入框中輸入金鑰"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlüssel sicher eingeben"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisir la clé de façon sécurisée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inserisci la chiave in modo sicuro"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introducir la clave de forma segura"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digitar a chave com segurança"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhập khóa một cách bảo mật"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masukkan kunci dengan aman"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใส่คีย์อย่างปลอดภัย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कुंजी सुरक्षित रूप से डालें"
+          }
+        }
+      }
+    },
     "보안 자격 증명을 확인하지 못했습니다.|The security credential could not be verified." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -310003,79 +310311,79 @@
         }
       }
     },
-    "아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요.|Pick access and period below, then enter your app password to make a key just for Muse." : {
+    "아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고 연결 안내(1회용 주소)를 복사해요.|Pick access and period below, then enter your app password to make a key just for Muse and copy the setup (a one-time link)." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "下で権限と期間を選び、アプリのパスワードを入力すると、Muse専用の接続キーを作成します。"
+            "value" : "下で権限と期間を選び、アプリのパスワードを入力すると、Muse 専用の接続キーを作成し、接続の案内（1回限りのリンク）をコピーします。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在下方选择权限和期限，然后输入应用密码，即可创建仅供 Muse 使用的连接密钥。"
+            "value" : "在下方选择权限和期限，然后输入应用密码，即可创建仅供 Muse 使用的连接密钥，并复制连接说明（一次性链接）。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在下方選擇權限和期限，然後輸入 App 密碼，即可建立僅供 Muse 使用的連線金鑰。"
+            "value" : "在下方選擇權限和期限，然後輸入 App 密碼，即可建立僅供 Muse 使用的連線金鑰，並複製連線說明（一次性連結）。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wähle unten Zugriff und Zeitraum und gib dann dein App-Passwort ein, um einen Schlüssel nur für Muse zu erstellen."
+            "value" : "Wähle unten Berechtigung und Zeitraum und gib dein App-Passwort ein: Es wird ein Schlüssel nur für Muse erstellt und die Verbindungsanleitung (ein Einmal-Link) kopiert."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choisissez ci-dessous l'accès et la période, puis saisissez le mot de passe de l'app pour créer une clé réservée à Muse."
+            "value" : "Choisissez ci-dessous l’accès et la durée, puis saisissez le mot de passe de l’app pour créer une clé réservée à Muse et copier les instructions de connexion (un lien à usage unique)."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scegli sotto accesso e periodo, poi inserisci la password dell'app per creare una chiave solo per Muse."
+            "value" : "Scegli sotto accesso e durata, poi inserisci la password dell’app per creare una chiave solo per Muse e copiare le istruzioni di connessione (un link monouso)."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elige abajo el acceso y el periodo y escribe la contraseña de la app para crear una clave solo para Muse."
+            "value" : "Elige abajo el acceso y el periodo e introduce la contraseña de la app para crear una clave solo para Muse y copiar las instrucciones de conexión (un enlace de un solo uso)."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escolha abaixo o acesso e o período e digite a senha do app para criar uma chave só para o Muse."
+            "value" : "Escolha abaixo o acesso e o período e digite a senha do app para criar uma chave só para o Muse e copiar as instruções de conexão (um link de uso único)."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chọn quyền truy cập và thời hạn bên dưới, rồi nhập mật khẩu ứng dụng để tạo khóa chỉ dùng cho Muse."
+            "value" : "Chọn quyền và thời hạn bên dưới, rồi nhập mật khẩu ứng dụng để tạo khóa chỉ dùng cho Muse và sao chép hướng dẫn kết nối (liên kết dùng một lần)."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pilih akses dan periode di bawah, lalu masukkan kata sandi aplikasi untuk membuat kunci khusus Muse."
+            "value" : "Pilih akses dan jangka waktu di bawah, lalu masukkan kata sandi aplikasi untuk membuat kunci khusus Muse dan menyalin panduan koneksi (tautan sekali pakai)."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เลือกสิทธิ์และช่วงเวลาด้านล่าง แล้วใส่รหัสผ่านแอปเพื่อสร้างคีย์ที่ใช้กับ Muse เท่านั้น"
+            "value" : "เลือกสิทธิ์และระยะเวลาด้านล่าง แล้วใส่รหัสผ่านของแอปเพื่อสร้างคีย์เฉพาะสำหรับ Muse และคัดลอกคำแนะนำการเชื่อมต่อ (ลิงก์ใช้ครั้งเดียว)"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "नीचे एक्सेस और अवधि चुनें, फिर ऐप पासवर्ड डालें, ताकि सिर्फ़ Muse के लिए एक कुंजी बन सके।"
+            "value" : "नीचे पहुँच और अवधि चुनें, फिर ऐप का पासवर्ड डालें। इससे सिर्फ़ Muse के लिए कुंजी बनेगी और कनेक्शन निर्देश (एक बार वाला लिंक) कॉपी होंगे।"
           }
         }
       }
@@ -325788,79 +326096,79 @@
         }
       }
     },
-    "연결 안내를 복사했어요. Muse의 커스텀 커넥터에 MCP 주소와 연결 키를 넣어 주세요.|Setup copied. Add the MCP URL and connection key as a custom connector in Muse." : {
+    "연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 맞춤 커넥터를 요청하고, 키는 Muse의 보안 입력창에 넣어 주세요.|Setup copied. Paste it into the Muse chat to request a custom connector, and enter the key in Muse's secure input." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "接続案内をコピーしました。MuseのカスタムコネクタにMCP URLと接続キーを入力してください。"
+            "value" : "接続の案内をコピーしました。Muse のチャットに貼り付けてカスタムコネクタを頼み、キーは Muse のセキュア入力欄に入力してください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已复制连接说明。请在 Muse 的自定义连接器中填入 MCP 地址和连接密钥。"
+            "value" : "已复制连接说明。请粘贴到 Muse 聊天中请求创建自定义连接器，并把密钥填入 Muse 的安全输入框。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已複製連線說明。請在 Muse 的自訂連接器中填入 MCP 網址和連線金鑰。"
+            "value" : "已複製連線說明。請貼到 Muse 聊天中請求建立自訂連接器，並把金鑰輸入 Muse 的安全輸入框。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anleitung kopiert. Füge die MCP-URL und den Verbindungsschlüssel in Muse als benutzerdefinierten Connector hinzu."
+            "value" : "Anleitung kopiert. Füge sie in den Muse-Chat ein, um einen benutzerdefinierten Connector anzufordern, und gib den Schlüssel in Muses sicherem Eingabefeld ein."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Instructions copiées. Ajoutez l'URL MCP et la clé de connexion comme connecteur personnalisé dans Muse."
+            "value" : "Instructions copiées. Collez-les dans le chat Muse pour demander un connecteur personnalisé, et saisissez la clé dans le champ sécurisé de Muse."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Istruzioni copiate. Aggiungi l'URL MCP e la chiave di connessione come connettore personalizzato in Muse."
+            "value" : "Istruzioni copiate. Incollale nella chat di Muse per chiedere un connettore personalizzato e inserisci la chiave nel campo sicuro di Muse."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Instrucciones copiadas. Añade la URL de MCP y la clave de conexión como conector personalizado en Muse."
+            "value" : "Instrucciones copiadas. Pégalas en el chat de Muse para pedir un conector personalizado e introduce la clave en el campo seguro de Muse."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Instruções copiadas. Adicione a URL do MCP e a chave de conexão como conector personalizado no Muse."
+            "value" : "Instruções copiadas. Cole no chat do Muse para pedir um conector personalizado e digite a chave no campo seguro do Muse."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Đã sao chép hướng dẫn kết nối. Hãy thêm URL MCP và khóa kết nối làm trình kết nối tùy chỉnh trong Muse."
+            "value" : "Đã sao chép hướng dẫn. Hãy dán vào cuộc trò chuyện Muse để yêu cầu trình kết nối tùy chỉnh và nhập khóa vào ô nhập bảo mật của Muse."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Panduan disalin. Tambahkan URL MCP dan kunci koneksi sebagai konektor kustom di Muse."
+            "value" : "Panduan disalin. Tempel ke obrolan Muse untuk meminta konektor kustom, dan masukkan kunci ke kolom input aman Muse."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "คัดลอกคำแนะนำการเชื่อมต่อแล้ว ใส่ URL ของ MCP และคีย์การเชื่อมต่อเป็นคอนเนกเตอร์แบบกำหนดเองใน Muse"
+            "value" : "คัดลอกคำแนะนำแล้ว วางลงในแชต Muse เพื่อขอตัวเชื่อมต่อแบบกำหนดเอง และใส่คีย์ในช่องป้อนข้อมูลที่ปลอดภัยของ Muse"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "निर्देश कॉपी हो गए। Muse में कस्टम कनेक्टर के रूप में MCP URL और कनेक्शन कुंजी डालें।"
+            "value" : "निर्देश कॉपी हो गए। कस्टम कनेक्टर माँगने के लिए उन्हें Muse की चैट में चिपकाएँ और कुंजी Muse के सुरक्षित इनपुट बॉक्स में डालें।"
           }
         }
       }
@@ -357354,83 +357662,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "प्रमाणीकरण में API कुंजी → Bearer चुनें, कुंजी पेस्ट करें और सहेजें।"
-          }
-        }
-      }
-    },
-    "인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣고 저장해요. 칸 이름은 Muse 화면을 따라 주세요.|In the auth field (request header), enter Authorization: Bearer followed by the key, then save. Field names follow Muse's screen." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "認証欄（リクエストヘッダー）にAuthorization: Bearerに続けてキーを貼り付け、保存します。欄の名前はMuseの画面に合わせてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在认证栏（请求头）中输入 Authorization: Bearer，后面接密钥，然后保存。栏位名称以 Muse 页面为准。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在驗證欄（請求標頭）中輸入 Authorization: Bearer，後面接金鑰，然後儲存。欄位名稱以 Muse 畫面為準。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gib im Authentifizierungsfeld (Request-Header) Authorization: Bearer gefolgt vom Schlüssel ein und speichere. Die Feldnamen richten sich nach dem Muse-Bildschirm."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dans le champ d'authentification (en-tête de requête), saisissez Authorization: Bearer suivi de la clé, puis enregistrez. Les noms des champs suivent l'écran de Muse."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nel campo di autenticazione (header della richiesta) inserisci Authorization: Bearer seguito dalla chiave, poi salva. I nomi dei campi seguono la schermata di Muse."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En el campo de autenticación (encabezado de la solicitud), escribe Authorization: Bearer seguido de la clave y guarda. Los nombres de los campos dependen de la pantalla de Muse."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No campo de autenticação (cabeçalho da requisição), digite Authorization: Bearer seguido da chave e salve. Os nomes dos campos seguem a tela do Muse."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trong ô xác thực (header yêu cầu), nhập Authorization: Bearer rồi đến khóa, sau đó lưu. Tên ô theo màn hình của Muse."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Di kolom autentikasi (header permintaan), masukkan Authorization: Bearer diikuti kunci, lalu simpan. Nama kolom mengikuti layar Muse."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ในช่องการยืนยันตัวตน (เฮดเดอร์ของคำขอ) ให้ใส่ Authorization: Bearer ตามด้วยคีย์ แล้วบันทึก ชื่อช่องให้ตามหน้าจอของ Muse"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ऑथ फ़ील्ड (रिक्वेस्ट हेडर) में Authorization: Bearer के बाद कुंजी डालकर सेव करें। फ़ील्ड के नाम Muse की स्क्रीन के अनुसार रखें।"
           }
         }
       }
@@ -397552,6 +397783,83 @@
         }
       }
     },
+    "통행료 금액 확인 필요|Check the toll amount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通行料金を確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请确认通行费金额"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請確認通行費金額"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mautbetrag prüfen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifiez le montant du péage"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controlla l'importo del pedaggio"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comprueba el importe del peaje"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confira o valor do pedágio"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiểm tra phí cầu đường"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa jumlah tol"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตรวจสอบค่าผ่านทาง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "टोल राशि जाँचें"
+          }
+        }
+      }
+    },
     "통행료 차종|Toll vehicle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -397625,83 +397933,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "टोल वाहन"
-          }
-        }
-      }
-    },
-    "통행료 할인 시간에 걸침|Toll near a discount time" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通行料の割引時間帯にまたがる"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通行费跨越折扣时段"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通行費跨越折扣時段"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Maut nahe einer Rabattzeit"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Péage proche d'un créneau de réduction"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pedaggio vicino a una fascia scontata"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Peaje cerca de un horario con descuento"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pedágio perto de um horário com desconto"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Phí đường gần khung giờ giảm giá"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tol dekat jam diskon"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ค่าทางด่วนใกล้ช่วงเวลาส่วนลด"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "टोल छूट के समय के पास"
           }
         }
       }

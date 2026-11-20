@@ -47,6 +47,8 @@ enum LedgerTollGate {
         var at: Date
         var meters: Double
         var accuracy: Double
+        /// 노선 이름(`경인선`). 기록 제목에 고속도로 이름을 넣어 노선 표지를 단다(TGT1120A01).
+        var route: String = ""
 
         var isPrecise: Bool { meters <= LedgerTollGate.preciseMeters && accuracy <= LedgerTollGate.preciseAccuracy }
     }
@@ -111,7 +113,7 @@ enum LedgerTollGate {
         var best: Pass?
         func consider(_ meters: Double, at: Date, accuracy: Double) {
             guard meters <= passMeters, best.map({ meters < $0.meters }) ?? true else { return }
-            best = Pass(code: unit.code, name: unit.name, at: at, meters: meters, accuracy: accuracy)
+            best = Pass(code: unit.code, name: unit.name, at: at, meters: meters, accuracy: accuracy, route: unit.route)
         }
         for (index, fix) in fixes.enumerated() {
             let here = local(fix, around: unit)
@@ -208,12 +210,17 @@ enum LedgerTollGate {
             sameRate = rate(entry.at) == rate(exit.at)
             let from = plaza(entry.name, language: language), to = plaza(exit.name, language: language)
             route = "\(from) → \(to)"
-            title = language.text("\(from) → \(to) 통행료", "Toll: \(from) → \(to)")
+            if let road = highway(entry.route, language: language), entry.route == exit.route {
+                title = language.text("\(road) 통행료", "Toll: \(road)")
+            } else {
+                title = language.text("\(from) → \(to) 통행료", "Toll: \(from) → \(to)")
+            }
         case let .single(pass):
             paidAt = pass.at
             sameRate = true
             route = plaza(pass.name, language: language)
-            title = language.text("\(route) 통행료", "Toll: \(route)")
+            let road = highway(pass.route, language: language)
+            title = language.text("\(road ?? route) 통행료", "Toll: \(road ?? route)")
         }
         let discount = rate(paidAt)
         var entry = LedgerEntry(occurredAt: paidAt, amount: LedgerTollDiscount.amount(base: normal, rate: discount.rate), title: title)
@@ -223,6 +230,16 @@ enum LedgerTollGate {
                        language.text("정상요금 \(money)", "Normal fare \(money)")]
             + [LedgerTollDiscount.label(discount, language: language)].compactMap { $0 }).joined(separator: " · ")
         return Addition(entry: entry, applied: discount, certain: trip.isPrecise && fareKnown && sameRate)
+    }
+
+    /// 노선 이름 → 고속도로 이름(`경인선` → `경인고속도로`). 영업소 이름만 적으면 노선 표지가 붙지 않는다(TGT1120A01).
+    static func highway(_ route: String, language: MapHomeLanguage) -> String? {
+        let name = route.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return nil }
+        let base = name.hasSuffix("선") ? String(name.dropLast()) : name
+        guard !base.isEmpty else { return nil }
+        if base.hasSuffix("고속도로") { return base }
+        return language.text("\(base)고속도로", "\(base) Expressway")
     }
 
     static func plaza(_ name: String, language: MapHomeLanguage) -> String {

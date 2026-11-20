@@ -19,6 +19,8 @@ enum LedgerTollRepeat {
         var passes: [LedgerTollGate.Pass] = []
         /// 카카오 길찾기에 물을 때 쓸 점(처음·끝과 사이 최대 5개, KDR1118A01). 기기 메모리에만 두고 저장하지 않는다.
         var points: [LedgerTollKakao.Point] = []
+        /// 출발·도착이 이름 있는 곳인지. 이름 모르는 「머문 곳」에서 떠난 이동은 지난 톨게이트로만 본다(TGT1120A02).
+        var named = true
 
         var key: String { "\(from)|\(to)|\(Int(start.timeIntervalSince1970 / 60))" }
         /// 요금소를 지났을 법한 때. 할인은 이 시각으로 본다.
@@ -459,11 +461,13 @@ enum LedgerTollRepeatRunner {
                   let input = await model.assistantActivityInput(for: day, now: now, calendar: calendar),
                   let built = AssistantActivityBuilder.make(input, level: .visits) else { continue }
             let readings = await model.planDayDataSnapshot(for: day, forceReload: false).readings
-            days.append((carDrives(built, language: input.language), readings))
+            days.append((carDrives(built, language: input.language, includeUnnamed: true), readings))
         }
         // 영업소 목록은 자동차 이동이 있을 때만 받는다(TGT1118A01). 목록을 통째로 받아 기기에서 견주고, 위치는 보내지 않는다.
         let units = days.contains { !$0.drives.isEmpty } ? await TollUnitStore.units(now: now) : []
-        let drives = days.flatMap { day in day.drives.map { withRoute($0, readings: day.readings, units: units) } }
+        let routed = days.flatMap { day in day.drives.map { withRoute($0, readings: day.readings, units: units) } }
+        // 같은 길·카카오는 출발·도착 이름이 있어야 하고, 지난 톨게이트는 위치만 본다(TGT1120A02).
+        let drives = routed.filter(\.named)
         await LedgerBook.shared.load()
         // 가계부를 못 읽었으면 이미 있는 통행료를 알 수 없으니 넣지 않는다.
         guard LedgerBook.shared.isLoaded else { return }
@@ -495,10 +499,10 @@ enum LedgerTollRepeatRunner {
             ) else { continue }
             await LedgerBook.shared.save(fixed)
         }
-        guard !drives.isEmpty else { return }
+        guard !routed.isEmpty else { return }
         // 지난 톨게이트로 먼저 알아내고, 못 알아낸 이동만 같은 길 방식으로 본다(TGT1118A01).
         let gate = await LedgerTollGateRunner.run(
-            drives: drives, existing: entries, handled: Set(handled), now: now,
+            drives: routed, existing: entries, handled: Set(handled), now: now,
             vehicle: vehicle, isOffDay: isOffDay, calendar: calendar, language: language
         )
         handled += gate.done
@@ -524,14 +528,19 @@ enum LedgerTollRepeatRunner {
         if !additions.isEmpty || !kakao.isEmpty { defaults.set(Array(handled.suffix(200)), forKey: handledKey) }
     }
 
-    /// 출발·도착 이름을 아는 자동차 이동만. 이름 모르는 「머문 곳」은 길로 보지 않는다.
-    static func carDrives(_ day: AssistantActivityDay, language: MapHomeLanguage) -> [LedgerTollRepeat.Drive] {
+    /// 자동차 이동. 이름 모르는 「머문 곳」이 낀 이동은 같은 길로 보지 않아 `includeUnnamed`일 때만 `named = false`로 담는다.
+    /// 영화관처럼 등록 안 한 곳에서 집으로 온 날도 지난 톨게이트로는 통행료를 알 수 있다(TGT1120A02).
+    static func carDrives(_ day: AssistantActivityDay, language: MapHomeLanguage, includeUnnamed: Bool = false) -> [LedgerTollRepeat.Drive] {
         let unnamed: Set<String> = [language.text("머문 곳", "Place"), "머문 곳", "Place"]
         return (day.moves ?? []).compactMap { move in
-            guard move.mode == "car", let from = move.from, let to = move.to, from != to,
-                  !unnamed.contains(from), !unnamed.contains(to),
+            guard move.mode == "car",
                   let start = parser.date(from: move.start), let end = parser.date(from: move.end) else { return nil }
-            return LedgerTollRepeat.Drive(from: from, to: to, start: start, end: end)
+            let from = move.from ?? "", to = move.to ?? ""
+            let named = !from.isEmpty && !to.isEmpty && from != to && !unnamed.contains(from) && !unnamed.contains(to)
+            guard named || includeUnnamed else { return nil }
+            var drive = LedgerTollRepeat.Drive(from: from, to: to, start: start, end: end)
+            drive.named = named
+            return drive
         }
     }
 
