@@ -1,7 +1,7 @@
 ---
 id: 20261120-1855-trip-assembly-architecture
 created_at: 2026-11-20T18:55+09:00
-status: pending
+status: blocked
 request_id: ARCH1120A01
 title: 여행 카드 조립 아키텍처 — 일본은 도시 팩을 레고처럼 조립, 그 밖의 나라는 알림 자동 + AI·수동
 from: 비야
@@ -191,3 +191,20 @@ packs/trip/<city>/<version>/images/…        썸네일(선택)
 - **공개 저장소 개인정보**: 시드 `phone?`은 업소·기관 대표번호만, `checkedBy`는 역할·애칭 같은 비식별 표기만 쓰도록 4-5-2에 못 박았습니다. 그리고 4-4의 예시로 적혀 있던 **특정 처방약 이름을 일반 표현으로 바꿨습니다**(공개 저장소에 특정 약을 찾는 관심이 드러나지 않게) — 처방 필요·반입 주의 안내만 넣고 구매 경로는 안내하지 않는다는 원칙은 그대로입니다.
 - **의료·약국 시드**는 확인일을 화면에 보이고 90일 넘으면 「오래된 정보」 표시하는 4-5-6 규칙을 따릅니다(새로 추가하지 않음).
 - 이 문서는 설계도라 **처리 순서상 맨 마지막**이고, 실행은 `FLT1120A01`·`TRN`·`STAY`·`AUTO`·`RUL`·`ADM`이 맡는다는 지위를 0절에 다시 적었습니다.
+
+## 클로드 코드 회신
+
+- 처리: 일부(**설계 검토만, 코드 없음**. 0단계 「대표가 이대로」 확인이 필요해 문서를 `done/`으로 옮기지 않음)
+- 요청 ID: ARCH1120A01
+- 시작·끝: 2026-11-21 01:40 ~ 01:50 (KST), 커밋: 이 회신 커밋(코드 변경 없음)
+- **1. 지금 코드로 이미 되는 것 / 새로 만들어야 하는 것** (근거는 읽은 코드, 못 읽은 곳은 「추정」)
+  - 이미 됨: ⑴ 카드 그릇 `TravelTripItem`(`Packages/TaptionPlanStore/.../AppFeatureSettings.swift`)의 `kind·title·start·end·note·status(booked/tentative)·place` 칸, ⑵ 항공 구간·가격 칸(FLT1120A01: `flightNumber…`, `fareAmount·fareCurrency·fareSource·fareExpenseID`), ⑶ 알림·결제 유입(`FlightIngest`·`LedgerIntents`·`FlightFare`), ⑷ 시즌 팩 다운로드·검증·캐시 골격(`Packages/SeasonPackKit`의 `SeasonPackDownloader`·`SeasonPackBackgroundEngine`·`SeasonPackStore`, 카탈로그 `packs/season/index.json`+`.bpack`+sha256), ⑸ 운영 콘솔의 팩 올리기·카탈로그(`tools/admin-console`), ⑹ 서버 R2 공개 읽기(`server/trip-relay/src/public.js`).
+  - 새로 만들어야 함: L2 `source`·`packRef`·`external` 칸, 도시 팩 형식(`packs/trip/<city>/<version>/index.json·items.json`)과 생성 스크립트(`scripts/`·`seed/trip/`), 앱의 도시 팩 목록·다운로드·후보 표시, 조립기(5-2 규칙 7개, 결정적 순수 함수라 시험하기 쉬움), 출처 표기 화면, 일본 밖 6절은 대부분 기존(알림·AI·수동)이라 거의 없음.
+- **2. `TravelTripItem` 확장 마이그레이션**: **필요 없음(확인함).** 이번 FLT1120A01에서 같은 구조에 옵셔널 4칸을 더했고, 비어 있으면 키를 쓰지 않아 예전 저장 바이트가 그대로 열림을 시험으로 고정했음(`FlightFareTests.testFareFieldsStayOutOfTheStoredBytesWhenEmpty`). `source`·`packRef`·`external`도 같은 방식(옵셔널, 값이 있을 때만 키)이면 막는 것이 없음. 다만 `packRef`는 JSON 한 칸으로 묶고(`{city,packID,itemID}`), `external`은 링크 문자열만 두는 것을 권장.
+- **3. 시즌 팩 다운로드 경로 재사용**: **부분 재사용 가능(추정, 다운로더 API는 깊게 읽지 않음).** 재사용: 이어받기(Range)·sha256 검증·임시 폴더 후 교체·「새 버전만 받기」·백그라운드 엔진. 못 쓰는 것: 시즌 팩은 `SeasonPackManifest`(기간·슬롯·화랑이 복장) 전용이라 카탈로그·압축 내용 해석이 다름. 권장: `SeasonPackKit`의 다운로드·검증·저장 계층을 `PackKit`(가칭)으로 한 층 빼거나, 도시 팩 전용 해석기만 새로 두고 다운로더는 그대로 부르는 방식. **착수 전에 다운로더 API를 읽고 확정**(1단계에 포함).
+- **4. 라쿠텐·핫페퍼 등록(대표가 할 일, 절차만)**: 지시서 4-1이 2026-11-17에 확인한 내용 기준으로 ⑴ 라쿠텐 웹서비스 개발자 등록 → 앱 등록 → `applicationId`·`applicationSecret` 발급(키는 서버 시크릿으로만, 호스트 `openapi.rakuten.co.jp`), ⑵ 리크루트 웹서비스(핫페퍼 구루메) 키 신청(하루 1,000회). **심사·승인 여부와 표기 조건의 원문은 이번에 확인하지 못했습니다(약관 페이지를 직접 읽지 않음).** 7-3 약속대로 표기 조건 원문을 약관에서 읽어 `docs/`에 옮기기 전에는 두 출처를 팩에 넣지 않습니다. 키 값은 이 문서·저장소에 쓰지 않습니다.
+- **5. 1단계 착수 가능 시점과 순서**: 대표가 0단계(「이대로」)를 주시면 바로 가능. 순서 제안: ① 카드 모델 옵셔널 3칸 + 저장본 호환 시험(반나절) → ② `seed/trip/fukuoka/` 형식과 팩 생성 스크립트(서버 생성은 키 없이 시드만으로 먼저) → ③ 다운로더 재사용 방식 확정 → ④ 조립기 순수 함수와 시험(AI 없이 후쿠오카 2박 3일) → 라쿠텐·핫페퍼는 키·표기 조건 확인 뒤 보강.
+- **대표 확인이 필요한 것(객관식)**:
+  1. 0단계: 이 설계 그대로 진행해도 되는지(추천: 「이대로」).
+  2. 라쿠텐·핫페퍼 앱 등록은 대표 계정이 필요 — 언제 하시는지(추천: 시드·조립기를 먼저 하고 API는 마지막).
+  3. 시즌 팩 다운로더를 공용 `PackKit`으로 뺄지, 도시 팩 전용 해석기만 새로 둘지(추천: 먼저 읽어 보고 작은 쪽).
