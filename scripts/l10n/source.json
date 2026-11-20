@@ -37,6 +37,30 @@
    ]
   },
   {
+   "key": " (출근)| (to work)",
+   "ko": " (출근)",
+   "en": " (to work)",
+   "files": [
+    "LedgerTollGate.swift:248"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": " (퇴근)| (to home)",
+   "ko": " (퇴근)",
+   "en": " (to home)",
+   "files": [
+    "LedgerTollGate.swift:249"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": " · {0}번| · {0}x",
    "ko": " · {0}번",
    "en": " · {0}x",
@@ -3706,7 +3730,7 @@
    "ko": "{0} → {1} 통행료",
    "en": "Toll: {0} → {1}",
    "files": [
-    "LedgerTollGate.swift:216"
+    "LedgerTollGate.swift:241"
    ],
    "args": [
     "from",
@@ -4125,7 +4149,7 @@
    "ko": "{0} 영업소",
    "en": "{0} toll plaza",
    "files": [
-    "LedgerTollGate.swift:246"
+    "LedgerTollGate.swift:279"
    ],
    "args": [
     "name"
@@ -4384,9 +4408,9 @@
    "ko": "{0} 통행료",
    "en": "Toll: {0}",
    "files": [
-    "LedgerTollGate.swift:214",
-    "LedgerTollGate.swift:223",
-    "LedgerTollGate.swift:444"
+    "LedgerTollGate.swift:239",
+    "LedgerTollGate.swift:245",
+    "LedgerTollGate.swift:478"
    ],
    "args": [
     "road"
@@ -4699,7 +4723,7 @@
    "ko": "{0}고속도로",
    "en": "{0} Expressway",
    "files": [
-    "LedgerTollGate.swift:242"
+    "LedgerTollGate.swift:275"
    ],
    "args": [
     "base"
@@ -34829,7 +34853,7 @@
    "ko": "같은 길 통행료 자동 추가",
    "en": "Same-route toll, added automatically",
    "files": [
-    "LedgerTollRepeat.swift:512"
+    "LedgerTollRepeat.swift:532"
    ],
    "args": [],
    "targets": [
@@ -36116,7 +36140,7 @@
    "ko": "경차 할인 50%",
    "en": "Compact car discount 50%",
    "files": [
-    "LedgerTollRepeat.swift:427"
+    "LedgerTollRepeat.swift:429"
    ],
    "args": [],
    "targets": [
@@ -36128,7 +36152,7 @@
    "ko": "경차",
    "en": "Compact",
    "files": [
-    "LedgerTollRepeat.swift:436"
+    "LedgerTollRepeat.swift:438"
    ],
    "args": [],
    "targets": [
@@ -36656,7 +36680,7 @@
    "ko": "고속도로",
    "en": "Expressway",
    "files": [
-    "LedgerTollGate.swift:443"
+    "LedgerTollGate.swift:477"
    ],
    "args": [],
    "targets": [
@@ -43139,7 +43163,7 @@
    "ko": "머문 곳",
    "en": "Place",
    "files": [
-    "LedgerTollRepeat.swift:529",
+    "LedgerTollRepeat.swift:550",
     "AssistantActivity.swift:207",
     "AssistantActivity.swift:300"
    ],
@@ -58397,7 +58421,7 @@
    "ko": "일반",
    "en": "Standard",
    "files": [
-    "LedgerTollRepeat.swift:435"
+    "LedgerTollRepeat.swift:437"
    ],
    "args": [],
    "targets": [
@@ -60280,7 +60304,7 @@
    "ko": "전기·수소차 할인",
    "en": "EV discount",
    "files": [
-    "LedgerTollRepeat.swift:428"
+    "LedgerTollRepeat.swift:430"
    ],
    "args": [],
    "targets": [
@@ -60292,7 +60316,7 @@
    "ko": "전기·수소차",
    "en": "EV · hydrogen",
    "files": [
-    "LedgerTollRepeat.swift:437"
+    "LedgerTollRepeat.swift:439"
    ],
    "args": [],
    "targets": [
@@ -60695,7 +60719,7 @@
    "ko": "정상요금 {0}",
    "en": "Normal fare {0}",
    "files": [
-    "LedgerTollGate.swift:230"
+    "LedgerTollGate.swift:223"
    ],
    "args": [
     "money"
@@ -61120,7 +61144,7 @@
    "ko": "주말 할증 5%",
    "en": "Weekend surcharge 5%",
    "files": [
-    "LedgerTollRepeat.swift:429"
+    "LedgerTollRepeat.swift:431"
    ],
    "args": [],
    "targets": [
@@ -61721,7 +61745,7 @@
    "ko": "지난 톨게이트로 자동 추가",
    "en": "Added from the toll plazas passed",
    "files": [
-    "LedgerTollGate.swift:229"
+    "LedgerTollGate.swift:222"
    ],
    "args": [],
    "targets": [
@@ -63750,7 +63774,7 @@
    "ko": "출퇴근 할인 20%",
    "en": "Commute discount 20%",
    "files": [
-    "LedgerTollRepeat.swift:426"
+    "LedgerTollRepeat.swift:428"
    ],
    "args": [],
    "targets": [
@@ -63762,7 +63786,7 @@
    "ko": "출퇴근 할인 50%",
    "en": "Commute discount 50%",
    "files": [
-    "LedgerTollRepeat.swift:425"
+    "LedgerTollRepeat.swift:427"
    ],
    "args": [],
    "targets": [
@@ -64157,7 +64181,7 @@
    "ko": "카카오 길찾기로 자동 추가",
    "en": "Added from Kakao directions",
    "files": [
-    "LedgerTollGate.swift:446"
+    "LedgerTollGate.swift:480"
    ],
    "args": [],
    "targets": [
@@ -64169,7 +64193,7 @@
    "ko": "카카오 예상 통행료",
    "en": "Kakao estimated toll",
    "files": [
-    "LedgerTollGate.swift:447"
+    "LedgerTollGate.swift:481"
    ],
    "args": [],
    "targets": [

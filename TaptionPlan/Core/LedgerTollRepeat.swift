@@ -499,11 +499,27 @@ enum LedgerTollRepeatRunner {
             ) else { continue }
             await LedgerBook.shared.save(fixed)
         }
+        // 집·회사로 가는 길이면 「(출근)」「(퇴근)」을 붙인다(TGT1120A03).
+        let places = model.snapshot.settings.frequentPlaces
+        let homes = Set(places.filter { $0.kind == .home }.map(\.displayName)), works = Set(places.filter { $0.kind == .company }.map(\.displayName))
+        let direction: (LedgerTollRepeat.Drive) -> LedgerTollGate.Direction? = { drive in
+            if works.contains(drive.to) { return .toWork }
+            if homes.contains(drive.to) || works.contains(drive.from) { return .toHome }
+            return nil
+        }
+        // 예전 형식으로 들어간 지난 톨게이트 통행료의 제목을 맞춘다(최근 14일, 손으로 고친 제목은 두기).
+        for entry in entries where now.timeIntervalSince(entry.occurredAt) <= 14 * 86_400 {
+            guard let fixed = LedgerTollGate.retitled(entry, drives: routed, direction: direction, language: language) else { continue }
+            await LedgerBook.shared.save(fixed)
+        }
+        for item in LedgerReviewStore.shared.items where item.reason == .toll {
+            if let fixed = LedgerTollGate.retitled(item.entry, drives: routed, direction: direction, language: language) { LedgerReviewStore.shared.update(fixed) }
+        }
         guard !routed.isEmpty else { return }
         // 지난 톨게이트로 먼저 알아내고, 못 알아낸 이동만 같은 길 방식으로 본다(TGT1118A01).
         let gate = await LedgerTollGateRunner.run(
             drives: routed, existing: entries, handled: Set(handled), now: now,
-            vehicle: vehicle, isOffDay: isOffDay, calendar: calendar, language: language
+            vehicle: vehicle, isOffDay: isOffDay, calendar: calendar, language: language, direction: direction
         )
         handled += gate.done
         if !gate.done.isEmpty { defaults.set(Array(handled.suffix(200)), forKey: handledKey) }

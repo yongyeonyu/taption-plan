@@ -92,8 +92,8 @@ final class LedgerTollGateTests: XCTestCase {
 
     // MARK: 표시와 넣기
 
-    private func addition(_ trip: LedgerTollGate.Trip, _ fare: LedgerTollGate.Fare, vehicle: LedgerTollDiscount.Vehicle = .standard) -> LedgerTollGate.Addition? {
-        LedgerTollGate.addition(trip: trip, fare: fare, vehicle: vehicle, isOffDay: { _ in false }, calendar: utc, language: .korean)
+    private func addition(_ trip: LedgerTollGate.Trip, _ fare: LedgerTollGate.Fare, vehicle: LedgerTollDiscount.Vehicle = .standard, direction: LedgerTollGate.Direction? = nil) -> LedgerTollGate.Addition? {
+        LedgerTollGate.addition(trip: trip, fare: fare, vehicle: vehicle, isOffDay: { _ in false }, calendar: utc, language: .korean, direction: direction)
     }
 
     func testCertainClosedTripIsWrittenWithPlazasFareAndDiscount() throws {
@@ -148,6 +148,31 @@ final class LedgerTollGateTests: XCTestCase {
                        "가짜북 영업소 → 가짜남 영업소 통행료", "노선이 바뀌면 영업소 이름으로")
         XCTAssertNil(LedgerTollGate.highway("  ", language: .korean))
         XCTAssertEqual(LedgerTollGate.highway("경인고속도로", language: .korean), "경인고속도로")
+    }
+
+    /// TGT1120A03: 같은 길 통행료처럼 제목 끝에 「(출근)」「(퇴근)」, 예전 제목은 지금 형식으로, 손으로 고친 제목은 그대로.
+    func testTitleGetsCommuteSuffixAndOldTitlesAreRetitled() throws {
+        var incheon = pass(north, 9.5)
+        incheon.name = "인천"
+        incheon.route = "경인선"
+        let trip = try XCTUnwrap(LedgerTollGate.trip([incheon]))
+        XCTAssertEqual(LedgerTollGate.title(trip: trip, direction: .toWork, language: .korean), "경인고속도로 통행료 (출근)")
+        XCTAssertEqual(LedgerTollGate.title(trip: trip, direction: .toHome, language: .korean), "경인고속도로 통행료 (퇴근)")
+        let made = try XCTUnwrap(addition(trip, .known(normal: 900, distanceKm: 10), direction: .toWork))
+        XCTAssertEqual(made.entry.title, "경인고속도로 통행료 (출근)")
+        XCTAssertEqual(LedgerHighway.number(for: made.entry), 120)
+
+        var drive = LedgerTollRepeat.Drive(from: "집", to: "회사", start: at(9.4), end: at(10.2))
+        drive.passes = [incheon]
+        var old = made.entry
+        old.title = "인천 영업소 통행료"
+        let direction: (LedgerTollRepeat.Drive) -> LedgerTollGate.Direction? = { _ in .toWork }
+        XCTAssertEqual(LedgerTollGate.retitled(old, drives: [drive], direction: direction, language: .korean)?.title, "경인고속도로 통행료 (출근)")
+        old.title = "경인고속도로 통행료"
+        XCTAssertEqual(LedgerTollGate.retitled(old, drives: [drive], direction: direction, language: .korean)?.title, "경인고속도로 통행료 (출근)")
+        old.title = "내가 고친 이름"
+        XCTAssertNil(LedgerTollGate.retitled(old, drives: [drive], direction: direction, language: .korean))
+        XCTAssertNil(LedgerTollGate.retitled(made.entry, drives: [drive], direction: direction, language: .korean), "이미 맞는 제목")
     }
 
     func testCandidatesKeepHandledPaidUnsettledAndUnmatchedDrivesOut() {

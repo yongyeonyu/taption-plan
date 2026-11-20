@@ -35,6 +35,13 @@ final class LedgerReviewStore {
         persist()
     }
 
+    /// 같은 기록의 제목 등을 고친다(TGT1120A03).
+    func update(_ entry: LedgerEntry) {
+        guard let index = items.firstIndex(where: { $0.entry.id == entry.id }) else { return }
+        items[index].entry = entry
+        persist()
+    }
+
     /// 버린다.
     func remove(_ id: UUID) {
         items.removeAll { $0.id == id }

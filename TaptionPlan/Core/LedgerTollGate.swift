@@ -192,7 +192,7 @@ enum LedgerTollGate {
     @MainActor
     static func addition(
         trip: Trip, fare: Fare, vehicle: LedgerTollDiscount.Vehicle, isOffDay: (Date) -> Bool,
-        calendar: Calendar, language: MapHomeLanguage
+        calendar: Calendar, language: MapHomeLanguage, direction: Direction? = nil
     ) -> Addition? {
         let normal: Double, distanceKm: Double?, fareKnown: Bool
         switch fare {
@@ -203,25 +203,18 @@ enum LedgerTollGate {
         func rate(_ date: Date) -> LedgerTollDiscount.Applied {
             applied(at: date, distanceKm: distanceKm, vehicle: vehicle, isOffDay: isOffDay(date), calendar: calendar)
         }
-        let paidAt: Date, sameRate: Bool, title: String, route: String
+        let paidAt: Date, sameRate: Bool, route: String
         switch trip.kind {
         case let .closed(entry, exit):
             paidAt = exit.at
             sameRate = rate(entry.at) == rate(exit.at)
-            let from = plaza(entry.name, language: language), to = plaza(exit.name, language: language)
-            route = "\(from) → \(to)"
-            if let road = highway(entry.route, language: language), entry.route == exit.route {
-                title = language.text("\(road) 통행료", "Toll: \(road)")
-            } else {
-                title = language.text("\(from) → \(to) 통행료", "Toll: \(from) → \(to)")
-            }
+            route = "\(plaza(entry.name, language: language)) → \(plaza(exit.name, language: language))"
         case let .single(pass):
             paidAt = pass.at
             sameRate = true
             route = plaza(pass.name, language: language)
-            let road = highway(pass.route, language: language)
-            title = language.text("\(road ?? route) 통행료", "Toll: \(road ?? route)")
         }
+        let title = title(trip: trip, direction: direction, language: language)
         let discount = rate(paidAt)
         var entry = LedgerEntry(occurredAt: paidAt, amount: LedgerTollDiscount.amount(base: normal, rate: discount.rate), title: title)
         entry.category = .transport
@@ -230,6 +223,46 @@ enum LedgerTollGate {
                        language.text("정상요금 \(money)", "Normal fare \(money)")]
             + [LedgerTollDiscount.label(discount, language: language)].compactMap { $0 }).joined(separator: " · ")
         return Addition(entry: entry, applied: discount, certain: trip.isPrecise && fareKnown && sameRate)
+    }
+
+    /// 출근길인지 퇴근길인지(TGT1120A03). 같은 길 통행료의 「(출근)」「(퇴근)」과 같은 꼴로 제목 끝에 붙인다.
+    enum Direction: Equatable { case toWork, toHome }
+
+    /// 기록 제목. 노선 이름이 있으면 고속도로 이름(노선 표지가 붙는다), 출퇴근을 알면 끝에 「(출근)」「(퇴근)」.
+    /// `road`가 거짓이면 영업소 이름으로만(예전에 들어간 제목을 알아보는 데 쓴다).
+    static func title(trip: Trip, direction: Direction?, language: MapHomeLanguage, road useRoad: Bool = true) -> String {
+        let base: String
+        switch trip.kind {
+        case let .closed(entry, exit):
+            let from = plaza(entry.name, language: language), to = plaza(exit.name, language: language)
+            if useRoad, let road = highway(entry.route, language: language), entry.route == exit.route {
+                base = language.text("\(road) 통행료", "Toll: \(road)")
+            } else {
+                base = language.text("\(from) → \(to) 통행료", "Toll: \(from) → \(to)")
+            }
+        case let .single(pass):
+            let name = (useRoad ? highway(pass.route, language: language) : nil) ?? plaza(pass.name, language: language)
+            base = language.text("\(name) 통행료", "Toll: \(name)")
+        }
+        switch direction {
+        case .toWork: return base + language.text(" (출근)", " (to work)")
+        case .toHome: return base + language.text(" (퇴근)", " (to home)")
+        case nil: return base
+        }
+    }
+
+    /// 예전에 영업소 이름·출퇴근 없이 들어간 통행료의 제목을 지금 형식으로. 손으로 고친 제목이면 nil.
+    static func retitled(_ entry: LedgerEntry, drives: [LedgerTollRepeat.Drive], direction: (LedgerTollRepeat.Drive) -> Direction?, language: MapHomeLanguage) -> LedgerEntry? {
+        let note = entry.note ?? ""
+        guard notes.contains(where: { note.hasPrefix($0) }),
+              let drive = LedgerTollRepeat.merged(drives).first(where: { LedgerTollRepeat.covers($0, entry.occurredAt) && !$0.passes.isEmpty }),
+              let trip = trip(drive.passes) else { return nil }
+        let old = [false, true].map { title(trip: trip, direction: nil, language: language, road: $0) }
+        let fresh = title(trip: trip, direction: direction(drive), language: language)
+        guard old.contains(entry.title), fresh != entry.title else { return nil }
+        var fixed = entry
+        fixed.title = fresh
+        return fixed
     }
 
     /// 노선 이름 → 고속도로 이름(`경인선` → `경인고속도로`). 영업소 이름만 적으면 노선 표지가 붙지 않는다(TGT1120A01).
@@ -356,7 +389,8 @@ enum LedgerTollFareStore {
 enum LedgerTollGateRunner {
     static func run(
         drives: [LedgerTollRepeat.Drive], existing: [LedgerEntry], handled: Set<String>, now: Date,
-        vehicle: LedgerTollDiscount.Vehicle, isOffDay: @escaping (Date) -> Bool, calendar: Calendar, language: MapHomeLanguage
+        vehicle: LedgerTollDiscount.Vehicle, isOffDay: @escaping (Date) -> Bool, calendar: Calendar, language: MapHomeLanguage,
+        direction: (LedgerTollRepeat.Drive) -> LedgerTollGate.Direction? = { _ in nil }
     ) async -> (done: [String], unknownFare: Set<String>) {
         var done: [String] = []
         var unknownFare = Set<String>()
@@ -365,7 +399,7 @@ enum LedgerTollGateRunner {
             guard let fare = await LedgerTollFareStore.fare(from: codes.from, to: codes.to, now: now) else { continue }
             if fare == .missing { unknownFare.insert(candidate.drive.key) }
             guard let addition = LedgerTollGate.addition(trip: candidate.trip, fare: fare, vehicle: vehicle, isOffDay: isOffDay,
-                                                         calendar: calendar, language: language) else { continue }
+                                                         calendar: calendar, language: language, direction: direction(candidate.drive)) else { continue }
             // 대표 결정: 확실하면 바로 넣고, 아니면 「확인 필요」에 올린다(지하철 요금과 같은 방식).
             if addition.certain { await LedgerBook.shared.save(addition.entry) } else { LedgerReviewStore.shared.add(addition.entry, reason: .toll, now: now) }
             done.append(candidate.drive.key)
