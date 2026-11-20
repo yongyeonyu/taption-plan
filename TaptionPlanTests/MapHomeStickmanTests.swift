@@ -1322,7 +1322,7 @@ final class MapHomeStickmanTests: XCTestCase {
     func testHomeGlyphDrawsEquippedHat() throws {
         let action = try XCTUnwrap(Optional(MapHomeStickmanAction.activity))
         func pixels(_ accessoryID: String?) throws -> [UInt8] {
-            let renderer = ImageRenderer(content: MapHomeStickmanGlyph(action: action, size: 36, equippedAccessoryID: accessoryID)
+            let renderer = ImageRenderer(content: MapHomeStickmanGlyph(action: action, size: 36, equippedAccessoryID: accessoryID, usesSeasonPack: false) // 오늘 날짜의 시즌 모자가 장착 모자를 덮지 않게
                 .environment(\.isLuminanceReduced, true)
                 .frame(width: 80, height: 80))
             renderer.scale = 2

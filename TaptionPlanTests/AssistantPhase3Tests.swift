@@ -677,16 +677,20 @@ final class AssistantPhase3Tests: XCTestCase {
 
     func testDefaultBubblePoolIsStablePerHalfHour() {
         let time = at(10, 5)
-        let first = MapHomeDefaultBubblePool.phrase(for: .computer, at: time, language: .korean)
+        let first = MapHomeDefaultBubblePool.phrase(for: .computer, at: time, language: .korean, seasonPhrases: [])
         XCTAssertNotNil(first)
-        XCTAssertEqual(MapHomeDefaultBubblePool.phrase(for: .computer, at: at(10, 20), language: .korean), first, "same half hour, same words")
+        XCTAssertEqual(MapHomeDefaultBubblePool.phrase(for: .computer, at: at(10, 20), language: .korean, seasonPhrases: []), first, "same half hour, same words")
         XCTAssertTrue(MapHomeDefaultBubblePool.phrases(.work, language: .korean).contains(first ?? ""))
         XCTAssertEqual(MapHomeDefaultBubblePool.group(for: .car), .movement)
         XCTAssertEqual(MapHomeDefaultBubblePool.group(for: .eating), .eating)
         XCTAssertEqual(MapHomeDefaultBubblePool.group(for: .deepSleep), .sleep)
-        XCTAssertNil(MapHomeDefaultBubblePool.phrase(for: .unconfirmed, at: time, language: .korean), "unknown activity keeps its own name")
-        let day = (0..<48).compactMap { MapHomeDefaultBubblePool.phrase(for: .restDonut, at: at(0).addingTimeInterval(Double($0) * 1_800), language: .korean) }
+        XCTAssertNil(MapHomeDefaultBubblePool.phrase(for: .unconfirmed, at: time, language: .korean, seasonPhrases: []), "unknown activity keeps its own name")
+        let day = (0..<48).compactMap { MapHomeDefaultBubblePool.phrase(for: .restDonut, at: at(0).addingTimeInterval(Double($0) * 1_800), language: .korean, seasonPhrases: []) }
         XCTAssertEqual(Set(day).count, MapHomeDefaultBubblePool.phrases(.rest, language: .korean).count, "every phrase comes up during a day")
+        // 시즌 대사가 있으면 기본 풀 앞에 섞인다(오늘 날짜와 상관없이 고정한 대사로 확인).
+        let withSeason = (0..<48).compactMap { MapHomeDefaultBubblePool.phrase(for: .computer, at: at(0).addingTimeInterval(Double($0) * 1_800), language: .korean, seasonPhrases: ["시즌 대사"]) }
+        XCTAssertTrue(withSeason.contains("시즌 대사"))
+        XCTAssertEqual(Set(withSeason).count, MapHomeDefaultBubblePool.phrases(.work, language: .korean).count + 1)
     }
 
     func testBubbleCommandIsUndoableTogglableAndTouchesNoRecords() async throws {
@@ -907,6 +911,20 @@ final class AssistantPhase3Tests: XCTestCase {
             XCTAssertFalse(text.contains("/mcp/"), "no key-in-URL form for Muse")
             XCTAssertFalse(text.localizedCaseInsensitiveContains("add an mcp server"), "no claim of an MCP server settings screen")
         }
+        // MUS1120A04: 키 자리는 자리 표시자뿐이고, API 안내가 이어 붙으며, 권한·기간은 만든 키의 것을 쓴다. 실제 키 모양 문자열은 쓰지 않는다.
+        for (text, language) in [(ko, MapHomeLanguage.korean), (en, .english)] {
+            XCTAssertTrue(text.contains("Authorization: Bearer <connection key>"), "\(language)")
+            XCTAssertTrue(text.contains("get_activity"), "API guide follows")
+            XCTAssertNil(text.range(of: "[A-Za-z0-9_-]{32,}", options: .regularExpression), "no key-shaped token in the text")
+            XCTAssertTrue(text.contains("read-only"), "default scope is the read key's")
+            XCTAssertFalse(text.contains("add_memo"), "no write tools for a read key")
+        }
+        XCTAssertTrue(ko.contains("보안 입력 화면을 보여 줘"))
+        XCTAssertTrue(en.contains("secure input screen"))
+        let writeText = TripRelay.museSetupText(host: "trip.bokkiyaw.com", language: .english, scope: .write, expiresAt: Date(timeIntervalSince1970: 1_800_000_000))
+        XCTAssertTrue(writeText.contains("read and write") && writeText.contains("add_memo") && writeText.contains("stops working after"))
+        XCTAssertNil(writeText.range(of: "[A-Za-z0-9_-]{32,}", options: .regularExpression))
+        XCTAssertFalse(writeText.contains("/mcp/"))
         XCTAssertNil(TripRelay.keyConnectorSetupText(for: .muse, host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil), "Muse never gets a key-carrying text")
         XCTAssertNil(TripRelay.keyConnectorSetupText(for: .pickle, host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil))
     }

@@ -86,7 +86,8 @@ struct AssistantGuideStep: Identifiable, Equatable {
 enum AssistantGuidePlan {
     /// AI마다 단계. 값(코드·PIN·키)이 아직 없으면 그 단계 버튼은 앞 단계를 먼저 하라고 막힌다.
     static func steps(
-        _ provider: AssistantAIProvider, host: String, token: String?, code: String?, pin: String?, language: MapHomeLanguage
+        _ provider: AssistantAIProvider, host: String, token: String?, code: String?, pin: String?, language: MapHomeLanguage,
+        scope: AssistantKeyScope = .read, expiresAt: Date? = nil
     ) -> [AssistantGuideStep] {
         let check = AssistantGuideStep(
             id: "check", title: language.text("연결 확인", "Check the connection"),
@@ -126,26 +127,31 @@ enum AssistantGuidePlan {
                       button: language.text("연결 키 복사", "Copy key"), action: token.map(AssistantGuideStep.Action.copy)),
                 check,
             ]
-        // Muse에는 「MCP 서버 추가」·「MCP 주소 복사」 단계가 없다(MUS1120A03). 키를 만들면 키 없는 안내가 복사되고,
-        // 채팅에 붙여 넣어 커넥터를 만들게 한 뒤 키는 Muse의 보안 입력에 따로 넣는다. 한국 App Store에는 없어 「열기」 단추가 없다.
+        // Muse에는 「MCP 서버 추가」 화면이 없다(MUS1120A04). 키 만들기 → 키 없는 안내 복사 → 채팅에 붙여 넣기 → 보안 입력에 키 → 연결 확인.
+        // 한국 App Store에는 Muse가 없어 「열기」 단추가 없다.
         case .muse:
+            let setup = TripRelay.museSetupText(host: host, language: language, scope: scope, expiresAt: expiresAt)
             return [
                 .init(id: "key", title: language.text("연결 키 만들기", "Make a key"),
-                      detail: language.text("권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고, Muse 채팅에 붙여 넣을 안내(키는 들어 있지 않아요)를 복사해요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.", "Pick access and period, then enter your app password to make a key just for Muse and copy the setup to paste into the Muse chat (it doesn't contain the key). Doing it again makes a new key and cuts the old one."),
+                      detail: language.text("권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.", "Pick access and period, then enter your app password to make a key just for Muse. Doing it again makes a new key and cuts the old one."),
                       button: language.text("키 만들기", "Make key"), action: .makeKey,
                       shot: .init(asset: "MuseGuide1Key", caption: language.text("1. 앱에서 연결 키 만들기", "1. Make a key in the app"))),
+                .init(id: "copySetup", title: language.text("설정 안내 복사", "Copy the setup"),
+                      detail: language.text("Muse 채팅에 붙여 넣을 설정 안내를 복사해요. 키는 들어 있지 않아요.", "Copy the setup to paste into the Muse chat. It doesn't contain the key."),
+                      button: language.text("설정 안내 복사", "Copy setup"), action: .copy(setup),
+                      shot: .init(asset: "MuseGuide2Copy", caption: language.text("2. 앱에서 설정 안내 복사", "2. Copy the setup in the app"))),
                 .init(id: "paste", title: language.text("Muse 채팅에 붙여 넣기", "Paste into the Muse chat"),
-                      detail: language.text("복사한 안내를 Muse 채팅에 붙여 넣고 보내요. Muse가 커스텀 커넥터를 만들어요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.", "Paste the copied setup into the Muse chat and send it. Muse creates the custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."),
-                      button: language.text("안내 다시 복사", "Copy setup again"), action: .copy(TripRelay.museSetupText(host: host, language: language)),
-                      shot: .init(asset: "MuseGuide2Paste", caption: language.text("2. Muse 채팅에 안내를 붙여 넣은 화면", "2. The setup pasted into the Muse chat"))),
+                      detail: language.text("복사한 안내를 Muse 채팅에 붙여 넣고 보내서 커스텀 커넥터를 만들어 달라고 해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.", "Paste the copied setup into the Muse chat and send it to ask for a custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."),
+                      button: language.text("안내 다시 복사", "Copy setup again"), action: .copy(setup),
+                      shot: .init(asset: "MuseGuide3Paste", caption: language.text("3. Muse 채팅에 안내를 붙여 넣은 화면", "3. The setup pasted into the Muse chat"))),
                 .init(id: "auth", title: language.text("보안 입력에 키 넣기", "Enter the key securely"),
-                      detail: language.text("Muse가 보안 입력(카드나 링크)을 보여 주면 연결 키를 넣어요. 채팅에 직접 쓰지 않아요.", "When Muse shows its secure input (a card or link), enter the connection key there. Don't type it in the chat."),
+                      detail: language.text("키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.", "Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat."),
                       button: language.text("연결 키 복사", "Copy key"), action: token.map(AssistantGuideStep.Action.copy),
-                      shot: .init(asset: "MuseGuide3Secure", caption: language.text("3. Muse 보안 키 입력 화면", "3. Muse's secure key input"))),
+                      shot: .init(asset: "MuseGuide4Secure", caption: language.text("4. Muse 보안 키 입력 화면", "4. Muse's secure key input"))),
                 .init(id: "check", title: check.title,
                       detail: language.text("Muse가 도구 목록과 읽기 시험을 마치고 연결됐다고 알려 주면, 눌러 앱에서도 연결됐는지 확인해요.", "When Muse finishes listing tools and a read test and says it's connected, tap to check in the app too."),
                       button: check.button, action: .check,
-                      shot: .init(asset: "MuseGuide4Done", caption: language.text("4. Muse 연결 완료 메시지", "4. Muse's connected message"))),
+                      shot: .init(asset: "MuseGuide5Done", caption: language.text("5. Muse 연결 완료 메시지", "5. Muse's connected message"))),
             ]
         default:
             let appStep: [AssistantGuideStep] = provider.destination(installed: provider.isInstalled).map { url in

@@ -170,7 +170,7 @@
    "ko": "1. 「Claude에서 바로 추가」를 누르고 앱 비밀번호를 넣어요.\n2. 연결 코드가 복사되고 승인 PIN이 보여요.\n3. Claude가 열리면 「Add」를 누르고, 승인 화면에 코드를 붙여 넣고 PIN을 넣어요.",
    "en": "1. Tap Add in Claude now and enter your app password.\n2. A connection code is copied and the approval PIN is shown.\n3. In Claude tap Add, then paste the code and enter the PIN on the approval page.",
    "files": [
-    "AssistantConnectView.swift:413"
+    "AssistantConnectView.swift:422"
    ],
    "args": [],
    "targets": [
@@ -194,7 +194,7 @@
    "ko": "1. 앱에서 연결 키 만들기",
    "en": "1. Make a key in the app",
    "files": [
-    "AssistantConnectGuide.swift:136"
+    "AssistantConnectGuide.swift:138"
    ],
    "args": [],
    "targets": [
@@ -206,7 +206,7 @@
    "ko": "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. ChatGPT → GPT 만들기 → 구성 → 작업(Actions) → 새 작업 만들기 → 가져오기(URL)에 스키마 주소를 붙여 넣어요.\n3. 인증 → API 키 → 인증 유형 Bearer를 고르고 연결 키를 붙여 넣어요.\n4. 미리보기에서 「오늘 기록 읽어 줘」로 확인한 뒤 저장해요.",
    "en": "1. In the Step by step card above, pick access and period in the make-key step and make the key.\n2. In ChatGPT, open Create a GPT → Configure → Actions → Create new action → Import from URL and paste the schema URL.\n3. Under Authentication choose API key, auth type Bearer, and paste the key.\n4. Check in the preview with \"read today's records\", then save.",
    "files": [
-    "AssistantConnectView.swift:384"
+    "AssistantConnectView.swift:389"
    ],
    "args": [],
    "targets": [
@@ -218,7 +218,7 @@
    "ko": "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. Cue에서 MCP 서버(커넥터)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Cue 화면을 따라 주세요.\n5. 저장한 뒤 Cue에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.",
    "en": "1. In the Step by step card above, pick access and period in the make-key step and make the key.\n2. In Cue, open the screen for adding an MCP server (connector).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Cue's screen.\n5. Save, then ask Cue something like \"read today's records\" to check.",
    "files": [
-    "AssistantConnectView.swift:298"
+    "AssistantConnectView.swift:303"
    ],
    "args": [],
    "targets": [
@@ -226,11 +226,11 @@
    ]
   },
   {
-   "key": "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. 복사된 안내를 Muse 채팅에 붙여 넣고 보내요. Muse가 커스텀 커넥터를 만들어요.\n3. Muse가 보여 주는 보안 입력에 연결 키를 넣어요. 키는 채팅에 직접 쓰지 않아요.\n4. Muse가 연결을 시험한 뒤 연결됐다고 알려 주면 끝나요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|1. In the Step by step card above, pick access and period in the make-key step and make the key.\n2. Paste the copied setup into the Muse chat and send it. Muse creates the custom connector.\n3. Enter the connection key in the secure input Muse shows. Don't type the key in the chat.\n4. You're done when Muse tests the connection and tells you it's connected. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
-   "ko": "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. 복사된 안내를 Muse 채팅에 붙여 넣고 보내요. Muse가 커스텀 커넥터를 만들어요.\n3. Muse가 보여 주는 보안 입력에 연결 키를 넣어요. 키는 채팅에 직접 쓰지 않아요.\n4. Muse가 연결을 시험한 뒤 연결됐다고 알려 주면 끝나요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
-   "en": "1. In the Step by step card above, pick access and period in the make-key step and make the key.\n2. Paste the copied setup into the Muse chat and send it. Muse creates the custom connector.\n3. Enter the connection key in the secure input Muse shows. Don't type the key in the chat.\n4. You're done when Muse tests the connection and tells you it's connected. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
+   "key": "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. 설정 안내를 복사해요. 키는 들어 있지 않아요.\n3. Muse 채팅에 붙여 넣고 보내서 커스텀 커넥터를 만들어 달라고 해요.\n4. 키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어요. 키를 채팅에 직접 적지 마세요.\n5. Muse가 연결을 시험한 뒤 연결됐다고 알려 주면 끝나요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|1. In the make-key step of the Step by step card above, pick access and period and make the key.\n2. Copy the setup. It doesn't contain the key.\n3. Paste it into the Muse chat and send it to ask for a custom connector.\n4. Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.\n5. You're done when Muse tests the connection and tells you it's connected. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
+   "ko": "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. 설정 안내를 복사해요. 키는 들어 있지 않아요.\n3. Muse 채팅에 붙여 넣고 보내서 커스텀 커넥터를 만들어 달라고 해요.\n4. 키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어요. 키를 채팅에 직접 적지 마세요.\n5. Muse가 연결을 시험한 뒤 연결됐다고 알려 주면 끝나요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
+   "en": "1. In the make-key step of the Step by step card above, pick access and period and make the key.\n2. Copy the setup. It doesn't contain the key.\n3. Paste it into the Muse chat and send it to ask for a custom connector.\n4. Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.\n5. You're done when Muse tests the connection and tells you it's connected. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
    "files": [
-    "AssistantConnectView.swift:340"
+    "AssistantConnectView.swift:345"
    ],
    "args": [],
    "targets": [
@@ -485,11 +485,11 @@
    ]
   },
   {
-   "key": "2. Muse 채팅에 안내를 붙여 넣은 화면|2. The setup pasted into the Muse chat",
-   "ko": "2. Muse 채팅에 안내를 붙여 넣은 화면",
-   "en": "2. The setup pasted into the Muse chat",
+   "key": "2. 걸은 거리|2. Distance walked",
+   "ko": "2. 걸은 거리",
+   "en": "2. Distance walked",
    "files": [
-    "AssistantConnectGuide.swift:140"
+    "MapHomeStride.swift:152"
    ],
    "args": [],
    "targets": [
@@ -497,11 +497,11 @@
    ]
   },
   {
-   "key": "2. 걸은 거리|2. Distance walked",
-   "ko": "2. 걸은 거리",
-   "en": "2. Distance walked",
+   "key": "2. 앱에서 설정 안내 복사|2. Copy the setup in the app",
+   "ko": "2. 앱에서 설정 안내 복사",
+   "en": "2. Copy the setup in the app",
    "files": [
-    "MapHomeStride.swift:152"
+    "AssistantConnectGuide.swift:142"
    ],
    "args": [],
    "targets": [
@@ -569,11 +569,11 @@
    ]
   },
   {
-   "key": "3. Muse 보안 키 입력 화면|3. Muse's secure key input",
-   "ko": "3. Muse 보안 키 입력 화면",
-   "en": "3. Muse's secure key input",
+   "key": "3. Muse 채팅에 안내를 붙여 넣은 화면|3. The setup pasted into the Muse chat",
+   "ko": "3. Muse 채팅에 안내를 붙여 넣은 화면",
+   "en": "3. The setup pasted into the Muse chat",
    "files": [
-    "AssistantConnectGuide.swift:144"
+    "AssistantConnectGuide.swift:146"
    ],
    "args": [],
    "targets": [
@@ -630,11 +630,11 @@
    ]
   },
   {
-   "key": "4. Muse 연결 완료 메시지|4. Muse's connected message",
-   "ko": "4. Muse 연결 완료 메시지",
-   "en": "4. Muse's connected message",
+   "key": "4. Muse 보안 키 입력 화면|4. Muse's secure key input",
+   "ko": "4. Muse 보안 키 입력 화면",
+   "en": "4. Muse's secure key input",
    "files": [
-    "AssistantConnectGuide.swift:148"
+    "AssistantConnectGuide.swift:150"
    ],
    "args": [],
    "targets": [
@@ -659,6 +659,18 @@
    "en": "Insurance",
    "files": [
     "MapHomeSalarySettingsSheet.swift:175"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "5. Muse 연결 완료 메시지|5. Muse's connected message",
+   "ko": "5. Muse 연결 완료 메시지",
+   "en": "5. Muse's connected message",
+   "files": [
+    "AssistantConnectGuide.swift:154"
    ],
    "args": [],
    "targets": [
@@ -755,7 +767,7 @@
    "ko": "AI 고르기",
    "en": "Choose an AI",
    "files": [
-    "AssistantConnectView.swift:649"
+    "AssistantConnectView.swift:656"
    ],
    "args": [],
    "targets": [
@@ -1603,7 +1615,7 @@
    "ko": "App Store에서 받기",
    "en": "Get it on the App Store",
    "files": [
-    "AssistantConnectView.swift:163"
+    "AssistantConnectView.swift:164"
    ],
    "args": [],
    "targets": [
@@ -2106,7 +2118,7 @@
    "ko": "ChatGPT → 설정 → 앱과 커넥터 → 고급에서 개발자 모드를 켜고, 커넥터 만들기에 서버 주소를 넣으세요(OAuth). 열린 화면에 아래 연결 코드와 PIN을 넣으면 끝나요.",
    "en": "In ChatGPT, open Settings → Apps & Connectors → Advanced, turn on developer mode and create a connector with the server URL (OAuth). Enter the code below and your PIN on the page that opens.",
    "files": [
-    "AssistantConnectView.swift:463"
+    "AssistantConnectView.swift:472"
    ],
    "args": [],
    "targets": [
@@ -2118,7 +2130,7 @@
    "ko": "ChatGPT 열기",
    "en": "Open ChatGPT",
    "files": [
-    "AssistantConnectGuide.swift:120"
+    "AssistantConnectGuide.swift:121"
    ],
    "args": [],
    "targets": [
@@ -2130,7 +2142,7 @@
    "ko": "ChatGPT에서 「구성」 → 「작업 추가」까지 가요. 맞춤 GPT는 Plus 이상이에요.",
    "en": "In ChatGPT, go to Configure → Create new action. Custom GPTs need Plus or higher.",
    "files": [
-    "AssistantConnectGuide.swift:119"
+    "AssistantConnectGuide.swift:120"
    ],
    "args": [],
    "targets": [
@@ -2142,7 +2154,7 @@
    "ko": "Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고 인증은 「로그인 없음」을 고르세요. 클립보드는 10분 뒤 지워져요.",
    "en": "In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:669"
+    "AssistantConnectView.swift:676"
    ],
    "args": [],
    "targets": [
@@ -2154,8 +2166,8 @@
    "ko": "Claude 열기",
    "en": "Open Claude",
    "files": [
-    "AssistantConnectGuide.swift:104",
-    "AssistantConnectView.swift:202"
+    "AssistantConnectGuide.swift:105",
+    "AssistantConnectView.swift:203"
    ],
    "args": [],
    "targets": [
@@ -2167,7 +2179,7 @@
    "ko": "Claude가 열리면 「Add」를 누르세요. 승인 화면이 열리면 이 앱으로 돌아와요.",
    "en": "When Claude opens, tap Add. When the approval page opens, come back here.",
    "files": [
-    "AssistantConnectGuide.swift:103"
+    "AssistantConnectGuide.swift:104"
    ],
    "args": [],
    "targets": [
@@ -2179,7 +2191,7 @@
    "ko": "Claude에서 「Add」를 누르면 승인 화면이 열려요. 코드를 붙여 넣고 PIN {0}을 넣어 주세요. 코드는 10분 안에 한 번만 쓸 수 있어요.",
    "en": "Tap Add in Claude to open the approval page. Paste the code and enter PIN {0}. The code works once within 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:206"
+    "AssistantConnectView.swift:207"
    ],
    "args": [
     "approvalPIN ?? \"\""
@@ -2193,7 +2205,7 @@
    "ko": "Claude에서 바로 추가 (추천)",
    "en": "Add in Claude now (recommended)",
    "files": [
-    "AssistantConnectView.swift:417"
+    "AssistantConnectView.swift:426"
    ],
    "args": [],
    "targets": [
@@ -2205,7 +2217,7 @@
    "ko": "Claude에서 추가",
    "en": "Add in Claude",
    "files": [
-    "AssistantConnectGuide.swift:102"
+    "AssistantConnectGuide.swift:103"
    ],
    "args": [],
    "targets": [
@@ -2217,7 +2229,7 @@
    "ko": "Cue 채팅창에 붙여 넣고 보내 주세요. Cue가 주소를 열어 MCP 주소와 키를 받아 가요. 안 되면 아래에서 MCP 주소와 키를 따로 넣어 주세요.",
    "en": "Paste it into the Cue chat and send. Cue opens the link to get the MCP URL and key. If that fails, enter them separately below.",
    "files": [
-    "AssistantConnectView.swift:686"
+    "AssistantConnectView.swift:693"
    ],
    "args": [],
    "targets": [
@@ -2313,7 +2325,7 @@
    "ko": "GPT 만들기 열기",
    "en": "Open the GPT builder",
    "files": [
-    "AssistantConnectGuide.swift:118"
+    "AssistantConnectGuide.swift:119"
    ],
    "args": [],
    "targets": [
@@ -2325,7 +2337,7 @@
    "ko": "Gemini CLI: 위 「단계별 연결」에서 키를 만들면 settings.json에 넣을 설정이 복사돼요. ~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작하세요.",
    "en": "Gemini CLI: making the key in the Step by step card above copies a block for settings.json. Paste it into ~/.gemini/settings.json and restart gemini.",
    "files": [
-    "AssistantConnectView.swift:330"
+    "AssistantConnectView.swift:335"
    ],
    "args": [],
    "targets": [
@@ -2337,7 +2349,7 @@
    "ko": "Gemini 앱은 연결할 수 없어요. 앱에서는 여행 프롬프트를 복사해 붙여 넣고, 받은 JSON을 이 앱에 붙여 넣어 주세요.",
    "en": "The Gemini app can't connect. In the app, paste the trip prompt and bring the JSON back here.",
    "files": [
-    "AssistantConnectView.swift:319"
+    "AssistantConnectView.swift:324"
    ],
    "args": [],
    "targets": [
@@ -2423,7 +2435,7 @@
    "ko": "MCP 주소 복사",
    "en": "Copy MCP URL",
    "files": [
-    "AssistantConnectView.swift:248"
+    "AssistantConnectView.swift:249"
    ],
    "args": [],
    "targets": [
@@ -2435,7 +2447,7 @@
    "ko": "MCP 주소",
    "en": "MCP URL",
    "files": [
-    "AssistantConnectView.swift:247"
+    "AssistantConnectView.swift:248"
    ],
    "args": [],
    "targets": [
@@ -2447,7 +2459,7 @@
    "ko": "MCP 주소를 복사했어요.",
    "en": "MCP URL copied.",
    "files": [
-    "AssistantConnectView.swift:250"
+    "AssistantConnectView.swift:251"
    ],
    "args": [],
    "targets": [
@@ -2455,11 +2467,11 @@
    ]
   },
   {
-   "key": "Muse 채팅에 붙여 넣고 보내 주세요. 연결 키는 채팅에 쓰지 말고, Muse가 보안 입력을 띄우면 그때 넣어 주세요(키는 이 화면에서 복사해요). 클립보드는 10분 뒤 지워져요.|Paste it into the Muse chat and send. Don't type the key in the chat; enter it when Muse shows its secure input (copy the key on this screen). The clipboard is cleared in 10 minutes.",
-   "ko": "Muse 채팅에 붙여 넣고 보내 주세요. 연결 키는 채팅에 쓰지 말고, Muse가 보안 입력을 띄우면 그때 넣어 주세요(키는 이 화면에서 복사해요). 클립보드는 10분 뒤 지워져요.",
+   "key": "Muse 채팅에 붙여 넣고 보내 주세요. 키는 채팅에 쓰지 말고, Muse가 보여주는 보안 입력 화면에 넣어 주세요(키는 이 화면에서 복사해요). 클립보드는 10분 뒤 지워져요.|Paste it into the Muse chat and send. Don't type the key in the chat; enter it when Muse shows its secure input (copy the key on this screen). The clipboard is cleared in 10 minutes.",
+   "ko": "Muse 채팅에 붙여 넣고 보내 주세요. 키는 채팅에 쓰지 말고, Muse가 보여주는 보안 입력 화면에 넣어 주세요(키는 이 화면에서 복사해요). 클립보드는 10분 뒤 지워져요.",
    "en": "Paste it into the Muse chat and send. Don't type the key in the chat; enter it when Muse shows its secure input (copy the key on this screen). The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:681"
+    "AssistantConnectView.swift:688"
    ],
    "args": [],
    "targets": [
@@ -2471,7 +2483,7 @@
    "ko": "Muse 채팅에 붙여 넣기",
    "en": "Paste into the Muse chat",
    "files": [
-    "AssistantConnectGuide.swift:137"
+    "AssistantConnectGuide.swift:143"
    ],
    "args": [],
    "targets": [
@@ -2479,11 +2491,11 @@
    ]
   },
   {
-   "key": "Muse 채팅에 붙여 넣을 안내 복사|Copy the setup to paste into Muse",
-   "ko": "Muse 채팅에 붙여 넣을 안내 복사",
-   "en": "Copy the setup to paste into Muse",
+   "key": "Muse 채팅에 붙여 넣을 설정 안내를 복사해요. 키는 들어 있지 않아요.|Copy the setup to paste into the Muse chat. It doesn't contain the key.",
+   "ko": "Muse 채팅에 붙여 넣을 설정 안내를 복사해요. 키는 들어 있지 않아요.",
+   "en": "Copy the setup to paste into the Muse chat. It doesn't contain the key.",
    "files": [
-    "AssistantConnectView.swift:242"
+    "AssistantConnectGuide.swift:140"
    ],
    "args": [],
    "targets": [
@@ -2495,19 +2507,7 @@
    "ko": "Muse가 도구 목록과 읽기 시험을 마치고 연결됐다고 알려 주면, 눌러 앱에서도 연결됐는지 확인해요.",
    "en": "When Muse finishes listing tools and a read test and says it's connected, tap to check in the app too.",
    "files": [
-    "AssistantConnectGuide.swift:146"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "Muse가 보안 입력(카드나 링크)을 보여 주면 연결 키를 넣어요. 채팅에 직접 쓰지 않아요.|When Muse shows its secure input (a card or link), enter the connection key there. Don't type it in the chat.",
-   "ko": "Muse가 보안 입력(카드나 링크)을 보여 주면 연결 키를 넣어요. 채팅에 직접 쓰지 않아요.",
-   "en": "When Muse shows its secure input (a card or link), enter the connection key there. Don't type it in the chat.",
-   "files": [
-    "AssistantConnectGuide.swift:142"
+    "AssistantConnectGuide.swift:152"
    ],
    "args": [],
    "targets": [
@@ -2519,7 +2519,7 @@
    "ko": "Muse에 연결",
    "en": "Connect to Muse",
    "files": [
-    "AssistantConnectView.swift:272"
+    "AssistantConnectView.swift:277"
    ],
    "args": [],
    "targets": [
@@ -2543,7 +2543,7 @@
    "ko": "PIN 넣고 승인",
    "en": "Enter the PIN and approve",
    "files": [
-    "AssistantConnectGuide.swift:108"
+    "AssistantConnectGuide.swift:109"
    ],
    "args": [],
    "targets": [
@@ -2555,7 +2555,7 @@
    "ko": "PIN 복사 {0}",
    "en": "Copy PIN {0}",
    "files": [
-    "AssistantConnectGuide.swift:110"
+    "AssistantConnectGuide.swift:111"
    ],
    "args": [
     "$0"
@@ -2569,7 +2569,7 @@
    "ko": "PIN 복사",
    "en": "Copy PIN",
    "files": [
-    "AssistantConnectGuide.swift:110"
+    "AssistantConnectGuide.swift:111"
    ],
    "args": [],
    "targets": [
@@ -2593,7 +2593,7 @@
    "ko": "PIN을 복사해 승인 화면 둘째 칸(PIN)에 붙여 넣고 「승인」을 눌러요.",
    "en": "Copy the PIN, paste it into the second field (PIN) and tap Approve.",
    "files": [
-    "AssistantConnectGuide.swift:109"
+    "AssistantConnectGuide.swift:110"
    ],
    "args": [],
    "targets": [
@@ -2994,7 +2994,7 @@
    "ko": "claude.ai → 설정 → 커넥터 → 맞춤 커넥터 추가에 서버 주소를 넣고 연결을 누르세요. 열린 화면에 아래 연결 코드와 PIN을 넣으면 끝나요.",
    "en": "On claude.ai, open Settings → Connectors → Add custom connector, enter the server URL and connect. Enter the code below and your PIN on the page that opens.",
    "files": [
-    "AssistantConnectView.swift:459"
+    "AssistantConnectView.swift:468"
    ],
    "args": [],
    "targets": [
@@ -3006,7 +3006,7 @@
    "ko": "claude.ai 열기",
    "en": "Open claude.ai",
    "files": [
-    "AssistantConnectView.swift:213"
+    "AssistantConnectView.swift:214"
    ],
    "args": [],
    "targets": [
@@ -3477,7 +3477,7 @@
    "ko": "{0} / {1} 단계",
    "en": "Step {0} of {1}",
    "files": [
-    "AssistantConnectGuide.swift:184"
+    "AssistantConnectGuide.swift:190"
    ],
    "args": [
     "index + 1",
@@ -4140,7 +4140,7 @@
    "ko": "{0} 연결 키를 만들어요.",
    "en": "Creates a connection key for {0}.",
    "files": [
-    "AssistantConnectView.swift:229"
+    "AssistantConnectView.swift:230"
    ],
    "args": [
     "name"
@@ -4154,9 +4154,9 @@
    "ko": "{0} 열기",
    "en": "Open {0}",
    "files": [
-    "AssistantConnectGuide.swift:152",
-    "AssistantConnectView.swift:162",
-    "AssistantConnectView.swift:216"
+    "AssistantConnectGuide.swift:158",
+    "AssistantConnectView.swift:163",
+    "AssistantConnectView.swift:217"
    ],
    "args": [
     "provider.title(language)"
@@ -4398,7 +4398,7 @@
    "ko": "{0} 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the {0} chat and send.",
    "files": [
-    "AssistantConnectView.swift:688",
+    "AssistantConnectView.swift:695",
     "TripImportSheet.swift:618"
    ],
    "args": [
@@ -4543,7 +4543,7 @@
    "ko": "{0}가 기록을 읽고 메모·일정·기록 수정을 보낼 수 있어요. 보낸 것은 앱에서 되돌릴 수 있어요.",
    "en": "{0} can read records and send memo, schedule and record edits. You can undo them in the app.",
    "files": [
-    "AssistantConnectView.swift:292"
+    "AssistantConnectView.swift:297"
    ],
    "args": [
     "name"
@@ -4801,7 +4801,7 @@
    "ko": "{0}는 기록을 읽기만 해요.",
    "en": "{0} can only read records.",
    "files": [
-    "AssistantConnectView.swift:293"
+    "AssistantConnectView.swift:298"
    ],
    "args": [
     "name"
@@ -4888,7 +4888,7 @@
    "ko": "{0}분 {1}초 남음 · 한 번만 쓸 수 있어요",
    "en": "{0}m {1}s left · single use",
    "files": [
-    "AssistantConnectView.swift:487"
+    "AssistantConnectView.swift:496"
    ],
    "args": [
     "left / 60",
@@ -5337,7 +5337,7 @@
    "ko": "{0}에서 직접 등록",
    "en": "Register in {0}",
    "files": [
-    "AssistantConnectView.swift:272"
+    "AssistantConnectView.swift:277"
    ],
    "args": [
     "name"
@@ -33975,7 +33975,7 @@
    "ko": "~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작해 주세요.",
    "en": "Paste it into ~/.gemini/settings.json and restart gemini.",
    "files": [
-    "AssistantConnectView.swift:667"
+    "AssistantConnectView.swift:674"
    ],
    "args": [],
    "targets": [
@@ -33987,7 +33987,7 @@
    "ko": "~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작해요.",
    "en": "Paste into ~/.gemini/settings.json and restart gemini.",
    "files": [
-    "AssistantConnectGuide.swift:154"
+    "AssistantConnectGuide.swift:160"
    ],
    "args": [],
    "targets": [
@@ -37754,11 +37754,11 @@
    ]
   },
   {
-   "key": "권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고, Muse 채팅에 붙여 넣을 안내(키는 들어 있지 않아요)를 복사해요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.|Pick access and period, then enter your app password to make a key just for Muse and copy the setup to paste into the Muse chat (it doesn't contain the key). Doing it again makes a new key and cuts the old one.",
-   "ko": "권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고, Muse 채팅에 붙여 넣을 안내(키는 들어 있지 않아요)를 복사해요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.",
-   "en": "Pick access and period, then enter your app password to make a key just for Muse and copy the setup to paste into the Muse chat (it doesn't contain the key). Doing it again makes a new key and cuts the old one.",
+   "key": "권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.|Pick access and period, then enter your app password to make a key just for Muse. Doing it again makes a new key and cuts the old one.",
+   "ko": "권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.",
+   "en": "Pick access and period, then enter your app password to make a key just for Muse. Doing it again makes a new key and cuts the old one.",
    "files": [
-    "AssistantConnectGuide.swift:134"
+    "AssistantConnectGuide.swift:136"
    ],
    "args": [],
    "targets": [
@@ -37770,7 +37770,7 @@
    "ko": "권한·기간을 고르고 앱 비밀번호를 넣으면 이 GPT에만 쓰는 연결 키를 만들어요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.",
    "en": "Pick access and period, then enter your app password to make a key just for this GPT. Doing it again makes a new key and cuts the old one.",
    "files": [
-    "AssistantConnectGuide.swift:116"
+    "AssistantConnectGuide.swift:117"
    ],
    "args": [],
    "targets": [
@@ -37782,7 +37782,7 @@
    "ko": "권한·기간을 고르고 앱 비밀번호를 넣으면 키를 만들고 연결 안내를 복사해요(키 대신 1회용 주소). 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.",
    "en": "Pick access and period, then enter your app password to make a key and copy the setup (a one-time link instead of the key). Doing it again makes a new key and cuts the old one.",
    "files": [
-    "AssistantConnectGuide.swift:160"
+    "AssistantConnectGuide.swift:166"
    ],
    "args": [],
    "targets": [
@@ -38567,7 +38567,7 @@
    "ko": "기록 수정 허용",
    "en": "Allow record edits",
    "files": [
-    "AssistantConnectView.swift:284",
+    "AssistantConnectView.swift:289",
     "AssistantSafetyViews.swift:128",
     "AssistantSafetyViews.swift:253"
    ],
@@ -39015,7 +39015,7 @@
    "ko": "기타 AI (웹 요청)",
    "en": "Other AI (web requests)",
    "files": [
-    "AssistantConnectView.swift:646"
+    "AssistantConnectView.swift:653"
    ],
    "args": [],
    "targets": [
@@ -40892,7 +40892,7 @@
    "ko": "다 했으면 눌러 연결됐는지 확인해요. 「연결됨」이 보이면 끝이에요.",
    "en": "When you're done, tap to check. You're finished when it says Connected.",
    "files": [
-    "AssistantConnectGuide.swift:93"
+    "AssistantConnectGuide.swift:94"
    ],
    "args": [],
    "targets": [
@@ -41232,7 +41232,7 @@
    "ko": "다음",
    "en": "Next",
    "files": [
-    "AssistantConnectGuide.swift:207",
+    "AssistantConnectGuide.swift:213",
     "BokkiShortcutsGuide.swift:227",
     "TravelTodayCard.swift:94"
    ],
@@ -41258,7 +41258,7 @@
    "ko": "단계별 연결",
    "en": "Step by step",
    "files": [
-    "AssistantConnectGuide.swift:212"
+    "AssistantConnectGuide.swift:218"
    ],
    "args": [],
    "targets": [
@@ -42871,7 +42871,7 @@
    "ko": "링크와 Claude 설정에는 서버 주소만 남고, 승인은 8시간마다 바뀌는 토큰으로 이어져요.",
    "en": "Only the server URL is in the link and in Claude; access runs on a token that rotates every 8 hours.",
    "files": [
-    "AssistantConnectView.swift:424"
+    "AssistantConnectView.swift:433"
    ],
    "args": [],
    "targets": [
@@ -43107,7 +43107,7 @@
    "ko": "맞춤 GPT는 그 GPT 안에서만 BOKKI를 읽고 보내요. 키는 이 연결에만 쓰고, 「연결 키 관리」에서 언제든 끊을 수 있어요.",
    "en": "The custom GPT reads and sends only inside that GPT. The key is only for this connection; cut it anytime under connection keys.",
    "files": [
-    "AssistantConnectView.swift:403"
+    "AssistantConnectView.swift:412"
    ],
    "args": [],
    "targets": [
@@ -43119,7 +43119,7 @@
    "ko": "맞춤 GPT로 연결 (Plus 이상, 추천)",
    "en": "Custom GPT (Plus or higher, recommended)",
    "files": [
-    "AssistantConnectView.swift:401"
+    "AssistantConnectView.swift:410"
    ],
    "args": [],
    "targets": [
@@ -43844,7 +43844,7 @@
    "ko": "명령 복사",
    "en": "Copy command",
    "files": [
-    "AssistantConnectView.swift:370"
+    "AssistantConnectView.swift:375"
    ],
    "args": [],
    "targets": [
@@ -44591,7 +44591,7 @@
    "ko": "바로 추가 (키가 남지 않음)",
    "en": "Quick add (no key left anywhere)",
    "files": [
-    "AssistantConnectView.swift:422"
+    "AssistantConnectView.swift:431"
    ],
    "args": [],
    "targets": [
@@ -46009,7 +46009,7 @@
    "ko": "보안 입력에 키 넣기",
    "en": "Enter the key securely",
    "files": [
-    "AssistantConnectGuide.swift:141"
+    "AssistantConnectGuide.swift:147"
    ],
    "args": [],
    "targets": [
@@ -46164,11 +46164,11 @@
    ]
   },
   {
-   "key": "복사한 안내를 Muse 채팅에 붙여 넣고 보내요. Muse가 커스텀 커넥터를 만들어요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|Paste the copied setup into the Muse chat and send it. Muse creates the custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
-   "ko": "복사한 안내를 Muse 채팅에 붙여 넣고 보내요. Muse가 커스텀 커넥터를 만들어요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
-   "en": "Paste the copied setup into the Muse chat and send it. Muse creates the custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
+   "key": "복사한 안내를 Muse 채팅에 붙여 넣고 보내서 커스텀 커넥터를 만들어 달라고 해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|Paste the copied setup into the Muse chat and send it to ask for a custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
+   "ko": "복사한 안내를 Muse 채팅에 붙여 넣고 보내서 커스텀 커넥터를 만들어 달라고 해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
+   "en": "Paste the copied setup into the Muse chat and send it to ask for a custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
    "files": [
-    "AssistantConnectGuide.swift:138"
+    "AssistantConnectGuide.swift:144"
    ],
    "args": [],
    "targets": [
@@ -46180,7 +46180,7 @@
    "ko": "복사했어요. 붙여 넣은 뒤 돌아오세요.",
    "en": "Copied. Paste it, then come back.",
    "files": [
-    "AssistantConnectView.swift:583"
+    "AssistantConnectView.swift:590"
    ],
    "args": [],
    "targets": [
@@ -46966,7 +46966,7 @@
    "ko": "사용 기간",
    "en": "Valid for",
    "files": [
-    "AssistantConnectView.swift:285",
+    "AssistantConnectView.swift:290",
     "AssistantSafetyViews.swift:254"
    ],
    "args": [],
@@ -48109,7 +48109,7 @@
    "ko": "서버 주소 복사",
    "en": "Copy server URL",
    "files": [
-    "AssistantConnectView.swift:359"
+    "AssistantConnectView.swift:364"
    ],
    "args": [],
    "targets": [
@@ -48121,7 +48121,7 @@
    "ko": "서버 주소",
    "en": "Server URL",
    "files": [
-    "AssistantConnectView.swift:358"
+    "AssistantConnectView.swift:363"
    ],
    "args": [],
    "targets": [
@@ -48423,6 +48423,42 @@
    "en": "Settings list",
    "files": [
     "MapHomeView+Menu2.swift:169"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "설정 안내 복사 (키 없음)|Copy setup (no key)",
+   "ko": "설정 안내 복사 (키 없음)",
+   "en": "Copy setup (no key)",
+   "files": [
+    "AssistantConnectView.swift:243"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "설정 안내 복사|Copy setup",
+   "ko": "설정 안내 복사",
+   "en": "Copy setup",
+   "files": [
+    "AssistantConnectGuide.swift:141"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "설정 안내 복사|Copy the setup",
+   "ko": "설정 안내 복사",
+   "en": "Copy the setup",
+   "files": [
+    "AssistantConnectGuide.swift:139"
    ],
    "args": [],
    "targets": [
@@ -49468,7 +49504,7 @@
    "ko": "스키마 넣기",
    "en": "Import the schema",
    "files": [
-    "AssistantConnectGuide.swift:121"
+    "AssistantConnectGuide.swift:122"
    ],
    "args": [],
    "targets": [
@@ -49480,8 +49516,8 @@
    "ko": "스키마 주소 복사",
    "en": "Copy schema URL",
    "files": [
-    "AssistantConnectGuide.swift:123",
-    "AssistantConnectView.swift:389"
+    "AssistantConnectGuide.swift:124",
+    "AssistantConnectView.swift:394"
    ],
    "args": [],
    "targets": [
@@ -49493,7 +49529,7 @@
    "ko": "스키마 주소",
    "en": "Schema URL",
    "files": [
-    "AssistantConnectView.swift:388"
+    "AssistantConnectView.swift:393"
    ],
    "args": [],
    "targets": [
@@ -49505,7 +49541,7 @@
    "ko": "스키마 주소를 복사해 「URL에서 가져오기」에 붙여 넣어요.",
    "en": "Copy the schema URL and paste it into Import from URL.",
    "files": [
-    "AssistantConnectGuide.swift:122"
+    "AssistantConnectGuide.swift:123"
    ],
    "args": [],
    "targets": [
@@ -49517,7 +49553,7 @@
    "ko": "스키마 주소를 복사했어요.",
    "en": "Schema URL copied.",
    "files": [
-    "AssistantConnectView.swift:391"
+    "AssistantConnectView.swift:396"
    ],
    "args": [],
    "targets": [
@@ -49581,7 +49617,7 @@
    "ko": "승인 화면 PIN",
    "en": "Approval page PIN",
    "files": [
-    "AssistantConnectView.swift:481"
+    "AssistantConnectView.swift:490"
    ],
    "args": [],
    "targets": [
@@ -50802,7 +50838,7 @@
    "ko": "아직 연결되지 않았어요. 앞 단계를 다시 확인해 주세요.",
    "en": "Not connected yet. Check the previous steps.",
    "files": [
-    "AssistantConnectView.swift:595"
+    "AssistantConnectView.swift:602"
    ],
    "args": [],
    "targets": [
@@ -50913,7 +50949,7 @@
    "ko": "안내 다시 복사",
    "en": "Copy setup again",
    "files": [
-    "AssistantConnectGuide.swift:139"
+    "AssistantConnectGuide.swift:145"
    ],
    "args": [],
    "targets": [
@@ -51148,7 +51184,7 @@
    "ko": "앞 단계를 먼저 해 주세요.",
    "en": "Do the previous step first.",
    "files": [
-    "AssistantConnectGuide.swift:202"
+    "AssistantConnectGuide.swift:208"
    ],
    "args": [],
    "targets": [
@@ -51383,7 +51419,7 @@
    "ko": "앱 비밀번호를 넣으면 연결 코드(글자)와 승인 PIN(숫자)이 나와요. 10분 안에 끝내 주세요.",
    "en": "Enter your app password to get a code (letters) and an approval PIN (digits). Finish within 10 minutes.",
    "files": [
-    "AssistantConnectGuide.swift:100"
+    "AssistantConnectGuide.swift:101"
    ],
    "args": [],
    "targets": [
@@ -51395,7 +51431,7 @@
    "ko": "앱 비밀번호를 넣으면 연결 코드와 승인 화면에 넣을 PIN이 나와요.",
    "en": "Enter your app password to get a code and the PIN for the approval page.",
    "files": [
-    "AssistantConnectView.swift:228"
+    "AssistantConnectView.swift:229"
    ],
    "args": [],
    "targets": [
@@ -51724,7 +51760,7 @@
    "ko": "앱이 {0}에 자동으로 연결해 주지는 않아요. 연결 키는 이 연결에만 쓰는 키이고, 앱의 주 키는 보내지 않아요. 아래 「연결 키 관리」에서 언제든 끊을 수 있어요.",
    "en": "The app doesn't connect to {0} for you. The key is only for this connection; the app's own key is never sent. You can cut it anytime under connection keys.",
    "files": [
-    "AssistantConnectView.swift:274"
+    "AssistantConnectView.swift:279"
    ],
    "args": [
     "name"
@@ -53068,7 +53104,7 @@
    "ko": "연결 안내 다시 복사",
    "en": "Copy setup again",
    "files": [
-    "AssistantConnectView.swift:310"
+    "AssistantConnectView.swift:315"
    ],
    "args": [],
    "targets": [
@@ -53092,7 +53128,7 @@
    "ko": "연결 안내 한 번에 복사 (추천)",
    "en": "Copy everything at once (recommended)",
    "files": [
-    "AssistantConnectView.swift:256"
+    "AssistantConnectView.swift:257"
    ],
    "args": [],
    "targets": [
@@ -53104,7 +53140,7 @@
    "ko": "연결 안내를 복사했어요. 10분 뒤 클립보드에서 지워져요.",
    "en": "Setup copied. It is cleared from the clipboard in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:567"
+    "AssistantConnectView.swift:574"
    ],
    "args": [],
    "targets": [
@@ -53124,23 +53160,11 @@
    ]
   },
   {
-   "key": "연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 주세요. 연결 키는 Muse가 보안 입력을 띄우면 그때 넣어요.|Setup copied. Paste it into the Muse chat. Enter the key when Muse shows its secure input.",
-   "ko": "연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 주세요. 연결 키는 Muse가 보안 입력을 띄우면 그때 넣어요.",
-   "en": "Setup copied. Paste it into the Muse chat. Enter the key when Muse shows its secure input.",
-   "files": [
-    "AssistantConnectView.swift:539"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "연결 안내를 복사했어요. {0} 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.|Setup copied. Paste it into the {0} chat, or enter the MCP URL and key separately.",
    "ko": "연결 안내를 복사했어요. {0} 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.",
    "en": "Setup copied. Paste it into the {0} chat, or enter the MCP URL and key separately.",
    "files": [
-    "AssistantConnectView.swift:546"
+    "AssistantConnectView.swift:553"
    ],
    "args": [
     "name"
@@ -53154,7 +53178,7 @@
    "ko": "연결 안내를 복사했어요",
    "en": "Setup copied",
    "files": [
-    "AssistantConnectView.swift:659"
+    "AssistantConnectView.swift:666"
    ],
    "args": [],
    "targets": [
@@ -53166,7 +53190,7 @@
    "ko": "연결 주소 다시 복사",
    "en": "Copy the link again",
    "files": [
-    "AssistantConnectView.swift:440"
+    "AssistantConnectView.swift:449"
    ],
    "args": [],
    "targets": [
@@ -53178,7 +53202,7 @@
    "ko": "연결 주소 만들기",
    "en": "Make a connection link",
    "files": [
-    "AssistantConnectView.swift:435"
+    "AssistantConnectView.swift:444"
    ],
    "args": [],
    "targets": [
@@ -53190,7 +53214,7 @@
    "ko": "연결 주소를 만들면 복사돼요. Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고, 인증은 「로그인 없음」을 고르면 끝나요.",
    "en": "Make a link and it's copied. In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in.",
    "files": [
-    "AssistantConnectView.swift:431"
+    "AssistantConnectView.swift:440"
    ],
    "args": [],
    "targets": [
@@ -53202,7 +53226,7 @@
    "ko": "연결 코드 넣기",
    "en": "Enter the code",
    "files": [
-    "AssistantConnectGuide.swift:105"
+    "AssistantConnectGuide.swift:106"
    ],
    "args": [],
    "targets": [
@@ -53214,8 +53238,8 @@
    "ko": "연결 코드 받기",
    "en": "Get a connection code",
    "files": [
-    "AssistantConnectGuide.swift:99",
-    "AssistantConnectView.swift:360"
+    "AssistantConnectGuide.swift:100",
+    "AssistantConnectView.swift:365"
    ],
    "args": [],
    "targets": [
@@ -53227,7 +53251,7 @@
    "ko": "연결 코드",
    "en": "Connection code",
    "files": [
-    "AssistantConnectView.swift:475"
+    "AssistantConnectView.swift:484"
    ],
    "args": [],
    "targets": [
@@ -53239,7 +53263,7 @@
    "ko": "연결 코드를 받지 못했어요.",
    "en": "Couldn't get a connection code.",
    "files": [
-    "AssistantConnectView.swift:506"
+    "AssistantConnectView.swift:515"
    ],
    "args": [],
    "targets": [
@@ -53251,7 +53275,7 @@
    "ko": "연결 코드를 복사했어요",
    "en": "Code copied",
    "files": [
-    "AssistantConnectView.swift:200"
+    "AssistantConnectView.swift:201"
    ],
    "args": [],
    "targets": [
@@ -53275,9 +53299,9 @@
    "ko": "연결 키 만들기",
    "en": "Make a key",
    "files": [
-    "AssistantConnectGuide.swift:115",
-    "AssistantConnectGuide.swift:133",
-    "AssistantConnectGuide.swift:159"
+    "AssistantConnectGuide.swift:116",
+    "AssistantConnectGuide.swift:135",
+    "AssistantConnectGuide.swift:165"
    ],
    "args": [],
    "targets": [
@@ -53289,8 +53313,8 @@
    "ko": "연결 키 복사",
    "en": "Copy connection key",
    "files": [
-    "AssistantConnectView.swift:266",
-    "AssistantConnectView.swift:395"
+    "AssistantConnectView.swift:267",
+    "AssistantConnectView.swift:400"
    ],
    "args": [],
    "targets": [
@@ -53302,8 +53326,8 @@
    "ko": "연결 키 복사",
    "en": "Copy key",
    "files": [
-    "AssistantConnectGuide.swift:126",
-    "AssistantConnectGuide.swift:143"
+    "AssistantConnectGuide.swift:127",
+    "AssistantConnectGuide.swift:149"
    ],
    "args": [],
    "targets": [
@@ -53315,8 +53339,20 @@
    "ko": "연결 키",
    "en": "Connection key",
    "files": [
-    "AssistantConnectView.swift:265",
-    "AssistantConnectView.swift:394"
+    "AssistantConnectView.swift:266",
+    "AssistantConnectView.swift:399"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "연결 키를 만들었어요. 다음 단계에서 설정 안내를 복사해요.|Key made. Copy the setup in the next step.",
+   "ko": "연결 키를 만들었어요. 다음 단계에서 설정 안내를 복사해요.",
+   "en": "Key made. Copy the setup in the next step.",
+   "files": [
+    "AssistantConnectView.swift:547"
    ],
    "args": [],
    "targets": [
@@ -53328,8 +53364,8 @@
    "ko": "연결 키를 복사했어요. 10분 뒤 클립보드에서 지워져요.",
    "en": "Key copied. It is cleared from the clipboard in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:268",
-    "AssistantConnectView.swift:397"
+    "AssistantConnectView.swift:269",
+    "AssistantConnectView.swift:402"
    ],
    "args": [],
    "targets": [
@@ -53341,7 +53377,7 @@
    "ko": "연결 키를 복사했어요. GPT 구성 → 작업 → 인증에서 API 키·Bearer를 고르고 붙여 넣어 주세요. 스키마 주소는 이 화면에서 따로 복사해요. 클립보드는 10분 뒤 지워져요.",
    "en": "Key copied. In the GPT's Configure → Actions → Authentication, choose API key and Bearer, then paste it. Copy the schema URL from this screen. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:676"
+    "AssistantConnectView.swift:683"
    ],
    "args": [],
    "targets": [
@@ -53353,7 +53389,7 @@
    "ko": "연결 확인",
    "en": "Check",
    "files": [
-    "AssistantConnectGuide.swift:94"
+    "AssistantConnectGuide.swift:95"
    ],
    "args": [],
    "targets": [
@@ -53365,7 +53401,7 @@
    "ko": "연결 확인",
    "en": "Check the connection",
    "files": [
-    "AssistantConnectGuide.swift:92"
+    "AssistantConnectGuide.swift:93"
    ],
    "args": [],
    "targets": [
@@ -53416,7 +53452,7 @@
    "ko": "연결됐어요.",
    "en": "Connected.",
    "files": [
-    "AssistantConnectView.swift:594"
+    "AssistantConnectView.swift:601"
    ],
    "args": [],
    "targets": [
@@ -53587,7 +53623,7 @@
    "ko": "연결됨",
    "en": "Connected",
    "files": [
-    "AssistantConnectGuide.swift:190",
+    "AssistantConnectGuide.swift:196",
     "AssistantConnectView.swift:81",
     "AssistantConnectView.swift:144"
    ],
@@ -54072,7 +54108,7 @@
    "en": "Open",
    "files": [
     "AssistantBubble.swift:334",
-    "AssistantConnectGuide.swift:156",
+    "AssistantConnectGuide.swift:162",
     "AssistantConnectView.swift:87"
    ],
    "args": [],
@@ -55684,7 +55720,7 @@
    "ko": "웹 요청을 할 수 있는 AI의 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the chat of an AI that can make web requests, then send.",
    "files": [
-    "AssistantConnectView.swift:674"
+    "AssistantConnectView.swift:681"
    ],
    "args": [],
    "targets": [
@@ -55696,7 +55732,7 @@
    "ko": "위 「단계별 연결」에서 키를 만들면 연결 안내가 복사돼요. 웹 요청을 할 수 있는 AI에 붙여 넣어 주세요.",
    "en": "Making the key in the Step by step card above copies the setup. Paste it into any AI that can make web requests.",
    "files": [
-    "AssistantConnectView.swift:345"
+    "AssistantConnectView.swift:350"
    ],
    "args": [],
    "targets": [
@@ -55708,7 +55744,7 @@
    "ko": "위 「단계별 연결」에서 키를 만들면 연결 안내가 복사돼요. 피클 채팅창에 붙여 넣어 주세요.",
    "en": "Making the key in the Step by step card above copies the setup. Paste it into the Pickle chat.",
    "files": [
-    "AssistantConnectView.swift:335"
+    "AssistantConnectView.swift:340"
    ],
    "args": [],
    "targets": [
@@ -58327,7 +58363,7 @@
    "ko": "이전",
    "en": "Back",
    "files": [
-    "AssistantConnectGuide.swift:205",
+    "AssistantConnectGuide.swift:211",
     "BokkiShortcutsGuide.swift:225",
     "FirstRunTutorialView.swift:77"
    ],
@@ -58365,7 +58401,7 @@
    "ko": "인증 → API 키 → Bearer를 고르고 키를 붙여 넣은 뒤 저장해요.",
    "en": "Under Authentication choose API key → Bearer, paste the key and save.",
    "files": [
-    "AssistantConnectGuide.swift:125"
+    "AssistantConnectGuide.swift:126"
    ],
    "args": [],
    "targets": [
@@ -58377,7 +58413,7 @@
    "ko": "인증에 키 넣기",
    "en": "Add the key",
    "files": [
-    "AssistantConnectGuide.swift:124"
+    "AssistantConnectGuide.swift:125"
    ],
    "args": [],
    "targets": [
@@ -61172,7 +61208,7 @@
    "ko": "주소 하나로 연결 (추천)",
    "en": "Connect with one link (recommended)",
    "files": [
-    "AssistantConnectView.swift:448"
+    "AssistantConnectView.swift:457"
    ],
    "args": [],
    "targets": [
@@ -61196,7 +61232,7 @@
    "ko": "주소에 연결 키가 들어 있어요. 다른 사람에게 보이지 마세요. 아래 「연결 키 관리」에서 언제든 끊을 수 있어요.",
    "en": "The link contains a connection key. Don't share it. You can cut it anytime under connection keys.",
    "files": [
-    "AssistantConnectView.swift:450"
+    "AssistantConnectView.swift:459"
    ],
    "args": [],
    "targets": [
@@ -63188,7 +63224,7 @@
    "ko": "채팅창에 붙여 넣고 보내요. 앱이 없으면 App Store가 열려요.",
    "en": "Paste into the chat and send. The App Store opens if it isn't installed.",
    "files": [
-    "AssistantConnectGuide.swift:155"
+    "AssistantConnectGuide.swift:161"
    ],
    "args": [],
    "targets": [
@@ -63895,7 +63931,7 @@
    "en": "Cancel",
    "files": [
     "AssistantBubble.swift:339",
-    "AssistantConnectView.swift:204",
+    "AssistantConnectView.swift:205",
     "AssistantPINReset.swift:96"
    ],
    "args": [],
@@ -64511,7 +64547,7 @@
    "ko": "커넥터로 연결 (Business·Enterprise·Edu, Pro는 읽기만)",
    "en": "Connector (Business, Enterprise, Edu; Pro read-only)",
    "files": [
-    "AssistantConnectView.swift:364"
+    "AssistantConnectView.swift:369"
    ],
    "args": [],
    "targets": [
@@ -64523,7 +64559,7 @@
    "ko": "커넥터로 연결",
    "en": "Connect as a connector",
    "files": [
-    "AssistantConnectView.swift:365"
+    "AssistantConnectView.swift:370"
    ],
    "args": [],
    "targets": [
@@ -64626,7 +64662,7 @@
    "ko": "코드 받기",
    "en": "Get code",
    "files": [
-    "AssistantConnectGuide.swift:101"
+    "AssistantConnectGuide.swift:102"
    ],
    "args": [],
    "targets": [
@@ -64638,7 +64674,7 @@
    "ko": "코드 복사 {0}",
    "en": "Copy code {0}",
    "files": [
-    "AssistantConnectGuide.swift:107"
+    "AssistantConnectGuide.swift:108"
    ],
    "args": [
     "$0"
@@ -64652,8 +64688,8 @@
    "ko": "코드 복사",
    "en": "Copy code",
    "files": [
-    "AssistantConnectGuide.swift:107",
-    "AssistantConnectView.swift:490"
+    "AssistantConnectGuide.swift:108",
+    "AssistantConnectView.swift:499"
    ],
    "args": [],
    "targets": [
@@ -64665,7 +64701,7 @@
    "ko": "코드가 끝났어요. 새로 받아 주세요.",
    "en": "The code expired. Get a new one.",
    "files": [
-    "AssistantConnectView.swift:488"
+    "AssistantConnectView.swift:497"
    ],
    "args": [],
    "targets": [
@@ -64677,7 +64713,7 @@
    "ko": "코드를 복사해 승인 화면 첫 칸(연결 코드)에 붙여 넣고 돌아와요.",
    "en": "Copy the code, paste it into the first field (connection code), then come back.",
    "files": [
-    "AssistantConnectGuide.swift:106"
+    "AssistantConnectGuide.swift:107"
    ],
    "args": [],
    "targets": [
@@ -64770,7 +64806,7 @@
    "ko": "클립보드는 10분 뒤 지워져요.",
    "en": "The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:690"
+    "AssistantConnectView.swift:697"
    ],
    "args": [],
    "targets": [
@@ -64806,9 +64842,9 @@
    "ko": "키 만들기",
    "en": "Make key",
    "files": [
-    "AssistantConnectGuide.swift:117",
-    "AssistantConnectGuide.swift:135",
-    "AssistantConnectGuide.swift:161"
+    "AssistantConnectGuide.swift:118",
+    "AssistantConnectGuide.swift:137",
+    "AssistantConnectGuide.swift:167"
    ],
    "args": [],
    "targets": [
@@ -64820,7 +64856,7 @@
    "ko": "키가 새면 직접 끊어야 해요.",
    "en": "If the key leaks, you have to cut it yourself.",
    "files": [
-    "AssistantConnectView.swift:289"
+    "AssistantConnectView.swift:294"
    ],
    "args": [],
    "targets": [
@@ -64833,6 +64869,20 @@
    "en": "If the key leaks, you have to revoke it yourself.",
    "files": [
     "AssistantSafetyViews.swift:258"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.|Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.",
+   "ko": "키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.",
+   "en": "Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.",
+   "files": [
+    "AssistantConnectGuide.swift:148",
+    "AssistantConnectView.swift:272",
+    "AssistantConnectView.swift:405"
    ],
    "args": [],
    "targets": [
@@ -64995,7 +65045,7 @@
    "ko": "터미널에 붙여 넣은 뒤 /mcp에서 bokki를 인증하고, 열린 화면에 연결 코드와 PIN을 넣어요.",
    "en": "Paste it in a terminal, authenticate bokki in /mcp, then enter the code and PIN on the page that opens.",
    "files": [
-    "AssistantConnectView.swift:374"
+    "AssistantConnectView.swift:379"
    ],
    "args": [],
    "targets": [
@@ -67172,7 +67222,7 @@
    "ko": "화면 사진 준비 중",
    "en": "Screenshot coming soon",
    "files": [
-    "AssistantConnectGuide.swift:230"
+    "AssistantConnectGuide.swift:236"
    ],
    "args": [],
    "targets": [
@@ -67378,7 +67428,7 @@
    "en": "OK",
    "files": [
     "AppShellView.swift:1103",
-    "AssistantConnectView.swift:218",
+    "AssistantConnectView.swift:219",
     "AssistantPINSheet.swift:61"
    ],
    "args": [],

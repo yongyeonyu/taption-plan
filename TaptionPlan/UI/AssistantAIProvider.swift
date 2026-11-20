@@ -214,16 +214,23 @@ extension TripRelay {
         """ + assistantSetupText(host: host, key: key, scope: scope, expiresAt: expiresAt)
     }
 
-    /// Muse 채팅에 붙여 넣을 안내(MUS1120A03). Muse에는 「MCP 서버 추가」 화면이 없어 채팅으로 맞춤 커넥터를 만들어 달라고 한다.
-    /// 연결 키 값과 키가 든 주소는 넣지 않는다. 키는 Muse가 띄우는 보안 입력으로만 따로 준다. 공식 설정 화면이 있다고 단정하지 않는다.
-    static func museSetupText(host: String, language: MapHomeLanguage) -> String {
-        // AI에게 보내는 글이라 번역 표에 넣지 않는다. 한국어 사용자는 한국어, 나머지는 영어.
+    /// Muse 채팅에 붙여 넣을 안내(MUS1120A03·MUS1120A04). Muse에는 「MCP 서버 추가」 화면이 없어 채팅으로 맞춤 커넥터를 만들어 달라고 한다.
+    /// 연결 키 값과 키가 든 주소는 한 글자도 넣지 않는다(키 자리는 `<connection key>`). 키는 Muse가 띄우는 보안 입력으로만 따로 준다.
+    /// 뒤에 API 안내(읽기·쓰기·AI 작업)를 붙이고, 권한·기간은 만든 키의 것을 쓴다. 공식 설정 화면이 있다고 단정하지 않는다.
+    static func museSetupText(host: String, language: MapHomeLanguage, scope: AssistantKeyScope = .read, expiresAt: Date? = nil) -> String {
+        // AI에게 보내는 글이라 번역 표에 넣지 않는다. 한국어 사용자는 한국어 머리말, API 안내는 영어 그대로.
         let mcp = mcpURL(host: host)
+        let intro: String
         if language == .korean {
-            return "뽀끼 플랜 연결을 위해 커스텀 커넥터를 만들어 줘.\n- MCP 주소: \(mcp) (Streamable HTTP)\n- 인증: Authorization: Bearer 연결 키\n- 연결 키는 채팅에 쓰지 말고, 보안 입력으로 따로 받아 줘. 답변에도 키를 되풀이하지 마.\n- 연결한 뒤 도구 목록을 확인하고 오늘 기록을 읽어 보며 시험해서 결과를 알려 줘."
+            intro = "뽀끼 플랜 연결을 위해 커스텀 커넥터를 만들어 줘.\n- MCP 주소: \(mcp) (Streamable HTTP)\n- 인증: Authorization: Bearer 연결 키\n- 연결 키는 이 채팅에 적지 말고, 키를 받을 보안 입력 화면을 보여 줘. 내가 거기에 따로 넣을게. 답변에도 키를 되풀이하지 마.\n- 연결한 뒤 도구 목록을 확인하고 오늘 기록을 읽어 보며 시험해서 결과를 알려 줘.\n\n아래는 연결한 뒤 쓸 API 안내야. 안내 속 \(museKeyPlaceholder) 자리에는 보안 입력으로 받은 연결 키를 써 줘."
+        } else {
+            intro = "Please create a custom connector for BOKKI Plan.\n- MCP URL: \(mcp) (Streamable HTTP)\n- Auth: Authorization: Bearer with a connection key\n- Don't ask me to type the key in this chat; show me a secure input screen to receive it and I will enter it there. Never repeat the key in your replies.\n- After connecting, list the tools, test by reading today's records, and tell me the result.\n\nBelow is the API guide to use after connecting. Wherever it says \(museKeyPlaceholder), use the connection key you received through the secure input."
         }
-        return "Please create a custom connector for BOKKI Plan.\n- MCP URL: \(mcp) (Streamable HTTP)\n- Auth: Authorization: Bearer with a connection key\n- Don't ask me to type the key in this chat; take it through a secure input instead, and never repeat it in your replies.\n- After connecting, list the tools, test by reading today's records, and tell me the result."
+        return intro + "\n\n" + assistantSetupText(host: host, key: museKeyPlaceholder, scope: scope, expiresAt: expiresAt)
     }
+
+    /// Muse 안내 글 속 키 자리 표시자. 실제 키가 아니다.
+    static let museKeyPlaceholder = "<connection key>"
 
     /// 연결 키 + MCP 직접 등록 방식(Cue)의 안내 글. Muse는 키 없는 `museSetupText`를 따로 쓴다. 다른 AI는 nil.
     static func keyConnectorSetupText(for provider: AssistantAIProvider, host: String, key: String, scope: AssistantKeyScope, expiresAt: Date?) -> String? {

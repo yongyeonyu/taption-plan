@@ -6274,6 +6274,20 @@
 "복사한 안내를 Muse 채팅에 붙여 넣고 보내요. Muse가 커스텀 커넥터를 만들어요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|Paste the copied setup into the Muse chat and send it. Muse creates the custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.": "把复制的说明粘贴到 Muse 聊天并发送，Muse 会创建自定义连接器。韩国 App Store 暂时没有 Muse 应用，没有应用时请用网页版。",
 "안내 다시 복사|Copy setup again": "再次复制说明",
 "연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 주세요. 연결 키는 Muse가 보안 입력을 띄우면 그때 넣어요.|Setup copied. Paste it into the Muse chat. Enter the key when Muse shows its secure input.": "已复制连接说明。请粘贴到 Muse 聊天。Muse 显示安全输入时再填入连接密钥。",
-"화면 사진 준비 중|Screenshot coming soon": "画面截图准备中"
+"화면 사진 준비 중|Screenshot coming soon": "画面截图准备中",
+"1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. 설정 안내를 복사해요. 키는 들어 있지 않아요.\n3. Muse 채팅에 붙여 넣고 보내서 커스텀 커넥터를 만들어 달라고 해요.\n4. 키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어요. 키를 채팅에 직접 적지 마세요.\n5. Muse가 연결을 시험한 뒤 연결됐다고 알려 주면 끝나요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|1. In the make-key step of the Step by step card above, pick access and period and make the key.\n2. Copy the setup. It doesn't contain the key.\n3. Paste it into the Muse chat and send it to ask for a custom connector.\n4. Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.\n5. You're done when Muse tests the connection and tells you it's connected. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.": "1. 在上方“分步连接”的创建密钥步骤中，选择权限和期限并创建连接密钥。\n2. 复制设置说明。其中不包含密钥。\n3. 粘贴到 Muse 聊天并发送，请它创建自定义连接器。\n4. 复制密钥，然后粘贴到 Muse 显示的安全输入界面。不要把密钥直接写在聊天中。\n5. 当 Muse 测试连接并告诉你已连接，就完成了。韩国 App Store 暂时没有 Muse 应用，没有应用时请使用网页版。",
+"2. 앱에서 설정 안내 복사|2. Copy the setup in the app": "2. 在应用中复制设置说明",
+"3. Muse 채팅에 안내를 붙여 넣은 화면|3. The setup pasted into the Muse chat": "3. 将说明粘贴到 Muse 聊天的界面",
+"4. Muse 보안 키 입력 화면|4. Muse's secure key input": "4. Muse 的安全密钥输入界面",
+"5. Muse 연결 완료 메시지|5. Muse's connected message": "5. Muse 的连接完成消息",
+"Muse 채팅에 붙여 넣고 보내 주세요. 키는 채팅에 쓰지 말고, Muse가 보여주는 보안 입력 화면에 넣어 주세요(키는 이 화면에서 복사해요). 클립보드는 10분 뒤 지워져요.|Paste it into the Muse chat and send. Don't type the key in the chat; enter it when Muse shows its secure input (copy the key on this screen). The clipboard is cleared in 10 minutes.": "粘贴到 Muse 聊天并发送。不要在聊天中写密钥，等 Muse 显示安全输入时再填入（密钥可在此页面复制）。剪贴板会在10分钟后清除。",
+"Muse 채팅에 붙여 넣을 설정 안내를 복사해요. 키는 들어 있지 않아요.|Copy the setup to paste into the Muse chat. It doesn't contain the key.": "复制要粘贴到 Muse 聊天的设置说明。其中不包含密钥。",
+"권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.|Pick access and period, then enter your app password to make a key just for Muse. Doing it again makes a new key and cuts the old one.": "选择权限和期限，然后输入应用密码，即可创建仅供 Muse 使用的连接密钥。再次操作会创建新密钥，旧密钥将失效。",
+"복사한 안내를 Muse 채팅에 붙여 넣고 보내서 커스텀 커넥터를 만들어 달라고 해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|Paste the copied setup into the Muse chat and send it to ask for a custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.": "将复制的说明粘贴到 Muse 聊天并发送，请它创建自定义连接器。韩国 App Store 暂时没有 Muse 应用，没有应用时请使用网页版。",
+"설정 안내 복사 (키 없음)|Copy setup (no key)": "复制设置说明（不含密钥）",
+"설정 안내 복사|Copy setup": "复制设置说明",
+"설정 안내 복사|Copy the setup": "复制设置说明",
+"연결 키를 만들었어요. 다음 단계에서 설정 안내를 복사해요.|Key made. Copy the setup in the next step.": "连接密钥已创建。请在下一步复制设置说明。",
+"키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.|Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.": "复制密钥，然后粘贴到 Muse 显示的安全输入界面。不要把密钥直接写在聊天中。"
 }
 }
