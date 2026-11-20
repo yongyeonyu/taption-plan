@@ -117,8 +117,8 @@ struct AssistantProviderView: View {
     @State private var message: String?
     @State private var isWorking = false
     @State private var installed = false
-    /// Cue·Muse: 권한과 사용 기간을 고른다(CUE1110A01, MUS1120A01). 기본은 읽기 전용·90일.
-    @State private var connectorAllowsEdits = false
+    /// 연결 키를 만드는 단계 안에서 권한과 사용 기간을 고른다(KEY1120A01). Cue·Muse는 읽기 전용, 나머지는 예전처럼 기록 수정 허용이 기본. 기간은 90일.
+    @State private var editsChoice: Bool?
     @State private var connectorPeriod = AssistantKeyPeriod.quarter
     /// 다시 복사할 수 있는 연결 키. 키체인은 나타날 때와 만든 뒤에만 읽는다.
     @State private var existing: (key: AssistantScopedKey, token: String)?
@@ -132,6 +132,10 @@ struct AssistantProviderView: View {
     @State private var isShowingPasteGuide = false
 
     private var host: String { TripRelay.host ?? "" }
+
+    private var connectorAllowsEdits: Bool { editsChoice ?? !provider.usesKeyConnector }
+    /// Claude는 OAuth가 기본이라 이 선택을 쓰지 않는다. 연결 키를 만드는 나머지 AI는 모두 키 만들기 단계에서 고른다.
+    private var choosesKeyOptions: Bool { provider != .claude }
 
     var body: some View {
         Form {
@@ -149,7 +153,8 @@ struct AssistantProviderView: View {
                     provider, host: host, token: existing?.token,
                     code: code.flatMap { $0.remaining(now: .now) > 0 ? $0.code : nil }, pin: approvalPIN, language: language
                 ),
-                language: language, isConnected: store.isConnected(provider), perform: performGuide
+                language: language, isConnected: store.isConnected(provider), perform: performGuide,
+                keyOptions: choosesKeyOptions ? AnyView(keyOptionRows) : nil
             )
             if provider.usesKeyConnector { keyConnectorSections } else if provider.usesOAuth { oauthSections } else { keySection }
             if provider.appStoreURL != nil {
@@ -231,22 +236,6 @@ struct AssistantProviderView: View {
     @ViewBuilder
     private var keyConnectorSections: some View {
         Section {
-            Toggle(language.text("기록 수정 허용", "Allow record edits"), isOn: $connectorAllowsEdits)
-            Picker(language.text("사용 기간", "Valid for"), selection: $connectorPeriod) {
-                ForEach(AssistantKeyPeriod.allCases) { Text($0.title(language)).tag($0) }
-            }
-            if connectorPeriod == .never {
-                Text(language.text("키가 새면 직접 끊어야 해요.", "If the key leaks, you have to cut it yourself.")).font(.taptionStyle(.footnote)).foregroundStyle(.orange)
-            }
-            Button(existing == nil ? language.text("\(name) 연결 키 만들기", "Make a \(name) key") : language.text("새 키로 다시 만들기", "Make a new key")) { isAskingPIN = true }
-        } header: {
-            Text(language.text("권한과 기간", "Access and period"))
-        } footer: {
-            Text(connectorAllowsEdits
-                 ? language.text("\(name)가 기록을 읽고 메모·일정·기록 수정을 보낼 수 있어요. 보낸 것은 앱에서 되돌릴 수 있어요.", "\(name) can read records and send memo, schedule and record edits. You can undo them in the app.")
-                 : language.text("\(name)는 기록을 읽기만 해요.", "\(name) can only read records."))
-        }
-        Section {
             Text(keySteps).font(.taptionStyle(.footnote))
             LabeledContent(language.text("MCP 주소", "MCP URL"), value: TripRelay.mcpURL(host: host)).font(.taptionStyle(.footnote))
             Button(language.text("MCP 주소 복사", "Copy MCP URL")) {
@@ -279,10 +268,26 @@ struct AssistantProviderView: View {
         }
     }
 
+    /// 연결 키를 만드는 단계(1단계) 안에서 권한·기간을 고른다. 다시 등록하면(단계를 처음부터) 그게 새 키 발급이다(KEY1120A01).
+    @ViewBuilder
+    private var keyOptionRows: some View {
+        Toggle(language.text("기록 수정 허용", "Allow record edits"), isOn: Binding(get: { connectorAllowsEdits }, set: { editsChoice = $0 }))
+        Picker(language.text("사용 기간", "Valid for"), selection: $connectorPeriod) {
+            ForEach(AssistantKeyPeriod.allCases) { Text($0.title(language)).tag($0) }
+        }
+        if connectorPeriod == .never {
+            Text(language.text("키가 새면 직접 끊어야 해요.", "If the key leaks, you have to cut it yourself.")).font(.taptionStyle(.footnote)).foregroundStyle(.orange)
+        }
+        Text(connectorAllowsEdits
+             ? language.text("\(name)가 기록을 읽고 메모·일정·기록 수정을 보낼 수 있어요. 보낸 것은 앱에서 되돌릴 수 있어요.", "\(name) can read records and send memo, schedule and record edits. You can undo them in the app.")
+             : language.text("\(name)는 기록을 읽기만 해요.", "\(name) can only read records."))
+            .font(.taptionStyle(.footnote)).foregroundStyle(.secondary)
+    }
+
     private var cueSteps: String {
         language.text(
-            "1. 위에서 권한·기간을 고르고 「Cue 연결 키 만들기」를 눌러요.\n2. Cue에서 MCP 서버(커넥터)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Cue 화면을 따라 주세요.\n5. 저장한 뒤 Cue에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.",
-            "1. Pick access and period above, then tap Make a Cue key.\n2. In Cue, open the screen for adding an MCP server (connector).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Cue's screen.\n5. Save, then ask Cue something like \"read today's records\" to check."
+            "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. Cue에서 MCP 서버(커넥터)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Cue 화면을 따라 주세요.\n5. 저장한 뒤 Cue에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.",
+            "1. In the Step by step card above, pick access and period in the make-key step and make the key.\n2. In Cue, open the screen for adding an MCP server (connector).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Cue's screen.\n5. Save, then ask Cue something like \"read today's records\" to check."
         )
     }
 
@@ -291,7 +296,6 @@ struct AssistantProviderView: View {
     private var keySection: some View {
         Section {
             Text(keySteps).font(.taptionStyle(.footnote))
-            Button(language.text("연결하기", "Connect")) { isAskingPIN = true }
             if let existing {
                 Button(language.text("연결 안내 다시 복사", "Copy setup again")) {
                     Task {
@@ -314,21 +318,21 @@ struct AssistantProviderView: View {
         switch provider {
         case .gemini:
             language.text(
-                "Gemini CLI: 연결하기를 누르면 settings.json에 넣을 설정이 복사돼요. ~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작하세요.",
-                "Gemini CLI: Connect copies a block for settings.json. Paste it into ~/.gemini/settings.json and restart gemini."
+                "Gemini CLI: 위 「단계별 연결」에서 키를 만들면 settings.json에 넣을 설정이 복사돼요. ~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작하세요.",
+                "Gemini CLI: making the key in the Step by step card above copies a block for settings.json. Paste it into ~/.gemini/settings.json and restart gemini."
             )
         case .pickle:
-            language.text("연결하기를 누르면 연결 안내가 복사되고 피클이 열려요. 피클 채팅창에 붙여 넣어 주세요.", "Connect copies the setup and opens Pickle. Paste it into the Pickle chat.")
+            language.text("위 「단계별 연결」에서 키를 만들면 연결 안내가 복사돼요. 피클 채팅창에 붙여 넣어 주세요.", "Making the key in the Step by step card above copies the setup. Paste it into the Pickle chat.")
         case .cue:
             cueSteps
         // Muse에는 「MCP 서버 추가」 설정 화면이 없다. 안내를 채팅에 붙여 넣고 맞춤 커넥터를 만들어 달라고 한 뒤, 키는 Muse의 보안 입력창에 넣는다(MUS1120A01).
         case .muse:
             language.text(
-                "1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요. 연결 안내가 복사돼요.\n2. Muse 채팅에 연결 안내를 붙여 넣고, 원격 MCP 서버에 연결하는 맞춤 커넥터를 만들어 달라고 요청해요.\n3. Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.\n4. 「오늘 기록 읽어 줘」처럼 물어 확인해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
-                "1. Pick access and period above, then tap Make a Muse key. The setup is copied.\n2. Paste the setup into the Muse chat and ask it to create a custom connector to the remote MCP server.\n3. When Muse asks for the key, enter the connection key in Muse's secure input, not in the chat text.\n4. Ask something like \"read today's records\" to check. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."
+                "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요. 연결 안내가 복사돼요.\n2. Muse 채팅에 연결 안내를 붙여 넣고, 원격 MCP 서버에 연결하는 맞춤 커넥터를 만들어 달라고 요청해요.\n3. Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.\n4. 「오늘 기록 읽어 줘」처럼 물어 확인해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
+                "1. In the Step by step card above, pick access and period in the make-key step and make the key. The setup is copied.\n2. Paste the setup into the Muse chat and ask it to create a custom connector to the remote MCP server.\n3. When Muse asks for the key, enter the connection key in Muse's secure input, not in the chat text.\n4. Ask something like \"read today's records\" to check. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."
             )
         default:
-            language.text("연결하기를 누르면 연결 안내가 복사돼요. 웹 요청을 할 수 있는 AI에 붙여 넣어 주세요.", "Connect copies the setup. Paste it into any AI that can make web requests.")
+            language.text("위 「단계별 연결」에서 키를 만들면 연결 안내가 복사돼요. 웹 요청을 할 수 있는 AI에 붙여 넣어 주세요.", "Making the key in the Step by step card above copies the setup. Paste it into any AI that can make web requests.")
         }
     }
 
@@ -368,17 +372,13 @@ struct AssistantProviderView: View {
     private var gptActionsSection: some View {
         Section {
             Text(language.text(
-                "1. 「연결 키 만들기」를 눌러 앱 비밀번호를 넣어요.\n2. ChatGPT → GPT 만들기 → 구성 → 작업(Actions) → 새 작업 만들기 → 가져오기(URL)에 스키마 주소를 붙여 넣어요.\n3. 인증 → API 키 → 인증 유형 Bearer를 고르고 연결 키를 붙여 넣어요.\n4. 미리보기에서 「오늘 기록 읽어 줘」로 확인한 뒤 저장해요.",
-                "1. Tap Make a key and enter your app password.\n2. In ChatGPT, open Create a GPT → Configure → Actions → Create new action → Import from URL and paste the schema URL.\n3. Under Authentication choose API key, auth type Bearer, and paste the key.\n4. Check in the preview with \"read today's records\", then save."
+                "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. ChatGPT → GPT 만들기 → 구성 → 작업(Actions) → 새 작업 만들기 → 가져오기(URL)에 스키마 주소를 붙여 넣어요.\n3. 인증 → API 키 → 인증 유형 Bearer를 고르고 연결 키를 붙여 넣어요.\n4. 미리보기에서 「오늘 기록 읽어 줘」로 확인한 뒤 저장해요.",
+                "1. In the Step by step card above, pick access and period in the make-key step and make the key.\n2. In ChatGPT, open Create a GPT → Configure → Actions → Create new action → Import from URL and paste the schema URL.\n3. Under Authentication choose API key, auth type Bearer, and paste the key.\n4. Check in the preview with \"read today's records\", then save."
             )).font(.taptionStyle(.footnote))
             LabeledContent(language.text("스키마 주소", "Schema URL"), value: TripRelay.openAPIURL(host: host)).font(.taptionStyle(.footnote))
             Button(language.text("스키마 주소 복사", "Copy schema URL")) {
                 copy(TripRelay.openAPIURL(host: host))
                 message = language.text("스키마 주소를 복사했어요.", "Schema URL copied.")
-            }
-            Button(existing == nil ? language.text("연결 키 만들기", "Make a key") : language.text("새 키로 다시 만들기", "Make a new key")) {
-                makesKeyURL = true
-                isAskingPIN = true
             }
             if let existing {
                 LabeledContent(language.text("연결 키", "Connection key"), value: AssistantCueText.masked(existing.token)).font(.footnote.monospaced())
@@ -511,7 +511,7 @@ struct AssistantProviderView: View {
     private func afterPIN(_ pin: String) async -> String? {
         // 다시 만들면 예전 키는 끊는다. 앱은 AI마다 마지막 키만 기억해 남은 키를 화면에서 다룰 수 없다(REV1117A02).
         let old = existing?.key
-        let made = provider.usesKeyConnector
+        let made = choosesKeyOptions
             ? await store.create(for: provider, pin: pin, language: language, scope: connectorAllowsEdits ? .write : .read, period: connectorPeriod)
             : await store.create(for: provider, pin: pin, language: language)
         switch made {

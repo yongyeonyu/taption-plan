@@ -106,7 +106,7 @@ enum AssistantGuidePlan {
         case .chatGPT:
             return [
                 .init(id: "key", title: language.text("연결 키 만들기", "Make a key"),
-                      detail: language.text("앱 비밀번호를 넣으면 이 GPT에만 쓰는 연결 키를 만들어요.", "Enter your app password to make a key just for this GPT."),
+                      detail: language.text("권한·기간을 고르고 앱 비밀번호를 넣으면 이 GPT에만 쓰는 연결 키를 만들어요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.", "Pick access and period, then enter your app password to make a key just for this GPT. Doing it again makes a new key and cuts the old one."),
                       button: language.text("키 만들기", "Make key"), action: .makeKey),
                 .init(id: "open", title: language.text("GPT 만들기 열기", "Open the GPT builder"),
                       detail: language.text("ChatGPT에서 「구성」 → 「작업 추가」까지 가요. 맞춤 GPT는 Plus 이상이에요.", "In ChatGPT, go to Configure → Create new action. Custom GPTs need Plus or higher."),
@@ -124,7 +124,7 @@ enum AssistantGuidePlan {
         case .muse:
             return [
                 .init(id: "key", title: language.text("연결 키 만들기", "Make a key"),
-                      detail: language.text("아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고 연결 안내(1회용 주소)를 복사해요.", "Pick access and period below, then enter your app password to make a key just for Muse and copy the setup (a one-time link)."),
+                      detail: language.text("권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고 연결 안내(1회용 주소)를 복사해요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.", "Pick access and period, then enter your app password to make a key just for Muse and copy the setup (a one-time link). Doing it again makes a new key and cuts the old one."),
                       button: language.text("키 만들기", "Make key"), action: .makeKey),
                 .init(id: "paste", title: language.text("Muse 채팅에 붙여 넣기", "Paste into the Muse chat"),
                       detail: language.text("Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.", "Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."),
@@ -144,7 +144,7 @@ enum AssistantGuidePlan {
             } ?? []
             return [
                 .init(id: "key", title: language.text("연결 키 만들기", "Make a key"),
-                      detail: language.text("앱 비밀번호를 넣으면 키를 만들고 연결 안내를 복사해요(키 대신 1회용 주소).", "Enter your app password to make a key and copy the setup (a one-time link instead of the key)."),
+                      detail: language.text("권한·기간을 고르고 앱 비밀번호를 넣으면 키를 만들고 연결 안내를 복사해요(키 대신 1회용 주소). 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.", "Pick access and period, then enter your app password to make a key and copy the setup (a one-time link instead of the key). Doing it again makes a new key and cuts the old one."),
                       button: language.text("키 만들기", "Make key"), action: .makeKey),
             ] + appStep + [check]
         }
@@ -158,6 +158,8 @@ struct AssistantGuideSection: View {
     let language: MapHomeLanguage
     let isConnected: Bool
     let perform: (AssistantGuideStep.Action) -> Void
+    /// 키 만들기 단계 안에 넣을 권한·기간 칸(KEY1120A01). 키를 쓰지 않는 AI는 nil.
+    var keyOptions: AnyView?
 
     private var memory: AssistantGuideMemory { .shared }
 
@@ -175,6 +177,7 @@ struct AssistantGuideSection: View {
                     }
                 }
                 .padding(.vertical, 4)
+                if step.id == "key", let keyOptions { keyOptions }
                 Button(step.button) {
                     if let action = step.action { perform(action) }
                 }
