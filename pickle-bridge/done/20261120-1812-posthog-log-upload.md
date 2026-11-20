@@ -1,7 +1,7 @@
 ---
 id: 20261120-1812-posthog-log-upload
 created_at: 2026-11-20T18:12+09:00
-status: pending
+status: done
 request_id: PHG1120A01
 title: 데이터 보호의 진단 업로드를 iCloud → PostHog로 (로그·어제오늘 원본 GPS 포함, 개발자에게 보내기 삭제)
 from: 비야
@@ -292,3 +292,20 @@ basis: 대표 직접 지시 (2026-11-20 18:0x 통화) — 「일단 디버깅 �
 - 개인정보 고리는 그대로 확인했습니다: 원본 업로드는 버튼+동의(1회, 되돌리기 있음)에만, 자동·백그라운드 전송 없음, `AGENTS.md` 4절 다섯 번째 좌표 예외·`PRIVACY.md`·`PrivacyInfo.xcprivacy`를 **같은 커밋**에 넣도록 되어 있습니다(배포 전 확인 항목).
 - 처리 순서를 머리에 넣었습니다: RTA1120A01 다음, 시작 경로·중계 서버 문서와 파일이 겹치지 않음.
 - 2절 표의 파일:줄은 18:4x `origin/main`에서 맞았습니다(`MapHomeSettingsSheets` 194·207~209·288·298·323~326·338·803, `AppModel+Export` 36·64·93·103·115). 고치지 않은 것: 이벤트·배치 상한(500표본/256KB/1MB/3MB)과 `$insert_id` 규칙은 제안대로 두었습니다.
+
+## 클로드 코드 회신
+
+- 처리: 일부(코드·시험·문서 완료. 키가 아직 없어 실기기 전송·PostHog 화면 확인은 남음)
+- 요청 ID: PHG1120A01 (`test.md` 「홈·UI」·「요청 상세」·「아이폰 11 Pro」 실기기 줄)
+- 시작·끝: 2026-11-20 22:00 ~ 23:10 (KST)
+- 커밋: 작업 커밋(`git log`의 「데이터 보호 진단 업로드를 iCloud에서 PostHog로」), 문서 이동은 `[비야 브리지] PHG1120A01` 커밋
+- 대표 확인: 위치 원본(GPS) 외부 전송과 `AGENTS.md` 4절 좌표 예외 5번은 **대표가 채팅에서 직접 확인**하고 「전부 진행」을 고름(2026-11-20). 키는 「이력에 남은 옛 키 그대로」를 고르셨고, 값은 대표가 로컬 파일에 직접 넣는 것으로 함(저는 값을 옮기지 않음).
+- 바뀐 화면: 카드 「포스트호그 로그 업로드」(설명문 PostHog), 「로그 업로드」(`arrow.up.doc`)·재시도, 「최근 전송: 〈시각〉 · 〈파일〉」, 원본 버튼 위 고지 한 줄, 첫 1회 동의 확인(전송 / 전송·다시 묻지 않기 / 취소)과 「위치 원본 전송에 동의함 · 다시 묻기」, 키 없음이면 두 버튼 비활성+「PostHog 키가 설정되지 않았습니다」. 「개발자에게 보내기」(호출부·extension·상태·시트) 삭제, 잔여 참조 0(`rg exportDiagnosticsToICloud|exportSensorRawToICloud|developerMailButtons|developerMailStatus TaptionPlan` 0건). `MapHomeDeveloperMail.swift`는 장소 요청 메일이 써서 유지. 무인 벤치는 `makeDiagnosticsPackageLocally()`로 로컬 패키지만(네트워크 없음).
+- 이벤트: `plan_diagnostics_log`(200KB 조각, 요약·지하철 노선 속성, 좌표·원본 센서 없음), `plan_diagnostics_raw_meta`(날짜별 이동·방문 장소·활동 기록 — 지시서는 요청당 하나였으나 이벤트 1MB 상한 때문에 날짜마다 하나), `plan_diagnostics_raw_batch`(표본 500개/256KB, 이벤트 1MB 이하, 전체 최근 20,000개). 모두 `app=bokki-plan`·`$process_person_profile=false`·`distinct_id`는 앱이 만든 UUID·`$insert_id`. 요청은 이벤트 하나씩 `POST /batch/`(gzip), 이래야 재시도가 성공분을 건너뜀. 3MB 요청 묶음은 쓰지 않음.
+- 로컬 사본: `Packages`(.txt.gz 6개)·`RawUploads`(원본 JSON 3개)·`upload-state.json`. 요청·응답 본문은 기록하지 않고 개수·바이트·코드·초만 남김.
+- 키 처리: 커밋된 파일에 키 없음(`git diff --cached | grep phc_` 0건), `AppSecrets.local.xcconfig`는 git 무시 확인. **키가 아직 없어 버튼은 꺼진 상태이며, 대표가 `POSTHOG_API_KEY = …`를 `AppSecrets.local.xcconfig`에 넣으면 켜짐.** 옛 키는 이력에 남아 있어 회전 여부는 대표 판단.
+- 개인정보: `PRIVACY.md` 로그/원본 두 줄 교체(iCloud Drive·개발자 메일 문구 삭제)와 분석 서버 문장 보강, `PrivacyInfo.xcprivacy`에 위치 목적 분석 추가와 진단 데이터 항목, `AGENTS.md` 4절 다섯 번째 예외(같은 커밋). **ASC 개인정보 라벨은 확인 못 함**(접근 없음).
+- 검증: 시뮬레이터 `TaptionPlanTests` 3,248건·실패 0·건너뜀 26(처음 두 번은 시험 러너가 연결 전에 멈춰 시뮬레이터를 다시 켜고 재실행), 새 시험 8건(좌표 없음·원본 배치 상한·좌표 보존·최근 20,000개·키 없음 판정·실패 사유 그대로+재시도 건너뜀·응답 코드별 문구·조각 해시), 구조 검사 2종·번역 검사(실패 0, 12개 언어) 통과. **실기기 전송·PostHog 필터(`app = bokki-plan`)로 본 이벤트 수·`$insert_id` 중복 제거 실제 효과·가장 큰 이벤트 크기는 미확인.** 시험은 `Packages/TaptionAssistant` 영향 없음.
+- 번역: 새 문구 33개 × 12개 언어. 
+- 남긴 것: iCloud exporter·entitlement·`exportTodaySensorRawURL`(DEBUG 용). 하지 않은 것: 서버·SDK·자동 전송.
+- 남은 것·확인 필요: 대표가 키를 로컬에 넣고 `test.md` 실기기 확인 목록 PHG1120A01 줄 확인.
