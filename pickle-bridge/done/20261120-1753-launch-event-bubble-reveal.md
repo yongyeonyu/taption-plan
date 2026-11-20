@@ -1,7 +1,7 @@
 ---
 id: 20261120-1753-launch-event-bubble-reveal
 created_at: 2026-11-20T17:53+09:00
-status: pending
+status: done
 title: 일정(event) 말풍선은 앱을 켤 때 한 번만 먼저 보이고, 시간대 말풍선으로 넘긴다
 from: 비야
 request_id: BUB1120A01
@@ -174,3 +174,17 @@ enum AssistantBubbleLaunchReveal {
 - 머리에 처리 순서를 넣었습니다: LAG1120A01 다음, RTA1120A01과 같은 커밋에 섞지 않기(LAG의 콜드 실행 측정을 오염시키지 않기 위해).
 - 1절 표의 파일:줄은 2026-11-20 18:4x `origin/main`에서 **그대로 맞았습니다** — `AssistantBubble.swift` 118~120 주석·161·169~175·178·184·207~213·218~222·229~243·245·251·253~257·301, `MapHomeMapAnnotations` 403·419~424·531~556, `MapHomeView+Map` 683, `DefaultBubblePool` 66~79, `AssistantSettingsView` 136~171·224, `AppShellView` 109~110·445, `FlightBubble` 21~26, `AssistantDataActions` 95~98, `AssistantAppValues` 81, `AssistantPhase3Tests` 618·641·656, `pbxproj` 222·1132.
 - 고치지 않은 것: 2절 계약 7항(10초·탭으로 즉시 넘김·같은 실행 재발 없음)·6절 확인 기준·7절 하지 말 것(영구 숨김 `xmark` 유지, 30초 루프 유지)은 대표 지시·기존 결정이라 손대지 않았습니다.
+
+## 클로드 코드 회신
+
+- 처리: 완료(시뮬레이터 시험까지. 실기기 확인은 대표 몫)
+- 요청 ID: BUB1120A01 (`test.md` 「홈·UI」·「요청 상세」·「아이폰 11 Pro」 실기기 줄, `AGENTS.md` 4절 대표 결정)
+- 시작·끝: 2026-11-20 20:10 ~ 20:50 (KST)
+- 커밋: `0ff6c914` 작업, 문서 이동은 `[비야 브리지] BUB1120A01` 커밋
+- 바꾼 파일: `TaptionPlan/UI/AssistantBubble.swift`, `AssistantSettingsView.swift`, `MapHomeMapAnnotations.swift`, `TaptionPlanTests/AssistantPhase3Tests.swift`, `test.md`, `AGENTS.md`
+- 연출 시간 상수: `AssistantBubbleLaunchReveal.seconds` = 10초. 규칙은 순수 함수(`start`·`shown`), 세션 상태는 `AssistantBubbleBoard`에만 있고 저장하지 않음. `AssistantBubbleStore.active`의 기본 동작은 그대로(공통 조건만 `valid`로 뺌, `nonisolated`).
+- 시작 훅 위치: `AssistantSettingsView.swift`의 `AssistantActivityObserver`(콜드: 말풍선 루프 시작 직전 `noteColdLaunch`, 복귀: `onChange(of: scenePhase)`의 `noteScene`, 잠금이 풀리면 `onChange(of: model.isAppLocked)`). 「새 시작」은 콜드 런치와 `.background → .active`만이고, `.inactive`만 스친 경우와 지도 화면 재생성은 한 실행에 한 번만 받는 보드 상태 때문에 새 시작이 아님. 탭은 `MapHomeCatBubbleState.toggleIfTapped`에서 보드의 `endLaunchReveal()`을 먼저 부름.
+- 지키지 못한 것: 앱 잠금이 덮고 있는 동안은 시작하지 않지만, **시작 스플래시·첫 실행 안내가 덮은 시간은 가리지 못함**(그 상태가 동결 파일 `AppShellView`에만 있어 읽을 수 없음). 스플래시는 보통 1~2초라 10초 중 그만큼이 먼저 지나갈 수 있음.
+- 지시서에 없는 판단: 켠 뒤에 창이 열린 새 event(항공편 등)도 그 event마다 한 번 먼저 보이게 함(같은 event는 이 실행에서 다시 오지 않음). 이게 없으면 실행 중 열린 항공편 말풍선이 아예 안 뜸. 원하지 않으면 보드 `refresh`의 해당 분기만 빼면 됨.
+- 검증: 시뮬레이터 `TaptionPlanTests` 3,231건·실패 0·건너뜀 26. 새 시험 6건(`testLaunchReveal…`) 외에 보드 상태 시험 2건 포함, 말풍선 관련 124건 통과. 구조 지표 기준선 통과. 실기기·화면으로 연출을 눈으로 본 것은 확인 안 함. 번역 대기 없음.
+- 남은 것·확인 필요: 대표가 `test.md` `## 실기기 확인 목록`의 BUB1120A01 줄을 아이폰 11 Pro로 확인. `docs/pipeline/CHANGELOG.md`는 없어 `test.md`로 대신함.
