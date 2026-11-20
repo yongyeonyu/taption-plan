@@ -198,6 +198,8 @@ final class LedgerBook {
         revision += 1
         // 메모리에 없어도 지움 표시를 남긴다(되돌리기가 저장소 행을 놓치지 않게).
         await write(entry, deleted: true)
+        // 항공편 카드의 가격 연결을 푼다. 카드는 남는다(FLT1120A01 C).
+        await FlightFareLinker.released(id)
     }
 
     /// 원화 환산이 빈 외화 기록을 지금 환율로 채운다(가계부를 열 때).

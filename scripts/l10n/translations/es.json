@@ -6355,6 +6355,9 @@
 "출발 빠른 순|Earliest departure": "Salida más temprana",
 "출발|From": "Salida",
 "코드·도시 이름|Code or city": "Código o ciudad",
-"항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.": "La clave de consulta de vuelos aún no está registrada. Añádelo a mano o busca el número de vuelo."
+"항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.": "La clave de consulta de vuelos aún no está registrada. Añádelo a mano o busca el número de vuelo.",
+" · 왕복 결제| · round trip": " · ida y vuelta",
+"결제 문자|payment text": "SMS de pago",
+"직접|manual": "manual"
 }
 }

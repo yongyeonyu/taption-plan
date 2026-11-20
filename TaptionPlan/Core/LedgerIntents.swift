@@ -177,6 +177,7 @@ enum PaymentTextCapture {
         if draft.isCancel, var original = LedgerMessageParser.canceledOriginal(for: entry, in: LedgerBook.shared.entries) {
             original.canceledAt = entry.occurredAt
             await LedgerBook.shared.save(original)
+            await FlightFareLinker.canceled(original.id)
             return (language.text("\(original.title) \(money) 결제를 취소됨으로 표시했어요.", "Marked \(original.title) \(money) as canceled."), .added)
         }
         switch LedgerMessageParser.duplicateVerdict(entry, in: LedgerBook.shared.entries) {
@@ -200,6 +201,8 @@ enum PaymentTextCapture {
             return (language.text("\(money) 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.", "\(money) is waiting in Needs review. Add or discard it in Memo › Spending."), .review)
         }
         let saved = await LedgerBook.shared.save(entry)
+        // 항공권 결제로 보이면 그 항공편 카드에 가격을 붙인다(FLT1120A01 C). 정해지지 않으면 아무것도 붙이지 않는다.
+        await FlightFareLinker.handle(saved, text: text)
         // 앱이 먼저 넣고, 연결된 AI가 가게 이름·분류를 다듬는다(대표 결정).
         // 가게 규칙으로 이미 정해진 결제는 맡기지 않는다(AIX1114A01 P3: 같은 판단을 AI에게 다시 묻지 않는다).
         let settledByRule = LedgerMessageParser.learnedMerchant(saved.title) != nil || parsedMerchantRule

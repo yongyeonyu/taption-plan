@@ -6355,6 +6355,9 @@
 "출발 빠른 순|Earliest departure": "出発が早い順",
 "출발|From": "出発",
 "코드·도시 이름|Code or city": "コードまたは都市名",
-"항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.": "航空便の照会キーがまだ登録されていません。手動で追加するか便名で検索してください。"
+"항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.": "航空便の照会キーがまだ登録されていません。手動で追加するか便名で検索してください。",
+" · 왕복 결제| · round trip": " · 往復決済",
+"결제 문자|payment text": "決済メッセージ",
+"직접|manual": "手入力"
 }
 }

@@ -75,6 +75,18 @@
    ]
   },
   {
+   "key": " · 왕복 결제| · round trip",
+   "ko": " · 왕복 결제",
+   "en": " · round trip",
+   "files": [
+    "FlightFare.swift:111"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": " 외 {0}개| +{0} more",
    "ko": " 외 {0}개",
    "en": " +{0} more",
@@ -3564,7 +3576,7 @@
    "ko": "{0} {1} 결제를 취소됨으로 표시했어요.",
    "en": "Marked {0} {1} as canceled.",
    "files": [
-    "LedgerIntents.swift:180"
+    "LedgerIntents.swift:181"
    ],
    "args": [
     "original.title",
@@ -3658,7 +3670,7 @@
    "en": "Added {0} {1} to the ledger.",
    "files": [
     "LedgerIntents.swift:133",
-    "LedgerIntents.swift:209",
+    "LedgerIntents.swift:212",
     "SiriIntents.swift:96"
    ],
    "args": [
@@ -3852,7 +3864,7 @@
    "ko": "{0} 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.",
    "en": "{0} is waiting in Needs review. Add or discard it in Memo › Spending.",
    "files": [
-    "LedgerIntents.swift:200"
+    "LedgerIntents.swift:201"
    ],
    "args": [
     "money"
@@ -5064,11 +5076,11 @@
    "ko": "{0}분 지연",
    "en": "Delayed {0} min",
    "files": [
-    "FlightSearchViews.swift:167",
-    "FlightDayBanner.swift:44"
+    "FlightDayBanner.swift:44",
+    "FlightSearchViews.swift:167"
    ],
    "args": [
-    "status.delayMinutes"
+    "row.delayMinutes"
    ],
    "targets": [
     "TaptionPlan"
@@ -5112,12 +5124,12 @@
    "ko": "{0}분",
    "en": "{0}m",
    "files": [
-    "FlightSearchViews.swift:138",
     "HealthAndSensorModels.swift:706",
-    "RecordSummaryEngine.swift:30"
+    "RecordSummaryEngine.swift:30",
+    "FlightSearchViews.swift:138"
    ],
    "args": [
-    "m"
+    "minutes"
    ],
    "targets": [
     "TaptionPlan",
@@ -5197,13 +5209,13 @@
    "ko": "{0}시간 {1}분",
    "en": "{0}h {1}m",
    "files": [
-    "FlightSearchViews.swift:138",
     "RecordSummaryEngine.swift:32",
+    "FlightSearchViews.swift:138",
     "MapHomeCalendarSheet.swift:479"
    ],
    "args": [
-    "h",
-    "m"
+    "hours",
+    "minutes"
    ],
    "targets": [
     "TaptionPlan"
@@ -5466,7 +5478,7 @@
    "ko": "{0}원",
    "en": "₩{0}",
    "files": [
-    "LedgerCore.swift:278",
+    "LedgerCore.swift:280",
     "MapHomeCalendarPolicies.swift:433"
    ],
    "args": [
@@ -36082,6 +36094,18 @@
    ]
   },
   {
+   "key": "결제 문자|payment text",
+   "ko": "결제 문자",
+   "en": "payment text",
+   "files": [
+    "FlightFare.swift:110"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "결제 문자·알림 자동으로 넣기|Payments, automatically",
    "ko": "결제 문자·알림 자동으로 넣기",
    "en": "Payments, automatically",
@@ -36220,8 +36244,8 @@
    "ko": "결항",
    "en": "Cancelled",
    "files": [
-    "FlightSearchViews.swift:167",
-    "FlightDayBanner.swift:42"
+    "FlightDayBanner.swift:42",
+    "FlightSearchViews.swift:167"
    ],
    "args": [],
    "targets": [
@@ -41566,9 +41590,9 @@
    "ko": "닫기",
    "en": "Close",
    "files": [
-    "FlightSearchViews.swift:51",
     "AIConnectNudge.swift:40",
-    "AnnouncementBanner.swift:31"
+    "AnnouncementBanner.swift:31",
+    "AnnouncementBanner.swift:115"
    ],
    "args": [],
    "targets": [
@@ -45193,7 +45217,7 @@
    "ko": "방금 같은 금액의 결제가 있어 「확인 필요」에 두었어요.",
    "en": "A payment of the same amount was just added, so this one is waiting in Needs review.",
    "files": [
-    "LedgerIntents.swift:188"
+    "LedgerIntents.swift:189"
    ],
    "args": [],
    "targets": [
@@ -58396,7 +58420,7 @@
    "en": "That payment is already in the ledger.",
    "files": [
     "LedgerIntents.swift:129",
-    "LedgerIntents.swift:184"
+    "LedgerIntents.swift:185"
    ],
    "args": [],
    "targets": [
@@ -63310,6 +63334,18 @@
    ]
   },
   {
+   "key": "직접|manual",
+   "ko": "직접",
+   "en": "manual",
+   "files": [
+    "FlightFare.swift:110"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "직항 {0}편 · 공동운항 {1}편 제외|{0} direct · {1} codeshare hidden",
    "ko": "직항 {0}편 · 공동운항 {1}편 제외",
    "en": "{0} direct · {1} codeshare hidden",
@@ -64449,6 +64485,7 @@
    "ko": "취소됨",
    "en": "Canceled",
    "files": [
+    "FlightFare.swift:105",
     "LedgerMemoPanel.swift:268",
     "LedgerSheet.swift:296"
    ],

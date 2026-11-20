@@ -601,10 +601,17 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public var pnrLocal: String?
     /// 알림 병합 기록(출처·지연 이력·체크인·메모, JSON 글). 예약번호와 같이 기기 안에서만 쓴다. 없으면 키를 쓰지 않는다.
     public var flightLog: String?
+    /// 실제로 결제한 항공권 가격(FLT1120A01 C). 정본은 가계부 지출이고 이 칸들은 사본이다. 없으면 키를 쓰지 않아 예전 바이트가 그대로다.
+    /// 금액은 그 통화의 정수, 출처는 `paymentText`·`receipt`·`manual`(`:roundTrip`이 붙으면 왕복 한 건), 취소되면 `canceled`.
+    public var fareAmount: Int?
+    public var fareCurrency: String?
+    public var fareSource: String?
+    public var fareExpenseID: String?
 
     public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil, colorHex: String? = nil, plannedSpendKRW: Double? = nil, parentItemID: String? = nil,
                 flightNumber: String? = nil, originCode: String? = nil, destinationCode: String? = nil, terminal: String? = nil, gate: String? = nil, baggageClaim: String? = nil,
-                legIndex: Int? = nil, itineraryID: String? = nil, pnrLocal: String? = nil, flightLog: String? = nil) {
+                legIndex: Int? = nil, itineraryID: String? = nil, pnrLocal: String? = nil, flightLog: String? = nil,
+                fareAmount: Int? = nil, fareCurrency: String? = nil, fareSource: String? = nil, fareExpenseID: String? = nil) {
         self.tripID = tripID
         self.itemID = itemID
         self.kind = kind
@@ -629,6 +636,20 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
         self.itineraryID = itineraryID
         self.pnrLocal = pnrLocal
         self.flightLog = flightLog
+        self.fareAmount = fareAmount
+        self.fareCurrency = fareCurrency
+        self.fareSource = fareSource
+        self.fareExpenseID = fareExpenseID
+    }
+
+    /// 결제한 항공권 가격을 붙인다(지출 하나에 카드 하나).
+    public mutating func applyFare(amount: Int, currency: String, source: String, expenseID: String) {
+        fareAmount = amount; fareCurrency = currency; fareSource = source; fareExpenseID = expenseID
+    }
+
+    /// 가격 연결을 푼다(지출을 지웠을 때). 카드는 남는다.
+    public mutating func clearFare() {
+        fareAmount = nil; fareCurrency = nil; fareSource = nil; fareExpenseID = nil
     }
 
     /// 비행 구간 정보를 한 번에 넣는다.

@@ -1,19 +1,7 @@
 {
- "ui": 5505,
+ "ui": 5508,
  "catalog": 509,
  "unread": [
-  {
-   "file": "TaptionPlan/UI/FlightSearchViews.swift",
-   "line": 65,
-   "ko": "airport.nameKo",
-   "en": "airport.nameEn"
-  },
-  {
-   "file": "TaptionPlan/UI/FlightSearchViews.swift",
-   "line": 116,
-   "ko": "ko[index]",
-   "en": "en[index]"
-  },
   {
    "file": "Packages/SeasonPackKit/Sources/SeasonPackKit/Icons/SeasonPackMenu.swift",
    "line": 6,
@@ -124,7 +112,7 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerCore.swift",
-   "line": 275,
+   "line": 277,
    "ko": "_ amount: Double",
    "en": "String = \"KRW\""
   },
@@ -289,6 +277,18 @@
    "line": 143,
    "ko": "$0.nameKo",
    "en": "$0.nameEn"
+  },
+  {
+   "file": "TaptionPlan/UI/FlightSearchViews.swift",
+   "line": 65,
+   "ko": "airport.nameKo",
+   "en": "airport.nameEn"
+  },
+  {
+   "file": "TaptionPlan/UI/FlightSearchViews.swift",
+   "line": 116,
+   "ko": "ko[index]",
+   "en": "en[index]"
   },
   {
    "file": "TaptionPlan/UI/HwarangCoat.swift",
