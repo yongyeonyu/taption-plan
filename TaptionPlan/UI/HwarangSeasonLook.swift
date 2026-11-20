@@ -8,6 +8,8 @@ struct HwarangSeasonLook: Equatable, Sendable {
     var cape = false
     var scarf: HwarangClothStyle?
     var ribbon: HwarangClothStyle?
+    /// 모자가 팩 것인지. 상대 고양이에게는 팩이 준 것만 입힌다(SEA1120A02).
+    var hat = false
 
     var isEmpty: Bool { !redNose && scarf == nil && ribbon == nil }
 }

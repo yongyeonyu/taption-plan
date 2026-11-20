@@ -434,7 +434,13 @@ extension HwarangPainter {
 
     private mutating func companion(_ pose: Pose, x: CGFloat, scale: CGFloat, ground: CGFloat, bow: UInt32) {
         let saved = (scarf, ribbon, hatImage, lineScale)
-        scarf = nil; ribbon = nil; hatImage = nil; lineScale = 1 / scale
+        // 화랑이가 고른 소품은 상대(춘향이·윤복이)에게 입히지 않지만, 시즌 팩 기간에는 모자·목도리·리본이 팩 것이라
+        // 세 고양이 모두 같이 입는다(SEA1120A02).
+        // 팩이 주지 않은 칸은 화랑이가 고른 소품이라 벗긴다.
+        if seasonLook?.scarf == nil { scarf = nil }
+        if seasonLook?.ribbon == nil { ribbon = nil }
+        if seasonLook?.hat != true { hatImage = nil }
+        lineScale = 1 / scale
         c.saveGState()
         // 화랑이 쪽을 바라보도록 좌우를 뒤집는다.
         c.translateBy(x: x, y: ground); c.scaleBy(x: -scale, y: scale); c.translateBy(x: -58, y: -groundY)

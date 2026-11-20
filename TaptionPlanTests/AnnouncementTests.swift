@@ -268,4 +268,31 @@ final class AnnouncementTests: XCTestCase {
         let items = (0..<5).map { AppAnnouncement(id: "n\($0)", title: "t", body: "b", kind: .info) }
         XCTAssertEqual(AnnouncementPolicy.unnotified(items, notified: ["n0"]).map(\.id), ["n1", "n2", "n3"])
     }
+
+    // BGN1120A01. 막 켜진 앱은 쿨다운·ETag에 막히지 않고 목록을 다시 받는다(목록은 메모리에만 있다).
+    func testFreshLaunchLoadsTheListDespiteCooldownAndETag() async {
+        let wire = Wire(), store = defaults()
+        wire.reply = (200, Data(fixture.utf8), "\"e\"")
+        let first = service(wire, store, clock: { self.now })
+        await first.refresh()
+        let relaunched = service(wire, store, clock: { self.now.addingTimeInterval(60) })
+        await relaunched.refresh()
+        XCTAssertEqual(wire.calls.count, 2, "새 실행의 첫 요청은 쿨다운을 건너뛴다")
+        XCTAssertNil(wire.calls[1].etag, "목록이 없을 때는 ETag를 보내지 않는다(304면 빈 목록에 머문다)")
+        XCTAssertEqual(relaunched.all.count, 2)
+        await relaunched.refresh()
+        XCTAssertEqual(wire.calls.count, 2, "그다음부터는 쿨다운을 지킨다")
+    }
+
+    func testSheetRequestIsTakenOnceAndExpires() {
+        var current = now
+        let feed = service(Wire(), defaults(), clock: { current })
+        XCTAssertFalse(feed.takeSheetRequest())
+        feed.requestSheet()
+        XCTAssertTrue(feed.takeSheetRequest())
+        XCTAssertFalse(feed.takeSheetRequest(), "한 번만 가져간다")
+        feed.requestSheet()
+        current = now.addingTimeInterval(120)
+        XCTAssertFalse(feed.takeSheetRequest(), "오래된 요청은 버린다")
+    }
 }

@@ -199,6 +199,11 @@ final class AnnouncementService {
     private(set) var sheetRequest = 0
     private(set) var dismissed: [String: Double]
     @ObservationIgnored private var notified: [String: Double]
+    @ObservationIgnored private var sheetRequestedAt: Date?
+    /// 이 실행에서 목록을 한 번이라도 받았는지. 목록은 메모리에만 있어, 막 켜진 앱이 쿨다운·304로 빈 목록에 머물지 않게 한다(BGN1120A01).
+    @ObservationIgnored private var hasLoaded = false
+    /// 이 실행에서 한 번이라도 요청했는지. 첫 요청만 쿨다운을 건너뛴다(서버가 멈춰도 요청이 되풀이되지 않게).
+    @ObservationIgnored private var hasAttempted = false
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let endpoint: () -> URL?
@@ -231,7 +236,17 @@ final class AnnouncementService {
         AnnouncementPolicy.visible(all, now: now(), build: build(), dismissed: Set(dismissed.keys))
     }
 
-    func requestSheet() { sheetRequest &+= 1 }
+    func requestSheet() {
+        sheetRequestedAt = now()
+        sheetRequest &+= 1
+    }
+
+    /// 배너가 아직 화면에 없을 때 온 요청(알림을 눌러 앱이 막 켜진 때)을 배너가 나타나며 한 번 가져간다. 1분이 지난 요청은 버린다.
+    func takeSheetRequest() -> Bool {
+        guard let at = sheetRequestedAt else { return false }
+        sheetRequestedAt = nil
+        return now().timeIntervalSince(at) <= 60
+    }
 
     func dismiss(_ id: String) {
         guard dismissed[id] == nil else { return }
@@ -243,16 +258,19 @@ final class AnnouncementService {
     func refresh() async {
         guard !isPreview, let url = endpoint() else { return }
         let current = now().timeIntervalSince1970
-        if let last = defaults.object(forKey: Self.lastAttemptKey) as? Double, current >= last, current - last < Self.cooldown { return }
+        // 이 실행의 첫 요청은 쿨다운을 건너뛰고, 목록을 받기 전에는 ETag 없이 통째로 받는다(앱을 껐다 켜거나 백그라운드로 깨어난 때).
+        if hasAttempted, let last = defaults.object(forKey: Self.lastAttemptKey) as? Double, current >= last, current - last < Self.cooldown { return }
+        hasAttempted = true
         defaults.set(current, forKey: Self.lastAttemptKey)
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8)
         request.httpMethod = "GET"
-        if let etag = defaults.string(forKey: Self.etagKey) { request.setValue(etag, forHTTPHeaderField: "If-None-Match") }
+        if hasLoaded, let etag = defaults.string(forKey: Self.etagKey) { request.setValue(etag, forHTTPHeaderField: "If-None-Match") }
         guard let reply = await send(request) else { return }
         switch reply.status {
         case 200:
             let feed = AnnouncementFeed.decode(reply.data)
             all = feed.items
+            hasLoaded = true
             if let etag = reply.etag, !etag.isEmpty { defaults.set(etag, forKey: Self.etagKey) } else { defaults.removeObject(forKey: Self.etagKey) }
             let live = Set(feed.items.map(\.id))
             let kept = AnnouncementPolicy.pruned(dismissed, liveIDs: live, now: now())
@@ -284,7 +302,8 @@ final class AnnouncementService {
         let stamp = now().timeIntervalSince1970
         var next = notified
         for id in ids where next[id] == nil { next[id] = stamp }
-        next = AnnouncementPolicy.pruned(next, liveIDs: Set(all.map(\.id)), now: now())
+        // 목록을 받은 실행에서만 정리한다(빈 목록 기준으로 살아 있는 공지의 기록을 지우지 않게).
+        if hasLoaded { next = AnnouncementPolicy.pruned(next, liveIDs: Set(all.map(\.id)), now: now()) }
         guard next != notified else { return }
         notified = next
         defaults.set(next, forKey: Self.notifiedKey)

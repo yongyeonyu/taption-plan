@@ -41,7 +41,9 @@ struct AnnouncementBanner: View {
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
             .sheet(isPresented: $isSheetPresented) { AnnouncementSheet(language: language) }
-            .onChange(of: service.sheetRequest) { _, _ in isSheetPresented = true }
+            .onChange(of: service.sheetRequest) { _, _ in if service.takeSheetRequest() { isSheetPresented = true } }
+            // 알림을 눌러 앱이 막 켜졌으면 배너가 뜨기 전에 온 요청을 여기서 받는다(BGN1120A01).
+            .onAppear { if service.takeSheetRequest() { isSheetPresented = true } }
         }
     }
 

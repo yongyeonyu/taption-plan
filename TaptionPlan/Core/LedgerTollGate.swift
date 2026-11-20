@@ -255,7 +255,11 @@ enum LedgerTollGate {
     static func retitled(_ entry: LedgerEntry, drives: [LedgerTollRepeat.Drive], direction: (LedgerTollRepeat.Drive) -> Direction?, language: MapHomeLanguage) -> LedgerEntry? {
         let note = entry.note ?? ""
         guard notes.contains(where: { note.hasPrefix($0) }),
-              let drive = LedgerTollRepeat.merged(drives).first(where: { LedgerTollRepeat.covers($0, entry.occurredAt) && !$0.passes.isEmpty }),
+              let drive = { () -> LedgerTollRepeat.Drive? in
+                  // 그 시각을 품은 이동을 먼저, 없으면 그 무렵의 이동(연달아 오간 날 엉뚱한 이동을 고르지 않게).
+                  let all = LedgerTollRepeat.merged(drives).filter { !$0.passes.isEmpty }
+                  return all.first { entry.occurredAt >= $0.start && entry.occurredAt <= $0.end } ?? all.first { LedgerTollRepeat.covers($0, entry.occurredAt) }
+              }(),
               let trip = trip(drive.passes) else { return nil }
         let old = [false, true].map { title(trip: trip, direction: nil, language: language, road: $0) }
         let fresh = title(trip: trip, direction: direction(drive), language: language)
@@ -269,6 +273,11 @@ enum LedgerTollGate {
     static func highway(_ route: String, language: MapHomeLanguage) -> String? {
         let name = route.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return nil }
+        // 지선(`호남지선`)은 「호남고속도로 지선」으로.
+        if name.hasSuffix("지선"), name.count > 2 {
+            let trunk = String(name.dropLast(2))
+            return language.text("\(trunk)고속도로 지선", "\(trunk) Expressway branch")
+        }
         let base = name.hasSuffix("선") ? String(name.dropLast()) : name
         guard !base.isEmpty else { return nil }
         if base.hasSuffix("고속도로") { return base }

@@ -72,13 +72,20 @@ final class SeasonPackAdapter: SeasonPackHost {
             backgroundSessionID: backgroundSessionID
         ))
         SeasonPackCenter.shared.recompute()
-        exportWidgetArt()
+        // 센터는 팩을 뒤에서 읽는다. 다 읽기 전에는 켜진 팩이 없어 보여 그림을 지우게 되므로, 읽은 뒤에만 내보낸다(SPL1120A01).
+        Task { @MainActor in
+            await SeasonPackCenter.shared.reload()
+            didLoadPacks = true
+            exportWidgetArt()
+        }
     }
+
+    @MainActor private static var didLoadPacks = false
 
     /// 앱 진입·`scenePhase == .active`: 팩 새로고침(30분 쿨다운·ETag·8초·조용한 실패는 패키지가 지킨다).
     @MainActor static func refresh() async {
         await SeasonPackCenter.shared.refresh()
-        exportWidgetArt()
+        if didLoadPacks { exportWidgetArt() }
     }
 
     /// 잠금화면·다이나믹 아일랜드가 쓸 모자·아이콘을 그룹 공간에 둔다(SPL1120A01). 팩이 꺼져 있으면 지운다.
@@ -147,7 +154,8 @@ final class SeasonPackAdapter: SeasonPackHost {
             }
             return HwarangClothStyle(base: base, shade: shade, accent: accent, trim: trim, pattern: pattern)
         }
-        let look = HwarangSeasonLook(redNose: c.redNose ?? false, cape: c.cape ?? false, scarf: cloth(c.scarf), ribbon: cloth(c.ribbon))
+        let look = HwarangSeasonLook(redNose: c.redNose ?? false, cape: c.cape ?? false, scarf: cloth(c.scarf), ribbon: cloth(c.ribbon),
+                                     hat: SeasonPackCenter.shared.accessoryImage("hat") != nil)
         return look.isEmpty ? nil : look
     }
 

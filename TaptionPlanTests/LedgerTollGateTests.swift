@@ -243,6 +243,21 @@ final class LedgerTollGateTests: XCTestCase {
         let all = LedgerTollRepeatRunner.carDrives(day, language: .korean, includeUnnamed: true)
         XCTAssertEqual(all.count, 3)
         XCTAssertEqual(all.map(\.named), [true, false, false])
+        XCTAssertEqual(all[1].from, "", "이름 모르는 쪽은 비운다")
+        XCTAssertEqual(all[1].to, "집", "아는 쪽은 남겨 출퇴근을 가린다")
+    }
+
+    /// 이름 모르는 이동은 거의 이어진 조각만 합친다. 20분 머문 뒤의 다른 이동과 한 통행료로 묶지 않는다(TGT1120A02 리뷰).
+    func testUnnamedDrivesMergeOnlyWhenNearlyContiguous() {
+        func drive(_ start: Double, _ end: Double, named: Bool) -> LedgerTollRepeat.Drive {
+            var drive = LedgerTollRepeat.Drive(from: named ? "집" : "", to: named ? "회사" : "", start: at(start), end: at(end))
+            drive.named = named
+            return drive
+        }
+        XCTAssertEqual(LedgerTollRepeat.merged([drive(8, 8.3, named: false), drive(8.35, 8.6, named: false)]).count, 1, "3분 뒤 이어진 조각")
+        XCTAssertEqual(LedgerTollRepeat.merged([drive(8, 8.3, named: false), drive(8.65, 9, named: false)]).count, 2, "21분 머문 뒤는 다른 이동")
+        XCTAssertEqual(LedgerTollRepeat.merged([drive(8, 8.3, named: true), drive(8.65, 9, named: true)]).count, 1, "이름 있는 이동은 예전처럼 30분")
+        XCTAssertEqual(LedgerTollGate.highway("호남지선", language: .korean), "호남고속도로 지선")
     }
 }
 

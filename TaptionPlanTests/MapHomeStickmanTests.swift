@@ -1340,6 +1340,31 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertGreaterThan(changed, 100)
     }
 
+    /// 시즌 팩 기간에는 회의 장면의 상대 고양이(춘향이·윤복이)도 팩 목도리를 두르고, 기간 밖에는 화랑이 소품을 빌려 입지 않는다(SEA1120A02).
+    @MainActor
+    func testCompanionCatWearsSeasonOutfitOnlyDuringTheSeason() throws {
+        let red = HwarangClothStyle(base: 0xD63A3A, shade: 0x9E2230, accent: 0xFFF6EC, trim: 0xFFF6EC, pattern: .bands)
+        let look = HwarangSeasonLook(redNose: false, cape: false, scarf: red, ribbon: nil)
+        func rightHalfDiff(_ season: HwarangSeasonLook?) throws -> Int {
+            func alpha(_ scarf: HwarangClothStyle?) throws -> [UInt8] {
+                let image = try XCTUnwrap(HwarangDiagnostics.frame(scene: .meeting, sec: 0.5, side: 146, scarf: scarf, seasonLook: season).cgImage)
+                var bytes = [UInt8](repeating: 0, count: image.width * image.height * 4)
+                let context = try XCTUnwrap(CGContext(data: &bytes, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4,
+                                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+                context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+                return bytes
+            }
+            let with = try alpha(red), without = try alpha(nil)
+            // 그림은 화면 배율로 그려지므로 실제 화소 폭으로 오른쪽(상대 고양이 쪽 x > 95/146)을 고른다.
+            let pixelsWide = Int((Double(with.count) / 4).squareRoot())
+            return stride(from: 0, to: with.count, by: 4).filter { index in
+                Double((index / 4) % pixelsWide) / Double(pixelsWide) > 95.0 / 146 && with[index] != without[index]
+            }.count
+        }
+        XCTAssertGreaterThan(try rightHalfDiff(look), 20, "시즌 기간에는 상대 고양이도 목도리를 두른다")
+        XCTAssertEqual(try rightHalfDiff(nil), 0, "시즌이 아니면 화랑이 소품을 상대에게 입히지 않는다")
+    }
+
     /// 탈것마다 자기 장면이 나오고 속도 구간의 걷기·달리기로 바뀌지 않는다(CAT1102A02).
     func testVehiclesAndChoresHaveTheirOwnScenes() {
         let expected: [(MapHomeStickmanAction, HwarangScene)] = [

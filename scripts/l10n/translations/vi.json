@@ -512,6 +512,7 @@
 },
 "ui": {
 "{0}고속도로|{0} Expressway": "Cao tốc {0}",
+"{0}고속도로 지선|{0} Expressway branch": "Nhánh cao tốc {0}",
 "통행료 금액 확인 필요|Check the toll amount": "Kiểm tra phí cầu đường",
 " (출근)| (to work)": " (đi làm)",
 " (퇴근)| (to home)": " (về nhà)",

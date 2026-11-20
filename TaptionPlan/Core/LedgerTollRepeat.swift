@@ -222,11 +222,14 @@ enum LedgerTollRepeat {
     }
 
     /// 한 번의 이동이 여러 조각으로 잡히면 하나로 본다: 같은 출발·도착이고 겹치거나 30분 안에 이어지는 것.
+    static let unnamedJoin: TimeInterval = 5 * 60
+
     static func merged(_ drives: [Drive]) -> [Drive] {
         var result: [Drive] = []
         for drive in drives.sorted(by: { $0.start < $1.start }) {
-            if let index = result.lastIndex(where: { $0.from == drive.from && $0.to == drive.to }),
-               drive.start <= result[index].end.addingTimeInterval(before) {
+            // 이름 모르는 이동은 출발·도착이 다 같아 보이므로, 거의 이어진 조각(5분 안)만 한 이동으로 본다(TGT1120A02).
+            if let index = result.lastIndex(where: { $0.from == drive.from && $0.to == drive.to && $0.named == drive.named }),
+               drive.start <= result[index].end.addingTimeInterval(drive.named ? before : unnamedJoin) {
                 result[index].end = max(result[index].end, drive.end)
                 result[index].cells.formUnion(drive.cells)
                 // 조각마다 같은 영업소가 잡히면 더 가까웠던 하나만 둔다.
@@ -503,6 +506,8 @@ enum LedgerTollRepeatRunner {
         let places = model.snapshot.settings.frequentPlaces
         let homes = Set(places.filter { $0.kind == .home }.map(\.displayName)), works = Set(places.filter { $0.kind == .company }.map(\.displayName))
         let direction: (LedgerTollRepeat.Drive) -> LedgerTollGate.Direction? = { drive in
+            // 쉬는 날은 출퇴근이 아니다.
+            guard !isOffDay(drive.end) else { return nil }
             if works.contains(drive.to) { return .toWork }
             if homes.contains(drive.to) || works.contains(drive.from) { return .toHome }
             return nil
@@ -554,7 +559,9 @@ enum LedgerTollRepeatRunner {
             let from = move.from ?? "", to = move.to ?? ""
             let named = !from.isEmpty && !to.isEmpty && from != to && !unnamed.contains(from) && !unnamed.contains(to)
             guard named || includeUnnamed else { return nil }
-            var drive = LedgerTollRepeat.Drive(from: from, to: to, start: start, end: end)
+            // 이름 모르는 쪽은 비운다(언어를 바꿔도 처리 기록의 키가 같게). 아는 쪽(집·회사)은 출퇴근을 가리는 데 쓴다.
+            func clean(_ name: String) -> String { unnamed.contains(name) ? "" : name }
+            var drive = LedgerTollRepeat.Drive(from: named ? from : clean(from), to: named ? to : clean(to), start: start, end: end)
             drive.named = named
             return drive
         }
