@@ -237,13 +237,22 @@ struct AssistantProviderView: View {
     private var keyConnectorSections: some View {
         Section {
             Text(keySteps).font(.taptionStyle(.footnote))
-            LabeledContent(language.text("MCP 주소", "MCP URL"), value: TripRelay.mcpURL(host: host)).font(.taptionStyle(.footnote))
-            Button(language.text("MCP 주소 복사", "Copy MCP URL")) {
-                copy(TripRelay.mcpURL(host: host))
-                message = language.text("MCP 주소를 복사했어요.", "MCP URL copied.")
+            if provider == .muse {
+                // Muse에는 MCP 주소 복사 단계가 없다. 키 없는 안내 글을 채팅에 붙여 넣는다(MUS1120A03).
+                Button(language.text("Muse 채팅에 붙여 넣을 안내 복사", "Copy the setup to paste into Muse")) {
+                    copy(TripRelay.museSetupText(host: host, language: language))
+                    isShowingPasteGuide = true
+                }
+            } else {
+                LabeledContent(language.text("MCP 주소", "MCP URL"), value: TripRelay.mcpURL(host: host)).font(.taptionStyle(.footnote))
+                Button(language.text("MCP 주소 복사", "Copy MCP URL")) {
+                    copy(TripRelay.mcpURL(host: host))
+                    message = language.text("MCP 주소를 복사했어요.", "MCP URL copied.")
+                }
             }
             if let existing {
                 // 주소·MCP·키를 한 번에: 1회용 주소 한 줄만 복사하고, AI가 열면 안내 전체가 나온다(SET1110A01).
+                if provider != .muse {
                 Button(language.text("연결 안내 한 번에 복사 (추천)", "Copy everything at once (recommended)")) {
                     Task {
                         let full = TripRelay.keyConnectorSetupText(for: provider, host: host, key: existing.token, scope: existing.key.scope, expiresAt: existing.key.expiresAt)
@@ -251,6 +260,7 @@ struct AssistantProviderView: View {
                         copy(await TripRelay.setupLinkText(for: full) ?? full)
                         isShowingPasteGuide = true
                     }
+                }
                 }
                 LabeledContent(language.text("연결 키", "Connection key"), value: AssistantCueText.masked(existing.token)).font(.footnote.monospaced())
                 Button(language.text("연결 키 복사", "Copy connection key")) {
@@ -328,8 +338,8 @@ struct AssistantProviderView: View {
         // Muse에는 「MCP 서버 추가」 설정 화면이 없다. 안내를 채팅에 붙여 넣고 맞춤 커넥터를 만들어 달라고 한 뒤, 키는 Muse의 보안 입력창에 넣는다(MUS1120A01).
         case .muse:
             language.text(
-                "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요. 연결 안내가 복사돼요.\n2. Muse 채팅에 연결 안내를 붙여 넣고, 원격 MCP 서버에 연결하는 맞춤 커넥터를 만들어 달라고 요청해요.\n3. Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.\n4. 「오늘 기록 읽어 줘」처럼 물어 확인해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
-                "1. In the Step by step card above, pick access and period in the make-key step and make the key. The setup is copied.\n2. Paste the setup into the Muse chat and ask it to create a custom connector to the remote MCP server.\n3. When Muse asks for the key, enter the connection key in Muse's secure input, not in the chat text.\n4. Ask something like \"read today's records\" to check. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."
+                "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. 복사된 안내를 Muse 채팅에 붙여 넣고 보내요. Muse가 커스텀 커넥터를 만들어요.\n3. Muse가 보여 주는 보안 입력에 연결 키를 넣어요. 키는 채팅에 직접 쓰지 않아요.\n4. Muse가 연결을 시험한 뒤 연결됐다고 알려 주면 끝나요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
+                "1. In the Step by step card above, pick access and period in the make-key step and make the key.\n2. Paste the copied setup into the Muse chat and send it. Muse creates the custom connector.\n3. Enter the connection key in the secure input Muse shows. Don't type the key in the chat.\n4. You're done when Muse tests the connection and tells you it's connected. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."
             )
         default:
             language.text("위 「단계별 연결」에서 키를 만들면 연결 안내가 복사돼요. 웹 요청을 할 수 있는 AI에 붙여 넣어 주세요.", "Making the key in the Step by step card above copies the setup. Paste it into any AI that can make web requests.")
@@ -523,12 +533,17 @@ struct AssistantProviderView: View {
                 _ = await TripRelay.revokeScopedKey(old.id)
                 await store.reload()
             }
+            if provider == .muse {
+                // 키 없는 안내만 복사한다. 키는 3단계에서 Muse 보안 입력에 따로 넣는다(MUS1120A03).
+                copy(TripRelay.museSetupText(host: host, language: language))
+                message = language.text("연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 주세요. 연결 키는 Muse가 보안 입력을 띄우면 그때 넣어요.", "Setup copied. Paste it into the Muse chat. Enter the key when Muse shows its secure input.")
+                pendingPasteGuide = true
+                return nil
+            }
             if let full = TripRelay.keyConnectorSetupText(for: provider, host: host, key: token, scope: key.scope, expiresAt: key.expiresAt) {
                 // 주소와 키는 화면에서 따로 복사한다.
                 copy(await TripRelay.setupLinkText(for: full) ?? full)
-                message = provider == .muse
-                    ? language.text("연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 맞춤 커넥터를 요청하고, 키는 Muse의 보안 입력창에 넣어 주세요.", "Setup copied. Paste it into the Muse chat to request a custom connector, and enter the key in Muse's secure input.")
-                    : language.text("연결 안내를 복사했어요. \(name) 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.", "Setup copied. Paste it into the \(name) chat, or enter the MCP URL and key separately.")
+                message = language.text("연결 안내를 복사했어요. \(name) 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.", "Setup copied. Paste it into the \(name) chat, or enter the MCP URL and key separately.")
                 pendingPasteGuide = true
                 return nil
             }
@@ -663,7 +678,10 @@ enum AssistantPasteGuide {
                 "Key copied. In the GPT's Configure → Actions → Authentication, choose API key and Bearer, then paste it. Copy the schema URL from this screen. The clipboard is cleared in 10 minutes."
             )
         case .muse:
-            place = language.text("Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해 주세요. 키는 채팅 본문이 아니라 Muse의 보안 입력창에 넣어요. 안내 주소를 Muse가 열게 해도 돼요.", "Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Enter the key in Muse's secure input, not in the chat text. You can also have Muse open the link.")
+            return language.text(
+                "Muse 채팅에 붙여 넣고 보내 주세요. 연결 키는 채팅에 쓰지 말고, Muse가 보안 입력을 띄우면 그때 넣어 주세요(키는 이 화면에서 복사해요). 클립보드는 10분 뒤 지워져요.",
+                "Paste it into the Muse chat and send. Don't type the key in the chat; enter it when Muse shows its secure input (copy the key on this screen). The clipboard is cleared in 10 minutes."
+            )
         case .cue:
             place = language.text("Cue 채팅창에 붙여 넣고 보내 주세요. Cue가 주소를 열어 MCP 주소와 키를 받아 가요. 안 되면 아래에서 MCP 주소와 키를 따로 넣어 주세요.", "Paste it into the Cue chat and send. Cue opens the link to get the MCP URL and key. If that fails, enter them separately below.")
         default:

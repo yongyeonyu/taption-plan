@@ -896,14 +896,18 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertFalse(AssistantAIProvider.muse.matchesClient("Pickle"))
         XCTAssertFalse(AssistantAIProvider.pickle.matchesClient("Muse"))
         XCTAssertNil(AITaskRequest.chatURL(.muse), "no unverified web chat URL")
-        let setup = TripRelay.museSetupText(host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil)
-        XCTAssertTrue(setup.hasPrefix("BOKKI Plan connection for Muse."))
-        XCTAssertTrue(setup.contains("custom connector to the remote MCP server https://trip.bokkiyaw.com/mcp"))
-        XCTAssertTrue(setup.contains("Authorization: Bearer K"))
-        XCTAssertTrue(setup.contains("secure credential input"), "the key goes into Muse's secure input, not the chat text")
-        XCTAssertTrue(setup.contains("https://trip.bokkiyaw.com/mcp/K"))
-        XCTAssertFalse(setup.localizedCaseInsensitiveContains("add an mcp server"), "no claim of an MCP server settings screen")
-        XCTAssertEqual(TripRelay.keyConnectorSetupText(for: .muse, host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil), setup)
+        let ko = TripRelay.museSetupText(host: "trip.bokkiyaw.com", language: .korean)
+        let en = TripRelay.museSetupText(host: "trip.bokkiyaw.com", language: .english)
+        XCTAssertTrue(ko.hasPrefix("뽀끼 플랜 연결을 위해 커스텀 커넥터를 만들어 줘."))
+        XCTAssertTrue(ko.contains("https://trip.bokkiyaw.com/mcp"))
+        XCTAssertTrue(ko.contains("보안 입력"), "the key goes into Muse's secure input, not the chat text")
+        XCTAssertTrue(en.contains("custom connector for BOKKI Plan"))
+        XCTAssertTrue(en.contains("https://trip.bokkiyaw.com/mcp"))
+        for text in [ko, en] {
+            XCTAssertFalse(text.contains("/mcp/"), "no key-in-URL form for Muse")
+            XCTAssertFalse(text.localizedCaseInsensitiveContains("add an mcp server"), "no claim of an MCP server settings screen")
+        }
+        XCTAssertNil(TripRelay.keyConnectorSetupText(for: .muse, host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil), "Muse never gets a key-carrying text")
         XCTAssertNil(TripRelay.keyConnectorSetupText(for: .pickle, host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil))
     }
 

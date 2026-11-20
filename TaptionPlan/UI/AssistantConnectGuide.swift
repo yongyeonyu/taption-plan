@@ -73,6 +73,13 @@ struct AssistantGuideStep: Identifiable, Equatable {
     var detail: String
     var button: String
     var action: Action?
+    /// 이 단계의 화면 사진 자리(MUS1120A03). 에셋이 없으면 캡션만 든 빈 칸을 보인다.
+    var shot: Shot?
+
+    struct Shot: Equatable {
+        var asset: String
+        var caption: String
+    }
 }
 
 @MainActor
@@ -119,20 +126,26 @@ enum AssistantGuidePlan {
                       button: language.text("연결 키 복사", "Copy key"), action: token.map(AssistantGuideStep.Action.copy)),
                 check,
             ]
-        // Muse에는 「MCP 서버 추가」 화면이 없다. 안내를 채팅에 붙여 넣어 맞춤 커넥터를 만들어 달라고 하고, 키는 보안 입력창에 넣는다(MUS1120A01).
-        // 한국 App Store에는 아직 없어 「열기」 단추를 달지 않는다(스킴·스토어 주소 없음).
+        // Muse에는 「MCP 서버 추가」·「MCP 주소 복사」 단계가 없다(MUS1120A03). 키를 만들면 키 없는 안내가 복사되고,
+        // 채팅에 붙여 넣어 커넥터를 만들게 한 뒤 키는 Muse의 보안 입력에 따로 넣는다. 한국 App Store에는 없어 「열기」 단추가 없다.
         case .muse:
             return [
                 .init(id: "key", title: language.text("연결 키 만들기", "Make a key"),
-                      detail: language.text("권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고 연결 안내(1회용 주소)를 복사해요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.", "Pick access and period, then enter your app password to make a key just for Muse and copy the setup (a one-time link). Doing it again makes a new key and cuts the old one."),
-                      button: language.text("키 만들기", "Make key"), action: .makeKey),
+                      detail: language.text("권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고, Muse 채팅에 붙여 넣을 안내(키는 들어 있지 않아요)를 복사해요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.", "Pick access and period, then enter your app password to make a key just for Muse and copy the setup to paste into the Muse chat (it doesn't contain the key). Doing it again makes a new key and cuts the old one."),
+                      button: language.text("키 만들기", "Make key"), action: .makeKey,
+                      shot: .init(asset: "MuseGuide1Key", caption: language.text("1. 앱에서 연결 키 만들기", "1. Make a key in the app"))),
                 .init(id: "paste", title: language.text("Muse 채팅에 붙여 넣기", "Paste into the Muse chat"),
-                      detail: language.text("Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.", "Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."),
-                      button: language.text("MCP 주소 복사", "Copy MCP URL"), action: .copy(TripRelay.mcpURL(host: host))),
-                .init(id: "auth", title: language.text("보안 입력창에 키 넣기", "Enter the key securely"),
-                      detail: language.text("Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.", "When Muse asks for the key, enter it in Muse's secure input, not in the chat text."),
-                      button: language.text("연결 키 복사", "Copy key"), action: token.map(AssistantGuideStep.Action.copy)),
-                check,
+                      detail: language.text("복사한 안내를 Muse 채팅에 붙여 넣고 보내요. Muse가 커스텀 커넥터를 만들어요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.", "Paste the copied setup into the Muse chat and send it. Muse creates the custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."),
+                      button: language.text("안내 다시 복사", "Copy setup again"), action: .copy(TripRelay.museSetupText(host: host, language: language)),
+                      shot: .init(asset: "MuseGuide2Paste", caption: language.text("2. Muse 채팅에 안내를 붙여 넣은 화면", "2. The setup pasted into the Muse chat"))),
+                .init(id: "auth", title: language.text("보안 입력에 키 넣기", "Enter the key securely"),
+                      detail: language.text("Muse가 보안 입력(카드나 링크)을 보여 주면 연결 키를 넣어요. 채팅에 직접 쓰지 않아요.", "When Muse shows its secure input (a card or link), enter the connection key there. Don't type it in the chat."),
+                      button: language.text("연결 키 복사", "Copy key"), action: token.map(AssistantGuideStep.Action.copy),
+                      shot: .init(asset: "MuseGuide3Secure", caption: language.text("3. Muse 보안 키 입력 화면", "3. Muse's secure key input"))),
+                .init(id: "check", title: check.title,
+                      detail: language.text("Muse가 도구 목록과 읽기 시험을 마치고 연결됐다고 알려 주면, 눌러 앱에서도 연결됐는지 확인해요.", "When Muse finishes listing tools and a read test and says it's connected, tap to check in the app too."),
+                      button: check.button, action: .check,
+                      shot: .init(asset: "MuseGuide4Done", caption: language.text("4. Muse 연결 완료 메시지", "4. Muse's connected message"))),
             ]
         default:
             let appStep: [AssistantGuideStep] = provider.destination(installed: provider.isInstalled).map { url in
@@ -172,6 +185,7 @@ struct AssistantGuideSection: View {
                         .font(.taptionStyle(.caption, weight: .semibold)).foregroundStyle(.secondary)
                     Text(step.title).font(.taptionStyle(.headline))
                     Text(step.detail).font(.taptionStyle(.footnote)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if let shot = step.shot { AssistantGuideShotView(shot: shot, language: language) }
                     if step.action == .check, isConnected {
                         Label(language.text("연결됨", "Connected"), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                     }
@@ -197,5 +211,26 @@ struct AssistantGuideSection: View {
         } header: {
             Text(language.text("단계별 연결", "Step by step"))
         }
+    }
+}
+
+/// 단계 화면 사진. 에셋이 아직 없으면 캡션만 든 빈 칸을 보인다.
+struct AssistantGuideShotView: View {
+    let shot: AssistantGuideStep.Shot
+    let language: MapHomeLanguage
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if let image = UIImage(named: shot.asset) {
+                Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 360)
+                    .clipShape(RoundedRectangle(cornerRadius: 10)).accessibilityLabel(shot.caption)
+            } else {
+                RoundedRectangle(cornerRadius: 10).strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
+                    .foregroundStyle(.secondary).frame(height: 120)
+                    .overlay(Text(language.text("화면 사진 준비 중", "Screenshot coming soon")).font(.taptionStyle(.caption)).foregroundStyle(.secondary))
+            }
+            Text(shot.caption).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
