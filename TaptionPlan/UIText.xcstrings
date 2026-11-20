@@ -1233,83 +1233,6 @@
         }
       }
     },
-    "1. 「연결 키 만들기」를 눌러 앱 비밀번호를 넣어요.\n2. ChatGPT → GPT 만들기 → 구성 → 작업(Actions) → 새 작업 만들기 → 가져오기(URL)에 스키마 주소를 붙여 넣어요.\n3. 인증 → API 키 → 인증 유형 Bearer를 고르고 연결 키를 붙여 넣어요.\n4. 미리보기에서 「오늘 기록 읽어 줘」로 확인한 뒤 저장해요.|1. Tap Make a key and enter your app password.\n2. In ChatGPT, open Create a GPT → Configure → Actions → Create new action → Import from URL and paste the schema URL.\n3. Under Authentication choose API key, auth type Bearer, and paste the key.\n4. Check in the preview with \"read today's records\", then save." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1.「接続キーを作成」をタップしてアプリのパスワードを入力します。\n2. ChatGPT → GPTを作成 → 構成 → アクション → 新しいアクションを作成 → URLからインポートにスキーマアドレスを貼り付けます。\n3. 認証 → APIキー → 認証タイプ Bearer を選び、接続キーを貼り付けます。\n4. プレビューで「今日の記録を読んで」と確認してから保存します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. 轻点“生成连接密钥”并输入 App 密码。\n2. 在 ChatGPT 中依次打开 创建 GPT → 配置 → 操作 → 创建新操作 → 从 URL 导入，粘贴架构地址。\n3. 在认证中选择 API 密钥、认证类型 Bearer，并粘贴连接密钥。\n4. 在预览中用“读一下今天的记录”确认后保存。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. 點一下「產生連線金鑰」並輸入 App 密碼。\n2. 在 ChatGPT 中依序開啟 建立 GPT → 設定 → 動作 → 建立新動作 → 從 URL 匯入，貼上結構描述網址。\n3. 在驗證中選擇 API 金鑰、驗證類型 Bearer，並貼上連線金鑰。\n4. 在預覽中用「讀一下今天的紀錄」確認後儲存。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Tippe auf „Schlüssel erstellen“ und gib dein App-Passwort ein.\n2. Öffne in ChatGPT GPT erstellen → Konfigurieren → Aktionen → Neue Aktion → Von URL importieren und füge die Schema-URL ein.\n3. Wähle unter Authentifizierung API-Schlüssel, Typ Bearer, und füge den Schlüssel ein.\n4. Prüfe in der Vorschau mit „Lies meine heutigen Einträge“ und speichere."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Touchez « Créer une clé » et saisissez le mot de passe de l’app.\n2. Dans ChatGPT, ouvrez Créer un GPT → Configurer → Actions → Créer une action → Importer depuis une URL et collez l’URL du schéma.\n3. Sous Authentification, choisissez Clé API, type Bearer, et collez la clé.\n4. Vérifiez dans l’aperçu avec « lis mes données d’aujourd’hui », puis enregistrez."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Tocca «Crea chiave» e inserisci la password dell’app.\n2. In ChatGPT apri Crea un GPT → Configura → Azioni → Crea nuova azione → Importa da URL e incolla l’URL dello schema.\n3. In Autenticazione scegli Chiave API, tipo Bearer, e incolla la chiave.\n4. Verifica nell’anteprima con «leggi i dati di oggi», poi salva."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Toca «Crear clave» e introduce la contraseña de la app.\n2. En ChatGPT, abre Crear un GPT → Configurar → Acciones → Crear nueva acción → Importar desde URL y pega la URL del esquema.\n3. En Autenticación elige Clave de API, tipo Bearer, y pega la clave.\n4. Comprueba en la vista previa con «lee mis registros de hoy» y guarda."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Toque em “Criar chave” e digite a senha do app.\n2. No ChatGPT, abra Criar um GPT → Configurar → Ações → Criar nova ação → Importar de URL e cole a URL do esquema.\n3. Em Autenticação escolha Chave de API, tipo Bearer, e cole a chave.\n4. Confira na prévia com “leia meus registros de hoje” e salve."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Chạm “Tạo khóa” và nhập mật khẩu ứng dụng.\n2. Trong ChatGPT, mở Tạo GPT → Cấu hình → Hành động → Tạo hành động mới → Nhập từ URL và dán URL lược đồ.\n3. Ở Xác thực chọn Khóa API, kiểu Bearer, rồi dán khóa.\n4. Kiểm tra ở bản xem trước bằng “đọc ghi chép hôm nay” rồi lưu."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Ketuk “Buat kunci” dan masukkan kata sandi aplikasi.\n2. Di ChatGPT, buka Buat GPT → Konfigurasi → Tindakan → Buat tindakan baru → Impor dari URL dan tempel URL skema.\n3. Di Autentikasi pilih Kunci API, jenis Bearer, lalu tempel kunci.\n4. Periksa di pratinjau dengan “baca catatan hari ini”, lalu simpan."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. แตะ “สร้างคีย์” แล้วใส่รหัสผ่านแอป\n2. ใน ChatGPT เปิด สร้าง GPT → กำหนดค่า → การดำเนินการ → สร้างการดำเนินการใหม่ → นำเข้าจาก URL แล้ววาง URL สคีมา\n3. ในการยืนยันตัวตน เลือกคีย์ API ประเภท Bearer แล้ววางคีย์\n4. ตรวจสอบในตัวอย่างด้วย “อ่านบันทึกวันนี้” แล้วบันทึก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. “कुंजी बनाएँ” दबाएँ और ऐप पासवर्ड डालें।\n2. ChatGPT में GPT बनाएँ → कॉन्फ़िगर → ऐक्शन → नया ऐक्शन → URL से इंपोर्ट खोलें और स्कीमा URL पेस्ट करें।\n3. प्रमाणीकरण में API कुंजी, प्रकार Bearer चुनें और कुंजी पेस्ट करें।\n4. प्रीव्यू में “आज के रिकॉर्ड पढ़ो” से जाँचकर सहेजें।"
-          }
-        }
-      }
-    },
     "1. 시작을 누르고 정한 거리를 걸은 뒤 종료를 누르세요.|1. Tap Start, walk a known distance, then tap Stop." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1387,156 +1310,310 @@
         }
       }
     },
-    "1. 위에서 권한·기간을 고르고 「Cue 연결 키 만들기」를 눌러요.\n2. Cue에서 MCP 서버(커넥터)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Cue 화면을 따라 주세요.\n5. 저장한 뒤 Cue에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.|1. Pick access and period above, then tap Make a Cue key.\n2. In Cue, open the screen for adding an MCP server (connector).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Cue's screen.\n5. Save, then ask Cue something like \"read today's records\" to check." : {
+    "1. 앱에서 연결 키 만들기|1. Make a key in the app" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. 上で権限と期間を選び「Cue接続キーを作成」をタップします。\n2. CueでMCPサーバー(コネクタ)を追加する画面を開きます。\n3. サーバーアドレスにMCPアドレスを貼り付けます。\n4. 認証欄(リクエストヘッダー)に Authorization: Bearer に続けて接続キーを貼り付けます。欄の名前はCueの画面に従ってください。\n5. 保存したら、Cueに「今日の記録を読んで」などと聞いて確認します。"
+            "value" : "1. アプリで接続キーを作成"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. 在上方选择权限和期限，然后轻点“生成 Cue 连接密钥”。\n2. 在 Cue 中打开添加 MCP 服务器(连接器)的界面。\n3. 将 MCP 地址粘贴为服务器地址。\n4. 在认证栏(请求头)输入 Authorization: Bearer，后接连接密钥。栏位名称以 Cue 界面为准。\n5. 保存后，向 Cue 说“读一下今天的记录”来确认。"
+            "value" : "1. 在应用中创建连接密钥"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. 在上方選擇權限和期限，然後點一下「產生 Cue 連線金鑰」。\n2. 在 Cue 中開啟新增 MCP 伺服器(連接器)的畫面。\n3. 將 MCP 網址貼上為伺服器網址。\n4. 在認證欄(請求標頭)輸入 Authorization: Bearer，後接連線金鑰。欄位名稱以 Cue 畫面為準。\n5. 儲存後，向 Cue 說「讀一下今天的紀錄」來確認。"
+            "value" : "1. 在 App 中建立連線金鑰"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Wähle oben Zugriff und Zeitraum und tippe auf „Cue-Schlüssel erstellen“.\n2. Öffne in Cue den Bildschirm zum Hinzufügen eines MCP-Servers (Connectors).\n3. Füge die MCP-URL als Serveradresse ein.\n4. Gib im Authentifizierungsfeld (Request-Header) Authorization: Bearer gefolgt vom Verbindungsschlüssel ein. Die Feldnamen richten sich nach Cue.\n5. Speichere und frage Cue z. B. „Lies meine heutigen Einträge“, um es zu prüfen."
+            "value" : "1. Verbindungsschlüssel in der App erstellen"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Choisissez l’accès et la durée ci-dessus, puis touchez « Créer une clé Cue ».\n2. Dans Cue, ouvrez l’écran d’ajout d’un serveur MCP (connecteur).\n3. Collez l’URL MCP comme adresse du serveur.\n4. Dans le champ d’authentification (en-tête), saisissez Authorization: Bearer suivi de la clé de connexion. Les noms des champs suivent l’écran de Cue.\n5. Enregistrez, puis demandez à Cue par exemple « lis mes données d’aujourd’hui » pour vérifier."
+            "value" : "1. Créer une clé de connexion dans l’app"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Scegli accesso e durata qui sopra, poi tocca «Crea chiave Cue».\n2. In Cue apri la schermata per aggiungere un server MCP (connettore).\n3. Incolla l’URL MCP come indirizzo del server.\n4. Nel campo di autenticazione (intestazione) inserisci Authorization: Bearer seguito dalla chiave di connessione. I nomi dei campi seguono la schermata di Cue.\n5. Salva, poi chiedi a Cue ad esempio «leggi i dati di oggi» per verificare."
+            "value" : "1. Crea una chiave di connessione nell’app"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Elige acceso y duración arriba y toca «Crear clave de Cue».\n2. En Cue, abre la pantalla para añadir un servidor MCP (conector).\n3. Pega la URL MCP como dirección del servidor.\n4. En el campo de autenticación (encabezado), escribe Authorization: Bearer seguido de la clave de conexión. Los nombres de los campos siguen la pantalla de Cue.\n5. Guarda y pregunta a Cue algo como «lee mis registros de hoy» para comprobarlo."
+            "value" : "1. Crear una clave de conexión en la app"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Escolha acesso e prazo acima e toque em “Criar chave do Cue”.\n2. No Cue, abra a tela para adicionar um servidor MCP (conector).\n3. Cole a URL MCP como endereço do servidor.\n4. No campo de autenticação (cabeçalho), digite Authorization: Bearer seguido da chave de conexão. Os nomes dos campos seguem a tela do Cue.\n5. Salve e pergunte ao Cue algo como “leia meus registros de hoje” para conferir."
+            "value" : "1. Criar uma chave de conexão no app"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Chọn quyền và thời hạn ở trên, rồi chạm “Tạo khóa Cue”.\n2. Trong Cue, mở màn hình thêm máy chủ MCP (trình kết nối).\n3. Dán URL MCP làm địa chỉ máy chủ.\n4. Ở ô xác thực (tiêu đề yêu cầu), nhập Authorization: Bearer rồi đến khóa kết nối. Tên ô theo màn hình của Cue.\n5. Lưu, rồi hỏi Cue chẳng hạn “đọc ghi chép hôm nay” để kiểm tra."
+            "value" : "1. Tạo khóa kết nối trong ứng dụng"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Pilih akses dan masa berlaku di atas, lalu ketuk “Buat kunci Cue”.\n2. Di Cue, buka layar untuk menambah server MCP (konektor).\n3. Tempel URL MCP sebagai alamat server.\n4. Di kolom autentikasi (header), masukkan Authorization: Bearer diikuti kunci koneksi. Nama kolom mengikuti layar Cue.\n5. Simpan, lalu tanya Cue misalnya “baca catatan hari ini” untuk memeriksa."
+            "value" : "1. Buat kunci koneksi di aplikasi"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. เลือกสิทธิ์และระยะเวลาด้านบน แล้วแตะ “สร้างคีย์ Cue”\n2. ใน Cue เปิดหน้าจอเพิ่มเซิร์ฟเวอร์ MCP (ตัวเชื่อมต่อ)\n3. วาง URL MCP เป็นที่อยู่เซิร์ฟเวอร์\n4. ในช่องยืนยันตัวตน (ส่วนหัวคำขอ) ใส่ Authorization: Bearer ตามด้วยคีย์เชื่อมต่อ ชื่อช่องเป็นไปตามหน้าจอของ Cue\n5. บันทึก แล้วถาม Cue เช่น “อ่านบันทึกวันนี้” เพื่อตรวจสอบ"
+            "value" : "1. สร้างคีย์เชื่อมต่อในแอป"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. ऊपर अनुमति और अवधि चुनें, फिर “Cue कुंजी बनाएँ” दबाएँ।\n2. Cue में MCP सर्वर (कनेक्टर) जोड़ने वाली स्क्रीन खोलें।\n3. सर्वर पते में MCP URL पेस्ट करें।\n4. प्रमाणीकरण फ़ील्ड (रिक्वेस्ट हेडर) में Authorization: Bearer के बाद कनेक्शन कुंजी डालें। फ़ील्ड के नाम Cue की स्क्रीन के अनुसार होंगे।\n5. सहेजें, फिर जाँचने के लिए Cue से पूछें “आज के रिकॉर्ड पढ़ो”।"
+            "value" : "1. ऐप में कनेक्शन कुंजी बनाएँ"
           }
         }
       }
     },
-    "1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요. 연결 안내가 복사돼요.\n2. Muse 채팅에 연결 안내를 붙여 넣고, 원격 MCP 서버에 연결하는 맞춤 커넥터를 만들어 달라고 요청해요.\n3. Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.\n4. 「오늘 기록 읽어 줘」처럼 물어 확인해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|1. Pick access and period above, then tap Make a Muse key. The setup is copied.\n2. Paste the setup into the Muse chat and ask it to create a custom connector to the remote MCP server.\n3. When Muse asks for the key, enter the connection key in Muse's secure input, not in the chat text.\n4. Ask something like \"read today's records\" to check. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app." : {
+    "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. ChatGPT → GPT 만들기 → 구성 → 작업(Actions) → 새 작업 만들기 → 가져오기(URL)에 스키마 주소를 붙여 넣어요.\n3. 인증 → API 키 → 인증 유형 Bearer를 고르고 연결 키를 붙여 넣어요.\n4. 미리보기에서 「오늘 기록 읽어 줘」로 확인한 뒤 저장해요.|1. In the Step by step card above, pick access and period in the make-key step and make the key.\n2. In ChatGPT, open Create a GPT → Configure → Actions → Create new action → Import from URL and paste the schema URL.\n3. Under Authentication choose API key, auth type Bearer, and paste the key.\n4. Check in the preview with \"read today's records\", then save." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. 上で権限と期間を選び、「Muse 接続キーを作成」をタップします。接続の案内がコピーされます。\n2. Muse のチャットに接続の案内を貼り付け、リモート MCP サーバーに接続するカスタムコネクタを作るよう頼みます。\n3. Muse がキーを尋ねたら、チャット本文ではなく Muse のセキュア入力欄に接続キーを入力します。\n4. 「今日の記録を読んで」のように尋ねて確認します。韓国の App Store にはまだ Muse アプリがないので、アプリがなければウェブ版を使います。"
+            "value" : "1. 上の「ステップごとに接続」のキー作成ステップで権限と期間を選び、接続キーを作ります。\n2. ChatGPT → GPTを作成 → 構成 → アクション → 新しいアクションを作成 → URLからインポートにスキーマアドレスを貼り付けます。\n3. 認証 → APIキー → 認証タイプ Bearer を選び、接続キーを貼り付けます。\n4. プレビューで「今日の記録を読んで」と確認してから保存します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. 在上方选择权限和期限，然后点按“创建 Muse 连接密钥”。连接说明会被复制。\n2. 将连接说明粘贴到 Muse 聊天中，并请它创建连接远程 MCP 服务器的自定义连接器。\n3. 当 Muse 询问密钥时，请把连接密钥填入 Muse 的安全输入框，而不是聊天正文。\n4. 问一句“读取今天的记录”之类的内容来确认。韩国 App Store 暂时没有 Muse 应用，没有应用时请使用网页版。"
+            "value" : "1. 在上方“分步连接”的创建密钥步骤中选择权限和有效期，并创建连接密钥。\n2. 在 ChatGPT 中依次打开 创建 GPT → 配置 → 操作 → 创建新操作 → 从 URL 导入，粘贴架构地址。\n3. 在认证中选择 API 密钥、认证类型 Bearer，并粘贴连接密钥。\n4. 在预览中用“读一下今天的记录”确认后保存。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. 在上方選擇權限和期限，然後點按「建立 Muse 連線金鑰」。連線說明會被複製。\n2. 將連線說明貼到 Muse 聊天中，並請它建立連接遠端 MCP 伺服器的自訂連接器。\n3. 當 Muse 詢問金鑰時，請把連線金鑰輸入 Muse 的安全輸入框，而不是聊天內文。\n4. 問一句「讀取今天的記錄」之類的內容來確認。韓國 App Store 目前沒有 Muse App，沒有 App 時請使用網頁版。"
+            "value" : "1. 在上方「分步連線」的建立金鑰步驟中選擇權限與有效期間，並建立連線金鑰。\n2. 在 ChatGPT 中依序開啟 建立 GPT → 設定 → 動作 → 建立新動作 → 從 URL 匯入，貼上結構描述網址。\n3. 在驗證中選擇 API 金鑰、驗證類型 Bearer，並貼上連線金鑰。\n4. 在預覽中用「讀一下今天的紀錄」確認後儲存。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Wähle oben Berechtigung und Zeitraum und tippe auf „Muse-Verbindungsschlüssel erstellen“. Die Verbindungsanleitung wird kopiert.\n2. Füge die Anleitung in den Muse-Chat ein und bitte Muse, einen benutzerdefinierten Connector zum Remote-MCP-Server zu erstellen.\n3. Wenn Muse nach dem Schlüssel fragt, gib den Verbindungsschlüssel in Muses sicherem Eingabefeld ein, nicht im Chattext.\n4. Frage zur Kontrolle z. B. „Lies die heutigen Einträge“. Muse ist noch nicht im koreanischen App Store, nutze ohne App die Webversion."
+            "value" : "1. Wähle in der Karte „Schritt für Schritt“ oben im Schritt zum Erstellen des Schlüssels Zugriff und Zeitraum und erstelle den Verbindungsschlüssel.\n2. Öffne in ChatGPT GPT erstellen → Konfigurieren → Aktionen → Neue Aktion → Von URL importieren und füge die Schema-URL ein.\n3. Wähle unter Authentifizierung API-Schlüssel, Typ Bearer, und füge den Schlüssel ein.\n4. Prüfe in der Vorschau mit „Lies meine heutigen Einträge“ und speichere."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Choisissez ci-dessus l’accès et la durée, puis touchez « Créer une clé Muse ». Les instructions de connexion sont copiées.\n2. Collez-les dans le chat Muse et demandez de créer un connecteur personnalisé vers le serveur MCP distant.\n3. Quand Muse demande la clé, saisissez la clé de connexion dans le champ de saisie sécurisé de Muse, pas dans le texte du chat.\n4. Vérifiez en demandant par exemple « lis les enregistrements d’aujourd’hui ». Muse n’est pas encore sur l’App Store coréen : sans l’app, utilisez la version web."
+            "value" : "1. Dans la carte « Étape par étape » ci-dessus, choisissez l’accès et la durée à l’étape de création de la clé, puis créez la clé de connexion.\n2. Dans ChatGPT, ouvrez Créer un GPT → Configurer → Actions → Créer une action → Importer depuis une URL et collez l’URL du schéma.\n3. Sous Authentification, choisissez Clé API, type Bearer, et collez la clé.\n4. Vérifiez dans l’aperçu avec « lis mes données d’aujourd’hui », puis enregistrez."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Scegli sopra accesso e durata, poi tocca «Crea chiave Muse». Le istruzioni di connessione vengono copiate.\n2. Incollale nella chat di Muse e chiedi di creare un connettore personalizzato verso il server MCP remoto.\n3. Quando Muse chiede la chiave, inserisci la chiave di connessione nel campo di inserimento sicuro di Muse, non nel testo della chat.\n4. Verifica chiedendo, per esempio, «leggi i record di oggi». Muse non è ancora sull’App Store coreano: senza l’app usa la versione web."
+            "value" : "1. Nella scheda «Passo per passo» qui sopra, scegli accesso e durata nel passo di creazione della chiave e crea la chiave di connessione.\n2. In ChatGPT apri Crea un GPT → Configura → Azioni → Crea nuova azione → Importa da URL e incolla l’URL dello schema.\n3. In Autenticazione scegli Chiave API, tipo Bearer, e incolla la chiave.\n4. Verifica nell’anteprima con «leggi i dati di oggi», poi salva."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Elige arriba el acceso y el periodo, y toca «Crear clave de Muse». Se copian las instrucciones de conexión.\n2. Pégalas en el chat de Muse y pídele que cree un conector personalizado al servidor MCP remoto.\n3. Cuando Muse pida la clave, introduce la clave de conexión en el campo de entrada seguro de Muse, no en el texto del chat.\n4. Comprueba preguntando, por ejemplo, «lee los registros de hoy». Muse aún no está en la App Store de Corea: sin la app, usa la versión web."
+            "value" : "1. En la tarjeta «Paso a paso» de arriba, elige el acceso y la validez en el paso de crear la clave y crea la clave de conexión.\n2. En ChatGPT, abre Crear un GPT → Configurar → Acciones → Crear nueva acción → Importar desde URL y pega la URL del esquema.\n3. En Autenticación elige Clave de API, tipo Bearer, y pega la clave.\n4. Comprueba en la vista previa con «lee mis registros de hoy» y guarda."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Escolha acima o acesso e o período e toque em “Criar chave do Muse”. As instruções de conexão são copiadas.\n2. Cole as instruções no chat do Muse e peça para criar um conector personalizado para o servidor MCP remoto.\n3. Quando o Muse pedir a chave, digite a chave de conexão no campo de entrada seguro do Muse, não no texto do chat.\n4. Confirme perguntando, por exemplo, “leia os registros de hoje”. O Muse ainda não está na App Store coreana: sem o app, use a versão web."
+            "value" : "1. No cartão “Passo a passo” acima, escolha o acesso e a validade na etapa de criar a chave e crie a chave de conexão.\n2. No ChatGPT, abra Criar um GPT → Configurar → Ações → Criar nova ação → Importar de URL e cole a URL do esquema.\n3. Em Autenticação escolha Chave de API, tipo Bearer, e cole a chave.\n4. Confira na prévia com “leia meus registros de hoje” e salve."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Chọn quyền và thời hạn ở trên rồi nhấn “Tạo khóa Muse”. Hướng dẫn kết nối sẽ được sao chép.\n2. Dán hướng dẫn vào cuộc trò chuyện Muse và nhờ Muse tạo trình kết nối tùy chỉnh tới máy chủ MCP từ xa.\n3. Khi Muse hỏi khóa, hãy nhập khóa kết nối vào ô nhập bảo mật của Muse, không nhập vào nội dung trò chuyện.\n4. Hỏi thử kiểu “đọc các bản ghi hôm nay” để kiểm tra. Muse chưa có trên App Store Hàn Quốc, nếu chưa có ứng dụng hãy dùng bản web."
+            "value" : "1. Trong thẻ “Từng bước” ở trên, chọn quyền và thời hạn ở bước tạo khóa rồi tạo khóa kết nối.\n2. Trong ChatGPT, mở Tạo GPT → Cấu hình → Hành động → Tạo hành động mới → Nhập từ URL và dán URL lược đồ.\n3. Ở Xác thực chọn Khóa API, kiểu Bearer, rồi dán khóa.\n4. Kiểm tra ở bản xem trước bằng “đọc ghi chép hôm nay” rồi lưu."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Pilih akses dan jangka waktu di atas, lalu ketuk “Buat kunci Muse”. Panduan koneksi akan disalin.\n2. Tempel panduan ke obrolan Muse dan minta Muse membuat konektor kustom ke server MCP jarak jauh.\n3. Saat Muse meminta kunci, masukkan kunci koneksi ke kolom input aman Muse, bukan ke teks obrolan.\n4. Periksa dengan bertanya, misalnya “bacakan catatan hari ini”. Muse belum ada di App Store Korea, jadi jika belum punya aplikasinya, gunakan versi web."
+            "value" : "1. Di kartu “Langkah demi langkah” di atas, pilih akses dan masa berlaku pada langkah membuat kunci, lalu buat kunci koneksi.\n2. Di ChatGPT, buka Buat GPT → Konfigurasi → Tindakan → Buat tindakan baru → Impor dari URL dan tempel URL skema.\n3. Di Autentikasi pilih Kunci API, jenis Bearer, lalu tempel kunci.\n4. Periksa di pratinjau dengan “baca catatan hari ini”, lalu simpan."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. เลือกสิทธิ์และระยะเวลาด้านบน แล้วแตะ “สร้างคีย์ Muse” ระบบจะคัดลอกคำแนะนำการเชื่อมต่อ\n2. วางคำแนะนำลงในแชต Muse แล้วขอให้ Muse สร้างตัวเชื่อมต่อแบบกำหนดเองไปยังเซิร์ฟเวอร์ MCP ระยะไกล\n3. เมื่อ Muse ขอคีย์ ให้ใส่คีย์การเชื่อมต่อในช่องป้อนข้อมูลที่ปลอดภัยของ Muse ไม่ใช่ในข้อความแชต\n4. ลองถามเช่น “อ่านบันทึกของวันนี้” เพื่อตรวจสอบ Muse ยังไม่มีใน App Store เกาหลี หากยังไม่มีแอปให้ใช้เวอร์ชันเว็บ"
+            "value" : "1. ในการ์ด “ทีละขั้น” ด้านบน เลือกสิทธิ์และระยะใช้งานในขั้นสร้างคีย์ แล้วสร้างคีย์เชื่อมต่อ\n2. ใน ChatGPT เปิด สร้าง GPT → กำหนดค่า → การดำเนินการ → สร้างการดำเนินการใหม่ → นำเข้าจาก URL แล้ววาง URL สคีมา\n3. ในการยืนยันตัวตน เลือกคีย์ API ประเภท Bearer แล้ววางคีย์\n4. ตรวจสอบในตัวอย่างด้วย “อ่านบันทึกวันนี้” แล้วบันทึก"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. ऊपर पहुँच और अवधि चुनें, फिर “Muse कनेक्शन कुंजी बनाएँ” पर टैप करें। कनेक्शन निर्देश कॉपी हो जाएँगे।\n2. निर्देशों को Muse की चैट में चिपकाएँ और रिमोट MCP सर्वर से जुड़ने वाला कस्टम कनेक्टर बनाने को कहें।\n3. जब Muse कुंजी माँगे, तो कनेक्शन कुंजी चैट के टेक्स्ट में नहीं, बल्कि Muse के सुरक्षित इनपुट बॉक्स में डालें।\n4. जाँचने के लिए पूछें, जैसे “आज के रिकॉर्ड पढ़ो”। Muse अभी कोरियाई App Store में नहीं है, इसलिए ऐप न हो तो वेब संस्करण इस्तेमाल करें।"
+            "value" : "1. ऊपर “एक-एक चरण” कार्ड में कुंजी बनाने वाले चरण पर एक्सेस और वैधता चुनें और कनेक्शन कुंजी बनाएँ।\n2. ChatGPT में GPT बनाएँ → कॉन्फ़िगर → ऐक्शन → नया ऐक्शन → URL से इंपोर्ट खोलें और स्कीमा URL पेस्ट करें।\n3. प्रमाणीकरण में API कुंजी, प्रकार Bearer चुनें और कुंजी पेस्ट करें।\n4. प्रीव्यू में “आज के रिकॉर्ड पढ़ो” से जाँचकर सहेजें।"
+          }
+        }
+      }
+    },
+    "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. Cue에서 MCP 서버(커넥터)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Cue 화면을 따라 주세요.\n5. 저장한 뒤 Cue에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.|1. In the Step by step card above, pick access and period in the make-key step and make the key.\n2. In Cue, open the screen for adding an MCP server (connector).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Cue's screen.\n5. Save, then ask Cue something like \"read today's records\" to check." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 上の「ステップごとに接続」のキー作成ステップで権限と期間を選び、接続キーを作ります。\n2. CueでMCPサーバー(コネクタ)を追加する画面を開きます。\n3. サーバーアドレスにMCPアドレスを貼り付けます。\n4. 認証欄(リクエストヘッダー)に Authorization: Bearer に続けて接続キーを貼り付けます。欄の名前はCueの画面に従ってください。\n5. 保存したら、Cueに「今日の記録を読んで」などと聞いて確認します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 在上方“分步连接”的创建密钥步骤中选择权限和有效期，并创建连接密钥。\n2. 在 Cue 中打开添加 MCP 服务器(连接器)的界面。\n3. 将 MCP 地址粘贴为服务器地址。\n4. 在认证栏(请求头)输入 Authorization: Bearer，后接连接密钥。栏位名称以 Cue 界面为准。\n5. 保存后，向 Cue 说“读一下今天的记录”来确认。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 在上方「分步連線」的建立金鑰步驟中選擇權限與有效期間，並建立連線金鑰。\n2. 在 Cue 中開啟新增 MCP 伺服器(連接器)的畫面。\n3. 將 MCP 網址貼上為伺服器網址。\n4. 在認證欄(請求標頭)輸入 Authorization: Bearer，後接連線金鑰。欄位名稱以 Cue 畫面為準。\n5. 儲存後，向 Cue 說「讀一下今天的紀錄」來確認。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Wähle in der Karte „Schritt für Schritt“ oben im Schritt zum Erstellen des Schlüssels Zugriff und Zeitraum und erstelle den Verbindungsschlüssel.\n2. Öffne in Cue den Bildschirm zum Hinzufügen eines MCP-Servers (Connectors).\n3. Füge die MCP-URL als Serveradresse ein.\n4. Gib im Authentifizierungsfeld (Request-Header) Authorization: Bearer gefolgt vom Verbindungsschlüssel ein. Die Feldnamen richten sich nach Cue.\n5. Speichere und frage Cue z. B. „Lies meine heutigen Einträge“, um es zu prüfen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Dans la carte « Étape par étape » ci-dessus, choisissez l’accès et la durée à l’étape de création de la clé, puis créez la clé de connexion.\n2. Dans Cue, ouvrez l’écran d’ajout d’un serveur MCP (connecteur).\n3. Collez l’URL MCP comme adresse du serveur.\n4. Dans le champ d’authentification (en-tête), saisissez Authorization: Bearer suivi de la clé de connexion. Les noms des champs suivent l’écran de Cue.\n5. Enregistrez, puis demandez à Cue par exemple « lis mes données d’aujourd’hui » pour vérifier."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Nella scheda «Passo per passo» qui sopra, scegli accesso e durata nel passo di creazione della chiave e crea la chiave di connessione.\n2. In Cue apri la schermata per aggiungere un server MCP (connettore).\n3. Incolla l’URL MCP come indirizzo del server.\n4. Nel campo di autenticazione (intestazione) inserisci Authorization: Bearer seguito dalla chiave di connessione. I nomi dei campi seguono la schermata di Cue.\n5. Salva, poi chiedi a Cue ad esempio «leggi i dati di oggi» per verificare."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. En la tarjeta «Paso a paso» de arriba, elige el acceso y la validez en el paso de crear la clave y crea la clave de conexión.\n2. En Cue, abre la pantalla para añadir un servidor MCP (conector).\n3. Pega la URL MCP como dirección del servidor.\n4. En el campo de autenticación (encabezado), escribe Authorization: Bearer seguido de la clave de conexión. Los nombres de los campos siguen la pantalla de Cue.\n5. Guarda y pregunta a Cue algo como «lee mis registros de hoy» para comprobarlo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. No cartão “Passo a passo” acima, escolha o acesso e a validade na etapa de criar a chave e crie a chave de conexão.\n2. No Cue, abra a tela para adicionar um servidor MCP (conector).\n3. Cole a URL MCP como endereço do servidor.\n4. No campo de autenticação (cabeçalho), digite Authorization: Bearer seguido da chave de conexão. Os nomes dos campos seguem a tela do Cue.\n5. Salve e pergunte ao Cue algo como “leia meus registros de hoje” para conferir."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Trong thẻ “Từng bước” ở trên, chọn quyền và thời hạn ở bước tạo khóa rồi tạo khóa kết nối.\n2. Trong Cue, mở màn hình thêm máy chủ MCP (trình kết nối).\n3. Dán URL MCP làm địa chỉ máy chủ.\n4. Ở ô xác thực (tiêu đề yêu cầu), nhập Authorization: Bearer rồi đến khóa kết nối. Tên ô theo màn hình của Cue.\n5. Lưu, rồi hỏi Cue chẳng hạn “đọc ghi chép hôm nay” để kiểm tra."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Di kartu “Langkah demi langkah” di atas, pilih akses dan masa berlaku pada langkah membuat kunci, lalu buat kunci koneksi.\n2. Di Cue, buka layar untuk menambah server MCP (konektor).\n3. Tempel URL MCP sebagai alamat server.\n4. Di kolom autentikasi (header), masukkan Authorization: Bearer diikuti kunci koneksi. Nama kolom mengikuti layar Cue.\n5. Simpan, lalu tanya Cue misalnya “baca catatan hari ini” untuk memeriksa."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. ในการ์ด “ทีละขั้น” ด้านบน เลือกสิทธิ์และระยะใช้งานในขั้นสร้างคีย์ แล้วสร้างคีย์เชื่อมต่อ\n2. ใน Cue เปิดหน้าจอเพิ่มเซิร์ฟเวอร์ MCP (ตัวเชื่อมต่อ)\n3. วาง URL MCP เป็นที่อยู่เซิร์ฟเวอร์\n4. ในช่องยืนยันตัวตน (ส่วนหัวคำขอ) ใส่ Authorization: Bearer ตามด้วยคีย์เชื่อมต่อ ชื่อช่องเป็นไปตามหน้าจอของ Cue\n5. บันทึก แล้วถาม Cue เช่น “อ่านบันทึกวันนี้” เพื่อตรวจสอบ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. ऊपर “एक-एक चरण” कार्ड में कुंजी बनाने वाले चरण पर एक्सेस और वैधता चुनें और कनेक्शन कुंजी बनाएँ।\n2. Cue में MCP सर्वर (कनेक्टर) जोड़ने वाली स्क्रीन खोलें।\n3. सर्वर पते में MCP URL पेस्ट करें।\n4. प्रमाणीकरण फ़ील्ड (रिक्वेस्ट हेडर) में Authorization: Bearer के बाद कनेक्शन कुंजी डालें। फ़ील्ड के नाम Cue की स्क्रीन के अनुसार होंगे।\n5. सहेजें, फिर जाँचने के लिए Cue से पूछें “आज के रिकॉर्ड पढ़ो”।"
+          }
+        }
+      }
+    },
+    "1. 위 「단계별 연결」의 키 만들기 단계에서 권한·기간을 고르고 연결 키를 만들어요.\n2. 설정 안내를 복사해요. 키는 들어 있지 않아요.\n3. Muse 채팅에 붙여 넣고 보내서 커스텀 커넥터를 만들어 달라고 해요.\n4. 키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어요. 키를 채팅에 직접 적지 마세요.\n5. Muse가 연결을 시험한 뒤 연결됐다고 알려 주면 끝나요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|1. In the make-key step of the Step by step card above, pick access and period and make the key.\n2. Copy the setup. It doesn't contain the key.\n3. Paste it into the Muse chat and send it to ask for a custom connector.\n4. Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.\n5. You're done when Muse tests the connection and tells you it's connected. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 上の「ステップごとの接続」のキー作成ステップで、権限と期間を選んで接続キーを作ります。\n2. 設定の案内をコピーします。キーは含まれません。\n3. Muse のチャットに貼り付けて送り、カスタムコネクタの作成を頼みます。\n4. キーをコピーしてから、Muse が表示するセキュア入力画面に貼り付けます。キーをチャットに直接書かないでください。\n5. Muse が接続をテストして接続できたと知らせたら完了です。韓国の App Store にはまだ Muse アプリがないので、アプリがなければウェブ版を使います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 在上方“分步连接”的创建密钥步骤中，选择权限和期限并创建连接密钥。\n2. 复制设置说明。其中不包含密钥。\n3. 粘贴到 Muse 聊天并发送，请它创建自定义连接器。\n4. 复制密钥，然后粘贴到 Muse 显示的安全输入界面。不要把密钥直接写在聊天中。\n5. 当 Muse 测试连接并告诉你已连接，就完成了。韩国 App Store 暂时没有 Muse 应用，没有应用时请使用网页版。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 在上方「分步連接」的建立金鑰步驟中，選擇權限與期限並建立連接金鑰。\n2. 複製設定說明。其中不包含金鑰。\n3. 貼到 Muse 聊天並傳送，請它建立自訂連接器。\n4. 複製金鑰，然後貼到 Muse 顯示的安全輸入畫面。請勿把金鑰直接寫在聊天中。\n5. 當 Muse 測試連線並告訴你已連接，就完成了。韓國 App Store 目前沒有 Muse App，沒有 App 時請使用網頁版。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Wähle im Schritt „Schlüssel erstellen“ der Karte „Schritt für Schritt“ oben Zugriff und Zeitraum und erstelle den Verbindungsschlüssel.\n2. Kopiere die Einrichtung. Der Schlüssel ist darin nicht enthalten.\n3. Füge sie in den Muse-Chat ein und sende sie, um einen benutzerdefinierten Connector anzufordern.\n4. Kopiere den Schlüssel und füge ihn in den sicheren Eingabebildschirm ein, den Muse anzeigt. Schreibe den Schlüssel nie direkt in den Chat.\n5. Fertig, sobald Muse die Verbindung getestet hat und meldet, dass sie steht. Muse ist noch nicht im koreanischen App Store, nutze also die Webversion, wenn du die App nicht hast."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Dans l’étape de création de clé de la carte « Étape par étape » ci-dessus, choisissez l’accès et la durée, puis créez la clé de connexion.\n2. Copiez la configuration. Elle ne contient pas la clé.\n3. Collez-la dans le chat Muse et envoyez-la pour demander un connecteur personnalisé.\n4. Copiez la clé, puis collez-la dans l’écran de saisie sécurisée que Muse affiche. N’écrivez jamais la clé directement dans le chat.\n5. C’est terminé quand Muse a testé la connexion et indique qu’elle est établie. Muse n’est pas encore sur l’App Store coréen : utilisez la version web si vous n’avez pas l’app."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Nel passaggio di creazione della chiave della scheda «Passo dopo passo» qui sopra, scegli accesso e durata e crea la chiave di connessione.\n2. Copia la configurazione. Non contiene la chiave.\n3. Incollala nella chat di Muse e invia per chiedere un connettore personalizzato.\n4. Copia la chiave e incollala nella schermata di inserimento sicuro che Muse mostra. Non scrivere mai la chiave direttamente in chat.\n5. Hai finito quando Muse testa la connessione e conferma che è collegata. Muse non è ancora sull’App Store coreano: usa la versione web se non hai l’app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. En el paso de crear la clave de la tarjeta «Paso a paso» de arriba, elige el acceso y el periodo y crea la clave de conexión.\n2. Copia la configuración. No incluye la clave.\n3. Pégala en el chat de Muse y envíala para pedir un conector personalizado.\n4. Copia la clave y pégala en la pantalla de entrada segura que muestra Muse. Nunca escribas la clave directamente en el chat.\n5. Terminas cuando Muse prueba la conexión y avisa de que está conectada. Muse aún no está en la App Store de Corea, así que usa la versión web si no tienes la app."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Na etapa de criar a chave do cartão «Passo a passo» acima, escolha o acesso e o período e crie a chave de conexão.\n2. Copie a configuração. Ela não contém a chave.\n3. Cole no chat do Muse e envie para pedir um conector personalizado.\n4. Copie a chave e cole na tela de entrada segura que o Muse mostra. Nunca escreva a chave diretamente no chat.\n5. Pronto quando o Muse testar a conexão e avisar que está conectado. O Muse ainda não está na App Store coreana, então use a versão web se você não tiver o app."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Ở bước tạo khóa của thẻ “Từng bước” phía trên, chọn quyền và thời hạn rồi tạo khóa kết nối.\n2. Sao chép hướng dẫn thiết lập. Trong đó không có khóa.\n3. Dán vào cuộc trò chuyện Muse và gửi để yêu cầu tạo bộ kết nối tùy chỉnh.\n4. Sao chép khóa, rồi dán vào màn hình nhập bảo mật mà Muse hiển thị. Không bao giờ gõ khóa trực tiếp vào cuộc trò chuyện.\n5. Xong khi Muse kiểm tra kết nối và báo đã kết nối. App Store Hàn Quốc chưa có ứng dụng Muse, nên nếu chưa có ứng dụng hãy dùng bản web."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Di langkah membuat kunci pada kartu “Langkah demi langkah” di atas, pilih akses dan masa berlaku lalu buat kunci koneksi.\n2. Salin panduan pengaturan. Kunci tidak ada di dalamnya.\n3. Tempel ke obrolan Muse dan kirim untuk meminta konektor khusus.\n4. Salin kunci, lalu tempel ke layar input aman yang ditampilkan Muse. Jangan pernah menulis kunci langsung di obrolan.\n5. Selesai saat Muse menguji koneksi dan memberi tahu bahwa sudah terhubung. Muse belum ada di App Store Korea, jadi gunakan versi web jika belum punya aplikasinya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. ในขั้นตอนสร้างคีย์ของการ์ด “ทีละขั้น” ด้านบน ให้เลือกสิทธิ์และระยะเวลา แล้วสร้างคีย์การเชื่อมต่อ\n2. คัดลอกคำแนะนำการตั้งค่า ในนั้นไม่มีคีย์\n3. วางลงในแชต Muse แล้วส่งเพื่อขอตัวเชื่อมต่อแบบกำหนดเอง\n4. คัดลอกคีย์ แล้ววางลงในหน้าจอป้อนข้อมูลที่ปลอดภัยที่ Muse แสดง ห้ามพิมพ์คีย์ลงในแชตโดยตรง\n5. เสร็จเมื่อ Muse ทดสอบการเชื่อมต่อและแจ้งว่าเชื่อมต่อแล้ว App Store เกาหลียังไม่มีแอป Muse หากยังไม่มีแอปให้ใช้เว็บ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. ऊपर “चरण-दर-चरण” कार्ड के कुंजी बनाने वाले चरण में पहुँच और अवधि चुनें और कनेक्शन कुंजी बनाएँ।\n2. सेटअप निर्देश कॉपी करें। उनमें कुंजी नहीं होती।\n3. उन्हें Muse की चैट में चिपकाकर भेजें और कस्टम कनेक्टर बनाने को कहें।\n4. कुंजी कॉपी करें, फिर Muse जो सुरक्षित इनपुट स्क्रीन दिखाए उसमें चिपकाएँ। कुंजी को सीधे चैट में कभी न लिखें।\n5. जब Muse कनेक्शन जाँचकर बता दे कि जुड़ गया, तो काम पूरा। कोरियाई App Store में अभी Muse ऐप नहीं है, इसलिए ऐप न हो तो वेब संस्करण इस्तेमाल करें।"
           }
         }
       }
@@ -3158,6 +3235,83 @@
         }
       }
     },
+    "2. 앱에서 설정 안내 복사|2. Copy the setup in the app" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. アプリで設定の案内をコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. 在应用中复制设置说明"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. 在 App 中複製設定說明"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Einrichtung in der App kopieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Copier la configuration dans l’app"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Copia la configurazione nell’app"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Copiar la configuración en la app"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Copiar a configuração no app"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Sao chép hướng dẫn thiết lập trong ứng dụng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Salin panduan pengaturan di aplikasi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. คัดลอกคำแนะนำการตั้งค่าในแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. ऐप में सेटअप निर्देश कॉपी करें"
+          }
+        }
+      }
+    },
     "2026은 365일이라 최대 365입니다. 366은 그림 미리보기용이고, 다음 기록 때 365로 돌아갑니다.|2026 has 365 days, so the cap is 365. Lv.366 is an artwork preview and returns to the cap on the next record." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3543,6 +3697,83 @@
         }
       }
     },
+    "3. Muse 채팅에 안내를 붙여 넣은 화면|3. The setup pasted into the Muse chat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. Muse のチャットに案内を貼り付けた画面"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. 将说明粘贴到 Muse 聊天的界面"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. 將說明貼到 Muse 聊天的畫面"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. Die in den Muse-Chat eingefügte Einrichtung"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. La configuration collée dans le chat Muse"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. La configurazione incollata nella chat di Muse"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. La configuración pegada en el chat de Muse"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. A configuração colada no chat do Muse"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. Hướng dẫn thiết lập đã dán vào cuộc trò chuyện Muse"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. Panduan pengaturan yang ditempel di obrolan Muse"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. คำแนะนำที่วางลงในแชต Muse"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. Muse चैट में चिपकाए गए सेटअप निर्देश"
+          }
+        }
+      }
+    },
     "3.3% 공제|3.3%" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3851,6 +4082,83 @@
         }
       }
     },
+    "4. Muse 보안 키 입력 화면|4. Muse's secure key input" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Muse のセキュアなキー入力画面"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Muse 的安全密钥输入界面"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Muse 的安全金鑰輸入畫面"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Sichere Schlüsseleingabe in Muse"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Saisie sécurisée de la clé dans Muse"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Inserimento sicuro della chiave in Muse"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Entrada segura de la clave en Muse"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Entrada segura da chave no Muse"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Màn hình nhập khóa bảo mật của Muse"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Input kunci aman di Muse"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. หน้าจอป้อนคีย์อย่างปลอดภัยของ Muse"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4. Muse की सुरक्षित कुंजी इनपुट स्क्रीन"
+          }
+        }
+      }
+    },
     "42분|42m" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4001,6 +4309,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "बीमा"
+          }
+        }
+      }
+    },
+    "5. Muse 연결 완료 메시지|5. Muse's connected message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Muse の接続完了メッセージ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Muse 的连接完成消息"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Muse 的連接完成訊息"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Verbindungsmeldung von Muse"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Message de connexion réussie de Muse"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Messaggio di connessione completata di Muse"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Mensaje de conexión completada de Muse"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Mensagem de conexão concluída do Muse"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Thông báo kết nối hoàn tất của Muse"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Pesan koneksi selesai dari Muse"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. ข้อความเชื่อมต่อสำเร็จของ Muse"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5. Muse का कनेक्शन पूरा होने का संदेश"
           }
         }
       }
@@ -13938,79 +14323,79 @@
         }
       }
     },
-    "Gemini CLI: 연결하기를 누르면 settings.json에 넣을 설정이 복사돼요. ~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작하세요.|Gemini CLI: Connect copies a block for settings.json. Paste it into ~/.gemini/settings.json and restart gemini." : {
+    "Gemini CLI: 위 「단계별 연결」에서 키를 만들면 settings.json에 넣을 설정이 복사돼요. ~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작하세요.|Gemini CLI: making the key in the Step by step card above copies a block for settings.json. Paste it into ~/.gemini/settings.json and restart gemini." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI: 「接続」を押すとsettings.json用の設定がコピーされます。~/.gemini/settings.jsonに貼り付けてgeminiを再起動してください。"
+            "value" : "Gemini CLI: 上の「ステップごとに接続」でキーを作ると、settings.json用の設定がコピーされます。~/.gemini/settings.jsonに貼り付けてgeminiを再起動してください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI：点按“连接”会复制用于 settings.json 的配置。粘贴到 ~/.gemini/settings.json 后重启 gemini。"
+            "value" : "Gemini CLI：在上方“分步连接”中创建密钥后，会复制要写入 settings.json 的配置。将其粘贴到 ~/.gemini/settings.json，然后重启 gemini。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI：點一下「連接」會拷貝用於 settings.json 的設定。貼到 ~/.gemini/settings.json 後重新啟動 gemini。"
+            "value" : "Gemini CLI：在上方「分步連線」建立金鑰後，會複製要放進 settings.json 的設定。請貼到 ~/.gemini/settings.json，然後重新啟動 gemini。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI: „Verbinden“ kopiert einen Block für settings.json. Füge ihn in ~/.gemini/settings.json ein und starte gemini neu."
+            "value" : "Gemini CLI: Wenn du oben unter „Schritt für Schritt“ den Schlüssel erstellst, wird ein Block für settings.json kopiert. Füge ihn in ~/.gemini/settings.json ein und starte gemini neu."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI : Connecter copie un bloc pour settings.json. Collez-le dans ~/.gemini/settings.json et redémarrez gemini."
+            "value" : "Gemini CLI : créer la clé dans « Étape par étape » ci-dessus copie un bloc pour settings.json. Collez-le dans ~/.gemini/settings.json et redémarrez gemini."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI: Collega copia un blocco per settings.json. Incollalo in ~/.gemini/settings.json e riavvia gemini."
+            "value" : "Gemini CLI: creando la chiave in «Passo per passo» qui sopra viene copiato un blocco per settings.json. Incollalo in ~/.gemini/settings.json e riavvia gemini."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI: Conectar copia un bloque para settings.json. Péguelo en ~/.gemini/settings.json y reinicie gemini."
+            "value" : "Gemini CLI: al crear la clave en «Paso a paso» de arriba se copia un bloque para settings.json. Pégalo en ~/.gemini/settings.json y reinicia gemini."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI: Conectar copia um bloco para settings.json. Cole-o em ~/.gemini/settings.json e reinicie o gemini."
+            "value" : "Gemini CLI: criar a chave em “Passo a passo” acima copia um bloco para o settings.json. Cole em ~/.gemini/settings.json e reinicie o gemini."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI: nhấn Kết nối để sao chép cấu hình cho settings.json. Dán vào ~/.gemini/settings.json rồi khởi động lại gemini."
+            "value" : "Gemini CLI: tạo khóa trong “Từng bước” ở trên sẽ sao chép một khối cho settings.json. Dán vào ~/.gemini/settings.json rồi khởi động lại gemini."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI: Hubungkan menyalin blok untuk settings.json. Tempel ke ~/.gemini/settings.json lalu mulai ulang gemini."
+            "value" : "Gemini CLI: membuat kunci di “Langkah demi langkah” di atas akan menyalin blok untuk settings.json. Tempel ke ~/.gemini/settings.json lalu mulai ulang gemini."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI: กดเชื่อมต่อเพื่อคัดลอกค่าสำหรับ settings.json วางลงใน ~/.gemini/settings.json แล้วเริ่ม gemini ใหม่"
+            "value" : "Gemini CLI: เมื่อสร้างคีย์ใน “ทีละขั้น” ด้านบน ระบบจะคัดลอกบล็อกสำหรับ settings.json ให้ วางลงใน ~/.gemini/settings.json แล้วเริ่ม gemini ใหม่"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemini CLI: कनेक्ट दबाने पर settings.json का ब्लॉक कॉपी होता है। इसे ~/.gemini/settings.json में पेस्ट करें और gemini फिर से शुरू करें।"
+            "value" : "Gemini CLI: ऊपर “एक-एक चरण” में कुंजी बनाने पर settings.json का ब्लॉक कॉपी होता है। इसे ~/.gemini/settings.json में पेस्ट करें और gemini फिर से शुरू करें।"
           }
         }
       }
@@ -14785,156 +15170,79 @@
         }
       }
     },
-    "Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해 주세요. 키는 채팅 본문이 아니라 Muse의 보안 입력창에 넣어요. 안내 주소를 Muse가 열게 해도 돼요.|Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Enter the key in Muse's secure input, not in the chat text. You can also have Muse open the link." : {
+    "Muse 채팅에 붙여 넣고 보내 주세요. 키는 채팅에 쓰지 말고, Muse가 보여주는 보안 입력 화면에 넣어 주세요(키는 이 화면에서 복사해요). 클립보드는 10분 뒤 지워져요.|Paste it into the Muse chat and send. Don't type the key in the chat; enter it when Muse shows its secure input (copy the key on this screen). The clipboard is cleared in 10 minutes." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muse のチャットに貼り付け、リモート MCP サーバーへのカスタムコネクタを作るよう頼んでください。キーはチャット本文ではなく Muse のセキュア入力欄に入力します。案内のリンクを Muse に開かせてもかまいません。"
+            "value" : "Muse のチャットに貼り付けて送ってください。キーはチャットに書かず、Muse がセキュア入力を表示したときに入力します（キーはこの画面でコピーできます）。クリップボードは10分後に消去されます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请粘贴到 Muse 聊天中，并请它创建连接远程 MCP 服务器的自定义连接器。密钥请填入 Muse 的安全输入框，而不是聊天正文。也可以让 Muse 打开说明链接。"
+            "value" : "粘贴到 Muse 聊天并发送。不要在聊天中写密钥，等 Muse 显示安全输入时再填入（密钥可在此页面复制）。剪贴板会在10分钟后清除。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "請貼到 Muse 聊天中，並請它建立連接遠端 MCP 伺服器的自訂連接器。金鑰請輸入 Muse 的安全輸入框，而不是聊天內文。也可以讓 Muse 開啟說明連結。"
+            "value" : "貼到 Muse 聊天並傳送。請勿在聊天中寫金鑰，等 Muse 顯示安全輸入時再填入（金鑰可在此畫面複製）。剪貼簿會在10分鐘後清除。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füge sie in den Muse-Chat ein und bitte Muse, einen benutzerdefinierten Connector zum Remote-MCP-Server zu erstellen. Gib den Schlüssel in Muses sicherem Eingabefeld ein, nicht im Chattext. Muse darf auch den Link öffnen."
+            "value" : "Füge es in den Muse-Chat ein und sende es. Schreibe den Schlüssel nicht in den Chat, sondern gib ihn ein, wenn Muse die sichere Eingabe zeigt (den Schlüssel kopierst du auf diesem Bildschirm). Die Zwischenablage wird nach 10 Minuten geleert."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Collez-les dans le chat Muse et demandez de créer un connecteur personnalisé vers le serveur MCP distant. Saisissez la clé dans le champ sécurisé de Muse, pas dans le texte du chat. Muse peut aussi ouvrir le lien."
+            "value" : "Collez-la dans le chat Muse et envoyez. N’écrivez pas la clé dans le chat ; saisissez-la quand Muse affiche sa saisie sécurisée (copiez la clé sur cet écran). Le presse-papiers est vidé au bout de 10 minutes."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Incollale nella chat di Muse e chiedi di creare un connettore personalizzato verso il server MCP remoto. Inserisci la chiave nel campo sicuro di Muse, non nel testo della chat. Puoi anche far aprire il link a Muse."
+            "value" : "Incollala nella chat di Muse e invia. Non scrivere la chiave in chat: inseriscila quando Muse mostra l’inserimento sicuro (copia la chiave da questa schermata). Gli appunti vengono svuotati dopo 10 minuti."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pégalas en el chat de Muse y pídele que cree un conector personalizado al servidor MCP remoto. Introduce la clave en el campo seguro de Muse, no en el texto del chat. También puedes hacer que Muse abra el enlace."
+            "value" : "Pégala en el chat de Muse y envíala. No escribas la clave en el chat: introdúcela cuando Muse muestre su entrada segura (copia la clave en esta pantalla). El portapapeles se borra a los 10 minutos."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cole no chat do Muse e peça para criar um conector personalizado para o servidor MCP remoto. Digite a chave no campo seguro do Muse, não no texto do chat. Você também pode pedir que o Muse abra o link."
+            "value" : "Cole no chat do Muse e envie. Não escreva a chave no chat: digite-a quando o Muse mostrar a entrada segura (copie a chave nesta tela). A área de transferência é limpa em 10 minutos."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hãy dán vào cuộc trò chuyện Muse và nhờ Muse tạo trình kết nối tùy chỉnh tới máy chủ MCP từ xa. Nhập khóa vào ô nhập bảo mật của Muse, không nhập vào nội dung trò chuyện. Bạn cũng có thể để Muse mở liên kết."
+            "value" : "Dán vào cuộc trò chuyện Muse và gửi. Đừng ghi khóa vào cuộc trò chuyện; hãy nhập khi Muse hiển thị ô nhập bảo mật (sao chép khóa ở màn hình này). Bộ nhớ tạm sẽ bị xóa sau 10 phút."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tempel ke obrolan Muse dan minta Muse membuat konektor kustom ke server MCP jarak jauh. Masukkan kunci ke kolom input aman Muse, bukan ke teks obrolan. Anda juga bisa meminta Muse membuka tautannya."
+            "value" : "Tempel ke obrolan Muse dan kirim. Jangan tulis kunci di obrolan; masukkan saat Muse menampilkan input aman (salin kunci di layar ini). Papan klip dihapus dalam 10 menit."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "วางลงในแชต Muse แล้วขอให้ Muse สร้างตัวเชื่อมต่อแบบกำหนดเองไปยังเซิร์ฟเวอร์ MCP ระยะไกล ใส่คีย์ในช่องป้อนข้อมูลที่ปลอดภัยของ Muse ไม่ใช่ในข้อความแชต คุณยังให้ Muse เปิดลิงก์ได้ด้วย"
+            "value" : "วางลงในแชต Muse แล้วส่ง อย่าเขียนคีย์ในแชต ให้ป้อนเมื่อ Muse แสดงช่องป้อนข้อมูลที่ปลอดภัย (คัดลอกคีย์ได้ที่หน้านี้) คลิปบอร์ดจะถูกล้างใน 10 นาที"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muse की चैट में चिपकाएँ और रिमोट MCP सर्वर से जुड़ने वाला कस्टम कनेक्टर बनाने को कहें। कुंजी चैट के टेक्स्ट में नहीं, Muse के सुरक्षित इनपुट बॉक्स में डालें। आप चाहें तो Muse से लिंक भी खुलवा सकते हैं।"
-          }
-        }
-      }
-    },
-    "Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Muse のチャットに貼り付け、リモート MCP サーバーへのカスタムコネクタを作るよう頼みます。韓国の App Store にはまだ Muse アプリがないので、アプリがなければウェブ版を使います。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "粘贴到 Muse 聊天中，并请它创建连接远程 MCP 服务器的自定义连接器。韩国 App Store 暂时没有 Muse 应用，没有应用时请使用网页版。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "貼到 Muse 聊天中，並請它建立連接遠端 MCP 伺服器的自訂連接器。韓國 App Store 目前沒有 Muse App，沒有 App 時請使用網頁版。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Füge sie in den Muse-Chat ein und bitte Muse, einen benutzerdefinierten Connector zum Remote-MCP-Server zu erstellen. Muse ist noch nicht im koreanischen App Store, nutze ohne App die Webversion."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collez-les dans le chat Muse et demandez de créer un connecteur personnalisé vers le serveur MCP distant. Muse n’est pas encore sur l’App Store coréen : sans l’app, utilisez la version web."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Incollale nella chat di Muse e chiedi di creare un connettore personalizzato verso il server MCP remoto. Muse non è ancora sull’App Store coreano: senza l’app usa la versione web."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pégalas en el chat de Muse y pídele que cree un conector personalizado al servidor MCP remoto. Muse aún no está en la App Store de Corea: sin la app, usa la versión web."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cole no chat do Muse e peça para criar um conector personalizado para o servidor MCP remoto. O Muse ainda não está na App Store coreana: sem o app, use a versão web."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dán vào cuộc trò chuyện Muse và nhờ Muse tạo trình kết nối tùy chỉnh tới máy chủ MCP từ xa. Muse chưa có trên App Store Hàn Quốc, nếu chưa có ứng dụng hãy dùng bản web."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tempel ke obrolan Muse dan minta Muse membuat konektor kustom ke server MCP jarak jauh. Muse belum ada di App Store Korea, jadi jika belum punya aplikasinya, gunakan versi web."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "วางลงในแชต Muse แล้วขอให้ Muse สร้างตัวเชื่อมต่อแบบกำหนดเองไปยังเซิร์ฟเวอร์ MCP ระยะไกล Muse ยังไม่มีใน App Store เกาหลี หากยังไม่มีแอปให้ใช้เวอร์ชันเว็บ"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Muse की चैट में चिपकाएँ और रिमोट MCP सर्वर से जुड़ने वाला कस्टम कनेक्टर बनाने को कहें। Muse अभी कोरियाई App Store में नहीं है, इसलिए ऐप न हो तो वेब संस्करण इस्तेमाल करें।"
+            "value" : "Muse की चैट में चिपकाकर भेजें। कुंजी चैट में न लिखें; जब Muse सुरक्षित इनपुट दिखाए तब उसमें डालें (कुंजी इसी स्क्रीन पर कॉपी करें)। क्लिपबोर्ड 10 मिनट बाद साफ़ हो जाता है।"
           }
         }
       }
@@ -15016,79 +15324,156 @@
         }
       }
     },
-    "Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.|When Muse asks for the key, enter it in Muse's secure input, not in the chat text." : {
+    "Muse 채팅에 붙여 넣을 설정 안내를 복사해요. 키는 들어 있지 않아요.|Copy the setup to paste into the Muse chat. It doesn't contain the key." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muse がキーを尋ねたら、チャット本文ではなく Muse のセキュア入力欄に接続キーを入力します。"
+            "value" : "Muse のチャットに貼り付ける設定の案内をコピーします。キーは含まれません。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当 Muse 询问密钥时，请把连接密钥填入 Muse 的安全输入框，而不是聊天正文。"
+            "value" : "复制要粘贴到 Muse 聊天的设置说明。其中不包含密钥。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "當 Muse 詢問金鑰時，請把連線金鑰輸入 Muse 的安全輸入框，而不是聊天內文。"
+            "value" : "複製要貼到 Muse 聊天的設定說明。其中不包含金鑰。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn Muse nach dem Schlüssel fragt, gib den Verbindungsschlüssel in Muses sicherem Eingabefeld ein, nicht im Chattext."
+            "value" : "Kopiere die Einrichtung für den Muse-Chat. Der Schlüssel ist darin nicht enthalten."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quand Muse demande la clé, saisissez la clé de connexion dans le champ de saisie sécurisé de Muse, pas dans le texte du chat."
+            "value" : "Copiez la configuration à coller dans le chat Muse. Elle ne contient pas la clé."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quando Muse chiede la chiave, inseriscila nel campo di inserimento sicuro di Muse, non nel testo della chat."
+            "value" : "Copia la configurazione da incollare nella chat di Muse. Non contiene la chiave."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cuando Muse pida la clave, introdúcela en el campo de entrada seguro de Muse, no en el texto del chat."
+            "value" : "Copia la configuración para pegarla en el chat de Muse. No incluye la clave."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quando o Muse pedir a chave, digite-a no campo de entrada seguro do Muse, não no texto do chat."
+            "value" : "Copie a configuração para colar no chat do Muse. Ela não contém a chave."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Khi Muse hỏi khóa, hãy nhập khóa kết nối vào ô nhập bảo mật của Muse, không nhập vào nội dung trò chuyện."
+            "value" : "Sao chép hướng dẫn thiết lập để dán vào cuộc trò chuyện Muse. Trong đó không có khóa."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saat Muse meminta kunci, masukkan kunci koneksi ke kolom input aman Muse, bukan ke teks obrolan."
+            "value" : "Salin panduan pengaturan untuk ditempel ke obrolan Muse. Kunci tidak ada di dalamnya."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เมื่อ Muse ขอคีย์ ให้ใส่คีย์การเชื่อมต่อในช่องป้อนข้อมูลที่ปลอดภัยของ Muse ไม่ใช่ในข้อความแชต"
+            "value" : "คัดลอกคำแนะนำการตั้งค่าเพื่อวางลงในแชต Muse ในนั้นไม่มีคีย์"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "जब Muse कुंजी माँगे, तो कनेक्शन कुंजी चैट के टेक्स्ट में नहीं, बल्कि Muse के सुरक्षित इनपुट बॉक्स में डालें।"
+            "value" : "Muse की चैट में चिपकाने के लिए सेटअप निर्देश कॉपी करें। उनमें कुंजी नहीं होती।"
+          }
+        }
+      }
+    },
+    "Muse가 도구 목록과 읽기 시험을 마치고 연결됐다고 알려 주면, 눌러 앱에서도 연결됐는지 확인해요.|When Muse finishes listing tools and a read test and says it's connected, tap to check in the app too." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Museがツール一覧と読み取りテストを終えて「接続できた」と知らせたら、タップしてアプリ側でも接続を確認します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muse 完成工具列表和读取测试并告诉你已连接后，点按在应用里也确认一下连接。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muse 完成工具清單與讀取測試並告訴你已連線後，點一下在 App 裡也確認連線。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn Muse die Werkzeugliste und den Lesetest abgeschlossen hat und meldet, dass es verbunden ist, tippe, um es auch in der App zu prüfen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand Muse a terminé la liste des outils et le test de lecture et dit qu’il est connecté, touchez pour vérifier aussi dans l’app."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando Muse ha finito l’elenco degli strumenti e il test di lettura e dice di essere collegato, tocca per verificare anche nell’app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando Muse termine la lista de herramientas y la prueba de lectura y diga que está conectado, toca para comprobarlo también en la app."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando o Muse terminar a lista de ferramentas e o teste de leitura e avisar que está conectado, toque para conferir também no app."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi Muse xong danh sách công cụ và bài thử đọc rồi báo đã kết nối, hãy chạm để kiểm tra trong ứng dụng."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setelah Muse selesai membuat daftar alat dan uji baca lalu memberi tahu sudah terhubung, ketuk untuk memeriksa juga di aplikasi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อ Muse ทำรายการเครื่องมือและทดสอบการอ่านเสร็จแล้วแจ้งว่าเชื่อมต่อแล้ว ให้แตะเพื่อตรวจสอบในแอปด้วย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जब Muse टूल सूची और पढ़ने की जाँच पूरी करके बता दे कि जुड़ गया है, तो टैप करके ऐप में भी जाँच लें।"
           }
         }
       }
@@ -24098,83 +24483,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} यात्रा अतिरिक्त खर्च"
-          }
-        }
-      }
-    },
-    "{0} 연결 키 만들기|Make a {0} key" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0}接続キーを作成"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "创建 {0} 连接密钥"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建立 {0} 連線金鑰"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0}-Verbindungsschlüssel erstellen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Créer une clé {0}"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crea chiave {0}"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crear clave de {0}"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Criar chave do {0}"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tạo khóa {0}"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buat kunci {0}"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "สร้างคีย์ {0}"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} कुंजी बनाएँ"
           }
         }
       }
@@ -233311,79 +233619,233 @@
         }
       }
     },
-    "권한과 기간|Access and period" : {
+    "권한·기간을 고르고 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.|Pick access and period, then enter your app password to make a key just for Muse. Doing it again makes a new key and cuts the old one." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "権限と期間"
+            "value" : "権限と期間を選び、アプリのパスワードを入力すると、Muse 専用の接続キーを作成します。もう一度行うと新しいキーが作られ、古いキーは無効になります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "权限和期限"
+            "value" : "选择权限和期限，然后输入应用密码，即可创建仅供 Muse 使用的连接密钥。再次操作会创建新密钥，旧密钥将失效。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "權限和期限"
+            "value" : "選擇權限與期限，然後輸入 App 密碼，即可建立僅供 Muse 使用的連接金鑰。再次操作會建立新金鑰，舊金鑰將失效。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zugriff und Zeitraum"
+            "value" : "Wähle Zugriff und Zeitraum und gib dein App-Passwort ein, um einen Schlüssel nur für Muse zu erstellen. Erneut ausgeführt, entsteht ein neuer Schlüssel und der alte wird gesperrt."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Accès et durée"
+            "value" : "Choisissez l’accès et la durée, puis saisissez le mot de passe de l’app pour créer une clé réservée à Muse. Recommencer crée une nouvelle clé et coupe l’ancienne."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Accesso e durata"
+            "value" : "Scegli accesso e durata, poi inserisci la password dell’app per creare una chiave solo per Muse. Ripetendo si crea una nuova chiave e si interrompe la vecchia."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Acceso y duración"
+            "value" : "Elige el acceso y el periodo e introduce la contraseña de la app para crear una clave solo para Muse. Si lo repites, se crea una clave nueva y la anterior deja de funcionar."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Acesso e prazo"
+            "value" : "Escolha o acesso e o período e digite a senha do app para criar uma chave só para o Muse. Repetir cria uma chave nova e desativa a antiga."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quyền và thời hạn"
+            "value" : "Chọn quyền và thời hạn rồi nhập mật khẩu ứng dụng để tạo khóa chỉ dùng cho Muse. Làm lại sẽ tạo khóa mới và ngắt khóa cũ."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Akses dan masa berlaku"
+            "value" : "Pilih akses dan masa berlaku, lalu masukkan kata sandi aplikasi untuk membuat kunci khusus Muse. Mengulang akan membuat kunci baru dan memutus yang lama."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "สิทธิ์และระยะเวลา"
+            "value" : "เลือกสิทธิ์และระยะเวลา แล้วใส่รหัสผ่านของแอปเพื่อสร้างคีย์ที่ใช้กับ Muse เท่านั้น ถ้าทำอีกครั้งจะได้คีย์ใหม่และคีย์เก่าจะถูกตัดการใช้งาน"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "अनुमति और अवधि"
+            "value" : "पहुँच और अवधि चुनें, फिर ऐप का पासवर्ड डालें। इससे सिर्फ़ Muse के लिए कुंजी बनती है। दोबारा करने पर नई कुंजी बनती है और पुरानी कट जाती है।"
+          }
+        }
+      }
+    },
+    "권한·기간을 고르고 앱 비밀번호를 넣으면 이 GPT에만 쓰는 연결 키를 만들어요. 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.|Pick access and period, then enter your app password to make a key just for this GPT. Doing it again makes a new key and cuts the old one." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "権限と期間を選び、アプリのパスワードを入力すると、このGPT専用の接続キーを作ります。もう一度行うと新しいキーが作られ、古いキーは無効になります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择权限和有效期，输入应用密码，即可创建仅用于此 GPT 的连接密钥。再做一次会生成新密钥，旧密钥随即失效。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇權限與有效期間，輸入 App 密碼，即可建立僅供此 GPT 使用的連線金鑰。再做一次會產生新金鑰，舊金鑰隨即失效。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle Zugriff und Zeitraum und gib dein App-Passwort ein, um einen Schlüssel nur für dieses GPT zu erstellen. Wiederholst du das, entsteht ein neuer Schlüssel und der alte wird gesperrt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez l’accès et la durée, puis saisissez le mot de passe de l’app pour créer une clé réservée à ce GPT. Recommencer crée une nouvelle clé et coupe l’ancienne."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli accesso e durata, poi inserisci la password dell’app per creare una chiave solo per questo GPT. Se lo ripeti, si crea una nuova chiave e quella vecchia viene revocata."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige el acceso y la validez e introduce la contraseña de la app para crear una clave solo para este GPT. Si lo repites, se crea una clave nueva y la anterior se corta."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha o acesso e a validade e informe a senha do app para criar uma chave só para este GPT. Se repetir, uma nova chave é criada e a antiga é cortada."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn quyền và thời hạn, rồi nhập mật khẩu ứng dụng để tạo khóa riêng cho GPT này. Làm lại sẽ tạo khóa mới và ngắt khóa cũ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih akses dan masa berlaku, lalu masukkan kata sandi aplikasi untuk membuat kunci khusus GPT ini. Mengulangnya membuat kunci baru dan memutus kunci lama."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกสิทธิ์และระยะใช้งาน แล้วใส่รหัสผ่านแอปเพื่อสร้างคีย์สำหรับ GPT นี้โดยเฉพาะ ถ้าทำซ้ำจะได้คีย์ใหม่และคีย์เก่าจะถูกตัด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एक्सेस और वैधता चुनें, फिर ऐप पासवर्ड डालकर सिर्फ़ इस GPT के लिए कुंजी बनाएँ। दोबारा करने पर नई कुंजी बनती है और पुरानी कट जाती है।"
+          }
+        }
+      }
+    },
+    "권한·기간을 고르고 앱 비밀번호를 넣으면 키를 만들고 연결 안내를 복사해요(키 대신 1회용 주소). 다시 하면 새 키가 만들어지고 옛 키는 끊겨요.|Pick access and period, then enter your app password to make a key and copy the setup (a one-time link instead of the key). Doing it again makes a new key and cuts the old one." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "権限と期間を選び、アプリのパスワードを入力するとキーを作り、接続案内をコピーします(キーの代わりに使い捨てリンク)。もう一度行うと新しいキーが作られ、古いキーは無効になります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择权限和有效期，输入应用密码，即可创建密钥并复制连接说明（用一次性链接代替密钥）。再做一次会生成新密钥，旧密钥随即失效。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇權限與有效期間，輸入 App 密碼，即可建立金鑰並複製連線說明（以一次性連結取代金鑰）。再做一次會產生新金鑰，舊金鑰隨即失效。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle Zugriff und Zeitraum und gib dein App-Passwort ein, um einen Schlüssel zu erstellen und die Einrichtung zu kopieren (Einmal-Link statt Schlüssel). Wiederholst du das, entsteht ein neuer Schlüssel und der alte wird gesperrt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez l’accès et la durée, puis saisissez le mot de passe de l’app pour créer une clé et copier les instructions (un lien à usage unique à la place de la clé). Recommencer crée une nouvelle clé et coupe l’ancienne."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli accesso e durata, poi inserisci la password dell’app per creare una chiave e copiare le istruzioni (un link monouso al posto della chiave). Se lo ripeti, si crea una nuova chiave e quella vecchia viene revocata."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige el acceso y la validez e introduce la contraseña de la app para crear una clave y copiar las instrucciones (un enlace de un solo uso en lugar de la clave). Si lo repites, se crea una clave nueva y la anterior se corta."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha o acesso e a validade e informe a senha do app para criar uma chave e copiar as instruções (um link de uso único no lugar da chave). Se repetir, uma nova chave é criada e a antiga é cortada."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn quyền và thời hạn, rồi nhập mật khẩu ứng dụng để tạo khóa và sao chép hướng dẫn kết nối (liên kết dùng một lần thay cho khóa). Làm lại sẽ tạo khóa mới và ngắt khóa cũ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih akses dan masa berlaku, lalu masukkan kata sandi aplikasi untuk membuat kunci dan menyalin panduan koneksi (tautan sekali pakai sebagai ganti kunci). Mengulangnya membuat kunci baru dan memutus kunci lama."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกสิทธิ์และระยะใช้งาน แล้วใส่รหัสผ่านแอปเพื่อสร้างคีย์และคัดลอกคำแนะนำการเชื่อมต่อ (ลิงก์ใช้ครั้งเดียวแทนคีย์) ถ้าทำซ้ำจะได้คีย์ใหม่และคีย์เก่าจะถูกตัด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एक्सेस और वैधता चुनें, फिर ऐप पासवर्ड डालकर कुंजी बनाएँ और निर्देश कॉपी करें (कुंजी की जगह एक बार का लिंक)। दोबारा करने पर नई कुंजी बनती है और पुरानी कट जाती है।"
           }
         }
       }
@@ -282976,25 +283438,25 @@
         }
       }
     },
-    "보안 입력창에 키 넣기|Enter the key securely" : {
+    "보안 입력에 키 넣기|Enter the key securely" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "セキュア入力欄にキーを入力"
+            "value" : "セキュア入力にキーを入力"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在安全输入框中填入密钥"
+            "value" : "在安全输入中填入密钥"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在安全輸入框中輸入金鑰"
+            "value" : "在安全輸入中填入金鑰"
           }
         },
         "de" : {
@@ -283006,7 +283468,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saisir la clé de façon sécurisée"
+            "value" : "Saisir la clé en sécurité"
           }
         },
         "it" : {
@@ -283030,7 +283492,7 @@
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nhập khóa một cách bảo mật"
+            "value" : "Nhập khóa bảo mật"
           }
         },
         "id" : {
@@ -283042,7 +283504,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ใส่คีย์อย่างปลอดภัย"
+            "value" : "ป้อนคีย์อย่างปลอดภัย"
           }
         },
         "hi" : {
@@ -283973,6 +284435,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सुरक्षित स्नैपशॉट"
+          }
+        }
+      }
+    },
+    "복사한 안내를 Muse 채팅에 붙여 넣고 보내서 커스텀 커넥터를 만들어 달라고 해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|Paste the copied setup into the Muse chat and send it to ask for a custom connector. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コピーした案内を Muse のチャットに貼り付けて送り、カスタムコネクタの作成を頼みます。韓国の App Store にはまだ Muse アプリがないので、アプリがなければウェブ版を使います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将复制的说明粘贴到 Muse 聊天并发送，请它创建自定义连接器。韩国 App Store 暂时没有 Muse 应用，没有应用时请使用网页版。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將複製的說明貼到 Muse 聊天並傳送，請它建立自訂連接器。韓國 App Store 目前沒有 Muse App，沒有 App 時請使用網頁版。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge die kopierte Einrichtung in den Muse-Chat ein und sende sie, um einen benutzerdefinierten Connector anzufordern. Muse ist noch nicht im koreanischen App Store, nutze also die Webversion, wenn du die App nicht hast."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collez la configuration copiée dans le chat Muse et envoyez-la pour demander un connecteur personnalisé. Muse n’est pas encore sur l’App Store coréen : utilisez la version web si vous n’avez pas l’app."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incolla la configurazione copiata nella chat di Muse e invia per chiedere un connettore personalizzato. Muse non è ancora sull’App Store coreano: usa la versione web se non hai l’app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pega la configuración copiada en el chat de Muse y envíala para pedir un conector personalizado. Muse aún no está en la App Store de Corea, así que usa la versión web si no tienes la app."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cole a configuração copiada no chat do Muse e envie para pedir um conector personalizado. O Muse ainda não está na App Store coreana, então use a versão web se você não tiver o app."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dán hướng dẫn đã sao chép vào cuộc trò chuyện Muse và gửi để yêu cầu bộ kết nối tùy chỉnh. App Store Hàn Quốc chưa có ứng dụng Muse, nên nếu chưa có ứng dụng hãy dùng bản web."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempel panduan yang disalin ke obrolan Muse dan kirim untuk meminta konektor khusus. Muse belum ada di App Store Korea, jadi gunakan versi web jika belum punya aplikasinya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วางคำแนะนำที่คัดลอกลงในแชต Muse แล้วส่งเพื่อขอตัวเชื่อมต่อแบบกำหนดเอง App Store เกาหลียังไม่มีแอป Muse หากยังไม่มีแอปให้ใช้เว็บ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कॉपी किए निर्देश Muse की चैट में चिपकाकर भेजें और कस्टम कनेक्टर बनाने को कहें। कोरियाई App Store में अभी Muse ऐप नहीं है, इसलिए ऐप न हो तो वेब संस्करण इस्तेमाल करें।"
           }
         }
       }
@@ -294295,83 +294834,6 @@
         }
       }
     },
-    "새 키로 다시 만들기|Make a new key" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいキーで作り直す"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新生成新密钥"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新產生新金鑰"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neuen Schlüssel erstellen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Créer une nouvelle clé"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crea una nuova chiave"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crear una clave nueva"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Criar uma chave nova"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tạo khóa mới"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buat kunci baru"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "สร้างคีย์ใหม่"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "नई कुंजी बनाएँ"
-          }
-        }
-      }
-    },
     "새 키로 바꿀까요?|Replace the link key?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -297987,6 +298449,237 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सेटिंग्ज़ सूची"
+          }
+        }
+      }
+    },
+    "설정 안내 복사 (키 없음)|Copy setup (no key)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定の案内をコピー（キーなし）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制设置说明（不含密钥）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製設定說明（不含金鑰）"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einrichtung kopieren (ohne Schlüssel)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier la configuration (sans clé)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia configurazione (senza chiave)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar configuración (sin clave)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar configuração (sem chave)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép hướng dẫn (không có khóa)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin panduan (tanpa kunci)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคำแนะนำ (ไม่มีคีย์)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सेटअप निर्देश कॉपी करें (कुंजी नहीं)"
+          }
+        }
+      }
+    },
+    "설정 안내 복사|Copy setup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定の案内をコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制设置说明"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製設定說明"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einrichtung kopieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier la configuration"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia configurazione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar configuración"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar configuração"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép hướng dẫn"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin panduan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคำแนะนำ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सेटअप निर्देश कॉपी करें"
+          }
+        }
+      }
+    },
+    "설정 안내 복사|Copy the setup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定の案内をコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制设置说明"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製設定說明"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einrichtung kopieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier la configuration"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia la configurazione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar la configuración"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar a configuração"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép hướng dẫn thiết lập"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin panduan pengaturan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคำแนะนำการตั้งค่า"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सेटअप निर्देश कॉपी करें"
           }
         }
       }
@@ -310465,83 +311158,6 @@
         }
       }
     },
-    "아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고 연결 안내(1회용 주소)를 복사해요.|Pick access and period below, then enter your app password to make a key just for Muse and copy the setup (a one-time link)." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下で権限と期間を選び、アプリのパスワードを入力すると、Muse 専用の接続キーを作成し、接続の案内（1回限りのリンク）をコピーします。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在下方选择权限和期限，然后输入应用密码，即可创建仅供 Muse 使用的连接密钥，并复制连接说明（一次性链接）。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在下方選擇權限和期限，然後輸入 App 密碼，即可建立僅供 Muse 使用的連線金鑰，並複製連線說明（一次性連結）。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wähle unten Berechtigung und Zeitraum und gib dein App-Passwort ein: Es wird ein Schlüssel nur für Muse erstellt und die Verbindungsanleitung (ein Einmal-Link) kopiert."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisissez ci-dessous l’accès et la durée, puis saisissez le mot de passe de l’app pour créer une clé réservée à Muse et copier les instructions de connexion (un lien à usage unique)."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli sotto accesso e durata, poi inserisci la password dell’app per creare una chiave solo per Muse e copiare le istruzioni di connessione (un link monouso)."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elige abajo el acceso y el periodo e introduce la contraseña de la app para crear una clave solo para Muse y copiar las instrucciones de conexión (un enlace de un solo uso)."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escolha abaixo o acesso e o período e digite a senha do app para criar uma chave só para o Muse e copiar as instruções de conexão (um link de uso único)."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn quyền và thời hạn bên dưới, rồi nhập mật khẩu ứng dụng để tạo khóa chỉ dùng cho Muse và sao chép hướng dẫn kết nối (liên kết dùng một lần)."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih akses dan jangka waktu di bawah, lalu masukkan kata sandi aplikasi untuk membuat kunci khusus Muse dan menyalin panduan koneksi (tautan sekali pakai)."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เลือกสิทธิ์และระยะเวลาด้านล่าง แล้วใส่รหัสผ่านของแอปเพื่อสร้างคีย์เฉพาะสำหรับ Muse และคัดลอกคำแนะนำการเชื่อมต่อ (ลิงก์ใช้ครั้งเดียว)"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "नीचे पहुँच और अवधि चुनें, फिर ऐप का पासवर्ड डालें। इससे सिर्फ़ Muse के लिए कुंजी बनेगी और कनेक्शन निर्देश (एक बार वाला लिंक) कॉपी होंगे।"
-          }
-        }
-      }
-    },
     "아이콘 표시|Show an icon" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -312617,6 +313233,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "खोज का कोहरा"
+          }
+        }
+      }
+    },
+    "안내 다시 복사|Copy setup again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "案内をもう一度コピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次复制说明"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次複製說明"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anleitung erneut kopieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recopier les instructions"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia di nuovo le istruzioni"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar las instrucciones otra vez"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar as instruções de novo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép lại hướng dẫn"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin panduan lagi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคำแนะนำอีกครั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "निर्देश फिर से कॉपी करें"
           }
         }
       }
@@ -315620,160 +316313,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कोड और मंज़ूरी पेज का PIN पाने के लिए ऐप पासवर्ड डालें।"
-          }
-        }
-      }
-    },
-    "앱 비밀번호를 넣으면 이 GPT에만 쓰는 연결 키를 만들어요.|Enter your app password to make a key just for this GPT." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリのパスワードを入力すると、このGPT専用の接続キーを作ります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "输入 App 密码会生成仅用于此 GPT 的连接密钥。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "輸入 App 密碼會產生僅用於此 GPT 的連線金鑰。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gib dein App-Passwort ein, um einen Schlüssel nur für dieses GPT zu erstellen."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saisissez le mot de passe de l’app pour créer une clé réservée à ce GPT."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inserisci la password dell’app per creare una chiave solo per questo GPT."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduce la contraseña de la app para crear una clave solo para este GPT."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Digite a senha do app para criar uma chave só para este GPT."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nhập mật khẩu ứng dụng để tạo khóa chỉ dành cho GPT này."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Masukkan kata sandi aplikasi untuk membuat kunci khusus GPT ini."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ใส่รหัสผ่านแอปเพื่อสร้างคีย์สำหรับ GPT นี้เท่านั้น"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ऐप पासवर्ड डालकर सिर्फ़ इस GPT के लिए कुंजी बनाएँ।"
-          }
-        }
-      }
-    },
-    "앱 비밀번호를 넣으면 키를 만들고 연결 안내를 복사해요(키 대신 1회용 주소).|Enter your app password to make a key and copy the setup (a one-time link instead of the key)." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリのパスワードを入力するとキーを作り、接続案内をコピーします(キーの代わりに使い捨てリンク)。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "输入 App 密码会生成密钥并复制连接说明(用一次性链接代替密钥)。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "輸入 App 密碼會產生金鑰並拷貝連線說明(用一次性連結代替金鑰)。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gib dein App-Passwort ein, um einen Schlüssel zu erstellen und die Einrichtung zu kopieren (Einmal-Link statt Schlüssel)."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saisissez le mot de passe de l’app pour créer une clé et copier la configuration (un lien à usage unique à la place de la clé)."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inserisci la password dell’app per creare una chiave e copiare la configurazione (un link monouso al posto della chiave)."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduce la contraseña de la app para crear una clave y copiar la configuración (un enlace de un solo uso en vez de la clave)."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Digite a senha do app para criar uma chave e copiar a configuração (um link de uso único no lugar da chave)."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nhập mật khẩu ứng dụng để tạo khóa và sao chép hướng dẫn (liên kết dùng một lần thay cho khóa)."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Masukkan kata sandi aplikasi untuk membuat kunci dan menyalin petunjuk (tautan sekali pakai sebagai ganti kunci)."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ใส่รหัสผ่านแอปเพื่อสร้างคีย์และคัดลอกคำแนะนำ (ใช้ลิงก์ครั้งเดียวแทนคีย์)"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ऐप पासवर्ड डालकर कुंजी बनाएँ और निर्देश कॉपी करें (कुंजी की जगह एक बार का लिंक)।"
           }
         }
       }
@@ -326250,83 +326789,6 @@
         }
       }
     },
-    "연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 맞춤 커넥터를 요청하고, 키는 Muse의 보안 입력창에 넣어 주세요.|Setup copied. Paste it into the Muse chat to request a custom connector, and enter the key in Muse's secure input." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続の案内をコピーしました。Muse のチャットに貼り付けてカスタムコネクタを頼み、キーは Muse のセキュア入力欄に入力してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已复制连接说明。请粘贴到 Muse 聊天中请求创建自定义连接器，并把密钥填入 Muse 的安全输入框。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已複製連線說明。請貼到 Muse 聊天中請求建立自訂連接器，並把金鑰輸入 Muse 的安全輸入框。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anleitung kopiert. Füge sie in den Muse-Chat ein, um einen benutzerdefinierten Connector anzufordern, und gib den Schlüssel in Muses sicherem Eingabefeld ein."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Instructions copiées. Collez-les dans le chat Muse pour demander un connecteur personnalisé, et saisissez la clé dans le champ sécurisé de Muse."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Istruzioni copiate. Incollale nella chat di Muse per chiedere un connettore personalizzato e inserisci la chiave nel campo sicuro di Muse."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Instrucciones copiadas. Pégalas en el chat de Muse para pedir un conector personalizado e introduce la clave en el campo seguro de Muse."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Instruções copiadas. Cole no chat do Muse para pedir um conector personalizado e digite a chave no campo seguro do Muse."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã sao chép hướng dẫn. Hãy dán vào cuộc trò chuyện Muse để yêu cầu trình kết nối tùy chỉnh và nhập khóa vào ô nhập bảo mật của Muse."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Panduan disalin. Tempel ke obrolan Muse untuk meminta konektor kustom, dan masukkan kunci ke kolom input aman Muse."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "คัดลอกคำแนะนำแล้ว วางลงในแชต Muse เพื่อขอตัวเชื่อมต่อแบบกำหนดเอง และใส่คีย์ในช่องป้อนข้อมูลที่ปลอดภัยของ Muse"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "निर्देश कॉपी हो गए। कस्टम कनेक्टर माँगने के लिए उन्हें Muse की चैट में चिपकाएँ और कुंजी Muse के सुरक्षित इनपुट बॉक्स में डालें।"
-          }
-        }
-      }
-    },
     "연결 안내를 복사했어요. {0} 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.|Setup copied. Paste it into the {0} chat, or enter the MCP URL and key separately." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -327478,6 +327940,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कनेक्शन कुंजी"
+          }
+        }
+      }
+    },
+    "연결 키를 만들었어요. 다음 단계에서 설정 안내를 복사해요.|Key made. Copy the setup in the next step." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続キーを作成しました。次のステップで設定の案内をコピーします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接密钥已创建。请在下一步复制设置说明。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連接金鑰已建立。請在下一步複製設定說明。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlüssel erstellt. Kopiere im nächsten Schritt die Einrichtung."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clé créée. Copiez la configuration à l’étape suivante."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiave creata. Copia la configurazione nel passaggio successivo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clave creada. Copia la configuración en el siguiente paso."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chave criada. Copie a configuração na próxima etapa."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã tạo khóa. Hãy sao chép hướng dẫn ở bước tiếp theo."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci dibuat. Salin panduan pengaturan di langkah berikutnya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างคีย์แล้ว คัดลอกคำแนะนำการตั้งค่าในขั้นตอนถัดไป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कुंजी बन गई। अगले चरण में सेटअप निर्देश कॉपी करें।"
           }
         }
       }
@@ -329634,160 +330173,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जोड़ें"
-          }
-        }
-      }
-    },
-    "연결하기를 누르면 연결 안내가 복사돼요. 웹 요청을 할 수 있는 AI에 붙여 넣어 주세요.|Connect copies the setup. Paste it into any AI that can make web requests." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「接続」を押すと接続ガイドがコピーされます。WebリクエストができるAIに貼り付けてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "点按“连接”会复制连接说明。请粘贴到能发起网络请求的 AI 中。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "點一下「連接」會拷貝連線說明。請貼到能發出網路請求的 AI 中。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "„Verbinden“ kopiert die Einrichtung. Füge sie in eine KI ein, die Web-Anfragen senden kann."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connecter copie les instructions. Collez-les dans une IA capable de faire des requêtes web."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collega copia le istruzioni. Incollale in un'IA che può fare richieste web."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conectar copia las instrucciones. Péguelas en una IA que pueda hacer solicitudes web."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conectar copia as instruções. Cole-as em uma IA que possa fazer requisições web."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nhấn Kết nối để sao chép hướng dẫn kết nối. Hãy dán vào AI có thể gửi yêu cầu web."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hubungkan menyalin panduan koneksi. Tempel ke AI yang bisa membuat permintaan web."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "กดเชื่อมต่อเพื่อคัดลอกวิธีเชื่อมต่อ แล้ววางใน AI ที่ส่งคำขอเว็บได้"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कनेक्ट दबाने पर सेटअप कॉपी होता है। इसे वेब अनुरोध कर सकने वाले किसी AI में पेस्ट करें।"
-          }
-        }
-      }
-    },
-    "연결하기를 누르면 연결 안내가 복사되고 피클이 열려요. 피클 채팅창에 붙여 넣어 주세요.|Connect copies the setup and opens Pickle. Paste it into the Pickle chat." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「接続」を押すと接続ガイドがコピーされ、Pickleが開きます。Pickleのチャットに貼り付けてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "点按“连接”会复制连接说明并打开 Pickle。请粘贴到 Pickle 聊天框中。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "點一下「連接」會拷貝連線說明並打開 Pickle。請貼到 Pickle 聊天框中。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "„Verbinden“ kopiert die Einrichtung und öffnet Pickle. Füge sie in den Pickle-Chat ein."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connecter copie les instructions et ouvre Pickle. Collez-les dans le chat de Pickle."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collega copia le istruzioni e apre Pickle. Incollale nella chat di Pickle."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conectar copia las instrucciones y abre Pickle. Péguelas en el chat de Pickle."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conectar copia as instruções e abre o Pickle. Cole-as no chat do Pickle."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nhấn Kết nối để sao chép hướng dẫn kết nối và mở Pickle. Hãy dán vào khung chat của Pickle."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hubungkan menyalin panduan koneksi dan membuka Pickle. Tempel ke obrolan Pickle."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "กดเชื่อมต่อเพื่อคัดลอกวิธีเชื่อมต่อและเปิด Pickle แล้ววางในแชต Pickle"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कनेक्ट दबाने पर सेटअप कॉपी होता है और Pickle खुलता है। इसे Pickle चैट में पेस्ट करें।"
           }
         }
       }
@@ -341338,6 +341723,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "इसे ऐसे AI की चैट में पेस्ट करके भेजें जो वेब अनुरोध कर सकता है।"
+          }
+        }
+      }
+    },
+    "위 「단계별 연결」에서 키를 만들면 연결 안내가 복사돼요. 웹 요청을 할 수 있는 AI에 붙여 넣어 주세요.|Making the key in the Step by step card above copies the setup. Paste it into any AI that can make web requests." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上の「ステップごとに接続」でキーを作ると接続案内がコピーされます。WebリクエストができるAIに貼り付けてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在上方“分步连接”中创建密钥后，连接说明会被复制。请粘贴到能发起网络请求的 AI 中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在上方「分步連線」建立金鑰後，連線說明會被複製。請貼到能發出網路請求的 AI 中。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du oben unter „Schritt für Schritt“ den Schlüssel erstellst, wird die Einrichtung kopiert. Füge sie in eine KI ein, die Web-Anfragen senden kann."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer la clé dans « Étape par étape » ci-dessus copie les instructions. Collez-les dans une IA capable de faire des requêtes web."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creando la chiave in «Passo per passo» qui sopra vengono copiate le istruzioni. Incollale in un’IA che può fare richieste web."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al crear la clave en «Paso a paso» de arriba se copian las instrucciones. Pégalas en una IA que pueda hacer solicitudes web."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Criar a chave em “Passo a passo” acima copia as instruções. Cole em uma IA que consiga fazer requisições web."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo khóa trong “Từng bước” ở trên sẽ sao chép hướng dẫn kết nối. Hãy dán vào AI có thể gửi yêu cầu web."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membuat kunci di “Langkah demi langkah” di atas akan menyalin panduan koneksi. Tempel ke AI yang bisa membuat permintaan web."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อสร้างคีย์ใน “ทีละขั้น” ด้านบน ระบบจะคัดลอกคำแนะนำการเชื่อมต่อให้ วางลงใน AI ที่ส่งคำขอเว็บได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऊपर “एक-एक चरण” में कुंजी बनाने पर सेटअप कॉपी होता है। इसे वेब अनुरोध कर सकने वाले किसी AI में पेस्ट करें।"
+          }
+        }
+      }
+    },
+    "위 「단계별 연결」에서 키를 만들면 연결 안내가 복사돼요. 피클 채팅창에 붙여 넣어 주세요.|Making the key in the Step by step card above copies the setup. Paste it into the Pickle chat." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上の「ステップごとに接続」でキーを作ると接続案内がコピーされます。Pickleのチャットに貼り付けてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在上方“分步连接”中创建密钥后，连接说明会被复制。请粘贴到 Pickle 的聊天中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在上方「分步連線」建立金鑰後，連線說明會被複製。請貼到 Pickle 的聊天中。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du oben unter „Schritt für Schritt“ den Schlüssel erstellst, wird die Einrichtung kopiert. Füge sie in den Pickle-Chat ein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer la clé dans « Étape par étape » ci-dessus copie les instructions. Collez-les dans le chat Pickle."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creando la chiave in «Passo per passo» qui sopra vengono copiate le istruzioni. Incollale nella chat di Pickle."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al crear la clave en «Paso a paso» de arriba se copian las instrucciones. Pégalas en el chat de Pickle."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Criar a chave em “Passo a passo” acima copia as instruções. Cole no chat do Pickle."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo khóa trong “Từng bước” ở trên sẽ sao chép hướng dẫn kết nối. Hãy dán vào khung chat của Pickle."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membuat kunci di “Langkah demi langkah” di atas akan menyalin panduan koneksi. Tempel ke obrolan Pickle."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อสร้างคีย์ใน “ทีละขั้น” ด้านบน ระบบจะคัดลอกคำแนะนำการเชื่อมต่อให้ วางลงในแชต Pickle"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऊपर “एक-एक चरण” में कुंजी बनाने पर सेटअप कॉपी होता है। इसे Pickle चैट में पेस्ट करें।"
           }
         }
       }
@@ -396782,6 +397321,83 @@
         }
       }
     },
+    "키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.|Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーをコピーしてから、Muse が表示するセキュア入力画面に貼り付けてください。キーをチャットに直接書かないでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制密钥，然后粘贴到 Muse 显示的安全输入界面。不要把密钥直接写在聊天中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製金鑰，然後貼到 Muse 顯示的安全輸入畫面。請勿把金鑰直接寫在聊天中。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopiere den Schlüssel und füge ihn in den sicheren Eingabebildschirm ein, den Muse anzeigt. Schreibe den Schlüssel nie direkt in den Chat."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiez la clé, puis collez-la dans l’écran de saisie sécurisée que Muse affiche. N’écrivez jamais la clé directement dans le chat."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia la chiave e incollala nella schermata di inserimento sicuro che Muse mostra. Non scrivere mai la chiave direttamente in chat."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia la clave y pégala en la pantalla de entrada segura que muestra Muse. Nunca escribas la clave directamente en el chat."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copie a chave e cole na tela de entrada segura que o Muse mostra. Nunca escreva a chave diretamente no chat."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép khóa, rồi dán vào màn hình nhập bảo mật mà Muse hiển thị. Không bao giờ gõ khóa trực tiếp vào cuộc trò chuyện."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin kunci, lalu tempel ke layar input aman yang ditampilkan Muse. Jangan pernah menulis kunci langsung di obrolan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคีย์ แล้ววางลงในหน้าจอป้อนข้อมูลที่ปลอดภัยที่ Muse แสดง ห้ามพิมพ์คีย์ลงในแชตโดยตรง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कुंजी कॉपी करें, फिर Muse जो सुरक्षित इनपुट स्क्रीन दिखाए उसमें चिपकाएँ। कुंजी को सीधे चैट में कभी न लिखें।"
+          }
+        }
+      }
+    },
     "키보드 닫기|Dismiss keyboard" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -411177,6 +411793,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "स्क्रीन रिकॉर्डिंग"
+          }
+        }
+      }
+    },
+    "화면 사진 준비 중|Screenshot coming soon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面の写真を準備中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面截图准备中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "畫面截圖準備中"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot folgt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture bientôt disponible"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot in arrivo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Captura próximamente"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Captura em breve"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ảnh màn hình sắp có"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tangkapan layar segera hadir"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ภาพหน้าจอเร็วๆ นี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्क्रीनशॉट जल्द आएगा"
           }
         }
       }

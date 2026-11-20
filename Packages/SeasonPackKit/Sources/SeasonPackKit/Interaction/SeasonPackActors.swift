@@ -33,6 +33,7 @@ public final class SeasonPackStage {
     @ObservationIgnored private var lyricTask: Task<Void, Never>?
     @ObservationIgnored private var blinkTask: Task<Void, Never>?
     @ObservationIgnored private var lastFlights: [String: Date] = [:]
+    @ObservationIgnored private var isPaused = false
     @ObservationIgnored private var round: Task<Void, Never>?
 
     public init() {}
@@ -118,7 +119,9 @@ public final class SeasonPackStage {
                 guard let self, let host = center.host else { return }
                 let usable = actors.filter { $0.when?.characterID.map { $0 == host.characterID } ?? true }
                 let plans = usable.compactMap { actor -> (SeasonPackManifest.Actor, Date)? in
-                    throttle.nextFlight(ref: ref, now: host.now(), lastFlight: lastFlights[actor.id], interval: actor.intervalSeconds, reduced: false).map { (actor, $0) }
+                    // 앱을 열었을 때(이 실행·이번 복귀에서 아직 안 난 액터)는 기다리지 않고 바로 한 번 날린다. 그다음부터 3~5분 간격.
+                    if lastFlights[actor.id] == nil { return (actor, host.now()) }
+                    return throttle.nextFlight(ref: ref, now: host.now(), lastFlight: lastFlights[actor.id], interval: actor.intervalSeconds, reduced: false).map { (actor, $0) }
                 }
                 guard let (actor, at) = plans.min(by: { $0.1 < $1.1 }) else { return }
                 try? await Task.sleep(for: .seconds(max(0, at.timeIntervalSince(host.now()))))
@@ -177,12 +180,19 @@ public final class SeasonPackStage {
     }
 
     func pause() {
+        isPaused = true
         flightLoop?.cancel(); lyricTask?.cancel(); round?.cancel()
         sound.stop()
         flight = nil; burst = nil; lyricText = nil; fastBlinkUntil = nil
     }
 
-    func resume() { startFlightLoop() }
+    /// 앱으로 돌아오면 이펙트를 바로 한 번 보이고 3~5분 타이머를 새로 돈다.
+    func resume() {
+        guard isPaused else { return }
+        isPaused = false
+        lastFlights.removeAll()
+        startFlightLoop()
+    }
 }
 
 /// 화면 전체 위로 날아가는 액터와 선물. 산타(44pt 이상)만 눌리고 나머지는 지도 제스처를 막지 않는다.

@@ -181,3 +181,14 @@ test("작업용 사본에서 실행해도 원래 저장소의 로컬 설정을 �
   assert.equal(typeof mainCheckout(), "string");
   assert.ok(!mainCheckout().includes("/.git/"));
 });
+
+test("팩 내용 보기: 대표 아이콘·자산 목록을 주고, 목록 밖 파일·토큰 없는 요청은 막는다", async () => {
+  const pack = localPacks().find((entry) => !entry.error);
+  assert.ok(pack.cover && pack.files.length > 0 && Array.isArray(pack.audio));
+  const q = (path, token = TOKEN) => `/api/pack-file?dir=${encodeURIComponent(pack.dir)}&path=${encodeURIComponent(path)}&t=${token}`;
+  const ok = await call("GET", q(pack.cover), { token: null });
+  assert.equal(ok.status, 200);
+  assert.match(ok.headers["content-type"], /^image\//);
+  assert.equal((await call("GET", q(pack.cover, "x".repeat(32)), { token: null })).status, 401);
+  assert.equal((await call("GET", q("../../../../manifest.json"), { token: null })).status, 404);
+});

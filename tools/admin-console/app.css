@@ -58,3 +58,26 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
 .span-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .span-row input { width: auto; flex: 1 1 200px; }
 [hidden] { display: none !important; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; align-items: start; margin-top: 8px; }
+details.card { border: 1px solid var(--line); border-radius: 14px; background: var(--bg); overflow: hidden; }
+details.card[open] { grid-column: 1 / -1; background: var(--card); }
+details.card > summary { list-style: none; cursor: pointer; display: flex; gap: 12px; align-items: center; padding: 12px; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::after { content: "펼치기 ▾"; margin-left: auto; font-size: 12px; color: var(--muted); }
+details.card[open] > summary::after { content: "접기 ▴"; }
+.cover { width: 56px; height: 56px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); object-fit: contain; flex-shrink: 0; }
+.cover.empty { display: grid; place-items: center; font-size: 22px; }
+.card-body { padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line); }
+.card-body h3 { font-size: 13px; margin: 8px 0 4px; color: var(--muted); }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.thumb { border: 1px solid var(--line); border-radius: 10px; padding: 6px; text-align: center; background: var(--bg); font-size: 11px; color: var(--muted); word-break: break-all; }
+.thumb img { width: 100%; height: 84px; object-fit: contain; display: block; margin-bottom: 4px; background: repeating-conic-gradient(#0000000d 0 25%, transparent 0 50%) 0 0 / 14px 14px; border-radius: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips span { font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; }
+.intro { white-space: pre-wrap; margin: 0; }
+audio { width: 100%; max-width: 420px; }
+details.card > summary > div:nth-child(2) { min-width: 0; flex: 1; }
+details.card > summary::after { white-space: nowrap; flex-shrink: 0; }
+details.card > summary .chip { margin-left: 6px; }
+.cards { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }

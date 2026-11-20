@@ -26,11 +26,15 @@ public struct SeasonPackOverlay: View {
         }
         .animation(.easeInOut(duration: 0.2), value: center.stage.lyricText)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
+            // 앱이 열려 있는 동안은 타이머가 돈다. 알림·제어 센터처럼 잠깐 비활성이 되는 것은 멈추지 않고, 백그라운드에서만 멈춘다.
+            switch phase {
+            case .active:
                 center.stage.resume()
                 center.recompute()
-            } else {
+            case .background:
                 center.stage.pause()
+            default:
+                break
             }
         }
         .onDisappear { center.stage.pause() }

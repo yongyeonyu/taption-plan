@@ -243,20 +243,50 @@ function scheduleEditor(spans, manifestWindows) {
 const describe = (schedule) => schedule === null ? "매니페스트 기간 그대로" : schedule.length
   ? schedule.map((s) => `${new Date(s.from).toLocaleString("ko-KR")} ~ ${new Date(s.to).toLocaleString("ko-KR")}`).join("\n") : "꺼 둠(기간 없음)";
 
+const fileUrl = (pack, path) => `/api/pack-file?dir=${encodeURIComponent(pack.dir)}&path=${encodeURIComponent(path)}&t=${encodeURIComponent(TOKEN)}`;
+
+/** 카드뉴스식 접이식 카드: 접으면 아이콘·이름·상태, 펼치면 내용. */
+function card({ pack, title, meta, badge, body }) {
+  const cover = pack?.cover ? el("img", { class: "cover", src: fileUrl(pack, pack.cover), alt: "" }) : el("div", { class: "cover empty", textContent: "📦" });
+  return el("details", { class: "card" },
+    el("summary", {}, cover, el("div", {}, el("strong", { textContent: title }), badge ? el("span", { class: "chip", textContent: badge }) : null, el("div", { class: "meta", textContent: meta }))),
+    el("div", { class: "card-body" }, body));
+}
+
+/** 팩 내용 보기: 이미지 모아 보기, 음원 재생, 안내 글, 슬롯. */
+function packContents(pack) {
+  const images = pack.files.filter((f) => f.kind === "image");
+  const parts = [];
+  if (pack.intro.length) parts.push(el("div", {}, el("h3", { textContent: "앱에 보이는 안내 글" }), ...pack.intro.map((i) => el("p", { class: "intro", textContent: `${i.title ? `[${i.title}] ` : ""}${i.text}` }))));
+  if (images.length) parts.push(el("div", {}, el("h3", { textContent: `이미지 ${images.length}개` }),
+    el("div", { class: "thumbs" }, images.map((f) => el("div", { class: "thumb" }, el("img", { src: fileUrl(pack, f.path), alt: f.id, loading: "lazy" }), `${f.id} · ${kb(f.bytes)}`)))));
+  if (pack.audio.length) parts.push(el("div", {}, el("h3", { textContent: "음원" }), ...pack.audio.map((a) => el("div", {},
+    el("div", { class: "meta", textContent: `${a.title} · ${a.seconds}초${pack.lyricLines ? ` · 가사 ${pack.lyricLines}줄` : ""}` }),
+    a.asset ? el("audio", { controls: true, preload: "none", src: fileUrl(pack, a.asset) }) : null))));
+  const chips = [...pack.slots.map((s) => `슬롯 ${s}`), ...pack.actors.map((a) => `등장 ${a}`), ...pack.menuIcons.map((m) => `메뉴 ${m}`)];
+  if (chips.length) parts.push(el("div", {}, el("h3", { textContent: "구성" }), el("div", { class: "chips" }, chips.map((t) => el("span", { textContent: t })))));
+  if (pack.credits.length) parts.push(el("div", { class: "meta", textContent: pack.credits.join("\n") }));
+  return parts;
+}
+
 async function loadPacks() {
   try {
     const data = await api("GET", "/api/packs");
     const live = data.catalog?.packs ?? [];
+    $("catalogList").className = "cards";
+    $("localList").className = "cards";
     $("catalogList").replaceChildren(...(data.catalogError ? [el("li", { class: "bad", textContent: data.catalogError })]
       : live.length ? live.map((entry) => {
         const editor = scheduleEditor(entry.schedule ?? null, entry.windows);
-        return el("li", { class: "stack" },
-          el("div", { class: "row between" },
-            el("div", {}, el("strong", { textContent: `${entry.id} · v${entry.version}` }),
-              el("div", { class: "meta", textContent: [entry.archive && kb(entry.archive.bytes), entry.updatedAt && `올린 때 ${new Date(entry.updatedAt).toLocaleString("ko-KR")}`].filter(Boolean).join(" · ") })),
-            el("div", { class: "actions" }, el("button", { class: "danger", textContent: "카탈로그에서 내리기", onclick: () => withdraw(entry.id) }))),
-          editor.node,
-          el("div", { class: "row" }, el("button", { class: "primary", textContent: "기간 배포", onclick: () => deploySchedule(entry, editor.value()) })));
+        const mine = data.local.find((p) => p.id === entry.id && !p.error);
+        const spanText = entry.schedule === undefined ? "매니페스트 기간(매년)" : entry.schedule.length ? `기간 ${entry.schedule.length}칸` : "꺼 둠";
+        return card({ pack: mine, title: `${entry.id} · v${entry.version}`, badge: "서버", meta: [spanText, entry.archive && kb(entry.archive.bytes), entry.updatedAt && `올린 때 ${new Date(entry.updatedAt).toLocaleString("ko-KR")}`].filter(Boolean).join(" · "),
+          body: [
+            ...(mine ? packContents(mine) : [el("div", { class: "meta", textContent: "이 맥에 같은 팩 폴더가 없어 내용을 미리 볼 수 없습니다." })]),
+            editor.node,
+            el("div", { class: "row" },
+              el("button", { class: "primary", textContent: "기간 배포", onclick: () => deploySchedule(entry, editor.value()) }),
+              el("button", { class: "danger", textContent: "카탈로그에서 내리기", onclick: () => withdraw(entry.id) }))] });
       })
       : [el("li", { class: "muted", textContent: "서버에 올라간 팩이 없습니다(앱은 번들 시드를 씁니다)" })]));
     $("localList").replaceChildren(...data.local.map((pack) => {
@@ -264,12 +294,13 @@ async function loadPacks() {
       const onServer = live.find((entry) => entry.id === pack.id);
       const blocked = Boolean(onServer && onServer.version >= pack.version);
       const state = !onServer ? "서버에 없음" : blocked ? `서버에 v${onServer.version} 있음 — 기간만 바꾸려면 위에서, 새로 올리려면 manifest.json의 version을 올리세요` : `서버 v${onServer.version} → v${pack.version} (기기는 옛 버전을 지우고 새로 받음)`;
-      const editor = blocked ? null : scheduleEditor(onServer ? onServer.schedule ?? null : [], pack.windows);
-      return el("li", { class: "stack" },
-        el("div", {}, el("strong", { textContent: `${pack.title} (${pack.id}) · v${pack.version}` }),
-          el("div", { class: "meta", textContent: [pack.dir, `파일 ${pack.assets}개 ${kb(pack.bytes)}`, state].join(" · ") })),
-        editor?.node ?? null,
-        blocked ? null : el("div", { class: "row" }, el("button", { textContent: "묶어서 미리보기", onclick: () => build(pack, editor.value()) })));
+      const editor = blocked ? null : scheduleEditor(onServer ? onServer.schedule ?? null : null, pack.windows);
+      return card({ pack, title: `${pack.title} (${pack.id}) · v${pack.version}`, badge: onServer ? (blocked ? "서버와 같음" : "새 버전") : "미배포",
+        meta: [`파일 ${pack.assets}개 ${kb(pack.bytes)}`, state].join(" · "),
+        body: [...packContents(pack), el("div", { class: "meta", textContent: pack.dir }), editor?.node ?? null,
+          blocked ? null : el("div", { class: "row" },
+            el("button", { class: "primary", textContent: "배포", onclick: () => deployNow(pack, editor.value()) }),
+            el("button", { textContent: "묶어서 미리보기", onclick: () => build(pack, editor.value()) }))] });
     }));
   } catch (error) { $("catalogList").replaceChildren(el("li", { class: "bad", textContent: error.message })); }
 }
@@ -283,6 +314,23 @@ async function deploySchedule(entry, schedule) {
     $("packOut").textContent = `${result.dryRun ? "[연습] " : ""}기간을 배포했습니다: ${entry.id}\n${describe(schedule)}`;
     setTimeout(loadPacks, 1500);
   } catch (error) { fail(error); }
+  refreshState();
+}
+
+/** 묶기 → 확인 → 올리기를 한 번에. */
+async function deployNow(pack, schedule) {
+  const ok = await confirmDialog(`${pack.id} v${pack.version}을(를) 묶어서 바로 배포합니다.\n공개 기간: ${describe(schedule)}\n파일을 먼저, 카탈로그를 나중에 올립니다. 앱 사용자 모두에게 보입니다. 계속할까요?`);
+  if (!ok) return;
+  try {
+    $("packOut").hidden = false;
+    $("packOut").textContent = "묶는 중…";
+    const built = await api("POST", "/api/packs/build", { dir: pack.dir, schedule });
+    $("packOut").textContent = `묶었습니다(${built.entry.archive.bytes.toLocaleString()}바이트). 올리는 중…`;
+    const result = await api("POST", "/api/packs/publish", { buildId: built.buildId });
+    $("packOut").textContent = `${result.dryRun ? "[연습] " : ""}배포했습니다: ${result.entry.id} v${result.entry.version}\n이어받기(Range) 확인: ${result.check.skipped ? "생략" : result.check.ok ? "206 통과" : `실패 (${result.check.status})`}`;
+    $("publishPack").hidden = true; lastBuild = null;
+    setTimeout(loadPacks, 1500);
+  } catch (error) { $("packOut").textContent = `배포 실패: ${error.message}`; }
   refreshState();
 }
 
