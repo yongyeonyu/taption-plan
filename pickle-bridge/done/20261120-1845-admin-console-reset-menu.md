@@ -1,7 +1,7 @@
 ---
 id: 20261120-1845-admin-console-reset-menu
 created_at: 2026-11-20T18:45+09:00
-status: pending
+status: done
 request_id: ADM1120A03
 title: 운영 페이지에 「초기화」 탭을 따로 만들기 — 공지·팩 배포 상태를 한 번에 되돌리고 되돌리기까지
 from: 비야
@@ -109,3 +109,18 @@ POST /api/reset/restore   ← { dir }                                // 생략�
 - 백업 자리를 실제 코드에 맞췄습니다: `BUILD_ROOT`의 기본값은 `build/admin-console/`(`server.mjs:23`)이고, 기존 폴더 이름도 `announce-<시각>` 꼴입니다 → `build/reset-…` 대신 `build/admin-console/reset-…`으로 적고 「백업 폴더는 `git add` 하지 않는다」를 붙였습니다(지시서의 첫 가정과 다름).
 - 인용은 18:4x `origin/main`에서 맞았습니다 — `index.html` 14~18(탭 셋)·22·65·78·90(기록 패널)·96~101(확인 상자), `server.mjs` 265(`exclusive`)·271(routes)·105(`upload`)·286(`baseVersion`)·333~342(파일 먼저·카탈로그 나중·`rangeCheck`)·387·409(Host 421·토큰 401), CI의 `node --test tools/admin-console/server.test.mjs`.
 - 고치지 않은 것: 범위 기본값(셋 다 켬)·확인 문구·R2 팩 파일을 지우지 않는 결정·드라이런 정책은 대표가 정한 범위라 그대로 두었습니다.
+
+## 클로드 코드 회신
+
+- 처리: 완료(연습 모드·가짜 응답 시험까지. 실제 서버 실행·앱 수신 시간은 미실측)
+- 요청 ID: ADM1120A03 (`test.md` 「배포·운영·출시」·「요청 상세」)
+- 시작·끝: 2026-11-20 21:30 ~ 21:55 (KST)
+- 커밋: 작업 `tools/admin-console` 커밋(`git log`의 「운영 페이지에 초기화 탭」), 문서 이동은 `[비야 브리지] ADM1120A03` 커밋
+- 바꾼 파일: `tools/admin-console/server.mjs`(초기화 절 + 라우트 4개), `index.html`(탭·패널), `app.js`, `app.css`(`.danger`·체크·두 칸), `README.md`, `server.test.mjs`, `test.md`
+- 새 라우트: `GET /api/reset/state`, `POST /api/reset/preview`, `POST /api/reset/apply`, `POST /api/reset/restore`. 모두 기존 토큰(401)·Host(421)·JSON(415) 검사를 그대로 탐. `exclusive`로 감싸고 올리기는 `upload`만 씀.
+- 화면 문구: 탭 `초기화`, 범위 `공지 비우기`·`팩 카탈로그 비우기`·`기간(운영 기간) 지우기`(기본 셋 다 켜짐), 단추 `미리보기`·`초기화 실행`(붉은 `.danger`, 미리보기 뒤 확인 칸에 「초기화」를 입력해야 켜짐)·`방금 초기화 되돌리기`, 안내 한 줄 「기기에 이미 받은 팩은 앱의 설정 › 모든 데이터 삭제로 지웁니다.」, 확인 상자는 기존 `confirm` 재사용(무엇이 사라지는지 문장으로).
+- 안전장치: 백업(`build/admin-console/reset-<시각>/before-announcements.json`·`before-index.json`, 이후 올릴 `after-*.json`도 같은 폴더) → 공지 → 카탈로그 순. 공지 성공·카탈로그 실패면 「공지가 먼저 비워졌습니다. 방금 초기화 되돌리기로 복구하십시오」를 기록. 미리보기의 `baseVersion`·카탈로그 해시가 다르면 409. `confirm`은 서버도 검사(422), 범위 전부 꺼짐 422. 되돌리기 `dir`은 `^reset-…$` 모양·BUILD_ROOT 안·두 파일만 읽음, 모양 밖(`..`·절대경로·빈 값·하위 폴더)은 400, 없는 폴더 404, 생략하면 메모리의 마지막 초기화(없으면 `build/` 폴더에서 가장 최근 것).
+- R2 팩 파일까지 지우는 선택: 넣지 않음.
+- 알아 둘 것: 되돌리기는 백업 때 문서를 **그대로** 올리므로 공지 `version`이 초기화 때 올린 값보다 낮아집니다(앱은 ETag로 받아 갱신되는 것으로 보나 기기에서 확인한 것은 아님). 되돌리기는 공지·카탈로그 둘 다 백업 상태로 덮으므로, 초기화 뒤 서버를 따로 고쳤다면 그 변경도 덮입니다.
+- 검증: `node --test tools/admin-console/server.test.mjs` 25건 통과·실패 0(기존 18 + 새 7: 전/후 계산, 기간만 지우기, 422, 409(공지·카탈로그), 백업·되돌리기·업로드 순서, `dir` 400/404, 401·421). 실제 R2 업로드·실제 서버에서 한 번 돌려 본 것·앱이 받기까지의 실제 시간(엣지 5분+앱 30분)은 **미실측**. 화면은 브라우저에서 눈으로 확인하지 않음.
+- 남은 것·확인 필요: 대표가 콘솔을 켜서(`node tools/admin-console/server.mjs --dry-run` 먼저) 초기화·되돌리기를 한 번 해 보고, 실제 실행은 대표 몫. 앱·중계 서버 코드는 건드리지 않음. `docs/pipeline/CHANGELOG.md`는 없어 `test.md`로 대신함.
