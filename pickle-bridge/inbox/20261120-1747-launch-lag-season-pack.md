@@ -12,13 +12,15 @@ basis: 대표 직접 지시 (2026-11-20 17:40 통화) — 「산타클로스 패
 
 이 지시서는 **원인을 미리 정해 두지 않습니다.** 아래 6절의 후보는 「의심」이고, 확정은 4~5절의 측정과 로그로만 합니다. 대표가 체감한 증상은 사실이고, 원인은 아직 모릅니다. **측정 없이 고치고 「고쳤다」고 보고하지 마십시오.**
 
+**처리 순서(브리지 공통, 2026-11-20 점검)**: 이 문서가 `pickle-bridge/inbox/` 파일 이름 순서로 **가장 먼저**이고, 순서를 지켜야 하는 이유도 있습니다 — 이 문서의 핵심이 「고치기 전 측정」이라 **시작 경로·폴링을 만지는 다른 문서보다 먼저 재야** 수치가 오염되지 않습니다(뒤 문서: `1753 BUB1120A01`이 시작 훅을, `1805 RTA1120A01`이 홈의 폴링 루프를 만집니다). 이 문서가 끝나기 전에는 그 두 문서의 시작 경로·폴링 변경을 이 기기에 적용하지 말고, 5절 측정은 다른 빌드·시험이 도는 동안 하지 않습니다(빌드 잠금, `load.txt`).
+
 ## 0. 시작할 때
 
 1. `git pull --rebase`, `git status --short --branch`, `git log --oneline -5`.
 2. 다른 세션의 미커밋 변경이 있을 수 있습니다 — 특히 `TaptionPlan/Assets.xcassets/PlaceBook/PlaceBook_kr_sungnyemun.imageset/PlaceBook_kr_sungnyemun.svg`. 건드리지도, 이번 커밋에 넣지도 않습니다(`AGENTS.md` 7절). 경로를 지정해 이번에 만진 파일만 커밋합니다.
 3. 이 작업은 동작 코드를 만지므로 병합·세션 규칙(`AGENTS.md` 7절)과 빌드 잠금(`AGENTS.md` 5절, `/tmp/taptionplan-xcodebuild.lock`)을 그대로 따릅니다. 측정 도중 다른 빌드가 돌면 수치가 흔들리니 `load.txt`(`scripts/perf-launch.sh`가 남김)에 맥 부하를 함께 적습니다.
 4. **요청 ID `LAG1120A01`** 을 `AGENTS.md` 2절대로 씁니다: `test.md` `## 남은 작업` 「성능·구조」에 한 줄, `### 요청 상세` 에 원인·해결·검증 기준. (이번 지시서가 ID를 정해 둡니다. `test.md`에 같은 ID가 이미 있는지만 먼저 `rg -n "LAG1120A01" test.md`로 확인하십시오.)
-5. **저장소는 공개입니다.** 로그 원문·기기 이름·계정·좌표·서버 주소·팩 파일 이름 규칙 밖의 값을 커밋하지 않습니다(`AGENTS.md` 8절). 로그 사본은 `build/validation/LAG1120A01/`(`.gitignore`의 `build/`)에만 두고, 회신에는 수치와 판정만 적습니다.
+5. **저장소는 공개입니다.** 로그 원문·기기 이름·계정·좌표·서버 주소·팩 파일 이름 규칙 밖의 값을 커밋하지 않습니다(`AGENTS.md` 8절). 로그 사본은 `build/validation/LAG1120A01/`(`.gitignore`의 `build/`)에만 두고 **그 사본을 `git add` 하지 않습니다**(경로를 지정해 커밋). 회신에는 수치와 판정만 적고, 기기 이름·계정이 든 원래 파일 이름은 그대로 옮기지 않습니다(종류·수정 시각·크기만).
 
 ## 1. 지금 저장소에서 확인한 사실 (2026-11-20 17:47, `origin/main` `26f3b76` 기준 — 착수 때 `rg`로 다시 확인하고 쓰십시오)
 
@@ -29,9 +31,9 @@ basis: 대표 직접 지시 (2026-11-20 17:40 통화) — 「산타클로스 패
 | `TaptionPlan/UI/MapHomeView+Support.swift:227` | `.task { SeasonPackAdapter.sync(model: model); await SeasonPackAdapter.refresh() }` — 홈이 뜰 때 한 번 | 시작 경로의 입구 |
 | `TaptionPlan/UI/MapHomeView+Support.swift:222` | `scenePhase == .active` 마다 `Task { await SeasonPackAdapter.refresh() }` | 복귀 때마다 네트워크 확인 |
 | `TaptionPlan/UI/MapHomeView+Support.swift:243` | `.overlay { SeasonPackOverlay() }` | 팩 화면이 홈 위에 항상 얹힘 |
-| `TaptionPlan/Core/SeasonPackAdapter.swift:68~80` | `sync`: `configure` → `recompute()` → `Task { await reload() }` → `exportWidgetArt()` | 메인에서 무엇이 도는지 |
+| `TaptionPlan/Core/SeasonPackAdapter.swift:62~84` | `sync`: `configure` → `recompute()` → `Task { await reload() }` → `exportWidgetArt()` | 메인에서 무엇이 도는지 |
 | `SeasonPackAdapter.swift:86~89` | `refresh`: `await center.refresh()` 뒤 `exportWidgetArt()` | 네트워크 뒤 메인 작업 |
-| `SeasonPackAdapter.swift:93~125` | `exportWidgetArt`: `accessoryImageData`(=`SeasonPack.assetData`=`Data(contentsOf:)`) → `smallPNG`(UIImage 해독 → `UIGraphicsImageRenderer` → PNG 인코딩) → `writeArt`(기존 파일 읽기·비교·쓰기), 전부 `@MainActor` | 메인 스레드 블로킹 후보 |
+| `SeasonPackAdapter.swift:92~127` | `exportWidgetArt`: `accessoryImageData`(=`SeasonPack.assetData`=`Data(contentsOf:)`) → `smallPNG`(UIImage 해독 → `UIGraphicsImageRenderer` → PNG 인코딩) → `writeArt`(기존 파일 읽기·비교·쓰기), 전부 `@MainActor` | 메인 스레드 블로킹 후보 |
 | `Packages/SeasonPackKit/.../SeasonPackCenter.swift:80~119` | `configure`: 저장소·시계·fetcher·다운로더 만들고 `Task { await reload() }` | |
 | `SeasonPackCenter.swift:123~137` | `reload`: 시드+설치본을 `DispatchQueue.global(qos: .utility)`에서 읽고, 합친 **모든 팩의 모든 그림을 `preload`**, 그 뒤 메인에서 `packs =`·`recompute()` | 시작 중 두 번째 로딩 |
 | `SeasonPackCenter.swift:139~145` | `refresh`: 30분 쿨다운·ETag·8초 제한. **새로 설치했으면 `reload()`를 한 번 더** | 실행 한 번에 로딩이 두 번 |
@@ -193,3 +195,11 @@ A~H는 **의심**입니다. 확정한 것만 「원인」으로, 나머지는 �
 - 시즌 팩 설계·배포: `docs/SEASON_PACK_PLAN.md`, `server/trip-relay/README.md` 「공용 공지·정적 데이터」, 이전 지시서 `pickle-bridge/done/20261119-2212-season-pack-framework.md`(받기·검증·폴백 설계와 회신).
 - 선례: `test.md` `LAG1107A01`(Debug 시험 호스트가 원인이었던 렉), `PRF1117A01`(시작 막대가 셸 본문을 다시 만들던 문제 — 시작 경로 계측·고침의 본보기).
 - 시험 규칙: `AGENTS.md` 2·5·6·7·8절, 브리지 형식: `pickle-bridge/README.md`.
+
+## 점검 회신 (비야, 2026-11-20 18:51)
+
+- 처리 순서를 머리에 넣었습니다: 이 문서가 가장 먼저이고, 그 이유는 「고치기 전 측정」이 시작 경로·폴링을 만지는 BUB1120A01·RTA1120A01보다 앞서야 수치가 오염되지 않기 때문입니다.
+- 인용 두 곳을 현재 코드에 맞게 고쳤습니다: `SeasonPackAdapter.swift`의 `sync`는 `62~84`, `exportWidgetArt`(`smallPNG`·`writeArt` 포함)는 `92~127`입니다(이전 `68~80`·`93~125`는 함수 경계와 어긋남).
+- 나머지 표의 파일:줄(`MapHomeView+Support.swift` 222·227·243, `SeasonPackCenter` 80·112~116·123·139·147·167·183, `SeasonPackStore` 28·130·144, `SeasonPackRenderer` 127~140, `SeasonPackActors` 119~125·207·222, `TreeEffects` 40·103, `HouseArt` 24, `Overlay` 28~33, `MapHomeStickmanMarker` 146~148·219~222)와 수치(자산 13개·1,144,304바이트·소리 355,355·창 12-19~12-30·빌드 358·준비 3,631ms/합격선 3,000ms)는 2026-11-20 18:4x `origin/main`에서 **그대로 맞았습니다**.
+- 로그 사본을 커밋하지 않도록 `git add` 금지·파일 이름 비노출을 §0-5에 더했습니다(사본에는 기기 이름·계정이 들어갑니다).
+- 고치지 않은 것: 후보 A~H의 내용·측정 조건·회신 양식은 그대로 두었습니다(대표가 정한 판정 기준이라 손대지 않음). `docs/pipeline/CHANGELOG.md`가 없다는 서술도 확인 결과 사실입니다.

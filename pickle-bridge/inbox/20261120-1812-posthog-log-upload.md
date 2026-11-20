@@ -14,6 +14,8 @@ basis: 대표 직접 지시 (2026-11-20 18:0x 통화) — 「일단 디버깅 �
 
 디버깅 단계라 베타 테스터도 같은 빌드에서 이 두 버튼으로 자기 진단을 대표의 PostHog 프로젝트로 보낼 수 있게 하는 것이 목적이다.
 
+**처리 순서(브리지 공통, 2026-11-20 점검)**: 파일 이름 순서로 `1805 RTA1120A01` 다음 네 번째입니다. 이 문서는 `MapHomeSettingsSheets.swift`의 데이터 보호 카드 하나와 `PostHogDiagnosticsUploader.swift`(새 파일)만 만지므로, 시작 경로(LAG·BUB)·홈 폴링(RTA)·중계 서버(FLT)와는 파일이 겹치지 않습니다. 다만 **원본 업로드 대상은 `exportTodaySensorRawURL()`이 만드는 자료**라, FLT1120A01이 같은 함수를 고치면(아직 고치지 않음) 둘을 확인한 뒤 합치십시오.
+
 ## 1. 합격선 (이것이 되면 끝)
 
 1. 데이터 보호 화면의 카드 제목이 **「포스트호그 로그 업로드」**이고, 설명문에 iCloud Drive·TaptionLogs 언급이 없다.
@@ -107,8 +109,8 @@ basis: 대표 직접 지시 (2026-11-20 18:0x 통화) — 「일단 디버깅 �
 - Host: `https://us.i.posthog.com`
 - 엔드포인트: **레거시 `POST /batch/`** (본문 `{api_key, batch:[…]}`, gzip은 `Content-Encoding: gzip`). v1(`/i/v1/analytics/events`)은 이벤트마다 `uuid`·`created_at`·`Authorization: Bearer`가 필요해 이번엔 쓰지 않는다.
 - 프로젝트: 조직 `BOKKI Plan` / `Default project`(ID `737239`) — **BOKKI Encoder와 같은 프로젝트**다. 그래서 4.5절의 앱 구분 속성이 필수다.
-- 프로젝트 API 키(클라이언트용, 대표가 전달): `phc_sWiiQ4pogo2wCwmnuBEwSnMNHUNt7AxEoe7mukkkVCQe`
-  - **앱 코드·커밋되는 파일·시험·로그에 넣지 않는다.** 넣는 곳은 git 무시 파일 `TaptionPlan/AppSecrets.local.xcconfig` 하나뿐이다.
+- 프로젝트 API 키(클라이언트용): **값은 이 문서에 쓰지 않는다**(공개 저장소). 넣는 곳은 git 무시 파일 `TaptionPlan/AppSecrets.local.xcconfig` 하나이고, 대표가 값을 직접 넣거나 클로드 코드 세션에 따로 전달한다.
+  - **앱 코드·커밋되는 파일·시험·로그·회신에 넣지 않는다.** 값이 없으면 코드는 끝까지 넣고, 회신에 「키가 아직 없다 — 대표가 `AppSecrets.local.xcconfig`에 넣으면 버튼이 켜진다」를 적는다(실기기 전송 1회만 남는다). **키가 없다고 막힘(`status: blocked`)으로 두지 않는다** — 1-6·3-⑥의 「키 없음」 상태가 바로 그 단계다.
   - 이 저장소의 기존 관례가 Encoder의 `Config/PostHog.xcconfig` + `Config/PostHog.local.xcconfig`와 같은 모양이다(공개 템플릿 + git 무시 로컬 파일). **두 번째 비밀값 체계를 만들지 말고** 이 저장소의 `AppSecrets` 방식을 그대로 쓴다.
 - 커밋되는 `TaptionPlan/AppSecrets.xcconfig`에 **include 줄 위**로:
   ```
@@ -119,7 +121,7 @@ basis: 대표 직접 지시 (2026-11-20 18:0x 통화) — 「일단 디버깅 �
 - `TaptionPlan/Info.plist`에 `POSTHOG_HOST`·`POSTHOG_API_KEY`를 `$(…)`로 넣는다(`AIR_QUALITY_PROXY_HOST`와 같은 자리).
 - 읽는 쪽은 `Bundle.main.object(forInfoDictionaryKey:)`로 읽고, **빈 값·`$(`가 남은 값이면 없는 것으로 본다**(`AirQualityContextService.proxyBaseURL`의 처리 방식 참고).
 - `TaptionPlan/AppSecrets.local.xcconfig`에 `POSTHOG_API_KEY = phc_…`를 넣고, `git status`에서 그 파일이 **무시 대상으로 보이는지** 확인한다(회신에 키 값은 쓰지 않는다).
-- 지시서 자체가 공개 저장소에 커밋되므로 키가 문서 이력에 남는다(대표 허락). 코드·xcconfig에 넣지만 말고, 남용 흔적이 보이면 대표가 PostHog에서 키를 회전한다 — 회신에 그 한 줄만 적는다.
+- **키를 문서·커밋에 남기지 않는다.** PostHog 프로젝트 키(`phc_…`)는 앱에 박히는 클라이언트 키라 값 자체가 서버 비밀은 아니지만, 공개 저장소에 있으면 누구나 이 프로젝트로 이벤트를 보내 한도·용량을 태울 수 있다. 2026-11-20 18:51 점검에서 이 문서에 적혀 있던 값을 지웠다(이미 커밋된 이력에는 남아 있으므로 **대표가 PostHog에서 키를 회전할지 판단**). 회신에는 「키는 로컬 xcconfig에만 있음」 한 줄만 적는다.
 
 ### 4.2 「로그 업로드」 이벤트
 
@@ -160,6 +162,7 @@ basis: 대표 직접 지시 (2026-11-20 18:0x 통화) — 「일단 디버깅 �
 - `429` → `한도 초과로 거절됨(429)` + 「나중에 다시」. `402`·`403` → `한도·결제로 거절됨(<코드>)`.
 - `5xx`·시간 초과·네트워크 끊김 → `실패 · <사유>` + **「재시도」**(성공한 배치·조각은 건너뛴다, 5절).
 - 화면에 넣는 사유는 그대로(감싸지 말 것) — 대표가 응답 코드로 원인을 안다.
+- **요청·응답 본문을 진단 로그에 남기지 않는다.** `TaptionPlanDiagnosticsLogger`·`PRFBENCH`·콘솔에 헤더·본문·응답을 찍지 않는다(키가 헤더에서 새고, 원본 배치에는 좌표가 들어 있다). 남길 것은 `이벤트 수·배치 수·바이트·응답 코드·걸린 초`뿐이다.
 - **자동·백그라운드 전송 없음**: 이 전송은 버튼을 누를 때만, 앱이 전면일 때만 한다. 재시도도 사용자가 누른다.
 - 실패해도 앱이 죽거나 `userFacingError`로 화면을 덮지 않는다(이 카드 안 상태 줄만).
 
@@ -280,3 +283,12 @@ basis: 대표 직접 지시 (2026-11-20 18:0x 통화) — 「일단 디버깅 �
 - 같은 프로젝트를 쓰는 다른 앱의 관례(참고용, 저장소는 다름): BOKKI Encoder의 `Config/PostHog.xcconfig`(공개 템플릿, 빈 `POSTHOG_API_KEY` + `#include? "PostHog.local.xcconfig"`)와 `TaptionEncoder/Core/Diagnostics/ProductAnalytics.swift`(호스트 `https://us.i.posthog.com`, 가림 처리 후 전송). 이 저장소에서는 `AppSecrets` 방식으로 같은 모양을 만든다.
 - 지금 동작: `MapHomeSettingsSheets.swift:288~340`, `AppModel+Export.swift:36·93·103·115·193`, `DiagnosticsLogSupport.swift:6·267·695·717·812`.
 - 규칙: `AGENTS.md` 3·4·5·6·7·8·9·12절, 브리지 형식: `pickle-bridge/README.md`.
+
+## 점검 회신 (비야, 2026-11-20 18:51)
+
+- **보안: 4.1에 PostHog 프로젝트 API 키 값이 그대로 적혀 있어 자리표시자로 바꿨습니다**(값은 여기에 옮기지 않습니다). 넣는 곳은 git 무시 `TaptionPlan/AppSecrets.local.xcconfig` 하나로만 남겼습니다. **이미 `origin/main`에 커밋된 이력에는 값이 남아 있습니다** — 지우기로는 없어지지 않으니 대표가 PostHog에서 키를 회전할지 판단해야 합니다(문서 4.1 끝에 그 한 줄을 넣었습니다).
+- 키가 없을 때의 처리도 명시했습니다: 버튼 비활성·「키가 설정되지 않았습니다」 상태로 **코드·시험을 끝까지 넣고 회신**하며, `status: blocked`로 두지 않습니다.
+- 진단 로그·PRFBENCH에 요청·응답 본문을 남기지 않도록 4.4에 한 줄 더했습니다(헤더의 키·배치의 좌표가 샐 수 있음). 남길 것은 이벤트·배치 수, 바이트, 응답 코드, 걸린 초뿐입니다.
+- 개인정보 고리는 그대로 확인했습니다: 원본 업로드는 버튼+동의(1회, 되돌리기 있음)에만, 자동·백그라운드 전송 없음, `AGENTS.md` 4절 다섯 번째 좌표 예외·`PRIVACY.md`·`PrivacyInfo.xcprivacy`를 **같은 커밋**에 넣도록 되어 있습니다(배포 전 확인 항목).
+- 처리 순서를 머리에 넣었습니다: RTA1120A01 다음, 시작 경로·중계 서버 문서와 파일이 겹치지 않음.
+- 2절 표의 파일:줄은 18:4x `origin/main`에서 맞았습니다(`MapHomeSettingsSheets` 194·207~209·288·298·323~326·338·803, `AppModel+Export` 36·64·93·103·115). 고치지 않은 것: 이벤트·배치 상한(500표본/256KB/1MB/3MB)과 `$insert_id` 규칙은 제안대로 두었습니다.

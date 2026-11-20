@@ -25,7 +25,7 @@ basis: 대표 직접 지시 (2026-11-20 18:43 통화) — 「어, 별도 메뉴�
 | `server.mjs`의 `exclusive(...)`·`upload(...)`·`log(...)`·`dryRun` | 한 번에 하나만 도는 잠금, R2 올리기(`npx wrangler r2 object put … --remote`), 기록, 연습 모드 | 초기화도 **`exclusive`로 감싸고 `upload`로만** 올린다. 새 업로드 경로를 만들지 않는다 |
 | `POST /api/announcements/publish`의 `baseVersion` 검사 | 읽은 뒤 서버 공지가 바뀌었으면 409 | 초기화에도 같은 **버전 충돌 검사**를 둔다(6절) |
 | `POST /api/packs/publish`의 순서 | 파일 먼저, 카탈로그 나중에 + `rangeCheck`(206) | 초기화는 **카탈로그만** 만진다(파일은 그대로 둔다, 4절) |
-| `server.mjs`의 `BUILD_ROOT` 저장 | 묶은 결과·기간·내리기를 `build/<이름>-<시각>/`에 남긴다 | 초기화 전 상태도 같은 자리에 백업한다(4절) |
+| `server.mjs`의 `BUILD_ROOT` 저장 | 기본 저장 폴더는 `build/admin-console/`(`BUILD_ROOT`, `server.mjs:23`, 시험은 `ADMIN_CONSOLE_BUILD_ROOT`로 바꿈)이고 그 아래 `announce-<시각>/`·`schedule-<id>-<시각>/`·`withdraw-<id>-<시각>/`에 남긴다 | 초기화 전 상태도 **같은 자리(BUILD_ROOT 아래)** 에 백업한다(4절) |
 | `server.test.mjs`(CI의 `node --test tools/admin-console/server.test.mjs`) | 가짜 응답·연습 모드로 공지·팩 흐름을 시험 | 초기화 시험을 같은 방식으로 더한다(7절) |
 | `README.md` 「할 수 있는 것」 | 공지·시즌 팩·공개 기간·설정 | `초기화` 항목을 한 절 더한다 |
 
@@ -51,7 +51,7 @@ basis: 대표 직접 지시 (2026-11-20 18:43 통화) — 「어, 별도 메뉴�
 
 ## 4. 안전장치 (이 넷은 빠지면 안 됩니다)
 
-1. **먼저 백업, 그다음 올리기.** 실행 직전의 공지 JSON과 카탈로그 JSON을 `build/reset-<yyyy-MM-ddTHH-mm-ss>/before-announcements.json`·`before-index.json`에 남기고, 새로 올릴 문서도 같은 폴더에 둔다. 되돌리기는 그 `before-*`를 그대로 다시 올리는 일이다(다시 계산하지 않는다 — 계산이 바뀌면 "그때 그대로"가 아니다).
+1. **먼저 백업, 그다음 올리기.** 실행 직전의 공지 JSON과 카탈로그 JSON을 `BUILD_ROOT`(`build/admin-console/`, `.gitignore`의 `build/`) 아래 `reset-<yyyy-MM-ddTHH-mm-ss>/before-announcements.json`·`before-index.json`에 남기고, 새로 올릴 문서도 같은 폴더에 둔다. 되돌리기는 그 `before-*`를 그대로 다시 올리는 일이다(다시 계산하지 않는다 — 계산이 바뀌면 "그때 그대로"가 아니다). **백업 폴더는 `git add` 하지 않는다.**
 2. **버전·시각 충돌 검사.** 실행 요청에 미리보기 때 읽은 `baseVersion`(공지)과 `baseCatalogUpdatedAt`(카탈로그, 없으면 `JSON.stringify` 해시)을 실어 보내고, 그 사이 서버가 바뀌었으면 409로 멈춘다(지금 공지 올리기와 같은 문구 톤).
 3. **순서와 실패 처리.** 공지와 카탈로그는 서로 다른 키라 한쪽만 성공할 수 있다. 그래서 ① 백업 → ② 공지 → ③ 카탈로그 순으로 하고, ②에서 실패하면 ③을 하지 않고, ②성공·③실패면 기록에 「공지가 먼저 비워졌습니다. 되돌리기로 복구하십시오」를 남긴다. 어느 경우에도 되돌리기 버튼은 살아 있어야 한다.
 4. **연습 모드·잠금·기록.** `--dry-run`에서는 `upload`가 올리지 않으므로 그대로 두고, `exclusive("초기화", …)`로 다른 작업과 겹치지 않게 하고, 모든 단계를 `log(...)`로 남긴다.
@@ -71,6 +71,7 @@ POST /api/reset/restore   ← { dir }                                // 생략�
 ```
 
 - `confirm`은 글자 그대로 `"초기화"`를 받아야 한다. 화면 입력칸에 그것을 치게 하고, 서버에서도 검사한다(브라우저에서만 막지 않는다).
+- **`dir`은 서버가 정한다(중요).** `restore`의 `dir`을 본문에서 그대로 받아 폴더를 열면 `../../` 같은 값으로 **아무 파일이나 읽어 공개 버킷에 올리는 길**이 된다. ⑴ `dir`은 `^reset-\d{4}-\d{2}-\d{2}T[\d-]+$` 모양만 받고, ⑵ `resolve(BUILD_ROOT, dir)`가 **`BUILD_ROOT` 안에 있는지**(`relative()`가 `..`로 시작하지 않는지) 확인하며, ⑶ `before-announcements.json`·`before-index.json` **두 파일만** 읽는다(폴더의 다른 파일·하위 폴더 무시). `dir`을 생략하면 메모리에 둔 **마지막 초기화**만 쓴다.
 - `scopes`가 모두 `false`면 422.
 - `lastReset`은 프로세스 메모리와 `build/` 폴더 양쪽에서 찾는다(콘솔을 다시 켜도 마지막 백업으로 되돌릴 수 있게).
 
@@ -89,7 +90,8 @@ POST /api/reset/restore   ← { dir }                                // 생략�
 2. `schedules`만 켬 → 팩 항목은 남고 `schedule` 칸만 사라지는지.
 3. `confirm`이 틀리면 422, `scopes`가 다 꺼짐이면 422.
 4. `baseVersion`이 서버와 다르면 409(그리고 아무것도 올라가지 않았는지).
-5. `apply` 뒤 `build/reset-*`에 `before-announcements.json`·`before-index.json`이 있는지, `restore`가 그 내용을 그대로 다시 올리는지.
+5. `apply` 뒤 `BUILD_ROOT/reset-*`에 `before-announcements.json`·`before-index.json`이 있는지, `restore`가 그 내용을 그대로 다시 올리는지.
+5-1. `restore`의 `dir`이 `..`·절대경로·모양 밖 값이면 **400**이고, `BUILD_ROOT` 밖 파일을 읽지 않는지(임시 폴더에 `before-*` 아닌 파일을 두고 시험).
 6. `--dry-run`에서 `apply`·`restore`가 기록만 남기고 `upload`를 부르지 않는지.
 7. 토큰 없음·`Host` 다름이 초기화 라우트에서도 401·421로 막히는지.
 
@@ -100,3 +102,10 @@ POST /api/reset/restore   ← { dir }                                // 생략�
 - R2 팩 파일까지 지우는 선택을 넣었는지 여부와, 넣었다면 기본값·확인 방식.
 - 초기화 뒤 앱이 받기까지의 실제 시간(엣지 캐시 5분 + 앱 확인 30분)을 한 번 실측했는지 — 못 했으면 「미실측」이라고 적어 주십시오.
 - 커밋 해시.
+
+## 점검 회신 (비야, 2026-11-20 18:51)
+
+- **보안 구멍 하나를 막았습니다**: `POST /api/reset/restore`의 `dir`을 본문에서 그대로 받아 폴더를 열면 `../`로 아무 파일이나 읽어 공개 버킷에 올릴 수 있었습니다. 5절에 ⑴ `^reset-…$` 모양 검사 ⑵ `BUILD_ROOT` 안인지 확인 ⑶ `before-*` 두 파일만 읽기 ⑷ 생략 시 메모리의 마지막 초기화만, 를 넣고 `..`·절대경로 시험을 7절에 더했습니다.
+- 백업 자리를 실제 코드에 맞췄습니다: `BUILD_ROOT`의 기본값은 `build/admin-console/`(`server.mjs:23`)이고, 기존 폴더 이름도 `announce-<시각>` 꼴입니다 → `build/reset-…` 대신 `build/admin-console/reset-…`으로 적고 「백업 폴더는 `git add` 하지 않는다」를 붙였습니다(지시서의 첫 가정과 다름).
+- 인용은 18:4x `origin/main`에서 맞았습니다 — `index.html` 14~18(탭 셋)·22·65·78·90(기록 패널)·96~101(확인 상자), `server.mjs` 265(`exclusive`)·271(routes)·105(`upload`)·286(`baseVersion`)·333~342(파일 먼저·카탈로그 나중·`rangeCheck`)·387·409(Host 421·토큰 401), CI의 `node --test tools/admin-console/server.test.mjs`.
+- 고치지 않은 것: 범위 기본값(셋 다 켬)·확인 문구·R2 팩 파일을 지우지 않는 결정·드라이런 정책은 대표가 정한 범위라 그대로 두었습니다.

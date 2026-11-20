@@ -16,6 +16,8 @@ basis: 대표 직접 지시 (2026-11-20 18:1x 통화) — 앞서 올린 RTA1120A
 - **만들지 않는 것**: 새 명령 규격, 새 로그·배너 체계, APNs 신설(이미 있음 — 9절), 공지·시즌·항공편 쪽 캐시(기존 것 재사용).
 - **배포는 하지 않습니다.** 코드·시험·묶기(`--dry-run`)까지만 하고, `wrangler deploy`는 대표 확인 뒤입니다(8절).
 
+**처리 순서(2026-11-20 점검)**: 파일 이름 순서로 `1805 RTA1120A01` **다음 다섯 번째**이고, A01을 끝낸 뒤에만 손대는 문서입니다. 특히 **`1820-국내선-항공편-카드-조회.md`(FLT1120A01)가 같은 날 production 배포를 승인받아 먼저 돌 수 있으므로**, 배포를 포함한 문서가 이 코드를 삼키는 경우를 8절 마지막 항목대로 확인하십시오(킄 없이 `GET /rt/ws` → **401**이면 라우트가 살아 있다는 뜻).
+
 ## 1. 대표 시나리오 — 이것이 합격선
 
 1. 대표가 앱에서 **여행 화면을 열어 둔 채** 통화한다.
@@ -278,4 +280,12 @@ new_sqlite_classes = ["RealtimeRoom"]
 - 같은 모양의 선례: `server/trip-relay/src/share.js`(`ShareRoom` Hibernation 소켓 전체), `Packages/TaptionTripShare/Sources/TaptionTripShare/ShareTransport.swift`·`ShareSocketChannel.swift`·`ShareSessionTypes.swift`.
 - 규격: `docs/ACTIVITY_RELAY_API.md`(경로·명령), `docs/AI_RELAY_PLAN.md`(AI 파이프라인), `server/trip-relay/README.md`(배포·비밀값·D1).
 - 규칙: `AGENTS.md` 2·4·5·6·7·8·9·12절, 브리지 형식: `pickle-bridge/README.md`.
+
+## 점검 회신 (비야, 2026-11-20 18:51)
+
+- 보안: 토큰을 쿼리에 두지 않고 헤더로만, 기기 ID를 저장·로그하지 않고, 이벤트에 본문·금액·이름·좌표를 싣지 않고, `POST /event`(발행)는 DO 바인딩으로만 닿는 문으로 둔 설계는 그대로 유지했습니다. 방 이름을 주인 키 해시(`ctx.master`)로 쓰는 것도 그대로입니다(원문 아님).
+- 비업그레이드 `GET /rt/ws` 426·키 없음 401·AI 키 401/403·연결 상한 5를 시험에 넣어 둔 것도 그대로이며, 배포 뒤 `GET /rt/ws` **401 확인**을 회신 항목으로 넣었습니다.
+- 요금(과금): hibernation 강제·타이머 금지가 요금 조건이라는 서술은 Cloudflare 문서와 어긋나지 않고, 한도 초과 시 폴링 폴백이 안전판이라는 구조도 그대로입니다.
+- 2절의 파일:줄은 18:4x `origin/main`에서 **그대로 맞았습니다** — `share.js` 148·695~706·708~735·736~750·757·773~783, `wrangler.toml` 73~81, `state.js` 781, `store.js` 56·78·127·194·363·512·536, `apns.js` 74·90, `index.js` 366(ROUTES)·559~566(authorized), `fakes.mjs` 121~125.
+- 처리 순서를 머리에 넣고 FLT 배포와의 경합을 한 줄 더했습니다. 고치지 않은 것: 라우트 모양(`/rt/ws`)·이벤트 규격·요금 계산·대안 판단(새 `RealtimeRoom` 클래스)은 비야 제안이라 그대로 두었습니다.
 - 근거(Cloudflare): `developers.cloudflare.com/durable-objects/platform/pricing/`(플랜·한도·WebSocket 과금·SQLite 저장 한도), `developers.cloudflare.com/durable-objects/best-practices/websockets/`(Hibernation API·`acceptWebSocket`·`webSocketClose`).

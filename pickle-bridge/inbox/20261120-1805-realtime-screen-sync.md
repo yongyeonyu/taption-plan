@@ -16,6 +16,8 @@ basis: 대표 직접 지시 (2026-11-20 통화) — 「화면이 실시간으로
 - **만들지 않는 것**: **지시 기록·로그 화면.** 이미 「AI 연결 › AI가 한 일」이 있습니다(`TaptionPlan/UI/AssistantSettingsView.swift:30`, `AssistantActionLog`·`AssistantActionLogView`). 로그를 새로 만들지 않고, 필요하면 목록 맨 위에 「방금 반영됨」 강조만 얹습니다(선택 사항 한 줄).
 - **서버는 손대지 않습니다.** 폴링은 앱만 고쳐 됩니다. 밀어주기(WebSocket/SSE)와 서버 푸시 변경은 11절의 **대표 승인 대상**입니다.
 
+**처리 순서와 후속 문서(2026-11-20 점검)**: 파일 이름 순서로 `1747 LAG1120A01`·`1753 BUB1120A01` **다음 세 번째**입니다. 이 문서는 홈의 폴링 루프(`MapHomeView+Support.swift:230~241`)를 바꾸므로 **LAG1120A01의 콜드 실행 측정이 끝난 뒤**에 적용합니다. 그리고 이 문서 11절의 「WebSocket은 이번에 하지 않습니다」는 **뒤에 올린 `1820 RTA1120A02`(중계 WebSocket)에서 대표 승인분으로 처리**됩니다 — 이 문서가 만드는 입구(`AssistantLiveSync.refresh` 하나)·화면 추적(`hold`/`release`)·설정 세그먼트(끔/3초/1초)를 A02가 그대로 딛고 서므로, **A01을 먼저 끝내고 A02를 얹습니다**(둘을 거꾸로 하거나 한 커밋에 합치지 않음).
+
 ## 1. 대표 시나리오 — 이것이 합격선
 
 1. 대표가 앱에서 **여행 화면(여행 계획·일정)을 열어 둔 상태**로 통화한다.
@@ -206,3 +208,10 @@ AssistantLiveSync (새 파일, 앱 target — 기존 UI 파일 관례 위치)
 - 지금 동작의 선례: `MapHomeView+Support.swift:216~241`, `AssistantCommandRunner.swift:1~272`, `AssistantCommands.swift:295~303`, `TripRelay.swift:8~20`, `AssistantCommandTransport.swift:1~117`.
 - 이전 지시서: `pickle-bridge/done/20261119-2330-travel-flight-and-alert-parser.md`(여행 모드 항공편 조회·파서 — 대표 시나리오의 항공편 표시가 어디로 들어가는지 참고), `pickle-bridge/inbox/20261120-1747-launch-lag-season-pack.md`(시작 경로·측정 방식).
 - 규칙: `AGENTS.md` 2·4·5·6·7·8·9·12절, 브리지 형식: `pickle-bridge/README.md`.
+
+## 점검 회신 (비야, 2026-11-20 18:51)
+
+- 머리에 처리 순서를 넣었습니다: LAG1120A01(시작 측정) → 이 문서(폴링 입구) → RTA1120A02(소켓). 11절의 「WebSocket은 이번에 하지 않는다」가 A02 지시서로 이어진다는 한 줄도 같은 자리에 적었습니다.
+- 2절 표의 파일:줄은 2026-11-20 18:4x `origin/main`에서 **그대로 맞았습니다** — `MapHomeView+Support` 230~241(10초 깸)·225~227, `AssistantCommandTransport` 75·90·92·114, `AssistantCommandRunner` 8·88·177·234·274, `AssistantCommands` 295·301(`204`), `TripRelay` 8~20, `TravelModeView` 195·333, `TaptionPlanApp` 108~114, `AssistantSettingsView` 26~31.
+- 동시 작업 정리: 이 문서의 홈 폴링 루프는 BUB1120A01(시작 훅)·LAG1120A01(시작 경로)과 같은 `.task` 주변을 만집니다. 파일이 달라도 **한 커밋에 섞지 않고**, 폴링 간격(3초·1초, 대표 결정)은 그대로 둡니다.
+- 고치지 않은 것: 4절의 세 값(끔/3초/1초)·백그라운드 정지·저전력 완화, 7절의 `/plan` 카드 방식(b는 「비야 제안」인 채로 둠), 11절의 서버 변경 보류는 대표 결정·승인 대상이라 손대지 않았습니다.

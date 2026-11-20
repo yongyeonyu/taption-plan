@@ -12,6 +12,8 @@ basis: 대표 직접 지시 (2026-11-20 17:45 통화) — 「일정이 있으면
 
 이 지시서는 **바꿀 동작을 못 박고, 무엇을 건드리지 않을지도 같이 못 박습니다.** 2절이 계약의 전부이고, 3절은 권장 구현입니다. 세부 구현은 구현자 판단이되 2절·6절·7절은 그대로 지켜야 합니다.
 
+**처리 순서(브리지 공통, 2026-11-20 점검)**: 파일 이름 순서로 `1747 LAG1120A01`(시작 지연) **다음 두 번째**입니다. 시작 훅이 LAG가 재는 콜드 실행 구간에 들어가므로 **LAG의 전후 측정이 끝난 뒤**에 붙입니다. 폴링을 만지는 `1805 RTA1120A01`과는 다른 객체(`AssistantBubbleBoard`)를 만지므로 서로 덮지 않지만, 둘 다 홈 진입 `.task` 주변을 건드리니 **한 커밋에 섞지 않습니다**.
+
 ## 이 요청의 범위 (먼저 읽기)
 
 1. **바꾸는 것 하나**: 앱을 켠 직후의 말풍선 **선택 순서**. 지금은 event가 그날 하루 종일 1순위라, 아침에 어제 요약을 event로 넣으면 하루 종일 그 문구만 떠서 시간대별 routine 말풍선이 전부 가려집니다(대표가 직접 겪고 지적). event를 「하루 종일 붙잡는 것」에서 **「켤 때 한 번 먼저 보여 주고 시간대 말풍선으로 넘기는 것」** 으로 바꿉니다.
@@ -93,7 +95,7 @@ enum AssistantBubbleLaunchReveal {
 
 3-2. **보드 세션 상태**: `AssistantBubbleBoard`에 `@ObservationIgnored private var launchReveal: AssistantBubbleLaunchReveal.Session?`과 취소 가능한 `Task`(또는 `Task<Void, Never>?`)를 두고, `refresh(now:)`가 `launchReveal`을 보고 `active`를 고릅니다. 세션은 **보드에만** 있고 파일·백업·서버에 저장하지 않습니다(다음 실행은 새 세션).
 
-3-3. **시작 훅**: 전면 진입을 아는 자리에서 `beginLaunchReveal(now:)`(가칭)를 부릅니다 — 후보는 `AppShellView`의 장면 단계 처리(`:109` → `:445`)와 지도 화면 부착 지점입니다. 지켜야 할 것:
+3-3. **시작 훅**: 전면 진입을 아는 자리에서 `beginLaunchReveal(now:)`(가칭)를 부릅니다 — 후보는 **지도 화면 부착 지점**(`AssistantSettingsView.swift:136~171`의 `AssistantActivityObserver`가 붙는 자리, `:224` `assistantLayers` overlay)입니다. `AppShellView`는 **동결 파일이라 고치지 않습니다**(7절). `AppShellView.swift:109~110` → `:445`는 **읽고 참고만** 합니다(장면 단계가 어디서 들어오는지 확인하는 용도). 지켜야 할 것:
 - **지도가 보이지 않을 때(잠금·첫 실행 안내·시트가 전부 덮음) 시작하지 않습니다.**
 - 같은 시작에서 두 번 불려도 한 번만 시작합니다(멱등).
 - 알림 센터·제어 센터처럼 `.inactive`만 스친 경우, 지도 뷰가 다시 만들어지는 경우에는 시작하지 않습니다.
@@ -165,3 +167,10 @@ enum AssistantBubbleLaunchReveal {
 - 이 지시서 1절의 파일:줄은 2026-11-20 17:51의 `ed824ea8`에서 확인한 것입니다. 착수 때 `rg -n`으로 다시 확인하고, 달라졌으면 회신에 적으십시오.
 - 관련 기록: `test.md` `BUB1110A01`(AI 말풍선 도입, 대표 결정), `BUB1110A02`(event/routine 종류·우선순위·정리), `BBL1111A01`(글 폭·줄 수), `BBL1111A02`(누르면 접기), `FLT1119A01`(항공편 event 말풍선), `SEA1120A01·A02`(시즌 팩 오버레이·산타).
 - 규칙: `AGENTS.md` 2·4·5·6·7·8절, `pickle-bridge/README.md`. 성능 함정은 `DEVELOPMENT.md` 「자주 걸리는 함정」.
+
+## 점검 회신 (비야, 2026-11-20 18:51)
+
+- 3-3의 시작 훅 후보에서 **모순 하나를 고쳤습니다**: `AppShellView`를 후보로 적어 두고 7절에서는 같은 파일을 동결 파일로 금지하고 있었습니다. 이제 `AppShellView`는 **읽기 참고만** 하고, 훅은 지도 화면 부착 지점(`AssistantActivityObserver`·`assistantLayers`)에 붙입니다.
+- 머리에 처리 순서를 넣었습니다: LAG1120A01 다음, RTA1120A01과 같은 커밋에 섞지 않기(LAG의 콜드 실행 측정을 오염시키지 않기 위해).
+- 1절 표의 파일:줄은 2026-11-20 18:4x `origin/main`에서 **그대로 맞았습니다** — `AssistantBubble.swift` 118~120 주석·161·169~175·178·184·207~213·218~222·229~243·245·251·253~257·301, `MapHomeMapAnnotations` 403·419~424·531~556, `MapHomeView+Map` 683, `DefaultBubblePool` 66~79, `AssistantSettingsView` 136~171·224, `AppShellView` 109~110·445, `FlightBubble` 21~26, `AssistantDataActions` 95~98, `AssistantAppValues` 81, `AssistantPhase3Tests` 618·641·656, `pbxproj` 222·1132.
+- 고치지 않은 것: 2절 계약 7항(10초·탭으로 즉시 넘김·같은 실행 재발 없음)·6절 확인 기준·7절 하지 말 것(영구 숨김 `xmark` 유지, 30초 루프 유지)은 대표 지시·기존 결정이라 손대지 않았습니다.
