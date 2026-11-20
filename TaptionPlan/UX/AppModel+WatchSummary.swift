@@ -396,8 +396,10 @@ extension AppModel {
                 into: snapshot.actuals,
                 linkedPlan: linkedPlan,
                 atHome: atHome,
+                homeWindow: watchSummaryHomeWindow(summary),
                 vitals: vitals
             )
+            snapshot.actuals = WatchHomeWindow.trimmingAwayFromHome(snapshot.actuals, away: awayFromHomeSpans(), asOf: Date())
         } else {
             // 답변 전에는 후보를 최종 활동으로 보이지 않는다. 원시 센서와
             // 요약 아카이브는 위에서 이미 보존했다.

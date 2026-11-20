@@ -226,7 +226,7 @@ final class RawSensorReplayTests: XCTestCase {
             for (label, records) in [("stored", actuals), ("meals", carved)] {
                 let rail = MapHomePlaceFirstPolicy.apply(
                     to: MapHomeTimeRailSegmentEngine.segments(from: records, travel: day.travel, on: start, asOf: end, calendar: calendar),
-                    stays: day.places ?? [], frequentPlaces: places, on: start, calendar: calendar
+                    stays: day.places ?? [], frequentPlaces: places, readings: readings, on: start, calendar: calendar
                 )
                 for segment in rail {
                     print("REPLAY rail-\(label) \(formatter.string(from: start).prefix(5)) \(clock(segment.startMinute))–\(clock(segment.endMinute)) "

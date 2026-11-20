@@ -7,6 +7,7 @@ enum AppleWatchSensorActivityEngine {
         into existing: [ActualRecord],
         linkedPlan: PlanRecord?,
         atHome: Bool = false,
+        homeWindow: TimeSpan? = nil,
         vitals: WatchChunkVitals? = nil
     ) -> [ActualRecord] {
         if summary.isAmbient == true {
@@ -14,6 +15,7 @@ enum AppleWatchSensorActivityEngine {
                 summary,
                 into: existing,
                 atHome: atHome,
+                homeWindow: homeWindow,
                 vitals: vitals
             )
         }
@@ -159,6 +161,7 @@ enum AppleWatchSensorActivityEngine {
         _ summary: TaptionWatchSensorSummary,
         into existing: [ActualRecord],
         atHome: Bool,
+        homeWindow: TimeSpan?,
         vitals: WatchChunkVitals?
     ) -> [ActualRecord] {
         let recordID = TaptionWatchStableID.ambientActivityRecord(
@@ -172,10 +175,12 @@ enum AppleWatchSensorActivityEngine {
             }
             return actual.id != summary.sessionID
         }
-        let start = summary.startedAt
-        let end = max(summary.startedAt, summary.endedAt)
+        let chunkEnd = max(summary.startedAt, summary.endedAt)
+        // 집 기록은 묶음 가운데 집에 있던 부분에만 둔다(HSW1120A01).
+        let start = max(summary.startedAt, homeWindow?.start ?? summary.startedAt)
+        let end = max(start, min(chunkEnd, homeWindow?.end ?? chunkEnd))
         let verdict = WatchAmbientChunkInterpreter.interpret(
-            duration: end.timeIntervalSince(start),
+            duration: chunkEnd.timeIntervalSince(summary.startedAt),
             sampleCount: summary.accelerometerSampleCount,
             standardDeviationG: summary.accelerometerStandardDeviationG,
             segments: summary.behaviorSegments ?? []

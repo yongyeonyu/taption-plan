@@ -1224,6 +1224,78 @@ extension FeatureEngineTests {
         XCTAssertTrue(outsideHome.isEmpty)
     }
 
+    // MARK: - HSW1120A01 집을 나선 뒤의 시간은 「집안일」이 아니다
+
+    /// 아이폰 18 11/19: 09:24–10:17 묶음이 집 체류(–09:31)와 조금 겹쳤다고 출근길·회사까지 집안일이 됐다.
+    func testHomeWindowKeepsOnlyTheHomePartOfAWatchChunk() {
+        let base = makeDate(2026, 11, 19, 9)
+        let chunk = TimeSpan(start: base.addingTimeInterval(24 * 60), end: base.addingTimeInterval(77 * 60))
+        let home = TimeSpan(start: base.addingTimeInterval(-120 * 60), end: base.addingTimeInterval(31 * 60))
+        let office = TimeSpan(start: base.addingTimeInterval(68 * 60), end: base.addingTimeInterval(160 * 60))
+
+        let window = WatchHomeWindow.window(summary: chunk, homeStays: [home], otherStays: [office], route: [], latestReadingAtHome: false)
+        XCTAssertEqual(window, TimeSpan(start: chunk.start, end: home.end))
+
+        // 집 체류와 30초만 겹치면 집으로 보지 않는다.
+        let brush = TimeSpan(start: home.end.addingTimeInterval(-30), end: home.end.addingTimeInterval(600))
+        XCTAssertNil(WatchHomeWindow.window(summary: brush, homeStays: [home], otherStays: [], route: [], latestReadingAtHome: false))
+        // 시계 위치가 모두 집 밖이면 휴대폰 최근 위치가 집이어도 집이 아니다.
+        XCTAssertNil(WatchHomeWindow.window(summary: chunk, homeStays: [], otherStays: [], route: [(chunk.start, false)], latestReadingAtHome: true))
+        // 휴대폰 최근 위치만 집이면 묶음 안의 다른 곳 체류 뒤만 집이다.
+        let errand = TimeSpan(start: base.addingTimeInterval(30 * 60), end: base.addingTimeInterval(50 * 60))
+        XCTAssertEqual(
+            WatchHomeWindow.window(summary: chunk, homeStays: [], otherStays: [errand], route: [], latestReadingAtHome: true),
+            TimeSpan(start: errand.end, end: chunk.end)
+        )
+        XCTAssertNil(WatchHomeWindow.window(summary: chunk, homeStays: [], otherStays: [office], route: [], latestReadingAtHome: true))
+    }
+
+    func testAmbientHouseworkIsClippedToTheHomeWindow() {
+        let base = makeDate(2026, 11, 19, 9)
+        let busy: [(WatchBehaviorKind, TimeInterval, TimeInterval, [String])] = [
+            (.walking, 0, 120, []), (.unknown, 120, 420, [WatchBehaviorClassifier.irregularMotionEvidence]), (.stationary, 420, 600, []),
+        ]
+        let summary = ambientSummary(
+            sessionID: UUID(), sequence: 1, start: base.addingTimeInterval(24 * 60), standardDeviation: 0.07, segments: busy
+        )
+        let unclipped = AppleWatchSensorActivityEngine.upserting(summary, into: [], linkedPlan: nil, atHome: true)
+        XCTAssertEqual(unclipped.first?.endedAt, summary.endedAt, "창이 없으면 묶음 전체")
+        let window = TimeSpan(start: summary.startedAt, end: base.addingTimeInterval(31 * 60))
+        let actuals = AppleWatchSensorActivityEngine.upserting(
+            summary, into: [], linkedPlan: nil, atHome: true, homeWindow: window
+        )
+        let housework = actuals.filter { $0.behavior == WatchBehaviorKind.housework.rawValue }
+        XCTAssertEqual(housework.count, 1)
+        XCTAssertEqual(housework.first?.startedAt, window.start)
+        XCTAssertEqual(housework.first?.endedAt, window.end, "집을 나선 09:31에서 끝난다")
+    }
+
+    func testStoredHouseworkIsTrimmedAwayFromRidesAndOtherPlaces() {
+        let base = makeDate(2026, 11, 19, 9)
+        let stored = ActualRecord(
+            id: UUID(), planID: nil, routineID: nil, title: "집안일", categoryID: "activity",
+            startedAt: base.addingTimeInterval(24 * 60), endedAt: base.addingTimeInterval(77 * 60),
+            source: .appleWatch, confidence: .high, createdAt: base,
+            behavior: WatchBehaviorKind.housework.rawValue, evidence: [], sensorChunkID: UUID(), modelVersion: "watch-har-v3"
+        )
+        let ride = TimeSpan(start: base.addingTimeInterval(28 * 60), end: base.addingTimeInterval(69 * 60))
+        let office = TimeSpan(start: base.addingTimeInterval(68 * 60), end: base.addingTimeInterval(160 * 60))
+        let trimmed = WatchHomeWindow.trimmingAwayFromHome([stored], away: [office, ride], asOf: base.addingTimeInterval(86_400))
+        XCTAssertEqual(trimmed.count, 1)
+        XCTAssertEqual(trimmed.first?.endedAt, ride.start)
+
+        // 회사 체류 안에 통째로 든 집안일은 지운다(11/19 12:23 회사).
+        var atOffice = stored
+        atOffice.startedAt = office.start.addingTimeInterval(600)
+        atOffice.endedAt = office.start.addingTimeInterval(900)
+        XCTAssertTrue(WatchHomeWindow.trimmingAwayFromHome([atOffice], away: [office], asOf: base.addingTimeInterval(86_400)).isEmpty)
+
+        // 사용자가 고친 기록은 그대로 둔다.
+        var owned = atOffice
+        owned.manuallyCorrected = true
+        XCTAssertEqual(WatchHomeWindow.trimmingAwayFromHome([owned], away: [office], asOf: base.addingTimeInterval(86_400)), [owned])
+    }
+
     // MARK: - WSN1112A01 평상시 묶음 → 집 안 활동
 
     private func ambientSummary(

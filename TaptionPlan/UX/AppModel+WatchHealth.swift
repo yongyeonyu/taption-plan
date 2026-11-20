@@ -425,44 +425,69 @@ extension AppModel {
     func isWatchSummaryAtHome(
         _ summary: TaptionWatchSensorSummary
     ) -> Bool {
+        watchSummaryHomeWindow(summary) != nil
+    }
+
+    /// 시계 묶음 가운데 집에 있던 시간. 집 체류와 조금만 겹쳐도 묶음 전체를 집으로 보면
+    /// 집을 나선 뒤 출근길·회사 시간까지 「집안일」이 된다(HSW1120A01). 겹친 부분만 돌려준다.
+    func watchSummaryHomeWindow(
+        _ summary: TaptionWatchSensorSummary
+    ) -> TimeSpan? {
         let homes = snapshot.settings.frequentPlaces.filter {
             $0.kind == .home && $0.point != nil
                 && $0.isAutomaticRecordingEnabled
         }
-        guard !homes.isEmpty else { return false }
-        let span = TimeSpan(start: summary.startedAt, end: summary.endedAt)
-        if snapshot.places.contains(where: { place in
-            guard place.span.intersection(with: span) != nil else { return false }
-            return homes.contains { home in
+        guard !homes.isEmpty else { return nil }
+        func isHome(_ point: GeoPoint) -> Bool {
+            homes.contains {
+                guard let homePoint = $0.point else { return false }
+                return distanceMeters(point, homePoint) <= $0.radiusMeters
+            }
+        }
+        let span = TimeSpan(start: summary.startedAt, end: max(summary.startedAt, summary.endedAt))
+        let homeStays = snapshot.places.filter { place in
+            homes.contains { home in
                 place.displayName == home.name
                     || place.placeKey == home.stablePlaceKey
             }
-        }) {
-            return true
-        }
-        if summary.routePoints?.contains(where: { point in
-            let coordinate = GeoPoint(
+        }.map(\.span)
+        let otherStays = snapshot.places.filter { place in
+            !homes.contains { home in
+                place.displayName == home.name
+                    || place.placeKey == home.stablePlaceKey
+            }
+        }.map(\.span)
+        let route = (summary.routePoints ?? []).map { point in
+            (point.capturedAt, isHome(GeoPoint(
                 latitude: point.latitude,
                 longitude: point.longitude,
                 altitude: point.altitude,
                 horizontalAccuracy: point.horizontalAccuracy,
                 verticalAccuracy: point.verticalAccuracy
-            )
-            return homes.contains {
-                guard let homePoint = $0.point else { return false }
-                return distanceMeters(coordinate, homePoint) <= $0.radiusMeters
+            )))
+        }
+        let latestAtHome: Bool = {
+            guard let latestSensorReading,
+                  let point = latestSensorReading.point,
+                  abs(latestSensorReading.timestamp.timeIntervalSince(summary.endedAt)) <= 10 * 60 else {
+                return false
             }
-        }) == true {
-            return true
-        }
-        guard let latestSensorReading,
-              let point = latestSensorReading.point,
-              abs(latestSensorReading.timestamp.timeIntervalSince(summary.endedAt)) <= 10 * 60 else {
-            return false
-        }
-        return homes.contains {
-            guard let homePoint = $0.point else { return false }
-            return distanceMeters(point, homePoint) <= $0.radiusMeters
-        }
+            return isHome(point)
+        }()
+        return WatchHomeWindow.window(
+            summary: span, homeStays: homeStays, otherStays: otherStays,
+            route: route, latestReadingAtHome: latestAtHome
+        )
+    }
+
+    /// 집 밖에 있던 시간: 집이 아닌 곳 체류와 걷기·달리기가 아닌 이동(HSW1120A01).
+    func awayFromHomeSpans() -> [TimeSpan] {
+        let homes = snapshot.settings.frequentPlaces.filter { $0.kind == .home }
+        guard !homes.isEmpty else { return [] }
+        let stays = snapshot.places.filter { place in
+            !homes.contains { place.displayName == $0.name || place.placeKey == $0.stablePlaceKey }
+        }.map(\.span)
+        let rides = snapshot.travel.filter { $0.mode != .walking && $0.mode != .running }.map(\.span)
+        return stays + rides
     }
 }

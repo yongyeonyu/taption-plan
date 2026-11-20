@@ -212,9 +212,11 @@ extension AppModel {
                 into: snapshot.actuals,
                 linkedPlan: linkedPlan,
                 atHome: isWatchSummaryAtHome(summary),
+                homeWindow: watchSummaryHomeWindow(summary),
                 vitals: vitals[WatchChunkVitals.key(for: summary)]
             )
         }
+        snapshot.actuals = WatchHomeWindow.trimmingAwayFromHome(snapshot.actuals, away: awayFromHomeSpans(), asOf: Date())
         snapshot.actuals = ActualRecordSuppressionEngine.visibleRecords(
             from: snapshot.actuals,
             suppressedIDs: snapshot.settings.suppressedActualIDs
