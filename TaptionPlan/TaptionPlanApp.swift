@@ -221,6 +221,8 @@ enum TaptionPlanBackgroundRefresh {
         let taskBox = TaptionBackgroundTaskBox(task)
         let operation = Task { @MainActor in
             _ = SensorBackgroundCoordinator.shared.receiveWake(.bgAppRefresh)
+            // 앱을 열지 않아도 새 공지·업데이트 안내를 알림으로 받는다(BGN1120A01). Pro 잠금과 상관없다.
+            await AnnouncementService.shared.refreshAndNotify()
             guard await TaptionProAccessController.currentAccessGranted() else {
                 taskBox.complete(success: true)
                 logger.notice("Background refresh skipped while Pro is locked")
@@ -233,6 +235,9 @@ enum TaptionPlanBackgroundRefresh {
             // 앱을 열지 않아도 AI 비서 명령을 반영하고 바뀐 날을 올린다(AIR1110A02).
             await AssistantCommandRunner.runInBackground(model: model)
             await DailyCardBubblePrompt.run()
+            // 시즌 팩도 미리 받아 둔다(쿨다운·ETag는 패키지가 지킨다).
+            SeasonPackAdapter.sync(model: model)
+            await SeasonPackAdapter.refresh()
             taskBox.complete(success: success)
             logger.notice(
                 "Background refresh completed: success=\(success, privacy: .public)"
@@ -443,6 +448,12 @@ final class TaptionPlanAppDelegate:
         if let raw = response.notification.request.content.userInfo[ArrivalCardManager.userInfoStopID] as? String,
            let stopID = UUID(uuidString: raw) {
             await ArrivalCardManager.shared.open(stopID: stopID)
+            return
+        }
+        // 공지 알림을 누르면 받아 둔 공지 시트를 연다(BGN1120A01).
+        if response.notification.request.content.userInfo[AnnouncementService.userInfoID] is String {
+            await AnnouncementService.shared.refresh()
+            AnnouncementService.shared.requestSheet()
             return
         }
         if let kind = response.notification.request.content.userInfo[MapHomeAlarmCenter.userInfoKind] as? String {

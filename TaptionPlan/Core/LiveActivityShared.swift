@@ -4,6 +4,24 @@ import OSLog
 import SwiftUI
 import TaptionPlanCore
 
+/// 시즌 팩 그림을 잠금화면·다이나믹 아일랜드에도(SPL1120A01). 위젯은 앱의 팩 저장소를 읽지 못해
+/// 앱이 그룹 공간에 작은 PNG(모자·아이콘)로 두고, 팩이 꺼지면 지운다. 위젯은 그리는 때마다 그대로 읽는다.
+enum TaptionSeasonArt {
+    enum Kind: String, CaseIterable { case hat, icon }
+    /// 라이브 액티비티 그림은 작아야 한다(긴 변 픽셀·파일 크기).
+    static let maximumPixels: CGFloat = 96
+    static let maximumBytes = 64_000
+
+    static func url(_ kind: Kind, root: URL? = TaptionPlanSharedContainer.containerURL()) -> URL? {
+        root?.appendingPathComponent("SeasonPackArt", isDirectory: true).appendingPathComponent("\(kind.rawValue).png")
+    }
+
+    static func image(_ kind: Kind, root: URL? = TaptionPlanSharedContainer.containerURL()) -> UIImage? {
+        guard let url = url(kind, root: root), let data = try? Data(contentsOf: url), data.count <= maximumBytes else { return nil }
+        return UIImage(data: data)
+    }
+}
+
 struct TaptionActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         private enum CodingKeys: String, CodingKey {

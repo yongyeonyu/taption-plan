@@ -3,6 +3,7 @@ import SeasonPackKit
 import Synchronization
 import TaptionAssistantKit
 import UIKit
+import TaptionPlanCore
 
 /// `SeasonPackKit`이 아는 앱의 유일한 자리(SEA1119A01). 앱 타입을 아는 곳은 여기뿐이고, 패키지는 `SeasonPackHost`만 본다.
 /// 집 좌표는 기기 안 일몰 계산에만 쓰이고 어디로도 보내지 않는다.
@@ -71,10 +72,50 @@ final class SeasonPackAdapter: SeasonPackHost {
             backgroundSessionID: backgroundSessionID
         ))
         SeasonPackCenter.shared.recompute()
+        exportWidgetArt()
     }
 
     /// 앱 진입·`scenePhase == .active`: 팩 새로고침(30분 쿨다운·ETag·8초·조용한 실패는 패키지가 지킨다).
-    @MainActor static func refresh() async { await SeasonPackCenter.shared.refresh() }
+    @MainActor static func refresh() async {
+        await SeasonPackCenter.shared.refresh()
+        exportWidgetArt()
+    }
+
+    /// 잠금화면·다이나믹 아일랜드가 쓸 모자·아이콘을 그룹 공간에 둔다(SPL1120A01). 팩이 꺼져 있으면 지운다.
+    @MainActor static func exportWidgetArt(root: URL? = TaptionPlanSharedContainer.containerURL()) {
+        let center = SeasonPackCenter.shared
+        let hat = center.accessoryImageData("hat")
+        let icon = center.active.flatMap { pack in pack.manifest.menuIcons?.first.flatMap { pack.assetData($0.icon) } }
+        for (kind, data) in [(TaptionSeasonArt.Kind.hat, hat), (.icon, icon)] {
+            guard let url = TaptionSeasonArt.url(kind, root: root) else { continue }
+            writeArt(data.flatMap(smallPNG), to: url)
+        }
+    }
+
+    /// 긴 변을 `TaptionSeasonArt.maximumPixels` 이하로 줄인 PNG. 읽지 못하면 nil.
+    static func smallPNG(_ data: Data) -> Data? {
+        guard let image = UIImage(data: data), image.size.width > 0, image.size.height > 0 else { return nil }
+        let pixels = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+        let ratio = min(1, TaptionSeasonArt.maximumPixels / max(pixels.width, pixels.height))
+        let size = CGSize(width: (pixels.width * ratio).rounded(), height: (pixels.height * ratio).rounded())
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let png = UIGraphicsImageRenderer(size: size, format: format).pngData { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+        return png.count <= TaptionSeasonArt.maximumBytes ? png : nil
+    }
+
+    /// 바뀐 때만 쓰고, 없으면 지운다. 쓰거나 지웠으면 참.
+    @discardableResult
+    static func writeArt(_ data: Data?, to url: URL, fileManager: FileManager = .default) -> Bool {
+        guard let data else {
+            guard fileManager.fileExists(atPath: url.path) else { return false }
+            try? fileManager.removeItem(at: url)
+            return true
+        }
+        if (try? Data(contentsOf: url)) == data { return false }
+        try? fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        return (try? data.write(to: url, options: .atomic)) != nil
+    }
 
     /// 「모든 데이터 삭제」: 받은 팩·메모·시연 기록을 지운다(센터가 아직 없어도 폴더는 지운다).
     @MainActor static func deleteAll() {

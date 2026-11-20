@@ -236,4 +236,36 @@ final class AnnouncementTests: XCTestCase {
         XCTAssertNotNil(reopened.dismissed["whats-new-354"], "앱을 다시 켜도 닫은 것을 기억한다")
         XCTAssertTrue(reopened.all.isEmpty, "목록 본문은 디스크에 두지 않는다")
     }
+
+    // BGN1120A01. 백그라운드에서 새 공지는 한 번만 알리고, 앱 안 배너로 본 공지는 알리지 않는다.
+    func testBackgroundNotifiesNewAnnouncementsOnce() async {
+        let wire = Wire(), store = defaults()
+        var current = now
+        var posted: [String] = []
+        let feed = service(wire, store, clock: { current })
+        wire.reply = (200, Data(fixture.utf8), "\"e\"")
+        let first = await feed.refreshAndNotify { item, _ in posted.append(item.id) }
+        XCTAssertFalse(first.isEmpty)
+        XCTAssertEqual(posted, feed.visible.map(\.id))
+
+        current = now.addingTimeInterval(31 * 60)
+        posted = []
+        let again = service(wire, store, clock: { current })
+        await again.refreshAndNotify { item, _ in posted.append(item.id) }
+        XCTAssertTrue(posted.isEmpty, "앱을 다시 켜도 이미 알린 공지는 다시 알리지 않는다")
+
+        let shownStore = defaults()
+        let shown = service(wire, shownStore, clock: { self.now })
+        await shown.refresh()
+        shown.markShown()
+        let later = service(wire, shownStore, clock: { self.now.addingTimeInterval(31 * 60) })
+        posted = []
+        await later.refreshAndNotify { item, _ in posted.append(item.id) }
+        XCTAssertTrue(posted.isEmpty, "앱 안에서 이미 본 공지는 알리지 않는다")
+    }
+
+    func testAtMostThreeNoticesAtOnce() {
+        let items = (0..<5).map { AppAnnouncement(id: "n\($0)", title: "t", body: "b", kind: .info) }
+        XCTAssertEqual(AnnouncementPolicy.unnotified(items, notified: ["n0"]).map(\.id), ["n1", "n2", "n3"])
+    }
 }

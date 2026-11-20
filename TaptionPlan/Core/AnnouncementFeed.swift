@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 import Observation
 import TaptionAssistantKit
 import TaptionWatchSync
@@ -158,6 +159,14 @@ enum AnnouncementPolicy {
         return result
     }
 
+    /// 백그라운드에서 한 번에 알림으로 띄울 수(BGN1120A01). 더 많으면 심각한 것부터.
+    static let maximumNotices = 3
+
+    /// 아직 알리지 않은 보이는 공지(`visible` 순서 그대로, 최대 `maximumNotices`개).
+    static func unnotified(_ visible: [AppAnnouncement], notified: Set<String>) -> [AppAnnouncement] {
+        Array(visible.filter { !notified.contains($0.id) }.prefix(maximumNotices))
+    }
+
     static func currentBuild(_ bundle: Bundle = .main) -> Int? {
         (bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String).flatMap { Int($0) }
     }
@@ -180,11 +189,16 @@ final class AnnouncementService {
     static let etagKey = "announcement.etag"
     static let lastAttemptKey = "announcement.lastAttemptAt"
     static let dismissedKey = "announcement.dismissedAt"
+    /// 알림으로 띄웠거나 앱 안 배너로 이미 보인 공지(BGN1120A01). 같은 공지를 두 번 알리지 않는다.
+    static let notifiedKey = "announcement.notifiedAt"
+    /// 알림을 눌렀을 때 공지 시트를 열기 위한 표시.
+    static let userInfoID = "announcementID"
 
     private(set) var all: [AppAnnouncement] = []
     /// 시즌 팩이 켜질 때 공지 시트를 한 번 열어 달라는 요청(SEA1119A01). 배너가 값이 바뀔 때마다 시트를 연다.
     private(set) var sheetRequest = 0
     private(set) var dismissed: [String: Double]
+    @ObservationIgnored private var notified: [String: Double]
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let endpoint: () -> URL?
@@ -208,6 +222,7 @@ final class AnnouncementService {
         self.build = build
         self.isPreview = previewItems != nil
         self.dismissed = defaults.dictionary(forKey: Self.dismissedKey) as? [String: Double] ?? [:]
+        self.notified = defaults.dictionary(forKey: Self.notifiedKey) as? [String: Double] ?? [:]
         if let previewItems { all = previewItems }
     }
 
@@ -248,6 +263,42 @@ final class AnnouncementService {
         default:
             break // 304는 지금 목록 그대로, 그 밖의 상태는 조용히 무시한다.
         }
+    }
+
+    /// 앱이 앞에 있을 때: 배너로 보이니 알림 없이 본 것으로 적는다(나중에 백그라운드에서 다시 알리지 않게).
+    func markShown() { mark(visible.map(\.id)) }
+
+    /// 백그라운드 새로 고침(BGN1120A01): 공지를 받고, 아직 알리지 않은 보이는 공지를 알림으로 띄운다.
+    /// 푸시(APNs)는 대표 결정 전이라 iOS가 깨워 줄 때만 받는다. 알림 권한이 없으면 iOS가 조용히 버린다.
+    @discardableResult
+    func refreshAndNotify(post: (AppAnnouncement, String) async -> Void = AnnouncementService.post) async -> [AppAnnouncement] {
+        await refresh()
+        let fresh = AnnouncementPolicy.unnotified(visible, notified: Set(notified.keys))
+        let code = AnnouncementPolicy.languageCode()
+        for item in fresh { await post(item, code) }
+        mark(fresh.map(\.id))
+        return fresh
+    }
+
+    private func mark(_ ids: [String]) {
+        let stamp = now().timeIntervalSince1970
+        var next = notified
+        for id in ids where next[id] == nil { next[id] = stamp }
+        next = AnnouncementPolicy.pruned(next, liveIDs: Set(all.map(\.id)), now: now())
+        guard next != notified else { return }
+        notified = next
+        defaults.set(next, forKey: Self.notifiedKey)
+    }
+
+    /// 공지 하나를 바로 뜨는 로컬 알림으로. 같은 공지는 같은 id라 겹쳐 쌓이지 않는다.
+    static func post(_ item: AppAnnouncement, code: String) async {
+        let content = UNMutableNotificationContent()
+        content.title = AnnouncementPolicy.title(of: item, code: code)
+        content.body = AnnouncementPolicy.body(of: item, code: code)
+        content.sound = item.kind >= .warning ? .default : nil
+        content.threadIdentifier = "announcement"
+        content.userInfo = [userInfoID: item.id]
+        try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "announcement.\(item.id)", content: content, trigger: nil))
     }
 
     /// 한 번만 시도한다(429를 기다리지 않는다).

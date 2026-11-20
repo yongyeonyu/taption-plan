@@ -60944,7 +60944,7 @@
    "en": "End",
    "files": [
     "TravelQuickEntrySheet.swift:337",
-    "TaptionPlanLiveActivity.swift:148"
+    "TaptionPlanLiveActivity.swift:165"
    ],
    "args": [],
    "targets": [
@@ -60958,7 +60958,7 @@
    "en": "Stop",
    "files": [
     "MapHomeStride.swift:146",
-    "TaptionPlanLiveActivity.swift:54"
+    "TaptionPlanLiveActivity.swift:64"
    ],
    "args": [],
    "targets": [
@@ -67576,9 +67576,9 @@
    "ko": "활동",
    "en": "Activity",
    "files": [
-    "LiveActivityShared.swift:31",
-    "LiveActivityShared.swift:45",
-    "LiveActivityShared.swift:80"
+    "LiveActivityShared.swift:49",
+    "LiveActivityShared.swift:63",
+    "LiveActivityShared.swift:98"
    ],
    "args": [],
    "targets": [

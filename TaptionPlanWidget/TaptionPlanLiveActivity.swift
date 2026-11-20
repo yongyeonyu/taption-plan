@@ -33,6 +33,16 @@ struct TaptionPlanLiveActivity: Widget {
                         .lineLimit(1)
                 }
             }
+            DynamicIslandExpandedRegion(.trailing) {
+                // 시즌 팩 아이콘(SPL1120A01). 팩이 꺼져 있으면 비운다.
+                if let icon = TaptionSeasonArt.image(.icon) {
+                    Image(uiImage: icon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 26, height: 26)
+                        .accessibilityHidden(true)
+                }
+            }
             DynamicIslandExpandedRegion(.center) {
                 Text(context.state.compactActivityTitle ?? context.state.majorCategoryTitle)
                     .font(.headline)
@@ -112,6 +122,13 @@ private struct TaptionLiveActivityLockScreenView: View {
                         .lineLimit(1)
                 }
                 Spacer()
+                if let icon = TaptionSeasonArt.image(.icon) {
+                    Image(uiImage: icon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22, height: 22)
+                        .accessibilityHidden(true)
+                }
                 // 남은 시간은 시스템 타이머로 그려 갱신 없이 줄어든다(REV1110A04).
                 Text(
                     timerInterval: context.state.startedAt...max(context.state.startedAt, context.state.endsAt),

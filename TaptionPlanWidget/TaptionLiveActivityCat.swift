@@ -35,6 +35,19 @@ struct TaptionLiveActivityCat: View {
                     .foregroundStyle(.white)
             }
         }
+        // 시즌 팩이 켜져 있으면 지도 화면처럼 모자를 얹는다(SPL1120A01).
+        .overlay {
+            if let hat = TaptionSeasonArt.image(.hat) {
+                GeometryReader { proxy in
+                    Image(uiImage: hat)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: proxy.size.width * 0.5, height: proxy.size.height * 0.4)
+                        .position(x: proxy.size.width * 0.5, y: proxy.size.height * 0.12)
+                }
+                .accessibilityHidden(true)
+            }
+        }
         .accessibilityLabel("\(style == "calico" ? "춘향이" : style == "mackerel" ? "윤복이" : "화랑이") \(title)")
     }
 }
