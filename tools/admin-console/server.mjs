@@ -142,6 +142,28 @@ export function planAnnouncements(current, spec) {
 
 // ---- 시즌 팩 ----
 
+const ko = (text) => (text && typeof text === "object" ? text.ko ?? text.en ?? "" : text ?? "");
+
+/** 카드에 보여 줄 팩 내용: 자산 목록, 대표 아이콘, 안내 글, 음원, 가사 줄 수, 슬롯 이름. */
+export function packDetails(manifest) {
+  const files = (manifest.assets ?? []).map((a) => ({ id: a.id, path: a.path, kind: a.kind, bytes: a.bytes ?? 0 }));
+  const byId = new Map(files.map((f) => [f.id, f]));
+  const coverId = manifest.menuIcons?.[0]?.icon;
+  const cover = (byId.get(coverId) ?? files.find((f) => f.kind === "image"))?.path ?? null;
+  const intro = (manifest.menuIcons ?? []).flatMap((icon) => (icon.menu?.sections ?? []).flatMap((section) => (section.items ?? [])
+    .filter((item) => item.kind === "text").map((item) => ({ title: ko(section.title), text: ko(item.text) }))));
+  return {
+    files, cover, intro,
+    audio: (manifest.audio ?? []).map((a) => ({ id: a.id, asset: byId.get(a.asset)?.path ?? null, seconds: Math.round((a.durationMs ?? 0) / 1000), title: a.license?.title ?? a.id })),
+    lyricLines: (manifest.lyrics ?? []).reduce((n, l) => n + (l.cues?.length ?? 0), 0),
+    slots: Object.keys(manifest.slots ?? {}), actors: (manifest.actors ?? []).map((a) => a.id),
+    menuIcons: (manifest.menuIcons ?? []).map((icon) => ko(icon.label)), credits: (manifest.credits ?? []).map(ko),
+    priority: manifest.priority ?? null,
+  };
+}
+
+const FILE_TYPES = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif", m4a: "audio/mp4", mp3: "audio/mpeg", wav: "audio/wav" };
+
 /** 묶을 수 있는 팩 폴더: seed/<id>/<version>/manifest.json */
 export function localPacks(root = SEED_ROOT) {
   const out = [];
@@ -157,7 +179,7 @@ export function localPacks(root = SEED_ROOT) {
         const size = (manifest.assets ?? []).reduce((sum, asset) => sum + (asset.bytes ?? 0), 0);
         out.push({ dir: relative(REPO, join(idDir, version)), id: manifest.id, version: manifest.version,
           title: manifest.event?.title?.ko ?? manifest.event?.title?.en ?? manifest.id, windows: manifest.event?.windows ?? [],
-          requiresAppBuild: manifest.requiresAppBuild ?? null, assets: (manifest.assets ?? []).length, bytes: size });
+          requiresAppBuild: manifest.requiresAppBuild ?? null, assets: (manifest.assets ?? []).length, bytes: size, ...packDetails(manifest) });
       } catch (error) {
         out.push({ dir: relative(REPO, join(idDir, version)), error: `매니페스트를 읽지 못함: ${error.message}` });
       }
@@ -372,6 +394,15 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
     if (req.method === "GET" && STATIC[url.pathname]) {
       const [file, type] = STATIC[url.pathname];
       return send(res, 200, readFileSync(join(HERE, file)), { "content-type": type, "cache-control": "no-store" });
+    }
+    if (req.method === "GET" && url.pathname === "/api/pack-file") {
+      // <img>·<audio>는 머리글을 못 붙이므로 이 길만 ?t= 토큰도 받는다. 목록에 있는 팩 폴더의 매니페스트 자산만 내준다.
+      if (!sameToken(req.headers["x-admin-token"] ?? url.searchParams.get("t"), token)) return send(res, 401, { error: "토큰이 맞지 않습니다" });
+      const pack = localPacks().find((entry) => entry.dir === url.searchParams.get("dir") && !entry.error);
+      const file = pack?.files.find((entry) => entry.path === url.searchParams.get("path"));
+      if (!file) return send(res, 404, { error: "not_found" });
+      const type = FILE_TYPES[file.path.split(".").pop().toLowerCase()] ?? "application/octet-stream";
+      return send(res, 200, readFileSync(join(REPO, pack.dir, file.path)), { "content-type": type, "cache-control": "no-store" });
     }
     const route = routes[`${req.method} ${url.pathname}`];
     if (!route) return send(res, 404, { error: "not_found" });
