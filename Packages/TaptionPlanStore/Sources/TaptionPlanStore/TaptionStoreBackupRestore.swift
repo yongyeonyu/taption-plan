@@ -247,7 +247,10 @@ public enum TaptionRestoreStaging {
     public static func recover(store: TaptionStoreV2, memoStore: TaptionStoreV2?) async {
         let root = root(of: store)
         var keep: String?
-        if let pending = try? await store.meta(pendingMemoKey), !pending.isEmpty {
+        // D3: 표시를 읽지 못하면(DB 오류 등) 아무것도 지우지 않는다. 지워 버리면 아직 합치지 못한 메모 준비 파일이 사라진다.
+        let marker: String?
+        do { marker = try await store.meta(pendingMemoKey) } catch { return }
+        if let pending = marker, !pending.isEmpty {
             let file = root.appendingPathComponent(pending, isDirectory: true).appendingPathComponent(fileName)
             do {
                 if let memoStore, FileManager.default.fileExists(atPath: file.path) {

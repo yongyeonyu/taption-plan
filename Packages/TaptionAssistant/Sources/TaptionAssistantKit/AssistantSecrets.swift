@@ -41,10 +41,20 @@ public final class AssistantKeychainSecrets: AssistantSecretStore {
 
     @discardableResult
     public func write(_ value: String?, to slot: AssistantSecretSlot) -> Bool {
-        SecItemDelete(query(slot) as CFDictionary)
-        guard let value else { return true }
+        guard let value else {
+            let status = SecItemDelete(query(slot) as CFDictionary)
+            return status == errSecSuccess || status == errSecItemNotFound
+        }
+        let data = Data(value.utf8)
+        // D1: 지우고 넣지 않는다. 있으면 제자리에서 바꾸고(실패해도 옛 키가 그대로 남는다), 없을 때만 새로 넣는다.
+        let update = SecItemUpdate(query(slot) as CFDictionary, [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ] as CFDictionary)
+        if update == errSecSuccess { return true }
+        guard update == errSecItemNotFound else { return false }
         var item = query(slot)
-        item[kSecValueData as String] = Data(value.utf8)
+        item[kSecValueData as String] = data
         item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
     }

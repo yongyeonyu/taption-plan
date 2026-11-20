@@ -104,3 +104,35 @@ struct ScheduleTests {
         #expect(SeasonPackFetcher.savedSchedules(defaults).isEmpty)
     }
 }
+
+/// T-03(CRV1120A01): 매니페스트·시연 인자의 날짜 글자를 읽는 규칙. 달·일이 틀리면 다음 해로 굴리지 않고 nil.
+struct DateParsingTests {
+    private func parse(_ text: String) -> Date? { SeasonPackDateParsing.localDateTime(text, calendar: Fixture.calendar) }
+
+    @Test func readsDatesWithAndWithoutTime() {
+        #expect(parse("2026-12-19") == Fixture.date(2026, 12, 19))
+        #expect(parse("2026-12-19T09:05") == Fixture.date(2026, 12, 19, 9, 5))
+        #expect(parse("2028-02-29") == Fixture.date(2028, 2, 29), "윤년")
+    }
+
+    @Test func rejectsImpossibleDatesInsteadOfRollingThemOver() {
+        #expect(parse("2026-13-40") == nil)
+        #expect(parse("2026-13-01") == nil)
+        #expect(parse("2026-00-10") == nil)
+        #expect(parse("2026-02-30") == nil)
+        #expect(parse("2027-02-29") == nil, "윤년이 아닌 해")
+        #expect(parse("2026-04-31") == nil)
+        #expect(parse("2026-12-00") == nil)
+    }
+
+    @Test func rejectsBadTimesAndShapes() {
+        #expect(parse("2026-12-19T24:00") == nil)
+        #expect(parse("2026-12-19T09:60") == nil)
+        #expect(parse("2026-12-19T09") == nil)
+        #expect(parse("2026-12") == nil)
+        #expect(parse("12/19") == nil)
+        #expect(parse("2026-12-19T09:05T10:00") == nil)
+        #expect(SeasonPackDateParsing.hourMinute("23:59")?.hour == 23)
+        #expect(SeasonPackDateParsing.hourMinute("7") == nil)
+    }
+}

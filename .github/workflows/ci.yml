@@ -4,9 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "0 18 * * *" # 매일 03:00(한국) — 앱 단위 시험
+  workflow_dispatch:
 
 jobs:
   architecture:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,6 +18,7 @@ jobs:
         run: python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json
 
   packages:
+    if: github.event_name != 'schedule'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,11 +26,14 @@ jobs:
         run: bash scripts/check-app-engine-import-boundary.sh
       - name: Test shared packages
         run: |
-          for package in TaptionPlanCore TaptionRouteEngine TaptionActivityEngine TaptionPlanEngine; do
+          # CI-1(CRV1120A01): 테스트가 있는 패키지를 모두 돈다. TaptionLedgerCore는 테스트가 아직 없어 뺀다(테스트를 더한 뒤 넣는다).
+          for package in TaptionPlanCore TaptionRouteEngine TaptionActivityEngine TaptionPlanEngine \
+                         TaptionAssistant TaptionClassifierEngine TaptionPlanStore TaptionTripShare TaptionWatchSync SeasonPackKit; do
             swift test --package-path "Packages/$package"
           done
 
   relay:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,8 +43,15 @@ jobs:
       - name: Test air quality relay
         run: npm test
         working-directory: server/airkorea-proxy
+      # CI-2: 주 중계 서버(trip-relay)와 이 맥 전용 운영 페이지도 돈다.
+      - name: Test trip relay
+        run: npm test
+        working-directory: server/trip-relay
+      - name: Test admin console
+        run: node --test tools/admin-console/server.test.mjs
 
   app:
+    if: github.event_name != 'schedule'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,4 +61,26 @@ jobs:
             -configuration Debug -destination 'generic/platform=iOS' \
             -derivedDataPath build/CIDD -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO \
+            OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox'
+
+  # CI-3: 앱 단위 시험(TaptionPlanTests). 오래 걸리고 macOS 시간이 들어 PR이 아니라 main 푸시와 매일 밤에만 돈다.
+  # 위의 app(빌드) 작업과 따로라서 그 작업의 실패와 상관없이 결과를 낸다.
+  app-tests:
+    if: github.event_name != 'pull_request'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d, reverse=True) if 'iOS' in k for x in d[k] if x['name'].startswith('iPhone')))")
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+      - name: Test app (unit tests)
+        run: |
+          xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
+            -configuration Debug -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build/CIDD -skipPackagePluginValidation -parallel-testing-enabled NO \
+            -only-testing:TaptionPlanTests \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox'
