@@ -1,7 +1,7 @@
 ---
 id: 20261120-1747-launch-lag-season-pack
 created_at: 2026-11-20T17:47+09:00
-status: pending
+status: done
 request_id: LAG1120A01
 title: 시즌(산타) 팩이 켜진 뒤 앱 시작이 버벅임 — 올려 둔 로그와 계측으로 원인을 확정하고 시작 경로에서 걷어낸다
 from: 비야
@@ -203,3 +203,20 @@ A~H는 **의심**입니다. 확정한 것만 「원인」으로, 나머지는 �
 - 나머지 표의 파일:줄(`MapHomeView+Support.swift` 222·227·243, `SeasonPackCenter` 80·112~116·123·139·147·167·183, `SeasonPackStore` 28·130·144, `SeasonPackRenderer` 127~140, `SeasonPackActors` 119~125·207·222, `TreeEffects` 40·103, `HouseArt` 24, `Overlay` 28~33, `MapHomeStickmanMarker` 146~148·219~222)와 수치(자산 13개·1,144,304바이트·소리 355,355·창 12-19~12-30·빌드 358·준비 3,631ms/합격선 3,000ms)는 2026-11-20 18:4x `origin/main`에서 **그대로 맞았습니다**.
 - 로그 사본을 커밋하지 않도록 `git add` 금지·파일 이름 비노출을 §0-5에 더했습니다(사본에는 기기 이름·계정이 들어갑니다).
 - 고치지 않은 것: 후보 A~H의 내용·측정 조건·회신 양식은 그대로 두었습니다(대표가 정한 판정 기준이라 손대지 않음). `docs/pipeline/CHANGELOG.md`가 없다는 서술도 확인 결과 사실입니다.
+
+## 클로드 코드 회신
+
+- 처리: 완료(원인 확정·수정·시험까지. 아이폰 18 Pro Max 체감은 대표 확인 필요)
+- 요청 ID: LAG1120A01 (`test.md` 「성능·구조」·「요청 상세」)
+- 시작·끝: 2026-11-20 18:50 ~ 20:30 (KST)
+- 커밋: `c0a3a189` 작업, 문서 이동은 이 문서를 옮기는 `[비야 브리지] LAG1120A01` 커밋
+- 쓴 로그: 앱 iCloud 컨테이너(CloudDocs 아님)의 기기 로그 1건, 2026-11-20 17:39 저장, gzip 사본. 로그가 가리킨 것: 콜드 실행 5.7초 중 저장소 읽기 4.3초(팩과 무관), 실행 직후 지도 끌기 구간의 끊김은 팩 켠 상태와 겹침.
+- 기기·판: 아이폰 11 Pro, Release+`-D BENCH` 개발 서명 판(TestFlight 아님). 대표 기기(아이폰 18 Pro Max, 120Hz)는 확인 못 함.
+- 팩이 켜진 경로: 서버 카탈로그 일정(자연 날짜). 끔은 `-seasonPackDate`로 날짜를 밖으로 둠.
+- 원인(확정): 눈꽃송이 층. 같은 판에서 조각을 하나씩 빼며 번갈아 쟀을 때 눈꽃을 빼면 끔 수준으로 내려가고, 화랑이 층·아이콘 층은 변화 없음. 송이 18가지를 매 프레임(24Hz) SwiftUI Canvas가 다시 그리고 있었다. 대기 메인 CPU 켬−끔 약 +1,000ms/10초, 메모리 +46~70MB.
+- 측정상 영향 없음: 콜드 실행(켬 약 2,220ms·끔 약 2,404ms), 팩 불러오기·그림 만들기 경로, 화랑이·아이콘 층. 후보표 중 직접 재지 못한 항목(`sync`의 `reload()` 중복, 메인의 `exportWidgetArt`)은 추정으로만 남김.
+- 전후 수치(대기 메인 CPU, 10초당 ms, 번갈아 평균): 끔 약 1,700(첫 묶음)/2,774(수정 뒤 묶음) · 수정 전 켬 약 2,800 · 수정 후 켬 2,670. 묶음마다 기기 상태로 절대값이 흔들려 같은 묶음 안 켬−끔(+1,000 → −100ms)만 근거. 표는 `docs/PERFORMANCE_PLAN.md` 「시즌 팩 콜드 실행」.
+- 수정: `SeasonPackTreeEffects.swift`. 송이를 레이어 애니메이션(떨어짐·흔들림·돌기)으로 렌더 서버에 맡기고, 그림은 크기 칸별 캐시. 모양·색·크기·속도 식·팩 날짜·첫 등장 시각은 그대로. 측정 전용 인자(`-seasonHide`, `-seasonSnowCount`)와 `PRFBENCH season` 줄은 BENCH·DEBUG 판에만(`SeasonPackCenter`·`SeasonPackClock`의 `#if DEBUG`를 `DEBUG || BENCH`로 넓힘).
+- 바꾼 파일: `Packages/SeasonPackKit/.../Render/SeasonPackTreeEffects.swift`, `SeasonPackOverlay.swift`, `SeasonPackCenter.swift`, `Scheduler/SeasonPackClock.swift`, `TaptionPlan/UI/MapHomeInteractionMonitor.swift`, `RenderAndIconTests.swift`, `docs/PERFORMANCE_PLAN.md`, `docs/SEASON_PACK_PLAN.md`(시작 경로 규칙), `test.md`
+- 검증: `TaptionPlanTests` 3,224건·실패 0·건너뜀 26(시뮬레이터) / SeasonPackKit 113건 통과(눈 식 일치·그림 캐시 시험 2건 추가) / 아이폰 11 Pro에서 번갈아 3회 측정 / 아이폰 18 Pro Max·눈 모양을 화면으로 전과 견주기는 확인 안 함. 번역 대기 없음(문구 변경 없음).
+- 남은 것·확인 필요: 대표가 18 Pro Max에서 켜고 껐을 때 체감 확인. `docs/pipeline/CHANGELOG.md`는 없어 이력은 `test.md`에 적음.
