@@ -194,13 +194,26 @@ const OPS = {
       known.add(item.id);
       added++;
     }
-    // 넘치면 끝난 것부터, 그다음 오래된 것부터 버린다.
-    while (rows.length > LIMITS.tasks) {
-      const index = rows.findIndex((t) => !TASK_OPEN.has(t.status));
-      const [gone] = rows.splice(index >= 0 ? index : 0, 1);
-      await s.delete("task:" + gone.id);
+    // 넘치면 끝난 것부터 버린다. 끝난 것이 없어 열린 일을 버려야 하면 지우지 않고 「넘침(overflow)」 실패로 바꿔 둔다
+    // (앱이 GET /tasks로 소실을 알 수 있게 한다, S4). 실패 표시는 보관 기간(taskLifeMs)이 지나면 일반 규칙대로 지워진다.
+    let overflowed = 0;
+    const marked = new Set();
+    for (let excess = rows.length - LIMITS.tasks; excess > 0; excess--) {
+      const index = rows.findIndex((t) => !TASK_OPEN.has(t.status) && !marked.has(t.id));
+      if (index >= 0) {
+        const [gone] = rows.splice(index, 1);
+        await s.delete("task:" + gone.id);
+        continue;
+      }
+      // 열린 일뿐이다: 가장 오래된 열린 일부터 실패로 표시한다(저장은 그대로 두고, 다음 추가 때 끝난 것으로 정리된다).
+      const oldest = rows.find((t) => TASK_OPEN.has(t.status));
+      if (!oldest) break;
+      Object.assign(oldest, { status: "failed", code: "overflow", sealed: null, updatedAt: now, claimedBy: null });
+      await s.put("task:" + oldest.id, oldest);
+      marked.add(oldest.id);
+      overflowed++;
     }
-    return { added };
+    return { added, overflowed };
   },
 
   async taskList(s, { now }) {
@@ -336,6 +349,8 @@ const OPS = {
         gone.push(op.id);
         changed++;
       } else {
+        // S1: onlyAI면 사용자가 만든 규칙은 켜지도 끄지도 못한다.
+        if (onlyAI && rule.by === "user") continue;
         const enabled = op.op === "enable";
         if (rule.enabled === enabled) continue;
         await s.put("rule:" + op.id, { ...rule, enabled, updatedAt: now });
