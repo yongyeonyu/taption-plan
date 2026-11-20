@@ -6293,6 +6293,14 @@
 "설정 안내 복사|Copy setup": "Salin panduan",
 "설정 안내 복사|Copy the setup": "Salin panduan pengaturan",
 "연결 키를 만들었어요. 다음 단계에서 설정 안내를 복사해요.|Key made. Copy the setup in the next step.": "Kunci dibuat. Salin panduan pengaturan di langkah berikutnya.",
-"키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.|Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.": "Salin kunci, lalu tempel ke layar input aman yang ditampilkan Muse. Jangan pernah menulis kunci langsung di obrolan."
+"키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.|Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.": "Salin kunci, lalu tempel ke layar input aman yang ditampilkan Muse. Jangan pernah menulis kunci langsung di obrolan.",
+"1초|1 s": "1 dtk",
+"3초|3 s": "3 dtk",
+"1초는 통화 중 빠른 모드로, 30분 뒤 3초로 돌아와요. 저전력 모드에서는 3초로 확인해요.|1 s is a fast mode for calls and returns to 3 s after 30 minutes. Low Power Mode checks every 3 s.": "1 dtk adalah mode cepat saat menelepon dan kembali ke 3 dtk setelah 30 menit. Pada mode daya rendah, pengecekan dilakukan tiap 3 dtk.",
+"AI 연결을 확인하지 못했어요|Couldn't reach the AI connection": "Tidak dapat menghubungi koneksi AI",
+"반영|Apply": "Terapkan",
+"새 계획이 도착했어요|A new plan arrived": "Rencana baru telah tiba",
+"실시간 반영|Live updates": "Pembaruan langsung",
+"편집 중이라 잠시 미뤘어요|Paused while you edit": "Dijeda saat Anda mengedit"
 }
 }

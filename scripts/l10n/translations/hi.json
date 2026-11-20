@@ -6293,6 +6293,14 @@
 "설정 안내 복사|Copy setup": "सेटअप निर्देश कॉपी करें",
 "설정 안내 복사|Copy the setup": "सेटअप निर्देश कॉपी करें",
 "연결 키를 만들었어요. 다음 단계에서 설정 안내를 복사해요.|Key made. Copy the setup in the next step.": "कुंजी बन गई। अगले चरण में सेटअप निर्देश कॉपी करें।",
-"키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.|Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.": "कुंजी कॉपी करें, फिर Muse जो सुरक्षित इनपुट स्क्रीन दिखाए उसमें चिपकाएँ। कुंजी को सीधे चैट में कभी न लिखें।"
+"키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.|Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.": "कुंजी कॉपी करें, फिर Muse जो सुरक्षित इनपुट स्क्रीन दिखाए उसमें चिपकाएँ। कुंजी को सीधे चैट में कभी न लिखें।",
+"1초|1 s": "1 सेकंड",
+"3초|3 s": "3 सेकंड",
+"1초는 통화 중 빠른 모드로, 30분 뒤 3초로 돌아와요. 저전력 모드에서는 3초로 확인해요.|1 s is a fast mode for calls and returns to 3 s after 30 minutes. Low Power Mode checks every 3 s.": "1 सेकंड कॉल के दौरान तेज़ मोड है और 30 मिनट बाद 3 सेकंड पर लौट आता है। लो पावर मोड में हर 3 सेकंड पर जाँच होती है।",
+"AI 연결을 확인하지 못했어요|Couldn't reach the AI connection": "AI कनेक्शन तक पहुँच नहीं हो सकी",
+"반영|Apply": "लागू करें",
+"새 계획이 도착했어요|A new plan arrived": "नई योजना आई है",
+"실시간 반영|Live updates": "रीयल-टाइम अपडेट",
+"편집 중이라 잠시 미뤘어요|Paused while you edit": "आपके संपादन के दौरान रुका हुआ है"
 }
 }

@@ -208,3 +208,11 @@
 - 앱: 시뮬레이터 `xcodebuild test`(AI·가계부 묶음), `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json`, `scripts/check-app-engine-import-boundary.sh`, l10n `extract → check → generate`
 - 연결 확인: 이 세션의 커넥터로 `get_ai_tasks`·`get_rules`·`put_rules`·명령 왕복
 - 기기: 위 표의 단계별 항목(대표 확인). 시뮬레이터 결과와 구분해 `test.md`에 기록
+
+## 앱 전면 실시간 반영 (RTA1120A01, 2026-11-20)
+
+- 앱이 전면에 있는 동안 명령을 확인하는 간격은 기본 3초, 통화 중 빠른 모드 1초(설정 「실시간 반영」 끔/3초/1초, 1초는 30분 뒤 3초로 복귀). 저전력에서 1초는 3초, 과열(serious 이상)에서는 10초, 끔이면 예전처럼 5분. 백그라운드·화면 꺼짐에서는 반복이 취소돼 요청이 0건이다. 이전 SYN1111A03(대화 중 10초·평소 5분)을 대체한다.
+- 갱신 입구는 `AssistantLiveSync.refresh` 하나다(폴링·푸시·수동 새로고침). 3초·1초 확인은 명령 받기·반영·결과 보고만 하고, 규칙 동기화·맡긴 일 갱신·영수증 스캔·질문 올리기는 5분 경로에 둔다.
+- 여행 화면이 열려 있으면 `/plan`도 같은 주기로 확인하고, 새 계획은 자동으로 덮어쓰지 않고 「새 계획이 도착했어요 — 반영/나중에」 카드로 묻는다. 같은 내용(해시)은 다시 뜨지 않는다.
+- 편집 시트(여행 가져오기·여행 편집)가 열려 있으면 그 주기의 명령 반영을 미루고 서버 큐에 그대로 둔다. 연속 3회 실패하면 한 줄을 5분에 한 번만 띄운다.
+- 서버 규격은 그대로다. `POST /command`는 이미 조용한 `cmd` 푸시를 보내고(`server/trip-relay/src/apns.js`), 앱의 `AssistantPush`가 같은 확인을 돈다. 푸시를 1순위로 올리거나 WebSocket으로 갈아끼우는 것은 서버 변경이라 RTA1120A02·대표 승인 대상이다.

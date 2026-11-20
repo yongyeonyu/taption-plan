@@ -25,6 +25,10 @@ struct TravelMapTripEditorSheet: View {
     private static let resultLimit = 8
 
     var body: some View {
+        editorBody.assistantLiveEditing()
+    }
+
+    private var editorBody: some View {
         NavigationStack {
             List {
                 Section(language.text("도시", "Cities")) {

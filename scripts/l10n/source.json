@@ -509,6 +509,30 @@
    ]
   },
   {
+   "key": "1초|1 s",
+   "ko": "1초",
+   "en": "1 s",
+   "files": [
+    "AssistantLiveSync.swift:251"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "1초는 통화 중 빠른 모드로, 30분 뒤 3초로 돌아와요. 저전력 모드에서는 3초로 확인해요.|1 s is a fast mode for calls and returns to 3 s after 30 minutes. Low Power Mode checks every 3 s.",
+   "ko": "1초는 통화 중 빠른 모드로, 30분 뒤 3초로 돌아와요. 저전력 모드에서는 3초로 확인해요.",
+   "en": "1 s is a fast mode for calls and returns to 3 s after 30 minutes. Low Power Mode checks every 3 s.",
+   "files": [
+    "AssistantLiveSync.swift:255"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "2. 걸은 거리|2. Distance walked",
    "ko": "2. 걸은 거리",
    "en": "2. Distance walked",
@@ -647,6 +671,18 @@
    "en": "3h 12m",
    "files": [
     "FirstRunTutorialView.swift:869"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "3초|3 s",
+   "ko": "3초",
+   "en": "3 s",
+   "files": [
+    "AssistantLiveSync.swift:250"
    ],
    "args": [],
    "targets": [
@@ -867,7 +903,7 @@
    "files": [
     "AssistantDataCommands.swift:500",
     "AssistantSafetyViews.swift:524",
-    "AssistantSettingsView.swift:29"
+    "AssistantSettingsView.swift:30"
    ],
    "args": [],
    "targets": [
@@ -892,7 +928,7 @@
    "ko": "AI 말풍선: {0}",
    "en": "AI speech bubble: {0}",
    "files": [
-    "AssistantBubble.swift:308"
+    "AssistantBubble.swift:405"
    ],
    "args": [
     "text.display"
@@ -968,7 +1004,7 @@
    "ko": "AI 서버 기록 모두 지우기",
    "en": "Erase all AI server records",
    "files": [
-    "AssistantSettingsView.swift:86"
+    "AssistantSettingsView.swift:87"
    ],
    "args": [],
    "targets": [
@@ -1105,8 +1141,20 @@
    "en": "AI connections",
    "files": [
     "AssistantDataCommands.swift:485",
-    "AssistantSettingsView.swift:37",
+    "AssistantSettingsView.swift:38",
     "MapHomeMenuShortcuts.swift:19"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI 연결을 확인하지 못했어요|Couldn't reach the AI connection",
+   "ko": "AI 연결을 확인하지 못했어요",
+   "en": "Couldn't reach the AI connection",
+   "files": [
+    "AssistantLiveSync.swift:156"
    ],
    "args": [],
    "targets": [
@@ -1348,7 +1396,7 @@
    "files": [
     "AITaskPanel.swift:88",
     "AssistantSafetyViews.swift:358",
-    "AssistantSettingsView.swift:28"
+    "AssistantSettingsView.swift:29"
    ],
    "args": [],
    "targets": [
@@ -1361,7 +1409,7 @@
    "en": "What the AI can do",
    "files": [
     "AssistantSafetyViews.swift:331",
-    "AssistantSettingsView.swift:27"
+    "AssistantSettingsView.swift:28"
    ],
    "args": [],
    "targets": [
@@ -1385,8 +1433,8 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "TravelModeView.swift:731",
-    "TravelModeView.swift:837"
+    "TravelModeView.swift:733",
+    "TravelModeView.swift:839"
    ],
    "args": [],
    "targets": [
@@ -3130,7 +3178,7 @@
    "ko": "iCloud 동기화 시작",
    "en": "iCloud sync started",
    "files": [
-    "AssistantCommandRunner.swift:412"
+    "AssistantCommandRunner.swift:418"
    ],
    "args": [],
    "targets": [
@@ -4911,7 +4959,7 @@
    "ko": "{0}박 {1}일",
    "en": "{0} nights, {1} days",
    "files": [
-    "TravelModeView.swift:597",
+    "TravelModeView.swift:599",
     "TravelNewTripSheet.swift:53"
    ],
    "args": [
@@ -5488,7 +5536,7 @@
    "ko": "{0}일 달력",
    "en": "Calendar, day {0}",
    "files": [
-    "MapHomeMapAnnotations.swift:1124"
+    "MapHomeMapAnnotations.swift:1126"
    ],
    "args": [
     "day"
@@ -5561,8 +5609,8 @@
    "en": "Day {0}",
    "files": [
     "TravelDayBoard.swift:41",
-    "TravelModeView.swift:810",
-    "TravelModeView.swift:988"
+    "TravelModeView.swift:812",
+    "TravelModeView.swift:990"
    ],
    "args": [
     "index + 1"
@@ -35410,7 +35458,7 @@
    "ko": "건강 연동 끔",
    "en": "Health sync off",
    "files": [
-    "AssistantCommandRunner.swift:514"
+    "AssistantCommandRunner.swift:520"
    ],
    "args": [],
    "targets": [
@@ -35733,7 +35781,7 @@
    "en": "No results.",
    "files": [
     "MapHomeView+Map.swift:1086",
-    "TravelMapTripEditorSheet.swift:153"
+    "TravelMapTripEditorSheet.swift:157"
    ],
    "args": [],
    "targets": [
@@ -35794,7 +35842,7 @@
    "en": "Search failed. Check your connection.",
    "files": [
     "MapHomeView+Map.swift:1085",
-    "TravelMapTripEditorSheet.swift:152"
+    "TravelMapTripEditorSheet.swift:156"
    ],
    "args": [],
    "targets": [
@@ -36451,7 +36499,7 @@
    "files": [
     "MapHomeMenuShortcuts.swift:25",
     "PlanRealityView.swift:65",
-    "TravelModeView.swift:839"
+    "TravelModeView.swift:841"
    ],
    "args": [],
    "targets": [
@@ -36924,7 +36972,7 @@
    "en": "Add a stop",
    "files": [
     "TravelModeSupport.swift:631",
-    "TravelModeView.swift:835",
+    "TravelModeView.swift:837",
     "TravelTodayCard.swift:45"
    ],
    "args": [],
@@ -37577,7 +37625,7 @@
    "ko": "구글 캘린더",
    "en": "Google Calendar",
    "files": [
-    "AssistantCommandRunner.swift:443"
+    "AssistantCommandRunner.swift:449"
    ],
    "args": [],
    "targets": [
@@ -38464,7 +38512,7 @@
    "ko": "기기 캘린더",
    "en": "Device calendars",
    "files": [
-    "AssistantCommandRunner.swift:438"
+    "AssistantCommandRunner.swift:444"
    ],
    "args": [],
    "targets": [
@@ -38593,7 +38641,7 @@
    "ko": "기록 새로고침",
    "en": "Records refreshed",
    "files": [
-    "AssistantCommandRunner.swift:408"
+    "AssistantCommandRunner.swift:414"
    ],
    "args": [],
    "targets": [
@@ -38840,7 +38888,7 @@
    "ko": "기본 색으로",
    "en": "Use default color",
    "files": [
-    "TravelModeView.swift:706",
+    "TravelModeView.swift:708",
     "TravelQuickEntrySheet.swift:301"
    ],
    "args": [],
@@ -39333,9 +39381,9 @@
    "ko": "끔",
    "en": "Off",
    "files": [
+    "AssistantLiveSync.swift:249",
     "LedgerMessageRules.swift:688",
-    "AssistantDataActions.swift:688",
-    "AssistantDataActions.swift:404"
+    "AssistantDataActions.swift:688"
    ],
    "args": [],
    "targets": [
@@ -39631,9 +39679,9 @@
    "ko": "나중에",
    "en": "Later",
    "files": [
+    "AssistantLiveSync.swift:226",
     "FirstRunTutorialGuides.swift:372",
-    "FirstRunTutorialGuides.swift:419",
-    "FirstRunTutorialView.swift:301"
+    "FirstRunTutorialGuides.swift:419"
    ],
    "args": [],
    "targets": [
@@ -39880,7 +39928,7 @@
    "ko": "남은 돈 {0}",
    "en": "Left {0}",
    "files": [
-    "TravelModeView.swift:665"
+    "TravelModeView.swift:667"
    ],
    "args": [
     "amount"
@@ -41516,8 +41564,8 @@
    "ko": "당일",
    "en": "Day trip",
    "files": [
-    "TravelModeView.swift:596",
-    "TravelModeView.swift:987",
+    "TravelModeView.swift:598",
+    "TravelModeView.swift:989",
     "TravelNewTripSheet.swift:53"
    ],
    "args": [],
@@ -41989,7 +42037,7 @@
    "ko": "도시 이름 검색",
    "en": "Search city name",
    "files": [
-    "TravelMapTripEditorSheet.swift:38"
+    "TravelMapTripEditorSheet.swift:42"
    ],
    "args": [],
    "targets": [
@@ -42001,7 +42049,7 @@
    "ko": "도시 추가",
    "en": "Add city",
    "files": [
-    "TravelMapTripEditorSheet.swift:37"
+    "TravelMapTripEditorSheet.swift:41"
    ],
    "args": [],
    "targets": [
@@ -42014,7 +42062,7 @@
    "en": "Cities",
    "files": [
     "MapHomePlaceBook.swift:504",
-    "TravelMapTripEditorSheet.swift:30"
+    "TravelMapTripEditorSheet.swift:34"
    ],
    "args": [],
    "targets": [
@@ -44451,7 +44499,7 @@
    "ko": "바꾸고 모두 지우기",
    "en": "Replace and delete everything",
    "files": [
-    "AssistantSettingsView.swift:92"
+    "AssistantSettingsView.swift:93"
    ],
    "args": [],
    "targets": [
@@ -44723,6 +44771,18 @@
    "en": "Not applied",
    "files": [
     "AITaskPanel.swift:137"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "반영|Apply",
+   "ko": "반영",
+   "en": "Apply",
+   "files": [
+    "AssistantLiveSync.swift:228"
    ],
    "args": [],
    "targets": [
@@ -46050,7 +46110,7 @@
    "ko": "보안 업데이트로 예전 AI 연결을 모두 끊었어요. 쓰던 AI를 아래에서 다시 연결해 주세요.",
    "en": "A security update disconnected your previous AI connections. Reconnect the AIs you use below.",
    "files": [
-    "AssistantSettingsView.swift:60"
+    "AssistantSettingsView.swift:61"
    ],
    "args": [],
    "targets": [
@@ -47674,7 +47734,7 @@
    "ko": "상세로 짜기",
    "en": "Plan in detail",
    "files": [
-    "TravelModeView.swift:720"
+    "TravelModeView.swift:722"
    ],
    "args": [],
    "targets": [
@@ -47748,6 +47808,18 @@
    "files": [
     "AssistantConnectView.swift:144",
     "TripItemStatus.swift:61"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "새 계획이 도착했어요|A new plan arrived",
+   "ko": "새 계획이 도착했어요",
+   "en": "A new plan arrived",
+   "files": [
+    "AssistantLiveSync.swift:223"
    ],
    "args": [],
    "targets": [
@@ -47846,7 +47918,7 @@
    "ko": "새 여행",
    "en": "New trip",
    "files": [
-    "TravelModeView.swift:722",
+    "TravelModeView.swift:724",
     "TravelNewTripSheet.swift:81"
    ],
    "args": [],
@@ -47895,7 +47967,7 @@
    "ko": "새 키로 바꿀까요?",
    "en": "Replace the link key?",
    "files": [
-    "AssistantSettingsView.swift:90"
+    "AssistantSettingsView.swift:91"
    ],
    "args": [],
    "targets": [
@@ -48285,7 +48357,7 @@
    "ko": "서버에 올린 기록과 모든 AI 연결, PIN을 지워요. 쓰던 AI는 다시 연결해야 해요. 연결 키가 새어 나간 것 같을 때 쓰세요.",
    "en": "Deletes the records on the server, every AI connection and the PIN. You'll need to reconnect the AIs you use. Use it if a connection key may have leaked.",
    "files": [
-    "AssistantSettingsView.swift:80"
+    "AssistantSettingsView.swift:81"
    ],
    "args": [],
    "targets": [
@@ -48297,7 +48369,7 @@
    "ko": "서버에 올린 기록과 모든 AI 연결, PIN이 지워져요. 쓰던 AI는 다시 연결해야 해요.",
    "en": "The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use.",
    "files": [
-    "AssistantSettingsView.swift:95"
+    "AssistantSettingsView.swift:96"
    ],
    "args": [],
    "targets": [
@@ -50336,6 +50408,18 @@
    ]
   },
   {
+   "key": "실시간 반영|Live updates",
+   "ko": "실시간 반영",
+   "en": "Live updates",
+   "files": [
+    "AssistantLiveSync.swift:248"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "실시간 운항 반영|With live status",
    "ko": "실시간 운항 반영",
    "en": "With live status",
@@ -50558,7 +50642,7 @@
    "en": "Spent {0}",
    "files": [
     "PlanRealityView.swift:404",
-    "TravelModeView.swift:665",
+    "TravelModeView.swift:667",
     "TravelPlanSpend.swift:62"
    ],
    "args": [
@@ -50879,7 +50963,7 @@
    "ko": "아직 여행이 없습니다. 아래에서 첫 여행을 만들어 보세요.",
    "en": "No trips yet. Make your first one below.",
    "files": [
-    "TravelModeView.swift:622"
+    "TravelModeView.swift:624"
    ],
    "args": [],
    "targets": [
@@ -51050,7 +51134,7 @@
    "ko": "알겠어요",
    "en": "Got it",
    "files": [
-    "AssistantSettingsView.swift:64"
+    "AssistantSettingsView.swift:65"
    ],
    "args": [],
    "targets": [
@@ -51546,7 +51630,7 @@
    "ko": "앱 안 도시 목록",
    "en": "Built-in city list",
    "files": [
-    "TravelMapTripEditorSheet.swift:120"
+    "TravelMapTripEditorSheet.swift:124"
    ],
    "args": [],
    "targets": [
@@ -52096,8 +52180,8 @@
    "ko": "언젠가",
    "en": "Someday",
    "files": [
-    "TravelModeView.swift:590",
-    "TravelModeView.swift:813"
+    "TravelModeView.swift:592",
+    "TravelModeView.swift:815"
    ],
    "args": [],
    "targets": [
@@ -52475,7 +52559,7 @@
    "ko": "여행 경로",
    "en": "Trip route",
    "files": [
-    "TravelMapTripEditorSheet.swift:59"
+    "TravelMapTripEditorSheet.swift:63"
    ],
    "args": [],
    "targets": [
@@ -52523,8 +52607,8 @@
    "ko": "여행 고치기",
    "en": "Edit trip",
    "files": [
-    "TravelModeView.swift:709",
-    "TravelModeView.swift:780",
+    "TravelModeView.swift:711",
+    "TravelModeView.swift:782",
     "TravelNewTripSheet.swift:81"
    ],
    "args": [],
@@ -52549,7 +52633,7 @@
    "ko": "여행 공유",
    "en": "Share trip",
    "files": [
-    "TravelModeView.swift:784",
+    "TravelModeView.swift:786",
     "TripSharePanel.swift:35"
    ],
    "args": [],
@@ -52598,7 +52682,7 @@
    "ko": "여행 메뉴",
    "en": "Trip menu",
    "files": [
-    "TravelModeView.swift:688"
+    "TravelModeView.swift:690"
    ],
    "args": [],
    "targets": [
@@ -52622,7 +52706,7 @@
    "ko": "여행 목록으로",
    "en": "Back to trips",
    "files": [
-    "TravelModeView.swift:768"
+    "TravelModeView.swift:770"
    ],
    "args": [],
    "targets": [
@@ -52900,7 +52984,7 @@
    "ko": "여행 중",
    "en": "On trip",
    "files": [
-    "TravelModeView.swift:587"
+    "TravelModeView.swift:589"
    ],
    "args": [],
    "targets": [
@@ -52913,7 +52997,7 @@
    "en": "Delete trip",
    "files": [
     "TravelModeView.swift:162",
-    "TravelModeView.swift:712"
+    "TravelModeView.swift:714"
    ],
    "args": [],
    "targets": [
@@ -52973,7 +53057,7 @@
    "ko": "여행",
    "en": "Trips",
    "files": [
-    "TravelModeView.swift:612"
+    "TravelModeView.swift:614"
    ],
    "args": [],
    "targets": [
@@ -53094,8 +53178,8 @@
    "ko": "연결 끊음",
    "en": "Disconnected",
    "files": [
-    "AssistantCommandRunner.swift:438",
-    "AssistantCommandRunner.swift:443"
+    "AssistantCommandRunner.swift:444",
+    "AssistantCommandRunner.swift:449"
    ],
    "args": [],
    "targets": [
@@ -54135,7 +54219,7 @@
    "ko": "열 편집",
    "en": "Edit columns",
    "files": [
-    "TravelModeView.swift:836",
+    "TravelModeView.swift:838",
     "TravelNewTripSheet.swift:269"
    ],
    "args": [],
@@ -54160,7 +54244,7 @@
    "ko": "열기",
    "en": "Open",
    "files": [
-    "AssistantBubble.swift:334",
+    "AssistantBubble.swift:431",
     "AssistantConnectGuide.swift:162",
     "AssistantConnectView.swift:87"
    ],
@@ -54756,7 +54840,7 @@
    "ko": "오늘 당일치기",
    "en": "Day trip today",
    "files": [
-    "TravelModeView.swift:723"
+    "TravelModeView.swift:725"
    ],
    "args": [],
    "targets": [
@@ -57247,8 +57331,8 @@
    "ko": "이 말풍선 숨기기",
    "en": "Hide this bubble",
    "files": [
-    "AssistantBubble.swift:314",
-    "AssistantBubble.swift:327"
+    "AssistantBubble.swift:411",
+    "AssistantBubble.swift:424"
    ],
    "args": [],
    "targets": [
@@ -57566,7 +57650,7 @@
    "ko": "이 주소를 열까요?",
    "en": "Open this address?",
    "files": [
-    "AssistantBubble.swift:333"
+    "AssistantBubble.swift:430"
    ],
    "args": [],
    "targets": [
@@ -57753,7 +57837,7 @@
    "ko": "이동 수단",
    "en": "Transport",
    "files": [
-    "TravelMapTripEditorSheet.swift:77"
+    "TravelMapTripEditorSheet.swift:81"
    ],
    "args": [],
    "targets": [
@@ -57976,7 +58060,7 @@
    "ko": "이름 없는 여행",
    "en": "Untitled trip",
    "files": [
-    "TravelModeView.swift:601"
+    "TravelModeView.swift:603"
    ],
    "args": [],
    "targets": [
@@ -58626,8 +58710,8 @@
    "ko": "일상으로 돌아가기",
    "en": "Back to everyday",
    "files": [
-    "TravelModeView.swift:610",
-    "TravelModeView.swift:789"
+    "TravelModeView.swift:612",
+    "TravelModeView.swift:791"
    ],
    "args": [],
    "targets": [
@@ -58743,7 +58827,7 @@
    "ko": "일정 넣기",
    "en": "Add plan",
    "files": [
-    "TravelModeView.swift:832",
+    "TravelModeView.swift:834",
     "TravelPlanTable.swift:502",
     "TravelQuickEntrySheet.swift:223"
    ],
@@ -61405,7 +61489,7 @@
    "ko": "준비물",
    "en": "Prep items",
    "files": [
-    "TravelModeView.swift:834",
+    "TravelModeView.swift:836",
     "TravelPrepSheet.swift:34"
    ],
    "args": [],
@@ -61825,8 +61909,8 @@
    "ko": "지난 여행",
    "en": "Past",
    "files": [
-    "TravelModeView.swift:589",
-    "TravelModeView.swift:812"
+    "TravelModeView.swift:591",
+    "TravelModeView.swift:814"
    ],
    "args": [],
    "targets": [
@@ -62493,7 +62577,7 @@
    "ko": "지웠어요.",
    "en": "Erased.",
    "files": [
-    "AssistantSettingsView.swift:116"
+    "AssistantSettingsView.swift:117"
    ],
    "args": [],
    "targets": [
@@ -62505,7 +62589,7 @@
    "ko": "지출 넣기",
    "en": "Add expense",
    "files": [
-    "TravelModeView.swift:838",
+    "TravelModeView.swift:840",
     "TravelPlanTable.swift:517",
     "TravelPlanTable.swift:669"
    ],
@@ -63462,7 +63546,7 @@
    "ko": "초대로 참여",
    "en": "Join with an invite",
    "files": [
-    "TravelModeView.swift:617"
+    "TravelModeView.swift:619"
    ],
    "args": [],
    "targets": [
@@ -63703,7 +63787,7 @@
    "ko": "추적 끝냄",
    "en": "Tracking stopped",
    "files": [
-    "AssistantCommandRunner.swift:424"
+    "AssistantCommandRunner.swift:430"
    ],
    "args": [],
    "targets": [
@@ -63983,7 +64067,7 @@
    "ko": "취소",
    "en": "Cancel",
    "files": [
-    "AssistantBubble.swift:339",
+    "AssistantBubble.swift:436",
     "AssistantConnectView.swift:205",
     "AssistantPINReset.swift:96"
    ],
@@ -64189,7 +64273,7 @@
    "ko": "카드로 짜기",
    "en": "Plan with cards",
    "files": [
-    "TravelModeView.swift:719"
+    "TravelModeView.swift:721"
    ],
    "args": [],
    "targets": [
@@ -65365,6 +65449,18 @@
    "en": "Your edit lock expired. Open it again to edit.",
    "files": [
     "TripSharePlanEditor.swift:32"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "편집 중이라 잠시 미뤘어요|Paused while you edit",
+   "ko": "편집 중이라 잠시 미뤘어요",
+   "en": "Paused while you edit",
+   "files": [
+    "AssistantLiveSync.swift:140"
    ],
    "args": [],
    "targets": [
@@ -66593,7 +66689,7 @@
    "en": "Find a flight",
    "files": [
     "FlightPickerSheet.swift:135",
-    "TravelModeView.swift:833"
+    "TravelModeView.swift:835"
    ],
    "args": [],
    "targets": [
@@ -67263,7 +67359,7 @@
    "ko": "화면 녹화",
    "en": "Screen recording",
    "files": [
-    "MapHomeView+Support.swift:314"
+    "MapHomeView+Support.swift:318"
    ],
    "args": [],
    "targets": [

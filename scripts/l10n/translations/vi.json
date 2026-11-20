@@ -6293,6 +6293,14 @@
 "설정 안내 복사|Copy setup": "Sao chép hướng dẫn",
 "설정 안내 복사|Copy the setup": "Sao chép hướng dẫn thiết lập",
 "연결 키를 만들었어요. 다음 단계에서 설정 안내를 복사해요.|Key made. Copy the setup in the next step.": "Đã tạo khóa. Hãy sao chép hướng dẫn ở bước tiếp theo.",
-"키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.|Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.": "Sao chép khóa, rồi dán vào màn hình nhập bảo mật mà Muse hiển thị. Không bao giờ gõ khóa trực tiếp vào cuộc trò chuyện."
+"키를 복사한 뒤, Muse가 보여주는 보안 입력 화면에 붙여 넣어주세요. 키를 채팅에 직접 적지 마세요.|Copy the key, then paste it into the secure input screen Muse shows. Never type the key directly in the chat.": "Sao chép khóa, rồi dán vào màn hình nhập bảo mật mà Muse hiển thị. Không bao giờ gõ khóa trực tiếp vào cuộc trò chuyện.",
+"1초|1 s": "1 giây",
+"3초|3 s": "3 giây",
+"1초는 통화 중 빠른 모드로, 30분 뒤 3초로 돌아와요. 저전력 모드에서는 3초로 확인해요.|1 s is a fast mode for calls and returns to 3 s after 30 minutes. Low Power Mode checks every 3 s.": "1 giây là chế độ nhanh khi đang gọi và quay lại 3 giây sau 30 phút. Ở chế độ tiết kiệm pin, ứng dụng kiểm tra mỗi 3 giây.",
+"AI 연결을 확인하지 못했어요|Couldn't reach the AI connection": "Không thể kết nối với AI",
+"반영|Apply": "Áp dụng",
+"새 계획이 도착했어요|A new plan arrived": "Có kế hoạch mới",
+"실시간 반영|Live updates": "Cập nhật trực tiếp",
+"편집 중이라 잠시 미뤘어요|Paused while you edit": "Tạm dừng trong khi bạn chỉnh sửa"
 }
 }

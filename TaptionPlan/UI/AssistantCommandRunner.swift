@@ -82,6 +82,8 @@ enum AssistantCommandRunner {
     }
 
     private static var isRunning = false
+    /// 마지막 명령 확인이 서버에 닿지 못했는지(RTA1120A01의 연속 실패 표시용).
+    static var lastFetchFailed = false
     /// 지금 반영 중인 명령. 그동안 같은 확인이 또 돌아도 두 번 반영하지 않는다.
     private static var claimed: Set<String> = []
 
@@ -97,7 +99,8 @@ enum AssistantCommandRunner {
         let journal = AssistantCommandJournal(defaults: defaults)
         journal.resolveInterrupted()
         await deliver(journal, env: env)
-        guard let fetched = await TripRelay.fetchCommands(env: env) else { return .nothing }
+        guard let fetched = await TripRelay.fetchCommands(env: env) else { lastFetchFailed = true; return .nothing }
+        lastFetchFailed = false
         let waiting = Set(journal.pending.map(\.id)).union(claimed)
         await deleteReported(fetched, waiting: waiting, defaults: defaults, env: env)
         var batch = AssistantCommandLedger.unseen(fetched, defaults: defaults).excluding(waiting)
@@ -237,22 +240,25 @@ enum AssistantCommandRefresh {
     /// 명령을 받아 반영하고 알림을 띄운다. 새 명령이 있었으면 true. 429는 기다리지 않는다.
     /// `manual`(현재 위치 단추·당겨서 새로고침)이면 빠른 확인을 다시 시작한다.
     @discardableResult
-    static func now(language: MapHomeLanguage = .current, manual: Bool = false) async -> Bool {
+    /// `light`는 짧은 실시간 확인용: 명령 받기·반영·결과 보고만 하고 무거운 곁일(규칙·영수증·질문 올리기)은 5분 경로에 둔다(RTA1120A01).
+    static func now(language: MapHomeLanguage = .current, manual: Bool = false, light: Bool = false) async -> Bool {
         if manual { AssistantCommandPolling.manualAt = .now }
         guard let model else {
             // 모델이 아직 없어도 못 올린 일은 다시 올린다(AIP1114A05).
             await AITaskQueue.upload()
             return false
         }
-        await AssistantPush.syncRegistration()
+        if !light { await AssistantPush.syncRegistration() }
         let result = await TripRelay.$singleAttempt.withValue(true) { await AssistantCommandRunner.run(model: model) }
-        // 새 질문(답 기다림)과 아직 못 올린 답을 올린다(ASK1112A01).
-        await AssistantQuestionStore.shared.uploadIfNeeded()
-        // 규칙 묶음을 서버와 맞추고, 맡긴 일의 상태도 「AI」 탭을 열지 않아도 갱신한다(AIX1114A01 P3·P5).
-        await AssistantRuleStore.sync()
-        await AITaskQueue.refresh()
-        ReceiptPhotoWatcher.shared.startIfNeeded()
-        await ReceiptPhotoScanner.scan()
+        if !light {
+            // 새 질문(답 기다림)과 아직 못 올린 답을 올린다(ASK1112A01).
+            await AssistantQuestionStore.shared.uploadIfNeeded()
+            // 규칙 묶음을 서버와 맞추고, 맡긴 일의 상태도 「AI」 탭을 열지 않아도 갱신한다(AIX1114A01 P3·P5).
+            await AssistantRuleStore.sync()
+            await AITaskQueue.refresh()
+            ReceiptPhotoWatcher.shared.startIfNeeded()
+            await ReceiptPhotoScanner.scan()
+        }
         // 끝난 일 알림이 이번 확인에서 떴으면 명령 반영 알림과 한 줄로 보인다(AIP1114A05).
         let taskNotice = AITaskNotice.takeBanner()
         switch result {

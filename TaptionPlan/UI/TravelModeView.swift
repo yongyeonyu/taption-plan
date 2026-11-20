@@ -184,6 +184,7 @@ struct TravelModeView: View {
         }
         .task(id: flightStart) { await finishFlight() }
         .task { await book.load() }
+        .assistantLiveTravelScreen(language: language)
         .sheet(item: $newTripDraft) { draft in
             TravelNewTripSheet(model: model, language: language, draft: draft) { trip in
                 guard draft.editing == nil else { return }
@@ -202,6 +203,7 @@ struct TravelModeView: View {
         }
         .sheet(isPresented: $isImportPresented) {
             MapHomeTripImportSheet(model: model, language: language, initialText: importText) { openImported($0) }
+                .assistantLiveEditing()
                 .presentationDetents([.large])
         }
         .sheet(item: $columnsTrip) { TravelColumnEditorSheet(model: model, language: language, trip: $0) }

@@ -225,19 +225,23 @@ extension MapHomeView {
         .task { await checkTripRelay() }
         .task { await AnnouncementService.shared.refresh(); AnnouncementService.shared.markShown() }
         .task { SeasonPackAdapter.sync(model: model); await SeasonPackAdapter.refresh() }
-        // 켜져 있는 동안 AI 비서 명령을 받는다(SYN1111A03). AI와 대화 중이면 10초, 아니면 5분.
-        // 10초마다 깨어 간격만 다시 본다(네트워크 없음). 직접 새로고침하면 다음 깸에 바로 빨라진다.
+        // 켜져 있는 동안 AI 비서 명령을 받는다(RTA1120A01, 대표 결정 2026-11-20): 기본 3초, 통화 중 1초, 끔이면 5분.
+        // 갱신 입구는 `AssistantLiveSync.refresh` 하나이고, 전면이 아니면 이 반복이 취소돼 요청이 0건이다.
         .task(id: scenePhase == .active) {
             guard scenePhase == .active else { return }
-            var lastFetch = Date.now
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(10))
-                guard !Task.isCancelled else { return }
-                let now = Date.now
-                guard now.timeIntervalSince(lastFetch) >= AssistantCommandPolling.nextInterval(now: now) - 1 else { continue }
-                lastFetch = now
-                await AssistantCommandRefresh.now(language: language)
-            }
+            await AssistantLiveSync.runLoop(
+                isActive: { scenePhase == .active },
+                interval: { AssistantLiveSync.liveInterval() },
+                wait: { try? await Task.sleep(for: .seconds($0)) },
+                refresh: { await AssistantLiveSync.shared.refresh(reason: .poll, language: language) }
+            )
+        }
+        // 통화 중 여행 계획이 와서 「반영」을 누르면 지금의 미리보기(가져오기)로 이어 준다.
+        .onChange(of: AssistantLiveSync.shared.acceptedPlan) { _, text in
+            guard let text else { return }
+            AssistantLiveSync.shared.acceptedPlan = nil
+            pastedTripText = text
+            isTravelHomePresented = true
         }
         .overlay(alignment: .top) { ArrivalCardHost(model: model, language: language) { homeTopNotices } }
         .overlay { SeasonPackOverlay() }
