@@ -38,18 +38,18 @@ basis: 대표 직접 지시 (2026-11-20 18:0x 통화) — 「일단 디버깅 �
 | `:316~317` | `model.diagnosticsLatestLogSummary`(iCloud에 마지막으로 저장한 파일 이름·시각) | 의미를 「최근 전송」으로 바꿈 |
 | `:319~335` | 버튼 2(주석 `SUB1029A01`) → `exportSensorRawToICloud()`, 라벨 「어제·오늘 원본 업로드」, 아이콘 `location.square` | 전송 함수 교체 + 고지·동의 추가 |
 | `:338` | `developerMailButtons` | **삭제** |
-| `:803~858` | `extension MapHomeSecuritySheet` — `developerMailButtons`, `developerMailButton(_:subject:source:)` | **삭제**(두 상태와 함께) |
+| `:803~856` | `extension MapHomeSecuritySheet` — `developerMailButtons`, `developerMailButton(_:subject:source:)` | **삭제**(두 상태와 함께) |
 | `TaptionPlan/UX/AppModel+Export.swift:36` | `exportTodaySensorRawURL()` — 어제·오늘 `[TodaySensorRawExport]` JSON을 임시 폴더에 씀. `places`·`actuals` 포함, 일정 제목·기기 이름은 가림(`GOO1106A01`·`WSN1112A02`) | 배치 전송을 위해 **자료 만들기와 파일 쓰기를 나눈다** |
 | `AppModel+Export.swift:93` | `diagnosticsPackageURL()` — `TaptionPlanDiagnosticsLogPackageBuilder`로 패키지를 Application Support에 씀(이미 로컬 사본!) | 로컬 사본 단계로 재사용 |
 | `AppModel+Export.swift:103` | `exportSensorRawToICloud()` — `exportTodaySensorRawURL` → `TaptionPlanDiagnosticsICloudExporter().export(url, updatesLatest: false)` | PostHog 전송으로 교체 |
-| `AppModel+Export.swift:115~186` | `exportDiagnosticsToICloud()` — `logger.beginOperation("diagnostics_export", destination: icloud_drive)` → 패키지 → iCloud → UserDefaults(`diagnosticsLatestFileKey`)·상태 키 | PostHog 전송으로 교체, 진단 기록(`diagnostics_export_*`) 이벤트는 이름·필드를 새 흐름에 맞게 |
+| `AppModel+Export.swift:115~191` | `exportDiagnosticsToICloud()` — `logger.beginOperation("diagnostics_export", destination: icloud_drive)` → 패키지 → iCloud → UserDefaults(`diagnosticsLatestFileKey`)·상태 키 | PostHog 전송으로 교체, 진단 기록(`diagnostics_export_*`) 이벤트는 이름·필드를 새 흐름에 맞게 |
 | `AppModel+Export.swift:193~244` | `diagnosticsSummary` — `app_version`·`build`·`os`·`device_model`·개수들·`cloud_status`·widget/watch skip 수 등 | **그대로 이벤트 속성으로** 쓴다(좌표 없음) |
 | `TaptionPlan/UX/AppModel.swift:185~188` | `isExportingDiagnostics`, `diagnosticsExportStatusKey`, `diagnosticsExportStatus` | 원본 업로드용 상태를 따로 둔다 |
 | `AppModel.swift:284~` | `diagnosticsLatestLogSummary`(UserDefaults의 파일 이름·시각) | 문구를 「최근 전송」으로 |
 | `TaptionPlan/Core/DiagnosticsLogSupport.swift:6` | `TaptionLogGzip.compress` (gzip) | **그대로 재사용**(요청 본문 압축) |
 | `DiagnosticsLogSupport.swift:264~267` | `TaptionPlanDiagnosticsTravelSummary` 주석 「Coordinates and raw sensor samples stay out of the export, while mode and subway-route names make a transit inference auditable」 | 로그 쪽 제외 규칙의 근거 — **유지** |
-| `DiagnosticsLogSupport.swift:695~806` | `TaptionPlanDiagnosticsLogPackageBuilder.makePackage(summary:iphoneLog:watchLog:)` — 요약+로그를 `.txt.gz`로 Application Support `TaptionPlan/Diagnostics/Packages`에 쓰고 최근 6개만 남김. `TaptionPlanDiagnosticsLogPolicy.redactingPersonalHealthFields`·`TaptionWatchDiagnosticsPrivacy.redacted` 적용 | 로컬 사본 + **전송할 평문 텍스트**를 함께 돌려주게 바꾼다(아래 5절) |
-| `DiagnosticsLogSupport.swift:812~` | `TaptionDiagnosticsLatestLogManifest`, `TaptionPlanDiagnosticsICloudExporter`(`updatesLatest` false면 `latest.json` 유지) | **지우지 않는다**(7절) |
+| `DiagnosticsLogSupport.swift:695~791` | `TaptionPlanDiagnosticsLogPackageBuilder.makePackage(summary:iphoneLog:watchLog:)` — 요약+로그를 `.txt.gz`로 Application Support `TaptionPlan/Diagnostics/Packages`에 쓰고 최근 6개만 남김. `TaptionPlanDiagnosticsLogPolicy.redactingPersonalHealthFields`·`TaptionWatchDiagnosticsPrivacy.redacted` 적용 | 로컬 사본 + **전송할 평문 텍스트**를 함께 돌려주게 바꾼다(아래 5절) |
+| `DiagnosticsLogSupport.swift:812~`(매니페스트)·`:826~`(내보내기) | `TaptionDiagnosticsLatestLogManifest`, `TaptionPlanDiagnosticsICloudExporter`(`updatesLatest` false면 `latest.json` 유지) | **지우지 않는다**(7절) |
 | `TaptionPlan/UI/MapHomeDeveloperMail.swift:11·62·69` | `MapHomeZipArchive`, `MapHomeDeveloperAttachment`, `MapHomeDeveloperMailSheet` | **다른 화면이 쓴다** — `MapHomePlaceBookTools.swift:578·644·676`(장소 요청 메일). 파일은 그대로 |
 | `TaptionPlan/UI/MapHomeView.swift:627·657` | 벤치 흐름(`-autoBenchMapPan`, `-autoStartDayPlayback`) 끝에서 `await model.exportDiagnosticsToICloud()` — 주석은 「로그 패키지를 만든다(USB로 받아 본다)」 | **네트워크 없이 로컬 패키지만** 남기게 바꾼다(무인 실행이 PostHog로 나가면 안 됨) |
 | `TaptionPlan/AppSecrets.xcconfig` | 공개 템플릿. 값은 여기, 비밀값은 빈 칸으로 두고 맨 아래 `#include? "AppSecrets.local.xcconfig"`. `.gitignore`에 `*.local.xcconfig` | 새 키 두 개를 **include 줄 위에** 둔다(아래 함정) |
@@ -98,7 +98,7 @@ basis: 대표 직접 지시 (2026-11-20 18:0x 통화) — 「일단 디버깅 �
 - 두 버튼 비활성 + 상태 `PostHog 키가 설정되지 않았습니다` / `PostHog key is not set`. (버튼을 숨기지 않는다 — 베타 테스터가 이유를 알 수 있게)
 
 **⑦ 삭제**
-- `developerMailButtons`(338) 호출, extension(803~858), `developerMailStatus`·`developerAttachment`(208·209), 안내문 「위치 기록이 포함될 수 있어요…」, `MapHomeDeveloperMailSheet`를 이 화면에 붙이던 `.sheet(item:)`까지.
+- `developerMailButtons`(338) 호출, extension(803~856), `developerMailStatus`·`developerAttachment`(208·209), 안내문 「위치 기록이 포함될 수 있어요…」, `MapHomeDeveloperMailSheet`를 이 화면에 붙이던 `.sheet(item:)`까지.
 
 ## 4. PostHog 전송 — 연결·이벤트·배치
 
@@ -199,7 +199,7 @@ basis: 대표 직접 지시 (2026-11-20 18:0x 통화) — 「일단 디버깅 �
 
 **남긴다 (지우면 다른 기능이 깨진다)**
 - `TaptionPlan/UI/MapHomeDeveloperMail.swift` 전체 — `MapHomeDeveloperMailSheet`·`MapHomeDeveloperAttachment`를 **장소 요청 메일**이 쓴다(`MapHomePlaceBookTools.swift:578·644·676`). `MapHomeZipArchive`도 이 파일에 있으니 손대지 않는다(쓰는 곳이 없어져도 파일 삭제는 대표 확인 대상).
-- `exportTodaySensorRawURL()` — DEBUG `-exportRawOnLaunch`가 쓴다(`AppModel+Export.swift:67~`).
+- `exportTodaySensorRawURL()` — DEBUG `-exportRawOnLaunch`가 쓴다(`AppModel+Export.swift:64`).
 - `TaptionPlanDiagnosticsICloudExporter`·`TaptionDiagnosticsLatestLogManifest`와 그 시험 — iCloud entitlement(`ubiquityContainerURL`, iCloud.com.taption.plan)도 **이번에 지우지 않는다**(백업·PIN이 쓴다: `BackupPasswordVault`·`AssistantPINDerivation` 확인). 이번 흐름에서 부르지 않게만 한다.
 - `MapHomeView.swift:627·657`의 벤치: `exportDiagnosticsToICloud()` 대신 **로컬 패키지만 만드는 함수**(예: `makeDiagnosticsPackageLocally()`)를 부른다. 무인 벤치가 PostHog로 나가면 안 된다.
 
