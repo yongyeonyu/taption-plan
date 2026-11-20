@@ -119,17 +119,18 @@ enum AssistantGuidePlan {
                       button: language.text("연결 키 복사", "Copy key"), action: token.map(AssistantGuideStep.Action.copy)),
                 check,
             ]
-        // Muse는 채팅에 붙여 넣지 않고 커스텀 커넥터(MCP 서버)로 등록한다(MUS1120A01). 앱 스킴이 없어 「열기」는 App Store 화면이다.
+        // Muse에는 「MCP 서버 추가」 화면이 없다. 안내를 채팅에 붙여 넣어 맞춤 커넥터를 만들어 달라고 하고, 키는 보안 입력창에 넣는다(MUS1120A01).
+        // 한국 App Store에는 아직 없어 「열기」 단추를 달지 않는다(스킴·스토어 주소 없음).
         case .muse:
             return [
                 .init(id: "key", title: language.text("연결 키 만들기", "Make a key"),
-                      detail: language.text("아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요.", "Pick access and period below, then enter your app password to make a key just for Muse."),
+                      detail: language.text("아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고 연결 안내(1회용 주소)를 복사해요.", "Pick access and period below, then enter your app password to make a key just for Muse and copy the setup (a one-time link)."),
                       button: language.text("키 만들기", "Make key"), action: .makeKey),
-                .init(id: "mcp", title: language.text("MCP 주소 복사", "Copy the MCP URL"),
-                      detail: language.text("Muse에서 커스텀 커넥터(MCP 서버)를 추가하는 화면의 서버 주소 칸에 붙여 넣어요.", "Paste it into the server URL field when adding a custom connector (MCP server) in Muse."),
+                .init(id: "paste", title: language.text("Muse 채팅에 붙여 넣기", "Paste into the Muse chat"),
+                      detail: language.text("Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.", "Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app."),
                       button: language.text("MCP 주소 복사", "Copy MCP URL"), action: .copy(TripRelay.mcpURL(host: host))),
-                .init(id: "auth", title: language.text("인증에 키 넣기", "Add the key"),
-                      detail: language.text("인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣고 저장해요. 칸 이름은 Muse 화면을 따라 주세요.", "In the auth field (request header), enter Authorization: Bearer followed by the key, then save. Field names follow Muse's screen."),
+                .init(id: "auth", title: language.text("보안 입력창에 키 넣기", "Enter the key securely"),
+                      detail: language.text("Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.", "When Muse asks for the key, enter it in Muse's secure input, not in the chat text."),
                       button: language.text("연결 키 복사", "Copy key"), action: token.map(AssistantGuideStep.Action.copy)),
                 check,
             ]

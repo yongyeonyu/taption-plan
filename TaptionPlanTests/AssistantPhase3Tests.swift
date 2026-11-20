@@ -881,7 +881,8 @@ final class AssistantPhase3Tests: XCTestCase {
     func testMuseIsAKeyConnectorProviderWithVerifiedStoreIDOnly() {
         XCTAssertEqual(AssistantAIProvider.muse.title(.korean), "Muse")
         XCTAssertEqual(AssistantAIProvider.muse.title(.english), "Muse")
-        XCTAssertEqual(AssistantAIProvider.muse.appStoreURL?.absoluteString, "https://apps.apple.com/app/id6760173601", "Muse from Meta")
+        // 한국 스토어 조회(itunes.apple.com/kr/lookup?id=6760173601)가 2026-11-20 resultCount 0: 미국 ID를 넣지 않는다.
+        XCTAssertNil(AssistantAIProvider.muse.appStoreURL, "Muse is not on the Korean App Store yet")
         XCTAssertNil(AssistantAIProvider.muse.scheme, "no unverified URL scheme")
         XCTAssertNil(AssistantAIProvider.muse.appURL)
         XCTAssertFalse(AssistantAIProvider.muse.usesOAuth)
@@ -897,8 +898,11 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertNil(AITaskRequest.chatURL(.muse), "no unverified web chat URL")
         let setup = TripRelay.museSetupText(host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil)
         XCTAssertTrue(setup.hasPrefix("BOKKI Plan connection for Muse."))
-        XCTAssertTrue(setup.contains("https://trip.bokkiyaw.com/mcp and the request header Authorization: Bearer K"))
+        XCTAssertTrue(setup.contains("custom connector to the remote MCP server https://trip.bokkiyaw.com/mcp"))
+        XCTAssertTrue(setup.contains("Authorization: Bearer K"))
+        XCTAssertTrue(setup.contains("secure credential input"), "the key goes into Muse's secure input, not the chat text")
         XCTAssertTrue(setup.contains("https://trip.bokkiyaw.com/mcp/K"))
+        XCTAssertFalse(setup.localizedCaseInsensitiveContains("add an mcp server"), "no claim of an MCP server settings screen")
         XCTAssertEqual(TripRelay.keyConnectorSetupText(for: .muse, host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil), setup)
         XCTAssertNil(TripRelay.keyConnectorSetupText(for: .pickle, host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil))
     }
