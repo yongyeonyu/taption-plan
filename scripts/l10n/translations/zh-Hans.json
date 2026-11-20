@@ -6334,6 +6334,27 @@
 "최근 전송: {0} · {1}|Last upload: {0} · {1}": "最近发送：{0} · {1}",
 "포스트호그 로그 업로드|PostHog Log Upload": "PostHog日志上传",
 "한도 초과로 거절됨(429) · 나중에 다시{0}|Rate limited (429) · try again later{0}": "超出限额被拒绝(429) · 请稍后再试{0}",
-"한도·결제로 거절됨({0}){1}|Rejected for quota or billing ({0}){1}": "因额度或计费被拒绝({0}){1}"
+"한도·결제로 거절됨({0}){1}|Rejected for quota or billing ({0}){1}": "因额度或计费被拒绝({0}){1}",
+"국내선|Domestic": "国内航线",
+"귀국편|Return": "返程",
+"다시 시도|Try again": "重试",
+"도착 공항|To": "到达机场",
+"도착 빠른 순|Earliest arrival": "最早到达",
+"도착 어림|Estimated": "估算",
+"도착|To": "到达",
+"도착할 공항을 골라 주세요.|Pick an arrival airport.": "请选择到达机场。",
+"소요 짧은 순|Shortest": "耗时最短",
+"정렬|Sort": "排序",
+"조회 서버에 항공편 경로가 아직 없어요. 직접 넣거나 편명으로 검색해 보세요.|The lookup server has no flight route yet. Add it manually or search the flight number.": "查询服务器还没有航班路由。请手动添加或搜索航班号。",
+"중계 서버 주소가 없어 조회할 수 없어요. 직접 넣거나 편명으로 검색해 보세요.|No relay server address, so it can't be looked up. Add it manually or search the flight number.": "没有中继服务器地址，无法查询。请手动添加或搜索航班号。",
+"직항 {0}편 · 공동운항 {1}편 제외|{0} direct · {1} codeshare hidden": "直飞{0}班 · 已隐藏共享航班{1}班",
+"직항|Direct": "直飞",
+"직항만|Direct only": "仅直飞",
+"출국편|Outbound": "出境",
+"출발 공항|From": "出发机场",
+"출발 빠른 순|Earliest departure": "最早出发",
+"출발|From": "出发",
+"코드·도시 이름|Code or city": "代码或城市名",
+"항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.": "航班查询密钥尚未登记。请手动添加或搜索航班号。"
 }
 }

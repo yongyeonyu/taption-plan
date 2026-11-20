@@ -129,6 +129,8 @@ GET /flights/status?airport=ICN&date=YYYY-MM-DD&direction=dep|arr[&flight=AB123]
 - 캐시(`caches.default`): 정기 스케줄 7일, 당일 운항현황 90초. 편명·항공사 필터는 응답에서만 적용해 같은 캐시를 씁니다. 응답의 `updatedAt`을 앱이 보여 줍니다.
 - 호출 예산: 상류를 부를 때마다 서버 전체 하루 예산을 1씩 세고(Durable Object `global:flights`) 캐시가 맞으면 세지 않습니다. 기본 400회, 환경 변수 `FLIGHT_DAILY_CALLS`로 조정합니다(개발계정 일 500회 안의 안전선).
 
+**국내선 시각 필드(FLT1120A01).** 행에 선택 필드 셋이 더해졌습니다: `departureTime`(출발 공항 현지 `HH:mm`)·`arrivalTime`(도착 공항 현지 `HH:mm`)·`durationMinutes`(두 공항이 모두 한국이고 두 시각이 모두 있을 때만, 자정을 넘기면 +1440). `dep` 행의 `time`은 출발, `arr` 행의 `time`은 도착이며 출발·도착 칸 이름은 `FIELD.depTime`·`FIELD.arrTime`이다(키를 받은 뒤 probe로 확인). 상류에 없으면 `null`이고 앱은 짝 행 또는 거리 어림으로 되돌아갑니다. 정기 스케줄 캐시는 30분(`SCHEDULE_TTL`)입니다. 당일 운항현황(`/flights/status`)은 지금처럼 인천만이고 국내 공항은 `available:false`입니다(나중에 넓히면 `available:true`·`source:"status"`만 주면 앱이 「실시간」으로 표시). **배포는 아직 하지 않았습니다**(대표 몫).
+
 **상류에서 확인한 것과 못 한 것(2026-11-20).** 공공데이터포털 상세 페이지로 확인한 것: 정기운항편 서비스 `apis.data.go.kr/B551177/StatusOfPaxFltSched`, 도착 조회 `getPaxFltSchedArrivalsDeOdp`, 요청 변수 `serviceKey`·`pageNo`·`numOfRows`·`type`·`airport`(인천 오는 편의 출발 공항)·`lang`, 개발계정 일 500회, 오류 코드 22(일 한도)·23(초당 한도). **응답 칸 이름은 그 페이지에 비어 있어 확인하지 못했습니다.** 그래서 `src/flights.js`의 `FIELD`에 후보 이름(대소문자 무시)을 두고 읽습니다. 출발 조회 이름, 당일 운항현황(`StatusOfPassengerFlightsOdp`), 한국공항공사 주소는 같은 계열을 따른 추정입니다. 키를 받은 뒤 아래 점검을 한 번 돌려, 없는 칸이 나오면 `FIELD`·`SOURCES`만 고칩니다.
 
 ```sh

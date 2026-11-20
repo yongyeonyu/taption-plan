@@ -6334,6 +6334,27 @@
 "최근 전송: {0} · {1}|Last upload: {0} · {1}": "Último envío: {0} · {1}",
 "포스트호그 로그 업로드|PostHog Log Upload": "Envío de registros a PostHog",
 "한도 초과로 거절됨(429) · 나중에 다시{0}|Rate limited (429) · try again later{0}": "Límite superado (429) · inténtalo más tarde{0}",
-"한도·결제로 거절됨({0}){1}|Rejected for quota or billing ({0}){1}": "Rechazado por cuota o facturación ({0}){1}"
+"한도·결제로 거절됨({0}){1}|Rejected for quota or billing ({0}){1}": "Rechazado por cuota o facturación ({0}){1}",
+"국내선|Domestic": "Nacional",
+"귀국편|Return": "Vuelta",
+"다시 시도|Try again": "Reintentar",
+"도착 공항|To": "Aeropuerto de llegada",
+"도착 빠른 순|Earliest arrival": "Llegada más temprana",
+"도착 어림|Estimated": "Estimado",
+"도착|To": "Llegada",
+"도착할 공항을 골라 주세요.|Pick an arrival airport.": "Elige un aeropuerto de llegada.",
+"소요 짧은 순|Shortest": "Más cortos",
+"정렬|Sort": "Ordenar",
+"조회 서버에 항공편 경로가 아직 없어요. 직접 넣거나 편명으로 검색해 보세요.|The lookup server has no flight route yet. Add it manually or search the flight number.": "El servidor de consulta aún no tiene la ruta de vuelos. Añádelo a mano o busca el número de vuelo.",
+"중계 서버 주소가 없어 조회할 수 없어요. 직접 넣거나 편명으로 검색해 보세요.|No relay server address, so it can't be looked up. Add it manually or search the flight number.": "No hay dirección del servidor de enlace, así que no se puede consultar. Añádelo a mano o busca el número de vuelo.",
+"직항 {0}편 · 공동운항 {1}편 제외|{0} direct · {1} codeshare hidden": "{0} directos · {1} en código compartido ocultos",
+"직항|Direct": "Directo",
+"직항만|Direct only": "Solo directos",
+"출국편|Outbound": "Ida",
+"출발 공항|From": "Aeropuerto de salida",
+"출발 빠른 순|Earliest departure": "Salida más temprana",
+"출발|From": "Salida",
+"코드·도시 이름|Code or city": "Código o ciudad",
+"항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.": "La clave de consulta de vuelos aún no está registrada. Añádelo a mano o busca el número de vuelo."
 }
 }

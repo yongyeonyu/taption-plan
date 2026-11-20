@@ -137,6 +137,12 @@ enum FlightPlacement {
         leg(from: listing, day: day, direction: direction).flatMap { draft(for: $0) }
     }
 
+    /// 찾기 화면의 한 줄 → 일정 칸 초안. 국내선 합집합처럼 도착 시각을 알면 비행 분을 넘겨 어림이 아니게 한다(FLT1120A01).
+    static func draft(from row: FlightSearch.Row, day: String) -> Draft? {
+        let minutes = row.isEstimated ? nil : row.durationMinutes
+        return leg(from: row.listing, day: day, direction: row.direction, durationMinutes: minutes).flatMap { draft(for: $0) }
+    }
+
     /// 손으로 적은 값 → 일정 칸 초안.
     static func manualDraft(flight: String?, origin: String, destination: String, day: String, minute: Int, durationMinutes: Int?) -> Draft? {
         manualLeg(flight: flight, origin: origin, destination: destination, day: day, minute: minute, durationMinutes: durationMinutes).flatMap { draft(for: $0) }

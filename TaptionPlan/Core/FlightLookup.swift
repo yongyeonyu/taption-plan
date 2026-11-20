@@ -9,6 +9,10 @@ struct FlightListing: Decodable, Equatable, Identifiable, Sendable {
     var destination: String
     /// 그 공항(조회한 공항)의 현지 시각 `HH:mm`.
     var time: String
+    /// 국내선 두 시각(FLT1120A01, 서버가 줄 때만). 출발·도착 공항의 현지 `HH:mm`과 비행 분.
+    var departureTime: String?
+    var arrivalTime: String?
+    var durationMinutes: Int?
     var dayOffset: Int
     var terminal: String?
     var gate: String?
@@ -47,7 +51,7 @@ enum FlightLookup {
     enum Kind: String, Sendable { case schedule, status }
     enum Direction: String, Sendable { case dep, arr }
     /// 조회하지 못한 이유. 앱은 어느 것이든 오류 화면 없이 「직접 입력 + 편명으로 검색」만 보여 준다.
-    enum Failure: Equatable, Sendable { case noServer, keyMissing, limited, outOfRange, failed }
+    enum Failure: Equatable, Sendable { case noServer, routeMissing, keyMissing, limited, outOfRange, failed }
     enum Outcome: Equatable, Sendable {
         case found(FlightListResult)
         case unavailable(Failure)
@@ -73,6 +77,7 @@ enum FlightLookup {
         switch status {
         case 200: break
         case 400, 422: return .unavailable(.outOfRange)
+        case 404: return .unavailable(.routeMissing)
         case 429: return .unavailable(.limited)
         case 503: return .unavailable(.keyMissing)
         default: return .unavailable(.failed)
@@ -84,7 +89,7 @@ enum FlightLookup {
             var flights: [FlightListing]
         }
         guard data.count <= maximumBytes, let reply = try? JSONDecoder().decode(Reply.self, from: data) else { return .unavailable(.failed) }
-        let valid = reply.flights.filter { clockMinute($0.time) != nil && $0.flight.count >= 3 && $0.origin.count == 3 && $0.destination.count == 3 }
+        let valid = reply.flights.filter { clockMinute($0.time) != nil && ($0.departureTime.map { clockMinute($0) != nil } ?? true) && ($0.arrivalTime.map { clockMinute($0) != nil } ?? true) && $0.flight.count >= 3 && $0.origin.count == 3 && $0.destination.count == 3 }
         return .found(FlightListResult(
             flights: valid, source: reply.source == "status" ? .status : .season,
             updatedAt: reply.updatedAt.flatMap(parseISO), isAvailable: reply.available ?? true

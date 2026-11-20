@@ -12,7 +12,8 @@
 import { json } from "./http.js";
 
 const CACHE_ORIGIN = "https://flights-cache.invalid";
-const SCHEDULE_TTL = 7 * 86_400;
+// 정기 스케줄 캐시 30분(FLT1120A01, 대표 지시 10~30분).
+const SCHEDULE_TTL = 1_800;
 const STATUS_TTL = 90;
 const PAGE_ROWS = 1_000;
 const MAX_PAGES = 5;
@@ -39,6 +40,9 @@ export const FIELD = {
   flight: ["flightid", "flightno", "flightnumber", "fid", "domesticnum"],
   otherAirport: ["airportcode", "airport", "arrairport", "depairport", "startcity", "arrivalcity"],
   time: ["st", "scheduletime", "scheduledatetime", "domesticstarttime", "domesticarrivaltime"],
+  // 국내선은 출발·도착 시각이 따로 온다(FLT1120A01). 칸 이름은 키를 받은 뒤 probe로 확인한다.
+  depTime: ["domesticstarttime", "departuretime", "stdtime", "std"],
+  arrTime: ["domesticarrivaltime", "arrivaltime", "statime", "sta"],
   expected: ["estimateddatetime", "estimatedtime", "chgtime", "changetime", "etd", "eta"],
   terminal: ["terminalid", "terminal", "terminalno"],
   gate: ["gatenumber", "gate", "gateno"],
@@ -109,14 +113,24 @@ export function validDate(date) {
 }
 
 const airlineOf = (flight) => flight.slice(0, 2);
+const KOREA = new Set(["ICN", "GMP", "PUS", "CJU", "TAE", "CJJ", "KWJ", "MWX", "RSU", "USN", "KPO", "HIN", "KUV", "WJU", "YNY"]);
+const clockMinutes = (hhmm) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
 
 // 정기운항편 한 줄을 정규화한다. 그 날 운항하지 않으면(요일·유효 기간) null.
 export function normalizeSchedule(row, { airport, date, direction }) {
   const r = lowerKeys(row);
   const flight = pick(r, FIELD.flight).replace(/\s+/g, "").toUpperCase();
-  const time = clock(pick(r, FIELD.time));
+  // 방향별로 그 공항의 시각 칸을 먼저 읽는다: 출발 조회의 time은 출발, 도착 조회의 time은 도착.
+  const depClock = clock(pick(r, FIELD.depTime)), arrClock = clock(pick(r, FIELD.arrTime));
+  const time = (direction === "dep" ? depClock : arrClock) || clock(pick(r, FIELD.time));
   const other = pick(r, FIELD.otherAirport).toUpperCase();
   if (!FLIGHT.test(flight) || !time || !AIRPORT.test(other)) return null;
+  const origin = direction === "dep" ? airport : other, destination = direction === "dep" ? other : airport;
+  // 두 시각이 모두 있고 두 공항이 모두 한국일 때만 비행 분을 계산한다(자정을 넘기면 +1440). 시차가 있는 구간은 계산하지 않는다.
+  const departureTime = direction === "dep" ? time : (depClock || null);
+  const arrivalTime = direction === "arr" ? time : (arrClock || null);
+  const durationMinutes = departureTime && arrivalTime && KOREA.has(origin) && KOREA.has(destination)
+    ? (clockMinutes(arrivalTime) - clockMinutes(departureTime) + 1_440) % 1_440 : null;
   const from = isoDate(pick(r, FIELD.validFrom)), to = isoDate(pick(r, FIELD.validTo));
   if (from && date < from) return null;
   if (to && date > to) return null;
@@ -128,8 +142,8 @@ export function normalizeSchedule(row, { airport, date, direction }) {
   const codeshare = truthy(pick(r, FIELD.codeshare)) || (master !== "" && master !== flight);
   return {
     flight, airline: airlineOf(flight),
-    origin: direction === "dep" ? airport : other, destination: direction === "dep" ? other : airport,
-    time, dayOffset: 0,
+    origin, destination,
+    time, departureTime, arrivalTime, durationMinutes, dayOffset: 0,
     terminal: pick(r, FIELD.terminal) || null, gate: pick(r, FIELD.gate) || null,
     codeshare, master: FLIGHT.test(master) ? master : flight,
     season: pick(r, FIELD.season) || null, validFrom: from || null, validTo: to || null,

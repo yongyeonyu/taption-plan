@@ -46,7 +46,7 @@ test("schedule row maps to the common shape and the weekday flags decide the day
   const sunday = { airport: "ICN", date: "2027-03-07", direction: "dep" };
   const item = normalizeSchedule(row(), sunday);
   assert.deepEqual(item, {
-    flight: "AB123", airline: "AB", origin: "ICN", destination: "BKK", time: "09:05", dayOffset: 0,
+    flight: "AB123", airline: "AB", origin: "ICN", destination: "BKK", time: "09:05", departureTime: "09:05", arrivalTime: null, durationMinutes: null, dayOffset: 0,
     terminal: "P02", gate: null, codeshare: false, master: "AB123", season: "2027S", validFrom: "2027-03-01", validTo: "2027-10-23", status: null,
   });
   assert.equal(normalizeSchedule(row(), { ...sunday, date: "2027-03-09" }), null, "화요일은 운항하지 않는다");
@@ -230,4 +230,49 @@ test("no user data is read: personal-looking query values are ignored, not forwa
   await flightsSchedule(get("/flights/schedule?airport=ICN&date=2027-03-07&direction=dep&pnr=ABC123&name=HONG%2FGILDONG&phone=0000-0000"), env, fetcher, null);
   const names = [...seen[0].searchParams.keys()];
   for (const forbidden of ["pnr", "name", "phone"]) assert.equal(names.includes(forbidden), false, forbidden);
+});
+
+// FLT1120A01: 국내선 방향별 출발·도착 시각.
+const domestic = (extra = {}) => row({ flightId: "AB101", airportCode: "CJU", st: undefined, domesticstarttime: "2350", domesticarrivaltime: "0020", ...extra });
+
+test("domestic row: dep rows read the departure column, arr rows read the arrival column", () => {
+  const dep = normalizeSchedule(domestic(), { airport: "GMP", date: "2027-03-07", direction: "dep" });
+  assert.equal(dep.time, "23:50");
+  assert.equal(dep.departureTime, "23:50");
+  assert.equal(dep.arrivalTime, "00:20");
+  assert.equal(dep.durationMinutes, 30, "23:50 → 00:20은 자정을 넘겨 30분");
+  assert.equal(dep.origin, "GMP");
+  assert.equal(dep.destination, "CJU");
+  const arr = normalizeSchedule(domestic({ airportCode: "GMP" }), { airport: "CJU", date: "2027-03-07", direction: "arr" });
+  assert.equal(arr.time, "00:20", "도착 조회의 time은 도착 칸");
+  assert.equal(arr.arrivalTime, "00:20");
+  assert.equal(arr.departureTime, "23:50");
+  assert.equal(arr.origin, "GMP");
+  assert.equal(arr.destination, "CJU");
+});
+
+test("domestic row: duration is only computed for two Korean airports and when both times exist", () => {
+  const intl = normalizeSchedule(domestic({ airportCode: "NRT" }), { airport: "GMP", date: "2027-03-07", direction: "dep" });
+  assert.equal(intl.durationMinutes, null, "시차가 있는 국제선은 계산하지 않는다");
+  const oneSided = normalizeSchedule(row({ flightId: "AB102", airportCode: "CJU", st: "0905" }), { airport: "GMP", date: "2027-03-07", direction: "dep" });
+  assert.equal(oneSided.arrivalTime, null);
+  assert.equal(oneSided.durationMinutes, null);
+});
+
+test("schedule cache lasts 30 minutes and a hit does not call upstream again", async () => {
+  const cache = memoryCache();
+  let calls = 0;
+  const fetcher = async () => { calls += 1; return ok(envelope([domestic()])); };
+  const request = () => get("/flights/schedule?airport=GMP&date=2027-03-07&direction=dep");
+  const first = await flightsSchedule(request(), env, fetcher, cache);
+  assert.equal(first.status, 200);
+  assert.equal(calls, 1);
+  const second = await flightsSchedule(request(), env, fetcher, cache);
+  assert.equal(calls, 1, "캐시 적중 때는 상류를 다시 부르지 않는다");
+  const body = await second.json();
+  assert.equal(body.flights[0].departureTime, "23:50");
+  let ttl;
+  const spy = { async match() { return undefined; }, async put(_key, response) { ttl = response.headers.get("cache-control"); } };
+  await flightsSchedule(request(), env, fetcher, spy);
+  assert.equal(ttl, "max-age=1800");
 });

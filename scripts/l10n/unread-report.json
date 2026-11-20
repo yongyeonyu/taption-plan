@@ -1,7 +1,19 @@
 {
- "ui": 5493,
+ "ui": 5505,
  "catalog": 509,
  "unread": [
+  {
+   "file": "TaptionPlan/UI/FlightSearchViews.swift",
+   "line": 65,
+   "ko": "airport.nameKo",
+   "en": "airport.nameEn"
+  },
+  {
+   "file": "TaptionPlan/UI/FlightSearchViews.swift",
+   "line": 116,
+   "ko": "ko[index]",
+   "en": "en[index]"
+  },
   {
    "file": "Packages/SeasonPackKit/Sources/SeasonPackKit/Icons/SeasonPackMenu.swift",
    "line": 6,
@@ -274,9 +286,9 @@
   },
   {
    "file": "TaptionPlan/UI/FlightPickerSheet.swift",
-   "line": 82,
-   "ko": "airport.nameKo",
-   "en": "airport.nameEn"
+   "line": 143,
+   "ko": "$0.nameKo",
+   "en": "$0.nameEn"
   },
   {
    "file": "TaptionPlan/UI/HwarangCoat.swift",

@@ -6334,6 +6334,27 @@
 "최근 전송: {0} · {1}|Last upload: {0} · {1}": "Unggahan terakhir: {0} · {1}",
 "포스트호그 로그 업로드|PostHog Log Upload": "Unggah Log ke PostHog",
 "한도 초과로 거절됨(429) · 나중에 다시{0}|Rate limited (429) · try again later{0}": "Melebihi batas (429) · coba lagi nanti{0}",
-"한도·결제로 거절됨({0}){1}|Rejected for quota or billing ({0}){1}": "Ditolak karena kuota atau penagihan ({0}){1}"
+"한도·결제로 거절됨({0}){1}|Rejected for quota or billing ({0}){1}": "Ditolak karena kuota atau penagihan ({0}){1}",
+"국내선|Domestic": "Domestik",
+"귀국편|Return": "Pulang",
+"다시 시도|Try again": "Coba lagi",
+"도착 공항|To": "Bandara tujuan",
+"도착 빠른 순|Earliest arrival": "Tiba paling awal",
+"도착 어림|Estimated": "Perkiraan",
+"도착|To": "Tiba",
+"도착할 공항을 골라 주세요.|Pick an arrival airport.": "Pilih bandara tujuan.",
+"소요 짧은 순|Shortest": "Tersingkat",
+"정렬|Sort": "Urutkan",
+"조회 서버에 항공편 경로가 아직 없어요. 직접 넣거나 편명으로 검색해 보세요.|The lookup server has no flight route yet. Add it manually or search the flight number.": "Server pencarian belum memiliki rute penerbangan. Tambahkan manual atau cari nomor penerbangan.",
+"중계 서버 주소가 없어 조회할 수 없어요. 직접 넣거나 편명으로 검색해 보세요.|No relay server address, so it can't be looked up. Add it manually or search the flight number.": "Tidak ada alamat server relai sehingga tidak dapat dicari. Tambahkan manual atau cari nomor penerbangan.",
+"직항 {0}편 · 공동운항 {1}편 제외|{0} direct · {1} codeshare hidden": "{0} langsung · {1} codeshare disembunyikan",
+"직항|Direct": "Langsung",
+"직항만|Direct only": "Hanya langsung",
+"출국편|Outbound": "Pergi",
+"출발 공항|From": "Bandara asal",
+"출발 빠른 순|Earliest departure": "Berangkat paling awal",
+"출발|From": "Berangkat",
+"코드·도시 이름|Code or city": "Kode atau kota",
+"항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.": "Kunci pencarian penerbangan belum terdaftar. Tambahkan manual atau cari nomor penerbangan."
 }
 }

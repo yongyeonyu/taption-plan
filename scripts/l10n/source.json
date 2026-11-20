@@ -5064,11 +5064,11 @@
    "ko": "{0}분 지연",
    "en": "Delayed {0} min",
    "files": [
-    "FlightDayBanner.swift:44",
-    "FlightPickerSheet.swift:229"
+    "FlightSearchViews.swift:167",
+    "FlightDayBanner.swift:44"
    ],
    "args": [
-    "row.delayMinutes"
+    "status.delayMinutes"
    ],
    "targets": [
     "TaptionPlan"
@@ -5112,12 +5112,12 @@
    "ko": "{0}분",
    "en": "{0}m",
    "files": [
+    "FlightSearchViews.swift:138",
     "HealthAndSensorModels.swift:706",
-    "RecordSummaryEngine.swift:30",
-    "MapHomeCalendarSheet.swift:481"
+    "RecordSummaryEngine.swift:30"
    ],
    "args": [
-    "minutes"
+    "m"
    ],
    "targets": [
     "TaptionPlan",
@@ -5197,13 +5197,13 @@
    "ko": "{0}시간 {1}분",
    "en": "{0}h {1}m",
    "files": [
+    "FlightSearchViews.swift:138",
     "RecordSummaryEngine.swift:32",
-    "MapHomeCalendarSheet.swift:479",
-    "MapHomeNLEClipFactory.swift:274"
+    "MapHomeCalendarSheet.swift:479"
    ],
    "args": [
-    "hours",
-    "minutes"
+    "h",
+    "m"
    ],
    "targets": [
     "TaptionPlan"
@@ -35297,20 +35297,6 @@
    ]
   },
   {
-   "key": "갱신 {0}|Updated {0}",
-   "ko": "갱신 {0}",
-   "en": "Updated {0}",
-   "files": [
-    "FlightPickerSheet.swift:122"
-   ],
-   "args": [
-    "updated.formatted(date: .omitted, time: .shortened)"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "갸우뚱|Puzzled",
    "ko": "갸우뚱",
    "en": "Puzzled",
@@ -36234,8 +36220,8 @@
    "ko": "결항",
    "en": "Cancelled",
    "files": [
-    "FlightDayBanner.swift:42",
-    "FlightPickerSheet.swift:228"
+    "FlightSearchViews.swift:167",
+    "FlightDayBanner.swift:42"
    ],
    "args": [],
    "targets": [
@@ -37137,18 +37123,6 @@
    ]
   },
   {
-   "key": "공동운항|Codeshare",
-   "ko": "공동운항",
-   "en": "Codeshare",
-   "files": [
-    "FlightPickerSheet.swift:215"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "공동으로 쓴 돈|Spent together",
    "ko": "공동으로 쓴 돈",
    "en": "Spent together",
@@ -37452,7 +37426,7 @@
    "ko": "공항 코드·날짜·방향·편명만 서버로 보냅니다. 예약번호·이름은 보내지 않습니다.",
    "en": "Only the airport code, date, direction and flight number are sent. Booking numbers and names are never sent.",
    "files": [
-    "FlightPickerSheet.swift:102"
+    "FlightPickerSheet.swift:134"
    ],
    "args": [],
    "targets": [
@@ -37885,6 +37859,18 @@
    ]
   },
   {
+   "key": "국내선|Domestic",
+   "ko": "국내선",
+   "en": "Domestic",
+   "files": [
+    "FlightPickerSheet.swift:118"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "권한 거부됨|Permission denied",
    "ko": "권한 거부됨",
    "en": "Permission denied",
@@ -38036,11 +38022,11 @@
    ]
   },
   {
-   "key": "귀국편(한국에 도착)|Return (arriving in Korea)",
-   "ko": "귀국편(한국에 도착)",
-   "en": "Return (arriving in Korea)",
+   "key": "귀국편|Return",
+   "ko": "귀국편",
+   "en": "Return",
    "files": [
-    "FlightPickerSheet.swift:62"
+    "FlightPickerSheet.swift:122"
    ],
    "args": [],
    "targets": [
@@ -39962,9 +39948,9 @@
    "ko": "날짜",
    "en": "Date",
    "files": [
-    "FlightPickerSheet.swift:69",
     "MapHomeDailyCard.swift:374",
-    "MapHomePlaceBookTools.swift:782"
+    "MapHomePlaceBookTools.swift:782",
+    "TravelNewTripSheet.swift:58"
    ],
    "args": [],
    "targets": [
@@ -41284,6 +41270,18 @@
    ]
   },
   {
+   "key": "다시 시도|Try again",
+   "ko": "다시 시도",
+   "en": "Try again",
+   "files": [
+    "FlightPickerSheet.swift:191"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "다시 연결|Reconnect",
    "ko": "다시 연결",
    "en": "Reconnect",
@@ -41568,9 +41566,9 @@
    "ko": "닫기",
    "en": "Close",
    "files": [
+    "FlightSearchViews.swift:51",
     "AIConnectNudge.swift:40",
-    "AnnouncementBanner.swift:31",
-    "AnnouncementBanner.swift:115"
+    "AnnouncementBanner.swift:31"
    ],
    "args": [],
    "targets": [
@@ -42276,6 +42274,18 @@
    ]
   },
   {
+   "key": "도착 공항|To",
+   "ko": "도착 공항",
+   "en": "To",
+   "files": [
+    "FlightPickerSheet.swift:91"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "도착 뒤 입국·짐 찾기로 {0}분은 두세요|Allow {0} min after landing for arrival",
    "ko": "도착 뒤 입국·짐 찾기로 {0}분은 두세요",
    "en": "Allow {0} min after landing for arrival",
@@ -42285,6 +42295,42 @@
    "args": [
     "need"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "도착 빠른 순|Earliest arrival",
+   "ko": "도착 빠른 순",
+   "en": "Earliest arrival",
+   "files": [
+    "FlightPickerSheet.swift:162"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "도착 어림|Estimated",
+   "ko": "도착 어림",
+   "en": "Estimated",
+   "files": [
+    "FlightSearchViews.swift:165"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "도착|To",
+   "ko": "도착",
+   "en": "To",
+   "files": [
+    "FlightPickerSheet.swift:115"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -42314,11 +42360,11 @@
    ]
   },
   {
-   "key": "도착할 도시·공항 코드|City or airport code you fly to",
-   "ko": "도착할 도시·공항 코드",
-   "en": "City or airport code you fly to",
+   "key": "도착할 공항을 골라 주세요.|Pick an arrival airport.",
+   "ko": "도착할 공항을 골라 주세요.",
+   "en": "Pick an arrival airport.",
    "files": [
-    "FlightPickerSheet.swift:72"
+    "FlightPickerSheet.swift:193"
    ],
    "args": [],
    "targets": [
@@ -45315,7 +45361,7 @@
    "ko": "방향",
    "en": "Direction",
    "files": [
-    "FlightPickerSheet.swift:60"
+    "FlightPickerSheet.swift:120"
    ],
    "args": [],
    "targets": [
@@ -47089,7 +47135,7 @@
    "ko": "비행 시간(분, 비우면 거리로 어림)",
    "en": "Flight minutes (empty = estimate)",
    "files": [
-    "FlightPickerSheet.swift:185"
+    "FlightPickerSheet.swift:242"
    ],
    "args": [],
    "targets": [
@@ -49218,6 +49264,18 @@
    ]
   },
   {
+   "key": "소요 짧은 순|Shortest",
+   "ko": "소요 짧은 순",
+   "en": "Shortest",
+   "files": [
+    "FlightPickerSheet.swift:163"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "속도에 따라 가변|Vary zoom with speed",
    "ko": "속도에 따라 가변",
    "en": "Vary zoom with speed",
@@ -50218,23 +50276,11 @@
    ]
   },
   {
-   "key": "시간표 불러오기|Load timetable",
-   "ko": "시간표 불러오기",
-   "en": "Load timetable",
-   "files": [
-    "FlightPickerSheet.swift:93"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "시간표를 불러오지 못했어요. 직접 넣거나 편명으로 검색해 보세요.|Could not load the timetable. Add it manually or search the flight number.",
    "ko": "시간표를 불러오지 못했어요. 직접 넣거나 편명으로 검색해 보세요.",
    "en": "Could not load the timetable. Add it manually or search the flight number.",
    "files": [
-    "FlightPickerSheet.swift:240"
+    "FlightPickerSheet.swift:268"
    ],
    "args": [],
    "targets": [
@@ -50564,7 +50610,7 @@
    "ko": "실시간 운항 반영",
    "en": "With live status",
    "files": [
-    "FlightPickerSheet.swift:233"
+    "FlightPickerSheet.swift:258"
    ],
    "args": [],
    "targets": [
@@ -50588,8 +50634,7 @@
    "ko": "실시간",
    "en": "Live",
    "files": [
-    "FlightDayBanner.swift:20",
-    "FlightPickerSheet.swift:209"
+    "FlightDayBanner.swift:20"
    ],
    "args": [],
    "targets": [
@@ -55115,7 +55160,7 @@
    "ko": "오늘 조회 한도에 도달했어요. 직접 넣거나 편명으로 검색해 보세요.",
    "en": "Today's lookup limit is reached. Add it manually or search the flight number.",
    "files": [
-    "FlightPickerSheet.swift:239"
+    "FlightPickerSheet.swift:267"
    ],
    "args": [],
    "targets": [
@@ -57402,7 +57447,7 @@
    "ko": "이 날짜는 조회할 수 없어요. 직접 넣거나 편명으로 검색해 보세요.",
    "en": "This date can't be looked up. Add it manually or search the flight number.",
    "files": [
-    "FlightPickerSheet.swift:238"
+    "FlightPickerSheet.swift:266"
    ],
    "args": [],
    "targets": [
@@ -57805,7 +57850,7 @@
    "ko": "이 조건에 맞는 편이 없어요. 날짜나 공항을 바꿔 보세요.",
    "en": "No flights match. Try another date or airport.",
    "files": [
-    "FlightPickerSheet.swift:112"
+    "FlightPickerSheet.swift:176"
    ],
    "args": [],
    "targets": [
@@ -59195,7 +59240,7 @@
    "ko": "일정에 넣지 못했어요. 시각이나 공항을 확인해 주세요.",
    "en": "Could not add it. Check the time and airports.",
    "files": [
-    "FlightPickerSheet.swift:132"
+    "FlightPickerSheet.swift:81"
    ],
    "args": [],
    "targets": [
@@ -60936,7 +60981,7 @@
    "en": "Scheduled timetable",
    "files": [
     "FlightDayBanner.swift:20",
-    "FlightPickerSheet.swift:233"
+    "FlightPickerSheet.swift:258"
    ],
    "args": [],
    "targets": [
@@ -60944,11 +60989,11 @@
    ]
   },
   {
-   "key": "정기|Scheduled",
-   "ko": "정기",
-   "en": "Scheduled",
+   "key": "정렬|Sort",
+   "ko": "정렬",
+   "en": "Sort",
    "files": [
-    "FlightPickerSheet.swift:209"
+    "FlightPickerSheet.swift:160"
    ],
    "args": [],
    "targets": [
@@ -61326,11 +61371,23 @@
    ]
   },
   {
+   "key": "조회 서버에 항공편 경로가 아직 없어요. 직접 넣거나 편명으로 검색해 보세요.|The lookup server has no flight route yet. Add it manually or search the flight number.",
+   "ko": "조회 서버에 항공편 경로가 아직 없어요. 직접 넣거나 편명으로 검색해 보세요.",
+   "en": "The lookup server has no flight route yet. Add it manually or search the flight number.",
+   "files": [
+    "FlightPickerSheet.swift:263"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "조회|Search",
    "ko": "조회",
    "en": "Search",
    "files": [
-    "FlightPickerSheet.swift:100"
+    "FlightPickerSheet.swift:132"
    ],
    "args": [],
    "targets": [
@@ -61738,6 +61795,18 @@
    "en": "Don't forget to stretch ☕",
    "files": [
     "MapHomeDefaultBubblePool.swift:32"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "중계 서버 주소가 없어 조회할 수 없어요. 직접 넣거나 편명으로 검색해 보세요.|No relay server address, so it can't be looked up. Add it manually or search the flight number.",
+   "ko": "중계 서버 주소가 없어 조회할 수 없어요. 직접 넣거나 편명으로 검색해 보세요.",
+   "en": "No relay server address, so it can't be looked up. Add it manually or search the flight number.",
+   "files": [
+    "FlightPickerSheet.swift:265"
    ],
    "args": [],
    "targets": [
@@ -63096,8 +63165,8 @@
    "ko": "직접 넣기",
    "en": "Add manually",
    "files": [
-    "FlightPickerSheet.swift:187",
-    "FlightPickerSheet.swift:194"
+    "FlightPickerSheet.swift:244",
+    "FlightPickerSheet.swift:251"
    ],
    "args": [],
    "targets": [
@@ -63234,6 +63303,45 @@
    "en": "You",
    "files": [
     "MapHomeTodayCalendar.swift:63"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "직항 {0}편 · 공동운항 {1}편 제외|{0} direct · {1} codeshare hidden",
+   "ko": "직항 {0}편 · 공동운항 {1}편 제외",
+   "en": "{0} direct · {1} codeshare hidden",
+   "files": [
+    "FlightPickerSheet.swift:184"
+   ],
+   "args": [
+    "found.rows.count",
+    "found.excludedCodeshare"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "직항|Direct",
+   "ko": "직항",
+   "en": "Direct",
+   "files": [
+    "FlightSearchViews.swift:151"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "직항만|Direct only",
+   "ko": "직항만",
+   "en": "Direct only",
+   "files": [
+    "FlightPickerSheet.swift:168"
    ],
    "args": [],
    "targets": [
@@ -63934,6 +64042,7 @@
    "ko": "최근",
    "en": "Recent",
    "files": [
+    "FlightSearchViews.swift:44",
     "MapHomeMenuShortcuts.swift:273",
     "MapHomeStickerPicker.swift:99"
    ],
@@ -64081,11 +64190,11 @@
    ]
   },
   {
-   "key": "출국편(한국에서 출발)|Outbound (leaving Korea)",
-   "ko": "출국편(한국에서 출발)",
-   "en": "Outbound (leaving Korea)",
+   "key": "출국편|Outbound",
+   "ko": "출국편",
+   "en": "Outbound",
    "files": [
-    "FlightPickerSheet.swift:61"
+    "FlightPickerSheet.swift:121"
    ],
    "args": [],
    "targets": [
@@ -64117,11 +64226,11 @@
    ]
   },
   {
-   "key": "출발 시각|Departure time",
-   "ko": "출발 시각",
-   "en": "Departure time",
+   "key": "출발 공항|From",
+   "ko": "출발 공항",
+   "en": "From",
    "files": [
-    "FlightPickerSheet.swift:182"
+    "FlightPickerSheet.swift:91"
    ],
    "args": [],
    "targets": [
@@ -64129,11 +64238,35 @@
    ]
   },
   {
-   "key": "출발한 도시·공항 코드|City or airport code you fly from",
-   "ko": "출발한 도시·공항 코드",
-   "en": "City or airport code you fly from",
+   "key": "출발 빠른 순|Earliest departure",
+   "ko": "출발 빠른 순",
+   "en": "Earliest departure",
    "files": [
-    "FlightPickerSheet.swift:72"
+    "FlightPickerSheet.swift:161"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "출발 시각|Departure time",
+   "ko": "출발 시각",
+   "en": "Departure time",
+   "files": [
+    "FlightPickerSheet.swift:239"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "출발|From",
+   "ko": "출발",
+   "en": "From",
+   "files": [
+    "FlightPickerSheet.swift:110"
    ],
    "args": [],
    "targets": [
@@ -65069,6 +65202,18 @@
    ]
   },
   {
+   "key": "코드·도시 이름|Code or city",
+   "ko": "코드·도시 이름",
+   "en": "Code or city",
+   "files": [
+    "FlightSearchViews.swift:48"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "코드가 끝났어요. 새로 받아 주세요.|The code expired. Get a new one.",
    "ko": "코드가 끝났어요. 새로 받아 주세요.",
    "en": "The code expired. Get a new one.",
@@ -65375,8 +65520,7 @@
    "ko": "탑승구 {0}",
    "en": "Gate {0}",
    "files": [
-    "FlightDayBanner.swift:49",
-    "FlightPickerSheet.swift:213"
+    "FlightDayBanner.swift:49"
    ],
    "args": [
     "gate"
@@ -65402,8 +65546,7 @@
    "ko": "터미널 {0}",
    "en": "Terminal {0}",
    "files": [
-    "FlightDayBanner.swift:48",
-    "FlightPickerSheet.swift:212"
+    "FlightDayBanner.swift:48"
    ],
    "args": [
     "terminal"
@@ -65635,7 +65778,7 @@
    "ko": "편명(예: AB123)",
    "en": "Flight number (e.g. AB123)",
    "files": [
-    "FlightPickerSheet.swift:179"
+    "FlightPickerSheet.swift:236"
    ],
    "args": [],
    "targets": [
@@ -65647,7 +65790,7 @@
    "ko": "편명으로 검색",
    "en": "Search the flight number",
    "files": [
-    "FlightPickerSheet.swift:191"
+    "FlightPickerSheet.swift:248"
    ],
    "args": [],
    "targets": [
@@ -65671,7 +65814,7 @@
    "ko": "편명으로 좁히기(선택)",
    "en": "Filter by flight number (optional)",
    "files": [
-    "FlightPickerSheet.swift:88"
+    "FlightPickerSheet.swift:128"
    ],
    "args": [],
    "targets": [
@@ -66614,18 +66757,6 @@
    ]
   },
   {
-   "key": "한국 공항|Korean airport",
-   "ko": "한국 공항",
-   "en": "Korean airport",
-   "files": [
-    "FlightPickerSheet.swift:66"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "한달 평균 보기|Show month average",
    "ko": "한달 평균 보기",
    "en": "Show month average",
@@ -66927,7 +67058,7 @@
    "ko": "항공사 문자나 알림톡을 복사한 뒤 붙이면 읽어서 이 여행의 항공편 카드에 붙입니다. 이름·예약번호는 이 기기 안에서만 쓰고 보내지 않습니다.",
    "en": "Copy an airline text or notice, then paste it: it is read and attached to this trip's flight card. Names and booking numbers stay on this device and are never sent.",
    "files": [
-    "FlightPickerSheet.swift:171"
+    "FlightPickerSheet.swift:228"
    ],
    "args": [],
    "targets": [
@@ -66939,7 +67070,7 @@
    "ko": "항공사 알림 붙여넣기",
    "en": "Paste an airline notice",
    "files": [
-    "FlightPickerSheet.swift:169"
+    "FlightPickerSheet.swift:226"
    ],
    "args": [],
    "targets": [
@@ -66952,7 +67083,19 @@
    "en": "Could not read this as a flight notice.",
    "files": [
     "FlightIngest.swift:110",
-    "FlightPickerSheet.swift:166"
+    "FlightPickerSheet.swift:223"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.",
+   "ko": "항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.",
+   "en": "The flight lookup key is not registered yet. Add it manually or search the flight number.",
+   "files": [
+    "FlightPickerSheet.swift:264"
    ],
    "args": [],
    "targets": [
@@ -66964,7 +67107,7 @@
    "ko": "항공편 찾기",
    "en": "Find a flight",
    "files": [
-    "FlightPickerSheet.swift:135",
+    "FlightPickerSheet.swift:84",
     "TravelModeView.swift:835"
    ],
    "args": [],
@@ -67207,7 +67350,7 @@
    "ko": "행선지를 위에서 고른 뒤 시각을 적으면 그 공항의 현지 시각으로 넣습니다. 도착 시각은 비행 시간이나 거리로 어림합니다.",
    "en": "Pick the other airport above, then enter the local time. The arrival is computed from the flight time or estimated from the distance.",
    "files": [
-    "FlightPickerSheet.swift:196"
+    "FlightPickerSheet.swift:253"
    ],
    "args": [],
    "targets": [
