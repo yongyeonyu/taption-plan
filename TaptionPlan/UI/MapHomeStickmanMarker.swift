@@ -142,8 +142,12 @@ struct MapHomeStickmanMarker: View {
             ? MapHomeSpeedTier.tier(forMetersPerSecond: speedMetersPerSecond)
             : .idle
         let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
-        let scarf = MapHomeGrowthAccessoryCatalog.scarfStyle(for: equippedAccessoryID)
-        let ribbon = MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
+        // 지도 위 모든 화랑이가 시즌 팩의 모자·복장·덧그림을 입는다(SEA1119A01). 팩이 없거나 기간이 아니면 모두 nil·빈 목록이라 그대로다.
+        let seasonHat = SeasonPackAdapter.hatImage()
+        let seasonLook = SeasonPackAdapter.look()
+        let seasonLayers = SeasonPackAdapter.characterLayers()
+        let scarf = seasonLook?.scarf ?? MapHomeGrowthAccessoryCatalog.scarfStyle(for: equippedAccessoryID)
+        let ribbon = seasonLook?.ribbon ?? MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
         TimelineView(
             .animation(
                 minimumInterval: 1.0 / 30,
@@ -175,10 +179,13 @@ struct MapHomeStickmanMarker: View {
                     anchorHeight: Self.size.height,
                     facesLeft: facesLeft && action.isMoving,
                     hatAssetName: hat,
+                    hatImage: seasonHat,
                     scarf: scarf,
                     ribbon: ribbon,
+                    seasonLook: seasonLook,
                     showsBackdrop: false, rendersAsynchronously: rendersAsynchronously
                 )
+                .overlay { if !seasonLayers.isEmpty { SeasonPackCharacterLayersView(layers: seasonLayers).frame(width: Self.size.width * 1.6, height: Self.size.width * 1.6) } }
                 .rotationEffect(.degrees(facesLeft ? -tier.leanDegrees * 0.5 : tier.leanDegrees * 0.5))
                 // 피카츄 구간 — 번개 스파크.
                 if tier.isPikachu {
@@ -202,8 +209,8 @@ struct MapHomeStickmanGlyph: View {
     var size: CGFloat = 30
     var equippedAccessoryID: String? = nil
     var rendersAsynchronously = false
-    /// 집에 있는 화랑이만 시즌 팩의 모자·의상을 입는다(SEA1119A01).
-    var usesSeasonPack = false
+    /// 시즌 팩의 모자·의상을 입는다(SEA1119A01). 모든 화랑이가 입고, 모자를 직접 고르는 화면만 끈다.
+    var usesSeasonPack = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
