@@ -1,7 +1,7 @@
 ---
 id: 20261120-1805-realtime-screen-sync
 created_at: 2026-11-20T18:05+09:00
-status: pending
+status: done
 request_id: RTA1120A01
 title: 통화 중 지시가 앱 화면에 바로 나타나게 — 앱 전면 실시간 반영(기본 3초·통화 중 1초)
 from: 비야
@@ -215,3 +215,16 @@ AssistantLiveSync (새 파일, 앱 target — 기존 UI 파일 관례 위치)
 - 2절 표의 파일:줄은 2026-11-20 18:4x `origin/main`에서 **그대로 맞았습니다** — `MapHomeView+Support` 230~241(10초 깸)·225~227, `AssistantCommandTransport` 75·90·92·114, `AssistantCommandRunner` 8·88·177·234·274, `AssistantCommands` 295·301(`204`), `TripRelay` 8~20, `TravelModeView` 195·333, `TaptionPlanApp` 108~114, `AssistantSettingsView` 26~31.
 - 동시 작업 정리: 이 문서의 홈 폴링 루프는 BUB1120A01(시작 훅)·LAG1120A01(시작 경로)과 같은 `.task` 주변을 만집니다. 파일이 달라도 **한 커밋에 섞지 않고**, 폴링 간격(3초·1초, 대표 결정)은 그대로 둡니다.
 - 고치지 않은 것: 4절의 세 값(끔/3초/1초)·백그라운드 정지·저전력 완화, 7절의 `/plan` 카드 방식(b는 「비야 제안」인 채로 둠), 11절의 서버 변경 보류는 대표 결정·승인 대상이라 손대지 않았습니다.
+
+## 클로드 코드 회신
+
+- 처리: 일부(폴링 경로·설정·여행 계획 카드·시험 완료. 실기기 실측과 아래 「못 한 것」은 남음)
+- 요청 ID: RTA1120A01 (`test.md` 「AI·PCC」·「요청 상세」·「아이폰 11 Pro」 실기기 줄, `AGENTS.md` 4절 대표 결정, `docs/AI_RELAY_PLAN.md`)
+- 시작·끝: 2026-11-20 20:55 ~ 21:15 (KST)
+- 커밋: `c5f42384` 작업, 문서 이동은 `[비야 브리지] RTA1120A01` 커밋
+- 고른 길: **폴링(앱만)**. 서버를 읽어 확인한 결과 `POST /command`는 이미 조용한 `cmd` 푸시를 보내고(`server/trip-relay/src/apns.js` `pushForCommand`) 앱 `AssistantPush`가 같은 확인을 돈다. 푸시를 1순위로 올리는 것과 WebSocket은 서버 변경이라 하지 않았고 RTA1120A02로 둔다. 서버 변경 필요 판단: 없음(이번 범위).
+- 구현: `AssistantLiveSync`(새 파일) — 갱신 입구 `refresh` 하나, 간격은 `AgentSyncMode`(끔 5분/3초/1초)와 `interval(...)` 한 곳. 1초는 30분 뒤 3초로 복귀·저장, 저전력에서 1초→3초, 과열 10초. 홈 폴링 루프(`MapHomeView+Support.swift`)를 이 입구를 부르는 반복으로 바꿈(깸 자체를 간격에 맞춤, 전면이 아니면 반복 취소). 3초·1초 확인은 `AssistantCommandRefresh.now(light: true)`로 명령 받기·반영·보고만 하고 규칙·질문 올리기·맡긴 일·영수증은 5분 경로(처음 한 번과 5분마다). 여행 화면이 열려 있으면 `/plan`도 같은 주기로 확인해 카드(반영/나중에)로 묻고 같은 해시는 다시 뜨지 않음. 편집 시트(여행 가져오기·여행 편집)가 열려 있으면 그 주기의 명령 반영을 미루고 서버 큐에 둠(「편집 중이라 잠시 미뤘어요」). 연속 3회 실패 시 5분에 한 번 한 줄, 성공하면 거둠. 설정 「AI 연결」에 끔/3초/1초 줄(기본 3초).
+- 못 한 것(솔직히): ① 항목 단위 편집 보호 — 지금은 편집 시트 단위(시트가 열려 있는 동안 그 주기 전체 보류). ② 5분 안에 직접 고친 항목의 「충돌」 표시. ③ 새로 들어온 항목 1.2초 강조(설정 끄기 포함). 카드 표시 때 햅틱 1회만 있음. ④ 같은 id 3회 확인 시 반영 1회는 새 시험을 만들지 않고 기존 장부·`claimed` 시험에 의존(새로 고정하지 않음). ⑤ **실기기 실측 전부 확인 안 함**: 반영까지 초(3초·1초 각 3회), 백그라운드 1분 요청 수, 1시간 배터리·데이터, 비행기 모드 한 줄. 표의 계산치(1초 시간당 3,600회 약 3~5MB, 3초 1,200회 약 1~2MB)는 계산일 뿐 측정이 아님.
+- 바꾼 파일: `TaptionPlan/UI/AssistantLiveSync.swift`(새), `AssistantCommandRunner.swift`, `AssistantSettingsView.swift`, `MapHomeView+Support.swift`, `TravelModeView.swift`, `TravelMapTripEditorSheet.swift`, `TaptionPlan.xcodeproj/project.pbxproj`, `TaptionPlanTests/AssistantLiveSyncTests.swift`(새), `UIText.xcstrings`·`scripts/l10n/*`, `docs/AI_RELAY_PLAN.md`, `test.md`, `AGENTS.md`
+- 검증: 시뮬레이터 `TaptionPlanTests` 3,240건·실패 0·건너뜀 26(첫 실행은 시험 러너가 연결 전에 멈춰 시뮬레이터를 다시 켜고 재실행), 새 시험 9건(간격·30분 복귀·전면 아님 0회·무거운 곁일 분리·편집 중 보류·계획 카드·실패 표시). 구조 지표 기준선·엔진 임포트 경계 통과. `swift test --package-path Packages/TaptionAssistant`는 시험 0건(Swift Testing 항목 없음). 번역: 새 문구 8개 12개 언어 추가, 검사 실패 0, 생성 완료.
+- 남은 것·확인 필요: 대표가 `test.md` 실기기 확인 목록의 RTA1120A01 줄 확인(아이폰 11 Pro, 체감은 18 Pro Max). `PRIVACY.md`: 새로 보내거나 저장하는 것 없음(좌표·계정 늘지 않음), 문구 변경 없음. `docs/pipeline/CHANGELOG.md`는 없어 `test.md`로 대신함. 패키지 `AssistantCommandPolling`의 옛 대표 결정 주석은 동작이 그대로라 손대지 않음.
