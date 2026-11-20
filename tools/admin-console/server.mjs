@@ -9,10 +9,10 @@
 // - 올리는 길은 기존과 같다: `npx wrangler r2 object put … --remote --config <wrangler.local.toml>`. 비밀값은 다루지 않는다(wrangler 로그인 그대로).
 // - 공지 검사·합치기는 `server/trip-relay/scripts/announce.mjs`, 팩 묶기는 `scripts/season-pack/build_bpack.py`를 그대로 부른다.
 import { execFile } from "node:child_process";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -223,6 +223,43 @@ export function withoutPack(catalog, id) {
   return { ...catalog, packs: (catalog.packs ?? []).filter((entry) => entry.id !== id) };
 }
 
+// ---- 초기화(ADM1120A03) ----
+
+export const RESET_DIR = /^reset-\d{4}-\d{2}-\d{2}T[\d-]+$/;
+const BEFORE_FILES = { announcements: "before-announcements.json", catalog: "before-index.json" };
+export const catalogHash = (catalog) => createHash("sha256").update(JSON.stringify(catalog)).digest("hex").slice(0, 16);
+
+/** 되돌릴 범위. 모두 꺼져 있으면 오류. */
+export function resetScopes(raw) {
+  const scopes = { notices: raw?.notices === true, packs: raw?.packs === true, schedules: raw?.schedules === true };
+  return Object.values(scopes).some(Boolean) ? scopes : null;
+}
+
+/** 초기화 뒤의 두 문서. 공지는 항목을 비우고 version을 하나 올리며(안 올리면 앱이 304로 바뀐 줄 모른다), 팩은 카탈로그를 비우거나 기간 칸만 지운다. */
+export function planReset(announcements, catalog, scopes) {
+  const nextAnnouncements = scopes.notices ? { ...announcements, version: (announcements.version ?? 0) + 1, items: [] } : announcements;
+  let nextCatalog = catalog;
+  if (scopes.packs) nextCatalog = { ...catalog, packs: [] };
+  else if (scopes.schedules) nextCatalog = { ...catalog, packs: (catalog.packs ?? []).map((entry) => { const { schedule, ...rest } = entry; return rest; }) };
+  const errors = scopes.notices ? ANNOUNCE.check(nextAnnouncements) : [];
+  return { after: { announcements: nextAnnouncements, catalog: nextCatalog }, errors };
+}
+
+/** `restore`가 받은 dir을 믿지 않는다: 모양 검사 → BUILD_ROOT 안인지 → 정해진 두 파일만 읽는다. 아니면 null. */
+export function resolveResetDir(dir, root = BUILD_ROOT) {
+  if (typeof dir !== "string" || !RESET_DIR.test(dir)) return null;
+  const full = resolve(root, dir);
+  const rel = relative(resolve(root), full);
+  if (!rel || rel.startsWith("..") || isAbsolute(rel) || rel.includes(sep)) return null;
+  return full;
+}
+
+export function lastResetDir(root = BUILD_ROOT) {
+  if (!existsSync(root)) return null;
+  const names = readdirSync(root).filter((name) => RESET_DIR.test(name) && existsSync(join(root, name, BEFORE_FILES.catalog))).sort();
+  return names.at(-1) ?? null;
+}
+
 // ---- HTTP ----
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
@@ -261,6 +298,7 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
   let busy = null;
   const log = (line) => { if (!line) return; for (const part of String(line).split("\n")) logs.push(`${now().toLocaleTimeString("ko-KR", { hour12: false })} ${part}`); while (logs.length > 400) logs.shift(); };
   const builds = new Map();
+  let lastReset = null;
 
   async function exclusive(label, work) {
     if (busy) throw Object.assign(new Error(`다른 작업(${busy}) 중입니다`), { status: 409 });
@@ -359,6 +397,85 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
       log(`${body.id} 기간: ${spans === undefined ? "매니페스트 기간 그대로" : spans.length ? spans.map((s) => `${s.from} ~ ${s.to}`).join(", ") : "꺼 둠"}`);
       log("앱은 다음 확인 때(최대 5분 엣지 캐시 + 30분 앱 확인 간격) 새 기간을 따릅니다.");
       return { catalog: next, dryRun };
+    }),
+    "GET /api/reset/state": async () => {
+      const config = loadConfig();
+      const [announcements, catalog] = await Promise.all([currentAnnouncements(config), currentCatalog(config)]);
+      const name = lastReset?.dir ?? lastResetDir();
+      return {
+        announcements: { version: announcements.version ?? 0, count: (announcements.items ?? []).length,
+          items: (announcements.items ?? []).map((item) => ({ id: item.id, title: item.title, updatedAt: item.updatedAt ?? null })) },
+        catalog: { hash: catalogHash(catalog), updatedAt: catalog.updatedAt ?? null,
+          packs: (catalog.packs ?? []).map((entry) => ({ id: entry.id, version: entry.version, schedule: entry.schedule ?? null })) },
+        lastReset: name ? { dir: name, at: lastReset?.at ?? null, scopes: lastReset?.scopes ?? null } : null,
+        dryRun,
+      };
+    },
+    "POST /api/reset/preview": async (body) => {
+      const scopes = resetScopes(body.scopes);
+      if (!scopes) return { status: 422, body: { errors: ["되돌릴 범위를 하나 이상 고르세요"] } };
+      const config = loadConfig();
+      const [announcements, catalog] = await Promise.all([currentAnnouncements(config), currentCatalog(config)]);
+      const plan = planReset(announcements, catalog, scopes);
+      return { before: { announcements, catalog }, after: plan.after, errors: plan.errors,
+        baseVersion: announcements.version ?? 0, baseCatalogHash: catalogHash(catalog) };
+    },
+    "POST /api/reset/apply": (body) => exclusive("초기화", async () => {
+      const scopes = resetScopes(body.scopes);
+      if (!scopes) return { status: 422, body: { errors: ["되돌릴 범위를 하나 이상 고르세요"] } };
+      if (body.confirm !== "초기화") return { status: 422, body: { errors: ["확인 칸에 「초기화」를 그대로 입력하세요"] } };
+      if (!Number.isInteger(body.baseVersion) || typeof body.baseCatalogHash !== "string") return { status: 422, body: { errors: ["미리보기 때 읽은 값이 없습니다. 미리보기를 다시 하세요"] } };
+      const config = loadConfig();
+      const [announcements, catalog] = await Promise.all([currentAnnouncements(config), currentCatalog(config)]);
+      if (body.baseVersion !== (announcements.version ?? 0) || body.baseCatalogHash !== catalogHash(catalog)) {
+        return { status: 409, body: { errors: ["그 사이 서버의 공지 또는 팩 카탈로그가 바뀌었습니다. 새로 읽고 다시 미리보기 해 주세요."] } };
+      }
+      const plan = planReset(announcements, catalog, scopes);
+      if (plan.errors.length) return { status: 422, body: { errors: plan.errors } };
+      // ① 백업(먼저) → ② 공지 → ③ 카탈로그. 백업 폴더는 git에 넣지 않는다(build/ 아래).
+      const stamp = now().toISOString().slice(0, 19).replace(/:/g, "-");
+      let name = `reset-${stamp}`;
+      for (let n = 2; existsSync(join(BUILD_ROOT, name)); n++) name = `reset-${stamp}-${n}`;
+      const dir = join(BUILD_ROOT, name);
+      mkdirSync(dir, { recursive: true });
+      const write = (file, doc) => writeFileSync(join(dir, file), JSON.stringify(doc, null, 2) + "\n");
+      write(BEFORE_FILES.announcements, announcements);
+      write(BEFORE_FILES.catalog, catalog);
+      write("after-announcements.json", plan.after.announcements);
+      write("after-index.json", plan.after.catalog);
+      lastReset = { dir: name, at: now().toISOString(), scopes };
+      log(`초기화 백업: ${relative(REPO, dir)}`);
+      const ctx = { config, dryRun, log };
+      const catalogChanges = scopes.packs || scopes.schedules;
+      if (scopes.notices) {
+        await upload(ctx, ANNOUNCE_KEY, join(dir, "after-announcements.json"), "application/json", "public, max-age=300");
+        log(`공지를 비웠습니다(version ${announcements.version ?? 0} → ${plan.after.announcements.version})`);
+      }
+      if (catalogChanges) {
+        try { await upload(ctx, CATALOG_KEY, join(dir, "after-index.json"), "application/json", "public, max-age=300"); }
+        catch (error) {
+          if (scopes.notices) log("공지가 먼저 비워졌습니다. 「방금 초기화 되돌리기」로 복구하십시오.");
+          throw error;
+        }
+        log(scopes.packs ? "팩 카탈로그를 비웠습니다(R2의 팩 파일은 그대로)" : "팩 운영 기간을 지웠습니다(매니페스트 기간으로 돌아감)");
+      }
+      log("초기화를 마쳤습니다. 앱은 최대 5분(엣지 캐시)+30분(앱 확인 간격) 안에 받습니다. 기기에 이미 받은 팩은 앱의 설정 › 모든 데이터 삭제로 지웁니다.");
+      return { dir: name, announcements: { version: plan.after.announcements.version }, catalog: { packs: (plan.after.catalog.packs ?? []).length }, dryRun };
+    }),
+    "POST /api/reset/restore": (body) => exclusive("초기화 되돌리기", async () => {
+      const name = body.dir === undefined ? (lastReset?.dir ?? lastResetDir()) : body.dir;
+      if (name === null || name === undefined) return { status: 404, body: { errors: ["되돌릴 초기화 기록이 없습니다"] } };
+      const dir = resolveResetDir(name);
+      if (!dir) return { status: 400, body: { errors: ["올바르지 않은 백업 폴더 이름입니다"] } };
+      const files = { announcements: join(dir, BEFORE_FILES.announcements), catalog: join(dir, BEFORE_FILES.catalog) };
+      if (!existsSync(files.announcements) || !existsSync(files.catalog)) return { status: 404, body: { errors: ["그 백업 폴더에 되돌릴 파일이 없습니다"] } };
+      const config = loadConfig();
+      const ctx = { config, dryRun, log };
+      // 백업 그대로 다시 올린다(다시 계산하지 않는다).
+      await upload(ctx, ANNOUNCE_KEY, files.announcements, "application/json", "public, max-age=300");
+      await upload(ctx, CATALOG_KEY, files.catalog, "application/json", "public, max-age=300");
+      log(`초기화를 되돌렸습니다(${name}). 공지 version은 백업 때 값으로 돌아갑니다.`);
+      return { restored: ["announcements", "catalog"], dir: name, dryRun };
     }),
     "POST /api/packs/withdraw": (body) => exclusive("팩 내리기", async () => {
       const config = loadConfig();

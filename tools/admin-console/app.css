@@ -23,6 +23,10 @@ button:hover:not(:disabled) { border-color: var(--muted); }
 button:disabled { opacity: .45; cursor: default; }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 button.danger { color: var(--bad); }
+button.danger:not(:disabled) { background: var(--bad); color: var(--accent-ink); border-color: var(--bad); }
+.col { display: flex; flex-direction: column; gap: 6px; }
+.check { display: flex; align-items: center; gap: 8px; }
+.grid.two { grid-template-columns: 1fr 1fr; }
 .tab.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
 .between { justify-content: space-between; }

@@ -1,7 +1,7 @@
 // ADM1120A01 운영 페이지 시험: node --test tools/admin-console/server.test.mjs
 // 서버 쪽 읽기(공지·카탈로그)는 가짜 fetch로 돌려주고, 올리기는 연습 모드(--dry-run)로 명령만 기록한다.
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,7 +12,7 @@ process.env.ADMIN_CONSOLE_CONFIG = join(dir, "config.json");
 process.env.ADMIN_CONSOLE_BUILD_ROOT = join(dir, "build");
 writeFileSync(process.env.ADMIN_CONSOLE_CONFIG, JSON.stringify({ host: "relay.test", bucket: "test-bucket", wranglerConfig: join(dir, "wrangler.local.toml") }));
 
-const { allowedHost, checkSchedule, cleanItem, createConsole, localPacks, mainCheckout, planAnnouncements, putArgs, validateConfig, withSchedule, withoutPack } = await import("./server.mjs");
+const { allowedHost, catalogHash, checkSchedule, cleanItem, createConsole, localPacks, mainCheckout, planAnnouncements, planReset, putArgs, resetScopes, resolveResetDir, validateConfig, withSchedule, withoutPack } = await import("./server.mjs");
 
 const remote = {
   announcements: { version: 4, items: [{ id: "old-1", title: "예전", body: "예전 공지", kind: "info" }] },
@@ -191,4 +191,96 @@ test("팩 내용 보기: 대표 아이콘·자산 목록을 주고, 목록 밖 �
   assert.match(ok.headers["content-type"], /^image\//);
   assert.equal((await call("GET", q(pack.cover, "x".repeat(32)), { token: null })).status, 401);
   assert.equal((await call("GET", q("../../../../manifest.json"), { token: null })).status, 404);
+});
+
+// ---- ADM1120A03 초기화 ----
+
+const ALL = { notices: true, packs: true, schedules: true };
+const entryA = { id: "christmas", version: 2, archive: { key: "k", bytes: 1, sha256: "0".repeat(64) }, schedule: [{ from: "2026-12-19T00:00:00+09:00", to: "2026-12-30T00:00:00+09:00" }] };
+
+test("초기화 미리보기: 셋 다 켜면 공지는 빈 목록+version+1, 카탈로그는 packs 비움", async () => {
+  remote.announcements = { version: 4, items: [{ id: "old-1", title: "예전", body: "예전 공지", kind: "info" }] };
+  remote.catalog = { format: "bokki-season-packs", schema: 1, packs: [entryA] };
+  const preview = await call("POST", "/api/reset/preview", { body: { scopes: ALL } });
+  assert.equal(preview.status, 200, preview.text);
+  assert.deepEqual(preview.json.after.announcements.items, []);
+  assert.equal(preview.json.after.announcements.version, 5);
+  assert.deepEqual(preview.json.after.catalog.packs, []);
+  assert.equal(preview.json.baseVersion, 4);
+  assert.equal(preview.json.baseCatalogHash, catalogHash(remote.catalog));
+  assert.deepEqual(preview.json.errors, []);
+});
+
+test("초기화: 기간만 지우면 팩은 남고 schedule 칸만 사라진다", () => {
+  const plan = planReset({ version: 1, items: [] }, { packs: [entryA] }, { notices: false, packs: false, schedules: true });
+  assert.equal(plan.after.catalog.packs.length, 1);
+  assert.equal("schedule" in plan.after.catalog.packs[0], false);
+  assert.equal(plan.after.announcements.version, 1, "공지는 그대로");
+});
+
+test("초기화: 범위가 모두 꺼졌거나 확인 글이 틀리면 422", async () => {
+  assert.equal(resetScopes({}), null);
+  assert.equal((await call("POST", "/api/reset/preview", { body: { scopes: {} } })).status, 422);
+  const base = { scopes: ALL, baseVersion: 4, baseCatalogHash: catalogHash(remote.catalog) };
+  assert.equal((await call("POST", "/api/reset/apply", { body: { ...base, confirm: "reset" } })).status, 422);
+  assert.equal((await call("POST", "/api/reset/apply", { body: { ...base, scopes: {}, confirm: "초기화" } })).status, 422);
+});
+
+test("초기화: 그 사이 서버가 바뀌었으면 409이고 아무것도 올리지 않는다", async () => {
+  const before = (await call("GET", "/api/state")).json.logs.length;
+  const stale = await call("POST", "/api/reset/apply", { body: { scopes: ALL, baseVersion: 3, baseCatalogHash: catalogHash(remote.catalog), confirm: "초기화" } });
+  assert.equal(stale.status, 409);
+  const staleCatalog = await call("POST", "/api/reset/apply", { body: { scopes: ALL, baseVersion: 4, baseCatalogHash: "0000", confirm: "초기화" } });
+  assert.equal(staleCatalog.status, 409);
+  const logs = (await call("GET", "/api/state")).json.logs.slice(before);
+  assert.equal(logs.some((l) => l.includes("wrangler")), false);
+});
+
+test("초기화 실행(연습) → 백업 파일이 있고 되돌리기가 그 내용을 그대로 올린다", async () => {
+  const hash = catalogHash(remote.catalog);
+  const before = (await call("GET", "/api/state")).json.logs.length;
+  const done = await call("POST", "/api/reset/apply", { body: { scopes: ALL, baseVersion: 4, baseCatalogHash: hash, confirm: "초기화" } });
+  assert.equal(done.status, 200, done.text);
+  assert.equal(done.json.dryRun, true);
+  const root = process.env.ADMIN_CONSOLE_BUILD_ROOT;
+  const backup = join(root, done.json.dir);
+  assert.match(done.json.dir, /^reset-\d{4}-\d{2}-\d{2}T[\d-]+$/);
+  assert.deepEqual(JSON.parse(readFileSync(join(backup, "before-announcements.json"), "utf8")), remote.announcements);
+  assert.deepEqual(JSON.parse(readFileSync(join(backup, "before-index.json"), "utf8")), remote.catalog);
+  const uploads = (await call("GET", "/api/state")).json.logs.slice(before).filter((l) => l.includes("[연습] npx wrangler"));
+  assert.equal(uploads.length, 2);
+  assert.match(uploads[0], /announcements\/latest\.json --file .*after-announcements\.json/);
+  assert.match(uploads[1], /packs\/season\/index\.json --file .*after-index\.json/);
+  // 되돌리기: 기본은 마지막 초기화, 백업 파일을 그대로 올린다.
+  const mark = (await call("GET", "/api/state")).json.logs.length;
+  const restored = await call("POST", "/api/reset/restore", { body: {} });
+  assert.equal(restored.status, 200, restored.text);
+  assert.deepEqual(restored.json.restored, ["announcements", "catalog"]);
+  const restoreLines = (await call("GET", "/api/state")).json.logs.slice(mark).filter((l) => l.includes("[연습] npx wrangler"));
+  assert.equal(restoreLines.length, 2);
+  assert.match(restoreLines[0], /before-announcements\.json/);
+  assert.match(restoreLines[1], /before-index\.json/);
+  const state = await call("GET", "/api/reset/state");
+  assert.equal(state.json.lastReset.dir, done.json.dir);
+});
+
+test("초기화 되돌리기: dir이 모양 밖·.. ·절대경로면 400이고 BUILD_ROOT 밖을 읽지 않는다", async () => {
+  const root = process.env.ADMIN_CONSOLE_BUILD_ROOT;
+  // 밖 폴더에 before-* 가 아닌 파일을 둬서, 열렸다면 올리려 했을 상황을 만든다.
+  mkdirSync(join(dir, "outside"), { recursive: true });
+  writeFileSync(join(dir, "outside", "before-announcements.json"), "{}");
+  writeFileSync(join(dir, "outside", "before-index.json"), "{}");
+  for (const bad of ["../outside", "/etc", "reset-2026-11-20T00-00-00/../../outside", "reset-x", "", "reset-2026-11-20T00-00-00/sub"]) {
+    const response = await call("POST", "/api/reset/restore", { body: { dir: bad } });
+    assert.equal(response.status, 400, `${bad} → ${response.status}`);
+  }
+  assert.equal(resolveResetDir("../outside", root), null);
+  assert.equal(resolveResetDir("reset-2026-11-20T00-00-00", root), join(root, "reset-2026-11-20T00-00-00"));
+  assert.equal((await call("POST", "/api/reset/restore", { body: { dir: "reset-2099-01-01T00-00-00" } })).status, 404);
+});
+
+test("초기화 라우트도 토큰·Host 검사를 따른다", async () => {
+  assert.equal((await call("GET", "/api/reset/state", { token: "x".repeat(32) })).status, 401);
+  assert.equal((await call("POST", "/api/reset/apply", { token: null, body: { scopes: ALL } })).status, 401);
+  assert.equal((await call("GET", "/api/reset/state", { host: `evil.example:${PORT}` })).status, 421);
 });

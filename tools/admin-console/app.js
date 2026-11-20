@@ -39,8 +39,9 @@ function fail(error) { alert(error.message); refreshState(); }
 for (const tab of document.querySelectorAll(".tab")) {
   tab.addEventListener("click", () => {
     for (const other of document.querySelectorAll(".tab")) other.classList.toggle("on", other === tab);
-    for (const id of ["notices", "packs", "settings"]) $(id).hidden = id !== tab.dataset.tab;
+    for (const id of ["notices", "packs", "reset", "settings"]) $(id).hidden = id !== tab.dataset.tab;
     if (tab.dataset.tab === "packs") loadPacks();
+    if (tab.dataset.tab === "reset") loadReset();
   });
 }
 
@@ -368,6 +369,64 @@ async function withdraw(id) {
 }
 
 $("reloadPacks").addEventListener("click", loadPacks);
+
+// ---- 초기화(ADM1120A03) ----
+let resetPlan = null; // 미리보기 때 읽은 baseVersion·baseCatalogHash와 범위
+const scopes = () => ({ notices: $("scopeNotices").checked, packs: $("scopePacks").checked, schedules: $("scopeSchedules").checked });
+const describeSchedule = (spans) => (spans === null ? "매니페스트 기간" : spans.length ? spans.map((s) => `${s.from} ~ ${s.to}`).join(", ") : "꺼 둠");
+
+function syncResetButtons() {
+  $("applyReset").disabled = !(resetPlan && $("resetConfirm").value === "초기화" && resetPlan.errors.length === 0);
+}
+
+async function loadReset() {
+  try {
+    const state = await api("GET", "/api/reset/state");
+    $("resetState").replaceChildren(
+      el("div", { class: "card" }, el("b", { textContent: "공지" }), el("div", { textContent: `version ${state.announcements.version} · ${state.announcements.count}건` }),
+        ...state.announcements.items.map((item) => el("div", { class: "muted", textContent: `${item.id} · ${item.title}` }))),
+      el("div", { class: "card" }, el("b", { textContent: "팩 카탈로그" }),
+        ...(state.catalog.packs.length ? state.catalog.packs.map((p) => el("div", { textContent: `${p.id} v${p.version} · ${describeSchedule(p.schedule)}` })) : [el("div", { class: "muted", textContent: "비어 있음" })])));
+    $("resetLast").textContent = state.lastReset ? `되돌릴 수 있는 마지막 초기화: ${state.lastReset.dir}` : "되돌릴 초기화 기록이 없습니다";
+    $("restoreReset").disabled = !state.lastReset;
+  } catch (error) { $("resetState").replaceChildren(el("div", { class: "muted", textContent: error.message })); }
+}
+
+$("reloadReset").addEventListener("click", () => { resetPlan = null; syncResetButtons(); loadReset(); });
+$("resetConfirm").addEventListener("input", syncResetButtons);
+for (const id of ["scopeNotices", "scopePacks", "scopeSchedules"]) $(id).addEventListener("change", () => { resetPlan = null; for (const out of ["resetBefore", "resetAfter"]) $(out).hidden = true; syncResetButtons(); });
+
+$("previewReset").addEventListener("click", async () => {
+  try {
+    const result = await api("POST", "/api/reset/preview", { scopes: scopes() });
+    resetPlan = { ...result, scopes: scopes() };
+    $("resetBefore").textContent = JSON.stringify(result.before, null, 2);
+    $("resetAfter").textContent = JSON.stringify(result.after, null, 2) + (result.errors.length ? `\n\n검사 실패:\n${result.errors.join("\n")}` : "");
+    $("resetBefore").hidden = $("resetAfter").hidden = false;
+    syncResetButtons();
+  } catch (error) { fail(error); }
+});
+
+$("applyReset").addEventListener("click", async () => {
+  const chosen = resetPlan.scopes;
+  const lines = [chosen.notices && "서버의 공지를 모두 내립니다", chosen.packs && "서버의 시즌 팩 카탈로그를 비웁니다(R2의 팩 파일은 그대로)", !chosen.packs && chosen.schedules && "팩 운영 기간을 지웁니다(매니페스트 기간으로 돌아감)"].filter(Boolean);
+  const ok = await confirmDialog(`${lines.join("\n")}.\n앱 사용자 모두에게 보입니다(최대 35분 안). 직전 상태는 백업되고 「방금 초기화 되돌리기」로 되돌릴 수 있습니다. 계속할까요?`);
+  if (!ok) return;
+  try {
+    const result = await api("POST", "/api/reset/apply", { scopes: chosen, baseVersion: resetPlan.baseVersion, baseCatalogHash: resetPlan.baseCatalogHash, confirm: $("resetConfirm").value });
+    $("resetConfirm").value = ""; resetPlan = null; syncResetButtons();
+    $("resetLast").textContent = `${result.dryRun ? "[연습] " : ""}초기화했습니다: ${result.dir}`;
+    setTimeout(loadReset, 1500);
+  } catch (error) { fail(error); }
+  refreshState();
+});
+
+$("restoreReset").addEventListener("click", async () => {
+  const ok = await confirmDialog("방금 초기화하기 직전의 공지와 팩 카탈로그를 그대로 다시 올립니다. 그 뒤에 바뀐 서버 내용은 덮어씁니다. 계속할까요?");
+  if (!ok) return;
+  try { await api("POST", "/api/reset/restore", {}); setTimeout(loadReset, 1500); } catch (error) { fail(error); }
+  refreshState();
+});
 
 // ---- 설정 ----
 $("configForm").addEventListener("submit", async (event) => {
