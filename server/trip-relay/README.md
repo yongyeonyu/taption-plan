@@ -24,6 +24,15 @@ AI 비서(도구 호출이 되는 비서, ChatGPT 맞춤 GPT Actions, 단축어 
 3. 배포 주소의 호스트 이름만(예: `taption-trip-relay.<계정>.workers.dev` 또는 연결한 도메인) 앱 빌드 설정 `TRIP_RELAY_HOST`(`TaptionPlan/AppSecrets.local.xcconfig`)에 넣습니다. 비어 있으면 앱은 이 기능을 숨깁니다.
 4. Cloudflare 대시보드에서 이 Worker에 속도 제한 규칙을 둡니다(예: IP당 분당 30회). 무료 KV는 하루 쓰기 1,000건이라, 남용되면 쓰기가 막힙니다.
 
+## `/public/*` 속도 제한은 Cloudflare 규칙으로 (S3, CRV1120A01)
+
+`/public/announcements`와 `/public/assets/*`는 인증·Worker 속도 제한 없이 R2를 그대로 읽어 준다(앱이 로그인 없이 받는 공용 파일). 시즌 팩 `.bpack`(최대 8MB)이나 큰 모델 파일을 한 IP가 반복해서 받으면 R2 이그레스를 쓸 수 있다. Worker 안에 한도를 두면 이어받기(`Range`)가 조각마다 한도에 걸려 끊기므로, **Worker 코드는 그대로 두고 Cloudflare 대시보드의 속도 제한 규칙으로 막는다**(대표 몫).
+
+- 대상: 경로가 `/public/assets/` 로 시작하는 요청.
+- 권장 시작값: IP당 1분에 60회(시즌 팩 하나는 조각 몇 개로 끝나고, 앱은 하루 몇 번만 받는다). 넘으면 429·10분 차단. 값은 Cloudflare 요금제 한도에 맞춰 조정한다.
+- `/public/announcements`는 작고 엣지 캐시되므로 규칙에서 뺀다.
+- 규칙을 만든 뒤 이어받기가 되는지 `curl -s -o /dev/null -D - -H "Range: bytes=0-99" https://<서버>/public/assets/<키>`가 `206`인지 확인한다.
+
 ## 확인할 것
 - 무료 한도(Workers 요청, KV 읽기·쓰기)는 Cloudflare 요금 문서에서 배포 전에 다시 확인하세요.
 - 여행 일정이 서버에 최대 3일 머무르므로 개인정보 처리방침(PRIVACY.md)과 App Store 개인정보 항목에 반영해야 합니다.

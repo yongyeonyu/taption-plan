@@ -1188,6 +1188,35 @@ final class TaptionBackupV2Tests: XCTestCase {
         }
     }
 
+    /// D4(CRV1120A01): 앞 작업을 기다리다 취소된 작업은 차례가 와도 시작하지 않고 자리를 다음에 넘긴다.
+    func testWaiterCancelledWhileQueuedNeverStartsAndPassesTheSlotOn() async throws {
+        let harness = try makeHarness()
+        let september = TaptionBackupMonth(year: 2026, month: 9)
+        try await harness.store.upsertReadings(readings(day: date(2026, 9, 12), count: 20))
+        let log = OperationLog()
+        var configuration = fastConfiguration
+        configuration.temporaryDirectory = harness.temporaryDirectory
+        configuration.operationHook = { name, started in log.add((started ? "+" : "-") + name) }
+        let backupEngine = TaptionBackupEngine(
+            store: harness.store, destination: SlowDestination(base: harness.destination),
+            calendar: calendar, configuration: configuration
+        )
+        let pw = password, now = date(2026, 10, 2)
+        let first = Task { try await backupEngine.backup(month: september, password: pw, now: now) }
+        while log.events.isEmpty { try await Task.sleep(nanoseconds: 5_000_000) }
+        let queued = Task { try await backupEngine.backup(month: september, password: pw, now: now) }
+        try await Task.sleep(nanoseconds: 30_000_000)
+        queued.cancel()
+        _ = try await first.value
+        do {
+            _ = try await queued.value
+            XCTFail("취소된 대기자가 실행됐다")
+        } catch is CancellationError {}
+        XCTAssertEqual(log.events.filter { $0.hasPrefix("+") }.count, 1, "대기하다 취소된 작업은 시작 표시도 남기지 않는다: \(log.events)")
+        // 자리가 막히지 않았다: 다음 작업이 곧바로 돈다.
+        _ = try await backupEngine.backup(month: september, password: pw, now: now)
+    }
+
     // A6: 달이 끝난 뒤에도 끝나지 않는 긴 기록은 오프로드에서 남는다.
     func testOffloadKeepsRecordsThatEndAfterTheMonthBoundary() async throws {
         let harness = try makeHarness()

@@ -100,6 +100,7 @@
 
 ### 성능·구조
 
+- CRV1120A01 · 코드 검토 문서(2026-11-20) P0 16건 중 15건 고침. 남은 것: T-08(대표 결정 대기), S3 Cloudflare 속도 제한 규칙(대표 몫, `server/trip-relay/README.md`), 서버 배포(대표 몫), P1·P2 94여 건 · 코드, 대표 몫
 - PRF1117A01 · 설치 직후 콜드 실행 3,000ms 이하(지금 3,422ms). 다음 후보는 첫 읽기 12MB 중 장소 9.5MB. 2026-11-17 대표 결정으로 멈추고 다음 항목으로 · 코드(재개 때) · `docs/PERFORMANCE_PLAN.md`
 - PRF1117A02 · 아이폰 11 집 그림 눈 확인, 날짜 40ms 넘는 끊김 3 이하, 긴 날로 재생 다시 재기 · 실기기, 코드
 - PRF1116A01·PRF1116A02 · 시간 막대 `drawingGroup` 합치기 끝(지도 끌기 717). 대표 기기 눈 확인 · 실기기
@@ -130,6 +131,7 @@
 
 위 영역에서 「대표 결정」으로 막힌 것만 모았습니다. 물을 때는 객관식으로, 추천을 첫째에 「(추천)」으로 둡니다.
 
+- CRV1120A01 · T-08 생체 보호 스냅샷(`BiometricProtectedSnapshotStore`) 기능 전체가 화면에 연결돼 있지 않음(`protectCurrentDataWithBiometrics`·`validateBiometricProtectedData`·`refreshBiometricDataProtectionStatus` 모두 호출처 없음). 설정 화면에 연결할지, 기능과 `BiometricDataProtectionStatus`를 지울지 · 대표 결정
 - CRV1118A01 ① 메모 저장 상한 1,000자와 다듬기 상한(1,500·12,000)을 어떻게 맞출지 ② 좌표가 든 메모를 사용자가 직접 연결된 AI에게 맡길 때 막을지
 - PCC1118A01 승인 뒤 `PRIVACY.md` 문구 확정(초안은 AI·PCC 줄)
 - ACX1112A01 세 가지, SET1110A01 피클 키 방식, AIX1114A01 줄 수 기준선·6묶음 전 결정, DOC1114A21 `PRIVACY.md` 새 문단
@@ -1189,6 +1191,12 @@
 | COM1016A01·IAP905G002 | 개인정보 라벨, IAP 보류 상태 | 대표 결정대로 | |
 
 ## 검증 기록
+
+### CRV1120A01 · 코드 검토 P0 15건 수정 (2026-11-20, 대표 요청 「P0 16건 전부」, 시뮬레이터 iPhone 17)
+- 서버(`server/trip-relay`, 53bb8157): S1 `set_rule_enabled`·`ruleOps` 켜기·끄기에 `onlyAI` 검사(AI는 사용자 규칙을 켜고 끌 수 없음), S2 카카오 키워드·이미지·사진 출처·구글 fetch 예외를 502 `upstream_failed`로, S4 일이 상한(100)을 넘고 끝난 것이 없으면 열린 일을 지우지 않고 `failed`+`reason: "overflow"`로 표시(다음 추가 때 정리), S5 명령 결과(`saveResults`)·활동 추가 칸(`saveExtras`) KV 읽기-수정-쓰기를 주인 DO 잠금(`claim`/`release`)으로 직렬화(잡지 못하면 503 `busy`+`Retry-After`). S3은 코드 대신 README에 Cloudflare 속도 제한 규칙 안내(이어받기가 조각마다 Worker 한도에 걸리지 않게). `npm test` 313건 통과(새 `test/review-p0.test.mjs` 5건).
+- 앱·패키지: D1 키체인 교체를 `SecItemUpdate` 먼저·없을 때만 `SecItemAdd`(실패해도 옛 키 유지), D2 `rawDigest` 스캔을 읽기 트랜잭션 안에서, D3 복원 `recover`가 메모 합치기 표시를 읽지 못하면 아무것도 지우지 않음, D4 백업 엔진 대기자가 취소됐으면 차례가 와도 시작하지 않고 자리를 넘김(시험 추가), D5 `PRAGMA journal_mode=WAL` 결과를 읽어 WAL이 아니면 재시도 후 오류, D6 공유 세션 `deinit`(고리 취소·스트림 닫기)과 ping 고리 `[weak self]`(시험 추가), D9 설정 백업 앞 취소 확인, T-03 시즌 팩 날짜 파싱 월·일 검증(「2026-13-40」은 nil, 시험 추가).
+- CI: 패키지 6개 추가(Assistant·ClassifierEngine·PlanStore·TripShare·WatchSync·SeasonPackKit), relay 작업에 trip-relay·운영 페이지 시험, 앱 단위 시험 작업(`app-tests`, main 푸시·매일 밤만) 추가. 같은 패키지를 이 맥에서 `swift test`로 돌려 모두 통과함(Core 90·Assistant 25·Classifier 38·Store 27+37·TripShare 83·WatchSync 59·SeasonPackKit 111). 새 워크플로는 GitHub에서 아직 돌려 보지 않았다.
+- 한계: D1 키체인과 D3 meta 실패, D5 다른 연결이 열린 때의 WAL은 단위 시험으로 만들기 어려워 코드 검토로만 확인했다(실기기·실제 재현 전). D4는 대기 중 취소 시 대기 자체가 앞 작업이 끝날 때까지 이어질 수 있다(그 뒤 시작하지는 않음).
 
 ### FLT1119A01 마무리 · 화랑이 말풍선·지구본 환승 점 (2026-11-20, 대표 요청, 시뮬레이터 iPhone 17)
 - 출발 4시간 전부터 출발까지 화랑이 말풍선(「곧 출발! 공항에 06:05까지 가요 ✈」, 지연이면 「AB123 65분 지연, 새 출발 10:10」)을 기존 말풍선 저장소(event)로 넣는다(`FlightBubble`). 사용자가 숨긴 말풍선은 다시 켜지 않고 같은 일정은 같은 id로 갱신한다. 지구본에서 36시간 안에 같은 공항에서 이어 타는 환승 공항은 번호 없는 작은 점으로 그린다(`FlightLayoverMarks`, 지도 핀은 그대로).

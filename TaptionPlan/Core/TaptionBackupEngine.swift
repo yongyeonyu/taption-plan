@@ -192,12 +192,11 @@ actor TaptionBackupEngine {
         } else {
             isBusy = true
         }
+        // D4: 대기 중 취소됐으면 시작하지 않고 자리를 다음 대기자에게 넘긴다.
+        defer { if waiters.isEmpty { isBusy = false } else { waiters.removeFirst().resume() } }
+        try Task.checkCancellation()
         configuration.operationHook?(name, true)
-        defer {
-            keyCache = [:]
-            configuration.operationHook?(name, false)
-            if waiters.isEmpty { isBusy = false } else { waiters.removeFirst().resume() }
-        }
+        defer { keyCache = [:]; configuration.operationHook?(name, false) }
         try await prepareEnvironment()
         return try await body()
     }
@@ -293,6 +292,7 @@ actor TaptionBackupEngine {
                 results.append(await attempt(.month(month), password: password, now: now))
                 progress?(results.count, total)
             }
+            try Task.checkCancellation() // D9
             results.append(await attempt(.settings, password: password, now: now))
             progress?(results.count, total)
             return results

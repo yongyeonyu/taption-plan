@@ -227,6 +227,22 @@ final class ShareSessionTests: XCTestCase {
         XCTAssertEqual(clock.pending(.lockRenewal), 0)
     }
 
+    /// D6(CRV1120A01): 세션을 놓으면 해제되고, 남은 ping 고리가 `client`를 붙든 채 영원히 돌지 않는다.
+    func testReleasedSessionIsDeallocatedAndItsPingLoopEnds() async throws {
+        let room = try await TestRoom.make()
+        let clock = TestClock()
+        var owner: ShareRoomSession? = try await room.liveSession(room.owner, clock: clock)
+        try await eventually { clock.pending(.ping) == 1 }
+        await owner?.stop()
+        weak var weakOwner = owner
+        owner = nil
+        try await eventually("세션이 해제된다") { weakOwner == nil }
+        let before = clock.requested(.ping).count
+        clock.release(.ping)
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(clock.requested(.ping).count, before, "해제된 세션의 ping 고리는 다음 기다림을 청하지 않는다")
+    }
+
     /// HTTP 요청 하나가 망 끊김으로 실패해 상태가 잠깐 offline이 되어도, 소켓으로 소식이 오면 다시 live이고
     /// 잡아 둔 잠금의 연장도 이어진다(TSR1117A01). 전에는 연장 차례가 그 사이에 오면 고리가 끝나 2분 뒤 잠금이 풀렸다.
     func testLockRenewalSurvivesABriefOfflineBlip() async throws {

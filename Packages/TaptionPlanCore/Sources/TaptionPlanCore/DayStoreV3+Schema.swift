@@ -164,8 +164,11 @@ extension TaptionPlanV3Store {
         let deadline = ProcessInfo.processInfo.systemUptime + 5
         while true {
             do {
-                try sqliteExecute(database, "PRAGMA journal_mode=WAL;")
-                return
+                // D5: 다른 연결이 DB를 열어 두면 `journal_mode=WAL`은 오류 없이 지금 모드를 돌려주기만 한다.
+                // 돌려준 모드를 읽어 WAL이 아니면 BUSY처럼 다시 해 보고, 끝내 안 되면 오류로 한다.
+                let mode = try journalModeAfterRequestingWAL(database)
+                if mode == "wal" || mode == "memory" { return }
+                throw error(code: SQLITE_BUSY, message: "journal_mode is \(mode), not wal")
             } catch {
                 guard let storeError = error as? TaptionPlanV3StoreError,
                       case let .database(code, _) = storeError,
@@ -301,6 +304,18 @@ extension TaptionPlanV3Store {
             throw sqliteError(database)
         }
         return Int(sqlite3_column_int64(statement, 0))
+    }
+
+    private nonisolated static func journalModeAfterRequestingWAL(
+        _ database: OpaquePointer
+    ) throws -> String {
+        let statement = try sqlitePrepare(database, "PRAGMA journal_mode=WAL;")
+        defer { sqlite3_finalize(statement) }
+        let step = sqlite3_step(statement)
+        guard step == SQLITE_ROW else {
+            throw error(code: step == SQLITE_DONE ? SQLITE_ERROR : step, message: String(cString: sqlite3_errmsg(database)))
+        }
+        return sqlite3_column_text(statement, 0).map { String(cString: $0).lowercased() } ?? ""
     }
 
     private nonisolated static func sqliteExecute(

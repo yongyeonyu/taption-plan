@@ -741,57 +741,60 @@ extension TaptionPlanV3Store {
             return digest
         }
         let dayKey = Self.dayKey(day)
-        let statement = try prepare(
-            """
-            SELECT timestamp, sequence, id, domain, provenance, payload
-            FROM raw_events
-            WHERE device = ? AND day_key = ?
-            ORDER BY timestamp, sequence, id, domain;
-            """
-        )
-        defer { sqlite3_finalize(statement) }
-        try bind(device.rawValue, to: statement, at: 1)
-        try bind(dayKey, to: statement, at: 2)
-
-        var hasher = SHA256()
-        var eventCount = 0
-        var firstTimestamp: Date?
-        var lastTimestamp: Date?
-        while try step(statement) == SQLITE_ROW {
-            let timestamp = Date(
-                timeIntervalSince1970: sqlite3_column_double(statement, 0)
+        // D2: 한 줄씩 훑는 동안 다른 연결이 쓰면 앞뒤가 섞인 다이제스트가 된다. 읽기 트랜잭션 하나(같은 스냅샷) 안에서 계산한다.
+        let digest = try withReadTransaction { () throws -> TaptionPlanDayDigest in
+            let statement = try prepare(
+                """
+                SELECT timestamp, sequence, id, domain, provenance, payload
+                FROM raw_events
+                WHERE device = ? AND day_key = ?
+                ORDER BY timestamp, sequence, id, domain;
+                """
             )
-            let sequence = try readUInt64(sqlite3_column_int64(statement, 1))
-            guard let id = sqlite3_column_text(statement, 2).map({ String(cString: $0) }),
-                  !id.isEmpty,
-                  let domain = sqlite3_column_text(statement, 3).map({ String(cString: $0) }),
-                  !domain.isEmpty else {
-                throw TaptionPlanV3StoreError.databaseCorrupt(
-                    message: "Invalid raw event digest row"
+            defer { sqlite3_finalize(statement) }
+            try bind(device.rawValue, to: statement, at: 1)
+            try bind(dayKey, to: statement, at: 2)
+
+            var hasher = SHA256()
+            var eventCount = 0
+            var firstTimestamp: Date?
+            var lastTimestamp: Date?
+            while try step(statement) == SQLITE_ROW {
+                let timestamp = Date(
+                    timeIntervalSince1970: sqlite3_column_double(statement, 0)
                 )
+                let sequence = try readUInt64(sqlite3_column_int64(statement, 1))
+                guard let id = sqlite3_column_text(statement, 2).map({ String(cString: $0) }),
+                      !id.isEmpty,
+                      let domain = sqlite3_column_text(statement, 3).map({ String(cString: $0) }),
+                      !domain.isEmpty else {
+                    throw TaptionPlanV3StoreError.databaseCorrupt(
+                        message: "Invalid raw event digest row"
+                    )
+                }
+                let provenance = try decodeProvenance(readData(statement, at: 4))
+                Self.appendCanonical(device.rawValue, to: &hasher)
+                Self.appendCanonical(dayKey, to: &hasher)
+                Self.appendCanonical(timestamp.timeIntervalSince1970, to: &hasher)
+                Self.appendCanonical(sequence, to: &hasher)
+                Self.appendCanonical(id, to: &hasher)
+                Self.appendCanonical(domain, to: &hasher)
+                Self.appendCanonical(provenance, to: &hasher)
+                try Self.appendCanonicalBlob(statement, at: 5, to: &hasher)
+                eventCount += 1
+                firstTimestamp = firstTimestamp ?? timestamp
+                lastTimestamp = timestamp
             }
-            let provenance = try decodeProvenance(readData(statement, at: 4))
-            Self.appendCanonical(device.rawValue, to: &hasher)
-            Self.appendCanonical(dayKey, to: &hasher)
-            Self.appendCanonical(timestamp.timeIntervalSince1970, to: &hasher)
-            Self.appendCanonical(sequence, to: &hasher)
-            Self.appendCanonical(id, to: &hasher)
-            Self.appendCanonical(domain, to: &hasher)
-            Self.appendCanonical(provenance, to: &hasher)
-            try Self.appendCanonicalBlob(statement, at: 5, to: &hasher)
-            eventCount += 1
-            firstTimestamp = firstTimestamp ?? timestamp
-            lastTimestamp = timestamp
+            try reset(statement)
+            return TaptionPlanDayDigest(
+                device: device,
+                day: day,
+                eventCount: eventCount,
+                firstTimestamp: firstTimestamp,
+                lastTimestamp: lastTimestamp,
+                sha256: hasher.finalize().map { String(format: "%02x", $0) }.joined()
+            )
         }
-        try reset(statement)
-        let digest = TaptionPlanDayDigest(
-            device: device,
-            day: day,
-            eventCount: eventCount,
-            firstTimestamp: firstTimestamp,
-            lastTimestamp: lastTimestamp,
-            sha256: hasher.finalize().map { String(format: "%02x", $0) }.joined()
-        )
         let didPersist = try withTransaction {
             guard try currentDataVersion() == dataVersion else { return false }
             try persistRawDigest(digest)

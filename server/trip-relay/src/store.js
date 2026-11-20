@@ -186,7 +186,7 @@ async function openTask(ctx, row) {
     ...(body?.context ? { context: body.context } : {}), status: row.status, createdAt: iso(row.createdAt), updatedAt: iso(row.updatedAt),
     ...(row.claimedBy ? { claimedBy: row.claimedBy } : {}), ...(row.attempts ? { attempts: row.attempts } : {}),
     ...(body?.result ? { result: body.result } : {}),
-    ...(body?.reason ? { reason: body.reason } : row.code === "timeout" ? { reason: "timeout" } : row.status === "expired" ? { reason: "expired" } : {}),
+    ...(body?.reason ? { reason: body.reason } : row.code === "timeout" ? { reason: "timeout" } : row.code === "overflow" ? { reason: "overflow" } : row.status === "expired" ? { reason: "expired" } : {}),
     ...(body?.outcome ? { outcome: body.outcome } : {}),
   };
 }
@@ -327,11 +327,27 @@ async function readDay(ctx, date) {
   return ctx.store.get(dayPrefix(ctx) + date, { reseal: false });
 }
 
+// S5: KV 읽기-수정-쓰기를 주인 DO의 잠금(`claim`/`release`)으로 차례로 한다. 잠금은 1분 뒤 저절로 풀린다(LIMITS.lockMs).
+// 잡지 못하면 잠깐 기다려 다시 해 보고, 그래도 안 되면 false(호출한 쪽이 503으로 앱이 다시 시도하게 한다).
+async function withLock(ctx, name, work, { tries = 20, waitMs = 40 } = {}) {
+  for (let attempt = 0; attempt < tries; attempt++) {
+    if ((await ctx.state.call("claim", { name, now: Date.now() })).ok) {
+      try { return { ok: true, value: await work() }; } finally { await ctx.state.call("release", { name }); }
+    }
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
+  return { ok: false };
+}
+
 // MARK: activity
 
 async function saveExtras(ctx, value, ttl) {
   const provided = ACTIVITY_EXTRAS.filter((name) => value[name] !== undefined);
-  if (!provided.length) return;
+  if (!provided.length) return true;
+  return (await withLock(ctx, "extras", () => mergeExtras(ctx, value, ttl, provided))).ok;
+}
+
+async function mergeExtras(ctx, value, ttl, provided) {
   const extras = parse((await ctx.store.get(extrasName(ctx))) ?? "{}", {});
   for (const name of provided) {
     if (value[name] === null) delete extras[name];
@@ -367,7 +383,8 @@ export async function saveActivity(ctx, value) {
     const { dropped } = await ctx.state.call("putDays", { days: index, now: ctx.now });
     for (const name of dropped ?? []) await ctx.kv.delete(name);
   }
-  await saveExtras(ctx, value, ttl);
+  // S5: 합치는 칸을 차례로 쓰지 못하면(다른 요청이 쓰는 중) 503. 하루 기록은 이미 올라가 있고 같은 내용은 다시 쓰지 않으므로 앱이 다시 올려도 된다.
+  if (!(await saveExtras(ctx, value, ttl))) return json({ error: "busy" }, 503, { "retry-after": "2" });
   return json({ ok: true, dates: value.days.map((day) => day.date), expiresInSeconds: ttl, written: changed.length }, 201);
 }
 
@@ -562,10 +579,12 @@ export async function saveResults(ctx, value) {
   const at = iso(ctx.now);
   const entries = value.results.map(({ id, status, reason }) => ({ id, status, ...(reason ? { reason } : {}), at }));
   const ids = new Set(entries.map((e) => e.id));
-  const old = parse((await ctx.store.get(resultName(ctx))) ?? "[]", []);
-  const items = (Array.isArray(old) ? old : []).filter((e) => !ids.has(e.id)).concat(entries).slice(-QUEUE_LIMIT);
-  await ctx.store.put(resultName(ctx), JSON.stringify(items), { expirationTtl: QUEUE_TTL_SECONDS });
-  return json({ ok: true }, 201);
+  const merged = await withLock(ctx, "results", async () => {
+    const old = parse((await ctx.store.get(resultName(ctx))) ?? "[]", []);
+    const items = (Array.isArray(old) ? old : []).filter((e) => !ids.has(e.id)).concat(entries).slice(-QUEUE_LIMIT);
+    await ctx.store.put(resultName(ctx), JSON.stringify(items), { expirationTtl: QUEUE_TTL_SECONDS });
+  });
+  return merged.ok ? json({ ok: true }, 201) : json({ error: "busy" }, 503, { "retry-after": "2" });
 }
 
 export async function readResults(ctx) {

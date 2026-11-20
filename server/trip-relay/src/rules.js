@@ -152,7 +152,8 @@ export async function deleteRules(ctx, ids) {
 
 export async function setRuleEnabled(ctx, value) {
   if (!ruleID(value?.id) || typeof value.enabled !== "boolean") return json({ error: "bad_rule_op" }, 422);
-  const result = await ctx.state.call("ruleOps", { ops: [{ op: value.enabled ? "enable" : "disable", id: value.id }], now: ctx.now });
+  // S1: AI(주인 키가 아닌 키)는 사용자가 만든 규칙을 켜고 끌 수 없다. 지우기(deleteRules)와 같은 검사다.
+  const result = await ctx.state.call("ruleOps", { ops: [{ op: value.enabled ? "enable" : "disable", id: value.id }], now: ctx.now, onlyAI: ctx.auth?.kind !== "master" });
   if (result.changed) notify(ctx, pushForRules());
   return result.changed ? json({ ok: true, version: result.version }, 200) : json({ error: "no_rule" }, 404);
 }

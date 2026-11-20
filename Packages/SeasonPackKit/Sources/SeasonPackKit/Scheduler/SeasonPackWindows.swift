@@ -19,7 +19,13 @@ public enum SeasonPackDateParsing {
             guard let time = hourMinute(String(parts[1])) else { return nil }
             comps.hour = time.hour; comps.minute = time.minute
         }
-        return calendar.date(from: comps)
+        // T-03: `calendar.date(from:)`은 「2026-13-40」 같은 값을 다음 해 날짜로 굴려 버린다. 만든 날짜의 연·월·일이 입력과 같을 때만 받는다.
+        guard (1...12).contains(day[1]), (1...31).contains(day[2]),
+              let date = calendar.date(from: comps) else { return nil }
+        let back = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        guard back.year == day[0], back.month == day[1], back.day == day[2],
+              back.hour == comps.hour, back.minute == comps.minute else { return nil }
+        return date
     }
 
     public static func hourMinute(_ text: String) -> (hour: Int, minute: Int)? {

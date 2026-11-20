@@ -47,6 +47,16 @@ public actor ShareRoomSession {
     private var pendingRev = 0
     private var lastBye: ShareByeReason?
 
+    /// D6: `stop()` 없이 세션이 해제돼도 돌고 있는 일을 취소하고 듣는 쪽이 영원히 기다리지 않게 스트림을 닫는다.
+    deinit {
+        runTask?.cancel()
+        renewTask?.cancel()
+        pingTask?.cancel()
+        catchUpTask?.cancel()
+        continuation.finish()
+        locationContinuation.finish()
+    }
+
     /// - Parameters:
     ///   - member·epoch: 입장(또는 만들기) 응답의 값. 앱이 `ShareRoomSecrets`에 두었다가 넣는다.
     ///   - snapshot: 저장해 둔 로컬 사본. 방·참여자가 다르면 쓰지 않는다.
@@ -299,9 +309,11 @@ public actor ShareRoomSession {
 
     private func startPing() {
         pingTask?.cancel()
-        pingTask = Task { [environment, client] in
+        // D6: 세션이 해제되면(stop 없이 놓아도) 한 번 깨어난 뒤 끝낸다. 강하게 잡은 `client`가 세션보다 오래 살지 않게 한다.
+        pingTask = Task { [weak self, environment, client] in
             while !Task.isCancelled {
                 do { try await environment.sleep(.ping, environment.pingInterval) } catch { return }
+                guard self != nil else { return }
                 await client.ping()
             }
         }

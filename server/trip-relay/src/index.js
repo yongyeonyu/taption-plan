@@ -63,8 +63,13 @@ export async function kakaoKeyword(request, env, fetcher = fetch, category = fal
     const value = incoming.get(name);
     if (value !== null) target.searchParams.set(name, value.slice(0, 100));
   }
-  const upstream = await fetcher(target, { headers: { authorization: `KakaoAK ${env.KAKAO_REST_API_KEY}` } });
-  return new Response(await upstream.text(), {
+  // S2: 상류 네트워크 오류·DNS 실패로 fetch가 던져도 처리되지 않은 500이 아니라 502로 돌려준다.
+  let upstream, text;
+  try {
+    upstream = await fetcher(target, { headers: { authorization: `KakaoAK ${env.KAKAO_REST_API_KEY}` } });
+    text = await upstream.text();
+  } catch { return json({ error: "upstream_failed" }, 502); }
+  return new Response(text, {
     status: upstream.status,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
@@ -81,7 +86,8 @@ export async function kakaoImage(request, env, fetcher = fetch) {
   const target = new URL(KAKAO_IMAGE_URL);
   target.searchParams.set("query", query);
   target.searchParams.set("size", "5");
-  const upstream = await fetcher(target, { headers: { authorization: `KakaoAK ${env.KAKAO_REST_API_KEY}` } });
+  let upstream;
+  try { upstream = await fetcher(target, { headers: { authorization: `KakaoAK ${env.KAKAO_REST_API_KEY}` } }); } catch { return json({ error: "upstream_failed" }, 502); }
   if (!upstream.ok) return json({ error: "upstream", status: upstream.status }, 502);
   let found;
   try { found = await upstream.json(); } catch { return json({ error: "upstream" }, 502); }
@@ -159,7 +165,8 @@ export async function photoSearch(request, env, fetcher = fetch) {
       image: item?.src?.medium, site: (typeof item?.photographer === "string" ? item.photographer.slice(0, 40) + " · " : "") + "Pexels", page: item?.url,
     }));
   }
-  const upstream = await fetcher(target, { headers });
+  let upstream;
+  try { upstream = await fetcher(target, { headers }); } catch { return json({ error: "upstream_failed" }, 502); }
   if (!upstream.ok) return json({ error: "upstream", status: upstream.status }, 502);
   let body;
   try { body = await upstream.json(); } catch { return json({ error: "upstream" }, 502); }
@@ -173,20 +180,24 @@ async function googlePhoto(env, fetcher, query, spot) {
   const key = env.GOOGLE_PLACES_KEY;
   if (!key) return json({ error: "unavailable" }, 503);
   if (!query) return json({ error: "bad_query" }, 400);
-  const search = await fetcher("https://places.googleapis.com/v1/places:searchText", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": key, "x-goog-fieldmask": "places.photos" },
-    body: JSON.stringify({
-      textQuery: query, pageSize: 1,
-      ...(spot ? { locationBias: { circle: { center: { latitude: spot.lat, longitude: spot.lng }, radius: 2000 } } } : {}),
-    }),
-  });
+  let search;
+  try {
+    search = await fetcher("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": key, "x-goog-fieldmask": "places.photos" },
+      body: JSON.stringify({
+        textQuery: query, pageSize: 1,
+        ...(spot ? { locationBias: { circle: { center: { latitude: spot.lat, longitude: spot.lng }, radius: 2000 } } } : {}),
+      }),
+    });
+  } catch { return json({ error: "upstream_failed" }, 502); }
   if (!search.ok) return json({ error: "upstream", status: search.status }, 502);
   let found;
   try { found = await search.json(); } catch { return json({ error: "upstream" }, 502); }
   const photo = found?.places?.[0]?.photos?.[0];
   if (typeof photo?.name !== "string" || !/^places\/[\w-]+\/photos\/[\w-]+$/.test(photo.name)) return json({ documents: [] }, 200);
-  const media = await fetcher(`https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=640&skipHttpRedirect=true`, { headers: { "x-goog-api-key": key } });
+  let media;
+  try { media = await fetcher(`https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=640&skipHttpRedirect=true`, { headers: { "x-goog-api-key": key } }); } catch { return json({ error: "upstream_failed" }, 502); }
   if (!media.ok) return json({ error: "upstream", status: media.status }, 502);
   let picture;
   try { picture = await media.json(); } catch { return json({ error: "upstream" }, 502); }
