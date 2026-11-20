@@ -203,8 +203,8 @@ struct AssistantConnectionsSection: View {
 
     private func copy(token: String, key: AssistantScopedKey) async {
         // 이 기기에만 10분 동안 둔다(SEC1110A02). 키 대신 1회용 주소를 먼저 쓴다(SET1110A01).
-        // Cue는 MCP 주소와 키를 따로 넣으므로 키만 복사한다(CUE1110A01).
-        if AssistantKeyProviders.provider(key.id) == .cue {
+        // Cue·Muse는 MCP 주소와 키를 따로 넣으므로 키만 복사한다(CUE1110A01, MUS1120A01).
+        if AssistantKeyProviders.provider(key.id)?.usesKeyConnector == true {
             AssistantClipboard.copy(token)
         } else {
             let full = TripRelay.assistantSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)

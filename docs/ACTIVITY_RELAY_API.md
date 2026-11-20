@@ -8,7 +8,7 @@
 |---|---|
 | 주소 | `https://trip.bokkiyaw.com` |
 | 인증 | 모든 요청에 `Authorization: Bearer <키>`, 본문이 있으면 `Content-Type: application/json`. 키는 앱만 가진 주인 키(master, 43자, `POST /register`로 등록해야 받는다), AI에 주는 읽기·쓰기 연결 키(43자), OAuth 토큰(64자, 14장), 지도 검색 전용 설치 키(43자)가 있다(7·12장). 등록되지 않은 키는 모든 경로에서 `401 {"error":"unregistered"}` |
-| 연결 | 앱 메인 메뉴 → 연결 → 「AI 연결」(피클·ChatGPT·Claude·Gemini·기타). 연결 키 만들기와 OAuth 연결 코드는 앱 비밀번호로 승인한다(13장, 서버에는 앱 비밀번호에서 만든 다른 6자리가 간다) |
+| 연결 | 앱 메인 메뉴 → 연결 → 「AI 연결」(피클·ChatGPT·Claude·Gemini·Cue·Muse·기타, Cue·Muse는 연결 키 + MCP 직접 등록). 연결 키 만들기와 OAuth 연결 코드는 앱 비밀번호로 승인한다(13장, 서버에는 앱 비밀번호에서 만든 다른 6자리가 간다) |
 | 기록 공유 | 「보내지 않음」·「하루 요약」(기본)·「머문 곳 이름과 시각」. 기기에만 저장. 끄면 앱이 `DELETE /activity`를 한 번 부른다 |
 | 서버 보관 기간 | 1일·7일(기본)·30일. 마지막으로 올린 때부터 센다. 줄이면 앱이 `DELETE /activity` 뒤 새 기간으로 다시 올린다 |
 

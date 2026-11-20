@@ -1,6 +1,6 @@
 # AI 비서 행동 수칙 (BOKKI Plan)
 
-AI 비서(피클·Claude·ChatGPT·Cue 등)가 이 앱과 연결됐을 때 따를 규칙이다. 연결 방법·명령 형식·한도는 `docs/ACTIVITY_RELAY_API.md`가 정본이고, 이 문서는 무엇을 언제 하면 좋은지만 적는다. 앱의 「연결 안내 복사」에 같은 내용이 한 문단으로 들어간다(`TripRelay.assistantSetupText`).
+AI 비서(피클·Claude·ChatGPT·Cue·Muse 등)가 이 앱과 연결됐을 때 따를 규칙이다. 연결 방법·명령 형식·한도는 `docs/ACTIVITY_RELAY_API.md`가 정본이고, 이 문서는 무엇을 언제 하면 좋은지만 적는다. 앱의 「연결 안내 복사」에 같은 내용이 한 문단으로 들어간다(`TripRelay.assistantSetupText`).
 
 ## 1. 말풍선 (`setBubble`)
 
