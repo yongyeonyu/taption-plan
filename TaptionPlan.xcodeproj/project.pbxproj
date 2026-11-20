@@ -221,6 +221,7 @@
 		ARL1116A01000000000003 /* SharedRuleStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRL1116A01000000000003 /* SharedRuleStoreTests.swift */; };
 		A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */; };
 		A1A1120A0100000000000002 /* AssistantLiveSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0100000000000002 /* AssistantLiveSyncTests.swift */; };
+		A1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift */; };
 		D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */; };
 		D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */; };
 		D24A00000000000000000003 /* PackageTextLookupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000003 /* PackageTextLookupTests.swift */; };
@@ -597,6 +598,8 @@
 		A1A1110A0200000000000004 /* AssistantKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000004 /* AssistantKeys.swift */; };
 		A1A1110A0300000000000011 /* AssistantBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000011 /* AssistantBubble.swift */; };
 		A1A1120A0100000000000001 /* AssistantLiveSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0100000000000001 /* AssistantLiveSync.swift */; };
+		A1A1120A0100000000000004 /* PostHogUploadModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0100000000000004 /* PostHogUploadModel.swift */; };
+		A1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift */; };
 		A1A1110A0600000000000001 /* AssistantPINReset.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0600000000000001 /* AssistantPINReset.swift */; };
 		B1A1110A0200000000000002 /* BackupPasswordForgotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0200000000000002 /* BackupPasswordForgotView.swift */; };
 		A1A1110A0300000000000001 /* AssistantRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000001 /* AssistantRegistration.swift */; };
@@ -1133,6 +1136,7 @@
 		FRL1116A01000000000003 /* SharedRuleStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedRuleStoreTests.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPhase3Tests.swift; sourceTree = "<group>"; };
 		F1A1120A0100000000000002 /* AssistantLiveSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantLiveSyncTests.swift; sourceTree = "<group>"; };
+		F1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogDiagnosticsUploaderTests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLastKnownLocationPolicyTests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeExpectedRouteRefreshGateTests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000003 /* PackageTextLookupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackageTextLookupTests.swift; sourceTree = "<group>"; };
@@ -1484,6 +1488,8 @@
 		F1A1110A0200000000000004 /* AssistantKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantKeys.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000011 /* AssistantBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantBubble.swift; sourceTree = "<group>"; };
 		F1A1120A0100000000000001 /* AssistantLiveSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantLiveSync.swift; sourceTree = "<group>"; };
+		F1A1120A0100000000000004 /* PostHogUploadModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogUploadModel.swift; sourceTree = "<group>"; };
+		F1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogDiagnosticsUploader.swift; sourceTree = "<group>"; };
 		F1A1110A0600000000000001 /* AssistantPINReset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINReset.swift; sourceTree = "<group>"; };
 		F1B1110A0200000000000002 /* BackupPasswordForgotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupPasswordForgotView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000001 /* AssistantRegistration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRegistration.swift; sourceTree = "<group>"; };
@@ -1935,6 +1941,7 @@
 				FRL1116A01000000000003 /* SharedRuleStoreTests.swift */,
 				F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */,
 				F1A1120A0100000000000002 /* AssistantLiveSyncTests.swift */,
+				F1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift */,
 				DC0B1116A01000000000B001 /* DailyCardBubblePromptTests.swift */,
 				D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */,
 				D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */,
@@ -2146,6 +2153,8 @@
 				F1A1110A0200000000000004 /* AssistantKeys.swift */,
 				F1A1110A0300000000000011 /* AssistantBubble.swift */,
 				F1A1120A0100000000000001 /* AssistantLiveSync.swift */,
+				F1A1120A0100000000000004 /* PostHogUploadModel.swift */,
+				F1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift */,
 				F1A1110A0600000000000001 /* AssistantPINReset.swift */,
 				F1B1110A0200000000000002 /* BackupPasswordForgotView.swift */,
 				F1A1110A0300000000000001 /* AssistantRegistration.swift */,
@@ -3262,6 +3271,8 @@
 				A1A1110A0200000000000004 /* AssistantKeys.swift in Sources */,
 				A1A1110A0300000000000011 /* AssistantBubble.swift in Sources */,
 				A1A1120A0100000000000001 /* AssistantLiveSync.swift in Sources */,
+				A1A1120A0100000000000004 /* PostHogUploadModel.swift in Sources */,
+				A1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift in Sources */,
 				A1A1110A0600000000000001 /* AssistantPINReset.swift in Sources */,
 				B1A1110A0200000000000002 /* BackupPasswordForgotView.swift in Sources */,
 				A1A1110A0300000000000001 /* AssistantRegistration.swift in Sources */,
@@ -3701,6 +3712,7 @@
 				ARL1116A01000000000003 /* SharedRuleStoreTests.swift in Sources */,
 				A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */,
 				A1A1120A0100000000000002 /* AssistantLiveSyncTests.swift in Sources */,
+				A1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift in Sources */,
 				DC0B1116A01000000000B002 /* DailyCardBubblePromptTests.swift in Sources */,
 				D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */,
 				D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */,

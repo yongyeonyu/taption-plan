@@ -215,6 +215,14 @@ AI·Siri·단축어
 - **공유 글 → 일정**(`ShareTextRouter`·`ShareScheduleParser`): 항공 알림으로 못 읽은 공유 글은 ① 기기 안 파서(날짜 `2026-11-21`·`11월 21일`·`11/21`·오늘/내일/모레/글피·`(다음 주) X요일` + `TravelQuickEntry` 시각)로 일정(여행 기간이면 여행 일정, 아니면 `applyAssistantAction(.addSchedule)`) ② 못 읽으면 `AITaskQueue` `.notificationReview`(context `sourceApp: share`) ③ AI 연결이 없으면 메모. 단축어 동작 「글을 일정으로 넣기」(`AddSharedTextIntent`)가 같은 길을 타며, 앱이 준비되지 않았으면 보관함에 넣는다. 메시지 앱 말풍선에는 공유 메뉴가 없어 문자는 단축어 자동화로 넘긴다.
 - **UI는 엔진을 직접 import하지 않는다**(`check-app-engine-import-boundary.sh`): 화면은 `FlightPlacement`의 어댑터(`AirportChoice`·`draft(from:)`)를 쓴다.
 
+## PostHog 진단 업로드 (PHG1120A01, 2026-11-20)
+
+- 위치: 「데이터 보호」 카드 「포스트호그 로그 업로드」. 버튼을 누를 때만, 앱이 전면일 때만 보낸다(자동·백그라운드·앱 시작 전송 없음). 무인 벤치는 `makeDiagnosticsPackageLocally()`로 로컬 패키지만 만든다.
+- 키: `TaptionPlan/AppSecrets.local.xcconfig`(git 무시)의 `POSTHOG_API_KEY`(`POSTHOG_HOST` 기본 `us.i.posthog.com`)만. 공개 템플릿 `AppSecrets.xcconfig`에는 빈 값이 `#include?` 줄 위에 있다. 키가 없으면 두 버튼이 꺼지고 「PostHog 키가 설정되지 않았습니다」가 보인다.
+- 이벤트(모두 `app = bokki-plan`, `$process_person_profile = false`, `distinct_id`는 앱이 만든 무작위 UUID): `plan_diagnostics_log`(로그 200KB 조각, 요약·지하철 노선 속성, 좌표·원본 센서 없음), `plan_diagnostics_raw_meta`(날짜별 이동·방문 장소·활동 기록), `plan_diagnostics_raw_batch`(표본 500개/256KB 중 먼저 닿는 쪽, 이벤트 1MB 이하, 전체 최근 20,000개).
+- 요청은 이벤트 하나씩(`POST /batch/`, gzip). `$insert_id`는 `<세션>-log-<조각>`·`<세션>-raw-<배치>`. 재시도는 성공한 이벤트를 건너뛴다. 401·400·413은 재시도 단추를 숨긴다. 요청·응답 본문은 기록하지 않고 개수·바이트·응답 코드·초만 남긴다.
+- 로컬 사본: `Application Support/TaptionPlan/Diagnostics/Packages`(로그 .txt.gz 6개), `…/RawUploads`(원본 JSON 3개), `…/upload-state.json`.
+
 ## 가계부 통행료 (2026-11-18 기준)
 
 자동차 이동 하나에 통행료는 한 번만 넣습니다(한 이동 한 번·지운 것 다시 넣지 않기는 같은 `handled`). 차례는 ① 지난 톨게이트(도로공사) → ② 같은 길 규칙 → ③ 카카오 길찾기입니다. 앞 단계가 처리한 이동은 뒤 단계가 보지 않습니다. 좌표 예외(카카오)는 `AGENTS.md` 4절.

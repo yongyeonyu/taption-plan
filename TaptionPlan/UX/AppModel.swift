@@ -292,14 +292,14 @@ final class AppModel {
             forKey: Self.diagnosticsLatestSavedAtKey
         ) as? Date else {
             return AppLanguagePreference.text(
-                korean: "최신 로그 없음",
-                english: "No recent log"
+                korean: "최근 전송 없음",
+                english: "No recent upload"
             )
         }
         let savedText = savedAt.formatted(date: .abbreviated, time: .shortened)
         return AppLanguagePreference.text(
-            korean: "최신 \(fileName) · \(savedText)",
-            english: "Latest \(fileName) · \(savedText)"
+            korean: "최근 전송: \(savedText) · \(fileName)",
+            english: "Last upload: \(savedText) · \(fileName)"
         )
     }
 

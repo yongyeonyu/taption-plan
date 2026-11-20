@@ -204,9 +204,9 @@ struct MapHomeSecuritySheet: View {
     @State private var message: String?
     @State private var restoreTarget: PlanBackupListingRow?
     @State private var isOffloadConfirmationPresented = false
-    @State private var rawExportStatus = ""
-    @State var developerAttachment: MapHomeDeveloperAttachment?
-    @State var developerMailStatus = ""
+    @State private var isRawConsentPresented = false
+    @State private var rawConsentRemember = false
+    @State private var hasRawConsent = PostHogUploadModel.shared.hasRawConsent
     @FocusState private var focusedField: PINField?
 
     private enum PINField { case pin, confirmation, backup, restore }
@@ -285,58 +285,7 @@ struct MapHomeSecuritySheet: View {
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                 }
 
-                card(language.text("iCloud 로그 업로드", "iCloud Log Upload")) {
-                    Text(language.text(
-                        "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 iCloud Drive의 TaptionLogs에 저장합니다.",
-                        "Saves iPhone and Apple Watch diagnostics plus the previous unfinished session to TaptionLogs in iCloud Drive."
-                    ))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
-                    .foregroundStyle(.secondary)
-
-                    HStack(spacing: 10) {
-                        Button {
-                            Task { await model.exportDiagnosticsToICloud() }
-                        } label: {
-                            Label(
-                                language.text("로그 업로드", "Upload logs"),
-                                systemImage: "icloud.and.arrow.up"
-                            )
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
-                            .lineLimit(1)
-                        }
-                        .fixedSize()
-                        .buttonStyle(.bordered)
-                        .tint(Color.tpReferenceBlue)
-                        .disabled(model.isExportingDiagnostics)
-
-                        Text(model.diagnosticsExportStatus)
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
-                            .foregroundStyle(Color.tpReferenceBlue)
-                    }
-
-                    Text(model.diagnosticsLatestLogSummary)
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
-                        .foregroundStyle(.secondary)
-                    // 어제·오늘 센서 원본(GPS·모션·기압)을 같은 TaptionLogs 폴더에 바로 저장한다(SUB1029A01).
-                    HStack(spacing: 10) {
-                        Button {
-                            rawExportStatus = language.text("저장 중…", "Saving…")
-                            Task { rawExportStatus = await model.exportSensorRawToICloud() }
-                        } label: {
-                            Label(language.text("어제·오늘 원본 업로드", "Upload raw (2 days)"), systemImage: "location.square")
-                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
-                                .lineLimit(1)
-                        }
-                        .fixedSize()
-                        .buttonStyle(.bordered)
-                        .tint(Color.tpReferenceBlue)
-                        Text(rawExportStatus)
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
-                            .foregroundStyle(Color.tpReferenceBlue)
-                            .lineLimit(2)
-                    }
-                    developerMailButtons
-                }
+                card(language.text("포스트호그 로그 업로드", "PostHog Log Upload")) { postHogUploadCard }
 
                 card(language.text("\(PlanPINVerifier.currentDigits)자리 비밀번호", "\(PlanPINVerifier.currentDigits)-digit password")) {
                     SecureField(hasPIN ? registeredPINDots : language.text("비밀번호", "Password"), text: $pin)
@@ -801,57 +750,108 @@ struct MapHomeSecuritySheet: View {
 }
 
 extension MapHomeSecuritySheet {
-    /// 압축해 메일 작성 화면에 첨부한다. 보내기는 사용자가 누른다(MAL1103A01).
+    /// 진단 로그와 어제·오늘 원본을 PostHog로 보낸다(PHG1120A01). 누를 때만, 앱이 전면일 때만 보낸다.
     @ViewBuilder
-    var developerMailButtons: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(language.text("개발자에게 보내기", "Send to developer"))
+    var postHogUploadCard: some View {
+        let upload = PostHogUploadModel.shared
+        Text(language.text(
+            "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 개발자 분석 서비스(PostHog)로 보냅니다. 로그에는 좌표와 원본 센서 값이 들어가지 않습니다.",
+            "Sends iPhone and Apple Watch diagnostics plus the previous unfinished session to the developer's analytics service (PostHog). Logs carry no coordinates or raw sensor values."
+        ))
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+        .foregroundStyle(.secondary)
+
+        if !upload.isConfigured {
+            Text(upload.notConfiguredText)
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
-                .foregroundStyle(.secondary)
-            HStack(spacing: 10) {
-                developerMailButton(language.text("로그 보내기", "Logs"), subject: "BOKKI Plan 로그") {
-                    try await model.diagnosticsPackageURL()
-                }
-                developerMailButton(language.text("어제·오늘 데이터", "2 days data"), subject: "BOKKI Plan 어제·오늘 데이터") {
-                    try await model.exportTodaySensorRawURL()
-                }
+                .foregroundStyle(.orange)
+        }
+
+        HStack(spacing: 10) {
+            Button {
+                Task { await upload.uploadLog(model: model) }
+            } label: {
+                Label(language.text("로그 업로드", "Upload logs"), systemImage: "arrow.up.doc")
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .lineLimit(1)
             }
-            Text(language.text(
-                "위치 기록이 포함될 수 있어요. 메일 화면에서 보내기를 눌러야 전송됩니다.",
-                "May include location history. Nothing is sent until you tap Send in Mail."
-            ))
+            .fixedSize()
+            .buttonStyle(.bordered)
+            .tint(Color.tpReferenceBlue)
+            .disabled(upload.isUploading || !upload.isConfigured)
+            Text(upload.logStatus)
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                .foregroundStyle(Color.tpReferenceBlue)
+                .lineLimit(3)
+            if upload.canRetryLog {
+                Button(language.text("재시도", "Retry")) { Task { await upload.retryLog() } }
+                    .buttonStyle(.bordered)
+                    .disabled(upload.isUploading)
+            }
+        }
+
+        Text(model.diagnosticsLatestLogSummary)
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
             .foregroundStyle(.secondary)
-            if !developerMailStatus.isEmpty {
-                Text(developerMailStatus)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
-                    .foregroundStyle(Color.tpReferenceBlue)
-            }
-        }
-        .sheet(item: $developerAttachment) { MapHomeDeveloperMailSheet(attachment: $0) }
-    }
 
-    private func developerMailButton(_ title: String, subject: String, source: @escaping () async throws -> URL) -> some View {
-        Button {
-            developerMailStatus = language.text("압축 중…", "Compressing…")
-            Task {
-                do {
-                    let file = try await source()
-                    let zipped = try await Task.detached(priority: .utility) { try MapHomeZipArchive.write(file) }.value
-                    developerMailStatus = ""
-                    developerAttachment = MapHomeDeveloperAttachment(url: zipped, subject: subject)
-                } catch {
-                    developerMailStatus = language.text("실패 · \(error.localizedDescription)", "Failed · \(error.localizedDescription)")
-                }
+        Text(language.text(
+            "위치 원본(GPS·모션·기압)이 개발자 분석 서비스 PostHog로 전송됩니다.",
+            "Raw location data (GPS, motion, pressure) is sent to the developer's analytics service, PostHog."
+        ))
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
+        .foregroundStyle(.secondary)
+
+        HStack(spacing: 10) {
+            Button {
+                if hasRawConsent { Task { await upload.uploadRaw(model: model) } } else { isRawConsentPresented = true }
+            } label: {
+                Label(language.text("어제·오늘 원본 업로드", "Upload raw (2 days)"), systemImage: "location.square")
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .lineLimit(1)
             }
-        } label: {
-            Label(title, systemImage: "envelope")
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
-                .lineLimit(1)
+            .fixedSize()
+            .buttonStyle(.bordered)
+            .tint(Color.tpReferenceBlue)
+            .disabled(upload.isUploading || !upload.isConfigured)
+            Text(upload.rawStatus)
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
+                .foregroundStyle(Color.tpReferenceBlue)
+                .lineLimit(3)
+            if upload.canRetryRaw {
+                Button(language.text("재시도", "Retry")) { Task { await upload.retryRaw() } }
+                    .buttonStyle(.bordered)
+                    .disabled(upload.isUploading)
+            }
         }
-        .fixedSize()
-        .buttonStyle(.bordered)
-        .tint(Color.tpReferenceBlue)
+        if hasRawConsent {
+            Button(language.text("위치 원본 전송에 동의함 · 다시 묻기", "Raw location upload allowed · Ask again")) {
+                PostHogUploadModel.shared.setRawConsent(false)
+                hasRawConsent = false
+            }
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+        }
+        Color.clear.frame(height: 0)
+            .confirmationDialog(language.text("위치 원본을 보낼까요?", "Send raw location data?"), isPresented: $isRawConsentPresented, titleVisibility: .visible) {
+                Button(language.text("전송", "Send")) {
+                    PostHogUploadModel.shared.setRawConsent(rawConsentRemember)
+                    hasRawConsent = rawConsentRemember
+                    Task { await PostHogUploadModel.shared.uploadRaw(model: model) }
+                }
+                Button(language.text("전송 · 다시 묻지 않기", "Send · Don't ask again")) {
+                    rawConsentRemember = true
+                    PostHogUploadModel.shared.setRawConsent(true)
+                    hasRawConsent = true
+                    Task { await PostHogUploadModel.shared.uploadRaw(model: model) }
+                }
+                Button(language.text("취소", "Cancel"), role: .cancel) {}
+            } message: {
+                Text(language.text(
+                    "어제·오늘 기록한 GPS 좌표와 센서 원본이 개발자 분석 서비스(PostHog)로 전송됩니다. 집·회사 주변이 드러날 수 있습니다.",
+                    "Yesterday's and today's GPS coordinates and raw sensor samples go to the developer's analytics service (PostHog). They can reveal where home and work are."
+                ))
+            }
     }
 }
 

@@ -1016,7 +1016,7 @@
    "ko": "AI 서버 기록",
    "en": "AI server records",
    "files": [
-    "MapHomeSettingsSheets.swift:400"
+    "MapHomeSettingsSheets.swift:349"
    ],
    "args": [],
    "targets": [
@@ -2313,7 +2313,7 @@
    "ko": "Face ID / Touch ID 사용",
    "en": "Use Face ID / Touch ID",
    "files": [
-    "MapHomeSettingsSheets.swift:382"
+    "MapHomeSettingsSheets.swift:331"
    ],
    "args": [],
    "targets": [
@@ -2773,6 +2773,18 @@
    ]
   },
   {
+   "key": "PostHog 키가 설정되지 않았습니다|PostHog key is not set",
+   "ko": "PostHog 키가 설정되지 않았습니다",
+   "en": "PostHog key is not set",
+   "files": [
+    "PostHogUploadModel.swift:27"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "Pro 구매 완료|Pro purchased",
    "ko": "Pro 구매 완료",
    "en": "Pro purchased",
@@ -3102,7 +3114,7 @@
    "ko": "iCloud Drive/TaptionBackup에 달마다 파일 하나로 압축·암호화해 저장합니다. 자동으로 올리지 않으며, ‘지금 백업’을 누를 때만 올립니다.",
    "en": "Saved to iCloud Drive/TaptionBackup as one compressed, encrypted file per month. Nothing is uploaded automatically; it runs only when you tap Back up now.",
    "files": [
-    "MapHomeSettingsSheets.swift:469"
+    "MapHomeSettingsSheets.swift:418"
    ],
    "args": [],
    "targets": [
@@ -3114,7 +3126,7 @@
    "ko": "iCloud Drive를 사용할 수 없습니다. iCloud Drive가 켜져 있는지 확인해 주세요.",
    "en": "iCloud Drive is unavailable. Check that iCloud Drive is turned on.",
    "files": [
-    "DiagnosticsLogSupport.swift:801"
+    "DiagnosticsLogSupport.swift:810"
    ],
    "args": [],
    "targets": [
@@ -3186,18 +3198,6 @@
    ]
   },
   {
-   "key": "iCloud 로그 업로드|iCloud Log Upload",
-   "ko": "iCloud 로그 업로드",
-   "en": "iCloud Log Upload",
-   "files": [
-    "MapHomeSettingsSheets.swift:288"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "iCloud 로그인 필요|iCloud sign-in required",
    "ko": "iCloud 로그인 필요",
    "en": "iCloud sign-in required",
@@ -3215,7 +3215,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud Backup",
    "files": [
-    "MapHomeSettingsSheets.swift:468"
+    "MapHomeSettingsSheets.swift:417"
    ],
    "args": [],
    "targets": [
@@ -3312,7 +3312,7 @@
    "ko": "iCloud에 백업 파일이 없습니다.",
    "en": "No backup files in iCloud.",
    "files": [
-    "MapHomeSettingsSheets.swift:763"
+    "MapHomeSettingsSheets.swift:712"
    ],
    "args": [],
    "targets": [
@@ -3324,7 +3324,7 @@
    "ko": "iCloud에서 내려받는 중 · 불러오기를 눌러도 됩니다",
    "en": "Downloading from iCloud · you can tap Restore",
    "files": [
-    "MapHomeSettingsSheets.swift:770"
+    "MapHomeSettingsSheets.swift:719"
    ],
    "args": [],
    "targets": [
@@ -3336,7 +3336,7 @@
    "ko": "iCloud에서 목록을 읽는 중",
    "en": "Reading the list from iCloud",
    "files": [
-    "MapHomeSettingsSheets.swift:581"
+    "MapHomeSettingsSheets.swift:530"
    ],
    "args": [],
    "targets": [
@@ -3482,11 +3482,11 @@
    ]
   },
   {
-   "key": "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 iCloud Drive의 TaptionLogs에 저장합니다.|Saves iPhone and Apple Watch diagnostics plus the previous unfinished session to TaptionLogs in iCloud Drive.",
-   "ko": "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 iCloud Drive의 TaptionLogs에 저장합니다.",
-   "en": "Saves iPhone and Apple Watch diagnostics plus the previous unfinished session to TaptionLogs in iCloud Drive.",
+   "key": "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 개발자 분석 서비스(PostHog)로 보냅니다. 로그에는 좌표와 원본 센서 값이 들어가지 않습니다.|Sends iPhone and Apple Watch diagnostics plus the previous unfinished session to the developer's analytics service (PostHog). Logs carry no coordinates or raw sensor values.",
+   "ko": "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 개발자 분석 서비스(PostHog)로 보냅니다. 로그에는 좌표와 원본 센서 값이 들어가지 않습니다.",
+   "en": "Sends iPhone and Apple Watch diagnostics plus the previous unfinished session to the developer's analytics service (PostHog). Logs carry no coordinates or raw sensor values.",
    "files": [
-    "MapHomeSettingsSheets.swift:289"
+    "MapHomeSettingsSheets.swift:757"
    ],
    "args": [],
    "targets": [
@@ -3794,7 +3794,7 @@
    "ko": "{0} · 다른 비밀번호로 만든 백업입니다. 위에 그 비밀번호를 넣어 주세요",
    "en": "{0} · made with another password. Enter that password above",
    "files": [
-    "MapHomeSettingsSheets.swift:773"
+    "MapHomeSettingsSheets.swift:722"
    ],
    "args": [
     "size"
@@ -3823,7 +3823,7 @@
    "ko": "{0} · 열 수 없음(손상되었거나 충돌 버전이 있음)",
    "en": "{0} · unreadable (damaged or has conflicting versions)",
    "files": [
-    "MapHomeSettingsSheets.swift:775"
+    "MapHomeSettingsSheets.swift:724"
    ],
    "args": [
     "size"
@@ -4025,7 +4025,7 @@
    "ko": "{0} 불러오는 중",
    "en": "Restoring {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:576"
+    "MapHomeSettingsSheets.swift:525"
    ],
    "args": [
     "name"
@@ -4887,7 +4887,7 @@
    "en": "{0}/{1}",
    "files": [
     "LedgerSheet.swift:271",
-    "MapHomeSettingsSheets.swift:754"
+    "MapHomeSettingsSheets.swift:703"
    ],
    "args": [
     "parts[1]",
@@ -5522,7 +5522,7 @@
    "ko": "{0}의 백업을 이 기기로 가져옵니다. 이 기기에 더 새로운 기록이 있으면 그대로 유지됩니다. 위 입력란의 비밀번호는 그 백업을 만들 때 쓴 비밀번호여야 합니다.",
    "en": "Brings the backup for {0} onto this device. Newer records already on this device are kept. The password above must be the one used when that backup was made.",
    "files": [
-    "MapHomeSettingsSheets.swift:446"
+    "MapHomeSettingsSheets.swift:395"
    ],
    "args": [
     "restoreTarget.map(title(of:)) ?? \"\""
@@ -5652,7 +5652,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit password",
    "files": [
-    "MapHomeSettingsSheets.swift:341"
+    "MapHomeSettingsSheets.swift:290"
    ],
    "args": [
     "PlanPINVerifier.currentDigits"
@@ -5729,7 +5729,7 @@
    "ko": "{0}행",
    "en": "{0} rows",
    "files": [
-    "MapHomeSettingsSheets.swift:780"
+    "MapHomeSettingsSheets.swift:729"
    ],
    "args": [
     "rows"
@@ -18754,10 +18754,26 @@
    "ko": "실패 · {0}",
    "en": "Failed · {0}",
    "files": [
-    "AppModel+Export.swift:111"
+    "PostHogDiagnosticsUploader.swift:158",
+    "PostHogUploadModel.swift:58"
    ],
    "args": [
-    "error.localizedDescription"
+    "reason"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Failed · {0}{1}",
+   "ko": "실패 · {0}{1}",
+   "en": "Failed · {0}{1}",
+   "files": [
+    "PostHogDiagnosticsUploader.swift:164"
+   ],
+   "args": [
+    "code",
+    "detail"
    ],
    "targets": [
     "TaptionPlan"
@@ -23515,6 +23531,21 @@
    ]
   },
   {
+   "key": "|Last upload: {0} · {1}",
+   "ko": "최근 전송: {0} · {1}",
+   "en": "Last upload: {0} · {1}",
+   "files": [
+    "AppModel.swift:301"
+   ],
+   "args": [
+    "savedText",
+    "fileName"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Latest data first",
    "ko": "",
    "en": "Latest data first",
@@ -23527,21 +23558,6 @@
     "TaptionPlanWidget",
     "TaptionPlanWatch",
     "TaptionPlanWatchWidget"
-   ]
-  },
-  {
-   "key": "|Latest {0} · {1}",
-   "ko": "최신 {0} · {1}",
-   "en": "Latest {0} · {1}",
-   "files": [
-    "AppModel.swift:301"
-   ],
-   "args": [
-    "fileName",
-    "savedText"
-   ],
-   "targets": [
-    "TaptionPlan"
    ]
   },
   {
@@ -25578,9 +25594,9 @@
    ]
   },
   {
-   "key": "|No recent log",
-   "ko": "최신 로그 없음",
-   "en": "No recent log",
+   "key": "|No recent upload",
+   "ko": "최근 전송 없음",
+   "en": "No recent upload",
    "files": [
     "AppModel.swift:295"
    ],
@@ -26673,6 +26689,18 @@
    ]
   },
   {
+   "key": "|PostHog key is not set",
+   "ko": "PostHog 키가 설정되지 않았습니다",
+   "en": "PostHog key is not set",
+   "files": [
+    "PostHogUploadModel.swift:27"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Potala Palace",
    "ko": "포탈라궁",
    "en": "Potala Palace",
@@ -26738,6 +26766,19 @@
    "en": "Prehistoric rock carvings on a cliff along the upper Taehwa River in Ulju County, Ulsan. The images include whales, animals and hunting scenes.",
    "files": [
     "MapHomePlaceBookDescriptions.swift:117"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Preparing…",
+   "ko": "준비 중…",
+   "en": "Preparing…",
+   "files": [
+    "PostHogUploadModel.swift:46",
+    "PostHogUploadModel.swift:75"
    ],
    "args": [],
    "targets": [
@@ -26970,6 +27011,20 @@
    ]
   },
   {
+   "key": "|Rate limited (429) · try again later{0}",
+   "ko": "한도 초과로 거절됨(429) · 나중에 다시{0}",
+   "en": "Rate limited (429) · try again later{0}",
+   "files": [
+    "PostHogDiagnosticsUploader.swift:162"
+   ],
+   "args": [
+    "detail"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Reading a map",
    "ko": "지도 펼쳐 보기",
    "en": "Reading a map",
@@ -27102,6 +27157,21 @@
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Rejected for quota or billing ({0}){1}",
+   "ko": "한도·결제로 거절됨({0}){1}",
+   "en": "Rejected for quota or billing ({0}){1}",
+   "files": [
+    "PostHogDiagnosticsUploader.swift:163"
+   ],
+   "args": [
+    "code",
+    "detail"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -27743,20 +27813,6 @@
    ]
   },
   {
-   "key": "|Saved · {0}",
-   "ko": "저장됨 · {0}",
-   "en": "Saved · {0}",
-   "files": [
-    "AppModel+Export.swift:109"
-   ],
-   "args": [
-    "saved.lastPathComponent"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "|Scenic drives",
    "ko": "드라이브",
    "en": "Scenic drives",
@@ -27946,6 +28002,50 @@
     "MapHomeKoreaPlaceBookData.swift:509"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Sending {0}/{1}",
+   "ko": "전송 중 {0}/{1}",
+   "en": "Sending {0}/{1}",
+   "files": [
+    "PostHogUploadModel.swift:121"
+   ],
+   "args": [
+    "done",
+    "total"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Sent · {0}",
+   "ko": "전송됨 · {0}",
+   "en": "Sent · {0}",
+   "files": [
+    "PostHogUploadModel.swift:133"
+   ],
+   "args": [
+    "rawSummary"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Sent · {0} events · {1}KB",
+   "ko": "전송됨 · 이벤트 {0} · {1}KB",
+   "en": "Sent · {0} events · {1}KB",
+   "files": [
+    "PostHogUploadModel.swift:132"
+   ],
+   "args": [
+    "job.events.count",
+    "kb"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -33859,7 +33959,7 @@
    "ko": "iCloud Drive를 사용할 수 없습니다. iCloud Drive가 켜져 있는지 확인해 주세요.",
    "en": "iCloud Drive is unavailable. Check that iCloud Drive is turned on.",
    "files": [
-    "DiagnosticsLogSupport.swift:802"
+    "DiagnosticsLogSupport.swift:811"
    ],
    "args": [],
    "targets": [
@@ -33964,6 +34064,38 @@
     "PlanTextSuggestion.swift:49"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|{0} batches · {1} samples · {2}MB (uncompressed)",
+   "ko": "배치 {0} · 표본 {1} · {2}MB(압축 전)",
+   "en": "{0} batches · {1} samples · {2}MB (uncompressed)",
+   "files": [
+    "PostHogUploadModel.swift:111"
+   ],
+   "args": [
+    "raw.batches",
+    "samples",
+    "megabytes"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|{0} batches · {1} samples · {2}MB (uncompressed) · latest 20,000 only",
+   "ko": "배치 {0} · 표본 {1} · {2}MB(압축 전) · 최근 20,000개만 전송",
+   "en": "{0} batches · {1} samples · {2}MB (uncompressed) · latest 20,000 only",
+   "files": [
+    "PostHogUploadModel.swift:109"
+   ],
+   "args": [
+    "raw.batches",
+    "samples",
+    "megabytes"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -35110,18 +35242,6 @@
    "en": "Ask the developer to add it",
    "files": [
     "LedgerMessageRules.swift:275"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "개발자에게 보내기|Send to developer",
-   "ko": "개발자에게 보내기",
-   "en": "Send to developer",
-   "files": [
-    "MapHomeSettingsSheets.swift:808"
    ],
    "args": [],
    "targets": [
@@ -39381,9 +39501,9 @@
    "ko": "끔",
    "en": "Off",
    "files": [
-    "AssistantLiveSync.swift:249",
     "LedgerMessageRules.swift:688",
-    "AssistantDataActions.swift:688"
+    "AssistantDataActions.swift:688",
+    "AssistantDataActions.swift:404"
    ],
    "args": [],
    "targets": [
@@ -40195,7 +40315,7 @@
    "ko": "내 데이터",
    "en": "My data",
    "files": [
-    "MapHomeSettingsSheets.swift:401"
+    "MapHomeSettingsSheets.swift:350"
    ],
    "args": [],
    "targets": [
@@ -42833,23 +42953,11 @@
    ]
   },
   {
-   "key": "로그 보내기|Logs",
-   "ko": "로그 보내기",
-   "en": "Logs",
-   "files": [
-    "MapHomeSettingsSheets.swift:812"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "로그 업로드|Upload logs",
    "ko": "로그 업로드",
    "en": "Upload logs",
    "files": [
-    "MapHomeSettingsSheets.swift:301"
+    "MapHomeSettingsSheets.swift:774"
    ],
    "args": [],
    "targets": [
@@ -42888,7 +42996,7 @@
    "ko": "로컬 정리",
    "en": "Clear from this device",
    "files": [
-    "MapHomeSettingsSheets.swift:452"
+    "MapHomeSettingsSheets.swift:401"
    ],
    "args": [],
    "targets": [
@@ -43020,7 +43128,7 @@
    "ko": "마지막 기록 {0}",
    "en": "last record {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:782"
+    "MapHomeSettingsSheets.swift:731"
    ],
    "args": [
     "formatted(last)"
@@ -43046,7 +43154,7 @@
    "ko": "마지막 백업: {0}",
    "en": "Last backup: {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:488"
+    "MapHomeSettingsSheets.swift:437"
    ],
    "args": [
     "latestBackupText"
@@ -44143,7 +44251,7 @@
    "ko": "목록 새로고침",
    "en": "Refresh list",
    "files": [
-    "MapHomeSettingsSheets.swift:603"
+    "MapHomeSettingsSheets.swift:552"
    ],
    "args": [],
    "targets": [
@@ -45256,6 +45364,38 @@
    ]
   },
   {
+   "key": "배치 {0} · 표본 {1} · {2}MB(압축 전) · 최근 20,000개만 전송|{0} batches · {1} samples · {2}MB (uncompressed) · latest 20,000 only",
+   "ko": "배치 {0} · 표본 {1} · {2}MB(압축 전) · 최근 20,000개만 전송",
+   "en": "{0} batches · {1} samples · {2}MB (uncompressed) · latest 20,000 only",
+   "files": [
+    "PostHogUploadModel.swift:109"
+   ],
+   "args": [
+    "raw.batches",
+    "samples",
+    "megabytes"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "배치 {0} · 표본 {1} · {2}MB(압축 전)|{0} batches · {1} samples · {2}MB (uncompressed)",
+   "ko": "배치 {0} · 표본 {1} · {2}MB(압축 전)",
+   "en": "{0} batches · {1} samples · {2}MB (uncompressed)",
+   "files": [
+    "PostHogUploadModel.swift:111"
+   ],
+   "args": [
+    "raw.batches",
+    "samples",
+    "megabytes"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "배터리 최소화|Battery saver",
    "ko": "배터리 최소화",
    "en": "Battery saver",
@@ -45301,7 +45441,7 @@
    "ko": "백업 {0}",
    "en": "backed up {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:785"
+    "MapHomeSettingsSheets.swift:734"
    ],
    "args": [
     "formatted(created)"
@@ -45327,7 +45467,7 @@
    "ko": "백업 목록과 복원",
    "en": "Backups and restore",
    "files": [
-    "MapHomeSettingsSheets.swift:555"
+    "MapHomeSettingsSheets.swift:504"
    ],
    "args": [],
    "targets": [
@@ -45341,7 +45481,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:709",
     "FirstRunTutorialView.swift:189",
-    "MapHomeSettingsSheets.swift:563"
+    "MapHomeSettingsSheets.swift:512"
    ],
    "args": [],
    "targets": [
@@ -45404,7 +45544,7 @@
    "ko": "백업 중 {0}/{1}",
    "en": "Backing up {0}/{1}",
    "files": [
-    "MapHomeSettingsSheets.swift:497"
+    "MapHomeSettingsSheets.swift:446"
    ],
    "args": [
     "completed",
@@ -45491,7 +45631,7 @@
    "ko": "백업 후 로컬 정리",
    "en": "Clear after backup",
    "files": [
-    "MapHomeSettingsSheets.swift:543"
+    "MapHomeSettingsSheets.swift:492"
    ],
    "args": [],
    "targets": [
@@ -45503,7 +45643,7 @@
    "ko": "백업 후 로컬 정리",
    "en": "Clear from device after backup",
    "files": [
-    "MapHomeSettingsSheets.swift:520"
+    "MapHomeSettingsSheets.swift:469"
    ],
    "args": [],
    "targets": [
@@ -45527,7 +45667,7 @@
    "ko": "백업을 다시 읽어 확인된 지난 달만 이 기기에서 지웁니다. 먼저 ‘지금 백업’을 해야 하며, 설정은 지우지 않습니다.",
    "en": "Only past months whose backup was read back and verified are removed from this device. Run ‘Back up now’ first; settings are never removed.",
    "files": [
-    "MapHomeSettingsSheets.swift:534"
+    "MapHomeSettingsSheets.swift:483"
    ],
    "args": [],
    "targets": [
@@ -46098,7 +46238,7 @@
    "ko": "보안 설정을 저장했습니다.",
    "en": "Security settings saved.",
    "files": [
-    "MapHomeSettingsSheets.swift:723"
+    "MapHomeSettingsSheets.swift:672"
    ],
    "args": [],
    "targets": [
@@ -46548,8 +46688,8 @@
    "ko": "불러오기",
    "en": "Restore",
    "files": [
-    "MapHomeSettingsSheets.swift:444",
-    "MapHomeSettingsSheets.swift:628"
+    "MapHomeSettingsSheets.swift:393",
+    "MapHomeSettingsSheets.swift:577"
    ],
    "args": [],
    "targets": [
@@ -46623,7 +46763,7 @@
    "ko": "비밀번호 {0}자리를 넣으면 iCloud 백업이 보입니다.",
    "en": "Enter your {0}-digit password to see iCloud backups.",
    "files": [
-    "MapHomeSettingsSheets.swift:761"
+    "MapHomeSettingsSheets.swift:710"
    ],
    "args": [
     "securityPINDigits"
@@ -46676,7 +46816,7 @@
    "ko": "비밀번호 저장",
    "en": "Save password",
    "files": [
-    "MapHomeSettingsSheets.swift:352"
+    "MapHomeSettingsSheets.swift:301"
    ],
    "args": [],
    "targets": [
@@ -46689,7 +46829,7 @@
    "en": "Confirm password",
    "files": [
     "FirstRunTutorialView.swift:701",
-    "MapHomeSettingsSheets.swift:347"
+    "MapHomeSettingsSheets.swift:296"
    ],
    "args": [],
    "targets": [
@@ -46702,7 +46842,7 @@
    "en": "Passwords do not match.",
    "files": [
     "FirstRunTutorialView.swift:391",
-    "MapHomeSettingsSheets.swift:696"
+    "MapHomeSettingsSheets.swift:645"
    ],
    "args": [],
    "targets": [
@@ -46714,8 +46854,8 @@
    "ko": "비밀번호",
    "en": "Password",
    "files": [
-    "MapHomeSettingsSheets.swift:342",
-    "MapHomeSettingsSheets.swift:476",
+    "MapHomeSettingsSheets.swift:291",
+    "MapHomeSettingsSheets.swift:425",
     "TripShareCreateSheet.swift:180"
    ],
    "args": [],
@@ -46828,7 +46968,7 @@
    "ko": "비밀번호를 넣으면 같은 iCloud의 다른 기기에서 만든 백업까지 보입니다. 백업을 만들 때 쓴 비밀번호로 열립니다.",
    "en": "Enter the password to see backups from every device on this iCloud account. They open with the password used when they were made.",
    "files": [
-    "MapHomeSettingsSheets.swift:556"
+    "MapHomeSettingsSheets.swift:505"
    ],
    "args": [],
    "targets": [
@@ -46840,7 +46980,7 @@
    "ko": "비밀번호를 먼저 입력해 주세요.",
    "en": "Enter your password first.",
    "files": [
-    "MapHomeSettingsSheets.swift:630"
+    "MapHomeSettingsSheets.swift:579"
    ],
    "args": [],
    "targets": [
@@ -46852,7 +46992,7 @@
    "ko": "비밀번호를 바꾸면 그 뒤에 만드는 백업부터 새 비밀번호를 씁니다. 바꾸기 전에 만든 백업 파일은 그때의 비밀번호로 열립니다.",
    "en": "After you change the password, new backups use it. Backup files made earlier still open with the password used at that time.",
    "files": [
-    "MapHomeSettingsSheets.swift:364"
+    "MapHomeSettingsSheets.swift:313"
    ],
    "args": [],
    "targets": [
@@ -46912,7 +47052,7 @@
    "ko": "비밀번호를 저장했습니다.",
    "en": "Password saved.",
    "files": [
-    "MapHomeSettingsSheets.swift:703"
+    "MapHomeSettingsSheets.swift:652"
    ],
    "args": [],
    "targets": [
@@ -48107,7 +48247,7 @@
    "ko": "생체 인증은 빠른 잠금 해제용이며, 생체 정보는 앱이나 백업에 저장되지 않습니다.",
    "en": "Biometrics are only a fast local unlock; biometric data is never stored.",
    "files": [
-    "MapHomeSettingsSheets.swift:389"
+    "MapHomeSettingsSheets.swift:338"
    ],
    "args": [],
    "targets": [
@@ -50561,15 +50701,30 @@
    ]
   },
   {
+   "key": "실패 · {0}{1}|Failed · {0}{1}",
+   "ko": "실패 · {0}{1}",
+   "en": "Failed · {0}{1}",
+   "files": [
+    "PostHogDiagnosticsUploader.swift:164"
+   ],
+   "args": [
+    "code",
+    "detail"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "실패 · {0}|Failed · {0}",
    "ko": "실패 · {0}",
    "en": "Failed · {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:844",
-    "AppModel+Export.swift:111"
+    "PostHogDiagnosticsUploader.swift:158",
+    "PostHogUploadModel.swift:58"
    ],
    "args": [
-    "error.localizedDescription"
+    "reason"
    ],
    "targets": [
     "TaptionPlan"
@@ -51305,18 +51460,6 @@
    ]
   },
   {
-   "key": "압축 중…|Compressing…",
-   "ko": "압축 중…",
-   "en": "Compressing…",
-   "files": [
-    "MapHomeSettingsSheets.swift:836"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "앞 단계를 먼저 해 주세요.|Do the previous step first.",
    "ko": "앞 단계를 먼저 해 주세요.",
    "en": "Do the previous step first.",
@@ -51690,7 +51833,7 @@
    "ko": "앱 잠금",
    "en": "App lock",
    "files": [
-    "MapHomeSettingsSheets.swift:372"
+    "MapHomeSettingsSheets.swift:321"
    ],
    "args": [],
    "targets": [
@@ -51813,7 +51956,7 @@
    "en": "Lock whenever the app opens",
    "files": [
     "FirstRunTutorialView.swift:711",
-    "MapHomeSettingsSheets.swift:374"
+    "MapHomeSettingsSheets.swift:323"
    ],
    "args": [],
    "targets": [
@@ -52040,11 +52183,11 @@
    ]
   },
   {
-   "key": "어제·오늘 데이터|2 days data",
-   "ko": "어제·오늘 데이터",
-   "en": "2 days data",
+   "key": "어제·오늘 기록한 GPS 좌표와 센서 원본이 개발자 분석 서비스(PostHog)로 전송됩니다. 집·회사 주변이 드러날 수 있습니다.|Yesterday's and today's GPS coordinates and raw sensor samples go to the developer's analytics service (PostHog). They can reveal where home and work are.",
+   "ko": "어제·오늘 기록한 GPS 좌표와 센서 원본이 개발자 분석 서비스(PostHog)로 전송됩니다. 집·회사 주변이 드러날 수 있습니다.",
+   "en": "Yesterday's and today's GPS coordinates and raw sensor samples go to the developer's analytics service (PostHog). They can reveal where home and work are.",
    "files": [
-    "MapHomeSettingsSheets.swift:815"
+    "MapHomeSettingsSheets.swift:850"
    ],
    "args": [],
    "targets": [
@@ -52056,7 +52199,7 @@
    "ko": "어제·오늘 원본 업로드",
    "en": "Upload raw (2 days)",
    "files": [
-    "MapHomeSettingsSheets.swift:326"
+    "MapHomeSettingsSheets.swift:808"
    ],
    "args": [],
    "targets": [
@@ -56125,18 +56268,6 @@
    ]
   },
   {
-   "key": "위치 기록이 포함될 수 있어요. 메일 화면에서 보내기를 눌러야 전송됩니다.|May include location history. Nothing is sent until you tap Send in Mail.",
-   "ko": "위치 기록이 포함될 수 있어요. 메일 화면에서 보내기를 눌러야 전송됩니다.",
-   "en": "May include location history. Nothing is sent until you tap Send in Mail.",
-   "files": [
-    "MapHomeSettingsSheets.swift:819"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "위치 다시 고르기|Choose again",
    "ko": "위치 다시 고르기",
    "en": "Choose again",
@@ -56232,6 +56363,42 @@
    "args": [
     "until.formatted(date: .omitted, time: .shortened)"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 원본 전송에 동의함 · 다시 묻기|Raw location upload allowed · Ask again",
+   "ko": "위치 원본 전송에 동의함 · 다시 묻기",
+   "en": "Raw location upload allowed · Ask again",
+   "files": [
+    "MapHomeSettingsSheets.swift:827"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 원본(GPS·모션·기압)이 개발자 분석 서비스 PostHog로 전송됩니다.|Raw location data (GPS, motion, pressure) is sent to the developer's analytics service, PostHog.",
+   "ko": "위치 원본(GPS·모션·기압)이 개발자 분석 서비스 PostHog로 전송됩니다.",
+   "en": "Raw location data (GPS, motion, pressure) is sent to the developer's analytics service, PostHog.",
+   "files": [
+    "MapHomeSettingsSheets.swift:797"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 원본을 보낼까요?|Send raw location data?",
+   "ko": "위치 원본을 보낼까요?",
+   "en": "Send raw location data?",
+   "files": [
+    "MapHomeSettingsSheets.swift:836"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -56872,7 +57039,7 @@
    "ko": "이 기기에 남길 최근 {0}개 달(이번 달 포함)",
    "en": "Keep the latest {0} months on this device (this month included)",
    "files": [
-    "MapHomeSettingsSheets.swift:528"
+    "MapHomeSettingsSheets.swift:477"
    ],
    "args": [
     "security.localMonthsToKeep"
@@ -56995,7 +57162,7 @@
    "ko": "이 기기에서는 정리됨 · 불러올 수 있음",
    "en": "Cleared from this device · can be restored",
    "files": [
-    "MapHomeSettingsSheets.swift:622"
+    "MapHomeSettingsSheets.swift:571"
    ],
    "args": [],
    "targets": [
@@ -57319,7 +57486,7 @@
    "ko": "이 달을 불러올까요?",
    "en": "Restore this month?",
    "files": [
-    "MapHomeSettingsSheets.swift:437"
+    "MapHomeSettingsSheets.swift:386"
    ],
    "args": [],
    "targets": [
@@ -57380,7 +57547,7 @@
    "ko": "이 비밀번호를 잊으면 백업을 열 수 없어요. 꼭 기억해 두세요.",
    "en": "If you forget this password, your backups can't be opened. Keep it safe.",
    "files": [
-    "MapHomeSettingsSheets.swift:361"
+    "MapHomeSettingsSheets.swift:310"
    ],
    "args": [],
    "targets": [
@@ -58462,7 +58629,7 @@
    "ko": "이전 버전에서 만든 백업 {0}개는 이 버전에서 열 수 없어 목록에서 뺐습니다. 파일은 그대로 있습니다.",
    "en": "{0} backups from an earlier version cannot be opened here and are not listed. The files are untouched.",
    "files": [
-    "MapHomeSettingsSheets.swift:593"
+    "MapHomeSettingsSheets.swift:542"
    ],
    "args": [
     "model.backupUnsupportedFileCount"
@@ -59781,7 +59948,7 @@
    "ko": "작업 중입니다",
    "en": "Working",
    "files": [
-    "MapHomeSettingsSheets.swift:501"
+    "MapHomeSettingsSheets.swift:450"
    ],
    "args": [],
    "targets": [
@@ -60203,11 +60370,12 @@
    ]
   },
   {
-   "key": "저장 중…|Saving…",
-   "ko": "저장 중…",
-   "en": "Saving…",
+   "key": "재시도|Retry",
+   "ko": "재시도",
+   "en": "Retry",
    "files": [
-    "MapHomeSettingsSheets.swift:323"
+    "MapHomeSettingsSheets.swift:787",
+    "MapHomeSettingsSheets.swift:821"
    ],
    "args": [],
    "targets": [
@@ -60273,20 +60441,6 @@
     "MapHomeSettingsSheets.swift:1106"
    ],
    "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "저장됨 · {0}|Saved · {0}",
-   "ko": "저장됨 · {0}",
-   "en": "Saved · {0}",
-   "files": [
-    "AppModel+Export.swift:109"
-   ],
-   "args": [
-    "saved.lastPathComponent"
-   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -60525,11 +60679,50 @@
    ]
   },
   {
+   "key": "전송 · 다시 묻지 않기|Send · Don't ask again",
+   "ko": "전송 · 다시 묻지 않기",
+   "en": "Send · Don't ask again",
+   "files": [
+    "MapHomeSettingsSheets.swift:842"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "전송 중 {0}/{1}|Sending {0}/{1}",
+   "ko": "전송 중 {0}/{1}",
+   "en": "Sending {0}/{1}",
+   "files": [
+    "PostHogUploadModel.swift:121"
+   ],
+   "args": [
+    "done",
+    "total"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "전송 중|Exporting",
    "ko": "전송 중",
    "en": "Exporting",
    "files": [
     "AppModel+Export.swift:28"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "전송|Send",
+   "ko": "전송",
+   "en": "Send",
+   "files": [
+    "MapHomeSettingsSheets.swift:837"
    ],
    "args": [],
    "targets": [
@@ -60546,6 +60739,35 @@
    "args": [],
    "targets": [
     "TaptionPlanWatch"
+   ]
+  },
+  {
+   "key": "전송됨 · {0}|Sent · {0}",
+   "ko": "전송됨 · {0}",
+   "en": "Sent · {0}",
+   "files": [
+    "PostHogUploadModel.swift:133"
+   ],
+   "args": [
+    "rawSummary"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "전송됨 · 이벤트 {0} · {1}KB|Sent · {0} events · {1}KB",
+   "ko": "전송됨 · 이벤트 {0} · {1}KB",
+   "en": "Sent · {0} events · {1}KB",
+   "files": [
+    "PostHogUploadModel.swift:132"
+   ],
+   "args": [
+    "job.events.count",
+    "kb"
+   ],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -60738,7 +60960,7 @@
    "ko": "정리",
    "en": "Clear",
    "files": [
-    "MapHomeSettingsSheets.swift:456"
+    "MapHomeSettingsSheets.swift:405"
    ],
    "args": [],
    "targets": [
@@ -61449,6 +61671,19 @@
    ]
   },
   {
+   "key": "준비 중…|Preparing…",
+   "ko": "준비 중…",
+   "en": "Preparing…",
+   "files": [
+    "PostHogUploadModel.swift:46",
+    "PostHogUploadModel.swift:75"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "준비됐습니다|You're ready",
    "ko": "준비됐습니다",
    "en": "You're ready",
@@ -61651,7 +61886,7 @@
    "ko": "지금 백업",
    "en": "Back up now",
    "files": [
-    "MapHomeSettingsSheets.swift:501"
+    "MapHomeSettingsSheets.swift:450"
    ],
    "args": [],
    "targets": [
@@ -63596,7 +63831,7 @@
    "ko": "최근 {0}개 달을 뺀 지난 달 중 백업을 다시 읽어 확인된 달만 이 기기에서 지웁니다. 지운 달은 백업 목록에서 다시 불러올 수 있습니다.",
    "en": "Past months older than the latest {0} are removed from this device only after their backup is read back and verified. You can restore them from the backup list.",
    "files": [
-    "MapHomeSettingsSheets.swift:458"
+    "MapHomeSettingsSheets.swift:407"
    ],
    "args": [
     "security.localMonthsToKeep"
@@ -63627,6 +63862,33 @@
    "args": [],
    "targets": [
     "TaptionPlanWidget"
+   ]
+  },
+  {
+   "key": "최근 전송 없음|No recent upload",
+   "ko": "최근 전송 없음",
+   "en": "No recent upload",
+   "files": [
+    "AppModel.swift:294"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "최근 전송: {0} · {1}|Last upload: {0} · {1}",
+   "ko": "최근 전송: {0} · {1}",
+   "en": "Last upload: {0} · {1}",
+   "files": [
+    "AppModel.swift:300"
+   ],
+   "args": [
+    "savedText",
+    "fileName"
+   ],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -63681,38 +63943,11 @@
    ]
   },
   {
-   "key": "최신 {0} · {1}|Latest {0} · {1}",
-   "ko": "최신 {0} · {1}",
-   "en": "Latest {0} · {1}",
-   "files": [
-    "AppModel.swift:300"
-   ],
-   "args": [
-    "fileName",
-    "savedText"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "최신 데이터 우선|Latest data first",
    "ko": "최신 데이터 우선",
    "en": "Latest data first",
    "files": [
     "MapHomeAppleWatchMenuItem.swift:135"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "최신 로그 없음|No recent log",
-   "ko": "최신 로그 없음",
-   "en": "No recent log",
-   "files": [
-    "AppModel.swift:294"
    ],
    "args": [],
    "targets": [
@@ -65530,6 +65765,18 @@
    ]
   },
   {
+   "key": "포스트호그 로그 업로드|PostHog Log Upload",
+   "ko": "포스트호그 로그 업로드",
+   "en": "PostHog Log Upload",
+   "files": [
+    "MapHomeSettingsSheets.swift:288"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "표본| samples",
    "ko": "표본",
    "en": " samples",
@@ -66398,6 +66645,35 @@
     "MapHomeCalendarSheet.swift:316"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "한도 초과로 거절됨(429) · 나중에 다시{0}|Rate limited (429) · try again later{0}",
+   "ko": "한도 초과로 거절됨(429) · 나중에 다시{0}",
+   "en": "Rate limited (429) · try again later{0}",
+   "files": [
+    "PostHogDiagnosticsUploader.swift:162"
+   ],
+   "args": [
+    "detail"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "한도·결제로 거절됨({0}){1}|Rejected for quota or billing ({0}){1}",
+   "ko": "한도·결제로 거절됨({0}){1}",
+   "en": "Rejected for quota or billing ({0}){1}",
+   "files": [
+    "PostHogDiagnosticsUploader.swift:163"
+   ],
+   "args": [
+    "code",
+    "detail"
+   ],
    "targets": [
     "TaptionPlan"
    ]

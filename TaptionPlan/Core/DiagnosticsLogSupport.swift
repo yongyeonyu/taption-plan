@@ -714,11 +714,12 @@ struct TaptionPlanDiagnosticsLogPackageBuilder {
         )
     }
 
-    func makePackage(
+    /// 로컬 사본을 쓰고, 전송할 평문 텍스트도 함께 돌려준다(PHG1120A01).
+    func makePackageText(
         summary: [String: String],
         iphoneLog: String,
         watchLog: String?
-    ) throws -> URL {
+    ) throws -> (text: String, fileURL: URL) {
         try fileManager.createDirectory(
             at: packageDirectoryURL,
             withIntermediateDirectories: true
@@ -760,7 +761,15 @@ struct TaptionPlanDiagnosticsLogPackageBuilder {
         let compressed = try TaptionLogGzip.compress(Data(text.utf8))
         try compressed.write(to: url, options: [.atomic, .completeFileProtection])
         try retainNewestPackages(limit: 6)
-        return url
+        return (text, url)
+    }
+
+    func makePackage(
+        summary: [String: String],
+        iphoneLog: String,
+        watchLog: String?
+    ) throws -> URL {
+        try makePackageText(summary: summary, iphoneLog: iphoneLog, watchLog: watchLog).fileURL
     }
 
     func deleteAll() throws {

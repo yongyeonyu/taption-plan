@@ -16941,6 +16941,83 @@
         }
       }
     },
+    "PostHog 키가 설정되지 않았습니다|PostHog key is not set" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHogのキーが設定されていません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未设置PostHog密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未設定PostHog金鑰"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHog-Schlüssel ist nicht festgelegt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La clé PostHog n’est pas définie"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La chiave PostHog non è impostata"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La clave de PostHog no está configurada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A chave do PostHog não está configurada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa đặt khóa PostHog"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci PostHog belum diatur"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยังไม่ได้ตั้งค่าคีย์ PostHog"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHog कुंजी सेट नहीं है"
+          }
+        }
+      }
+    },
     "Pro 구매 완료|Pro purchased" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19482,83 +19559,6 @@
         }
       }
     },
-    "iCloud 로그 업로드|iCloud Log Upload" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloudログのアップロード"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud 日志上传"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud 記錄上傳"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud-Log-Upload"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Envoi du journal vers iCloud"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Caricamento log su iCloud"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subida de registros a iCloud"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Envio de logs para o iCloud"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tải nhật ký lên iCloud"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unggah Log iCloud"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "อัปโหลดบันทึก iCloud"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud लॉग अपलोड"
-          }
-        }
-      }
-    },
     "iCloud 로그인 필요|iCloud sign-in required" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -21022,79 +21022,79 @@
         }
       }
     },
-    "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 iCloud Drive의 TaptionLogs에 저장합니다.|Saves iPhone and Apple Watch diagnostics plus the previous unfinished session to TaptionLogs in iCloud Drive." : {
+    "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 개발자 분석 서비스(PostHog)로 보냅니다. 로그에는 좌표와 원본 센서 값이 들어가지 않습니다.|Sends iPhone and Apple Watch diagnostics plus the previous unfinished session to the developer's analytics service (PostHog). Logs carry no coordinates or raw sensor values." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhoneとApple Watchの診断情報と、前回の未完了セッションを、iCloud DriveのTaptionLogsに保存します。"
+            "value" : "iPhoneとApple Watchの診断ログと前回の異常終了の状態を、開発者の分析サービス(PostHog)へ送信します。ログには座標や生のセンサー値は含まれません。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将 iPhone 和 Apple Watch 的诊断信息以及上一次未完成的会话保存到 iCloud 云盘的 TaptionLogs。"
+            "value" : "将iPhone和Apple Watch的诊断日志以及上次异常退出的状态发送到开发者的分析服务(PostHog)。日志不含坐标和原始传感器数据。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "將 iPhone 和 Apple Watch 的診斷資料，以及上一次未完成的工作階段，儲存到 iCloud 雲碟的 TaptionLogs。"
+            "value" : "將iPhone與Apple Watch的診斷記錄及上次異常結束的狀態傳送到開發者的分析服務(PostHog)。記錄不含座標與原始感測器資料。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Speichert Diagnosedaten von iPhone und Apple Watch sowie die vorherige unfertige Sitzung in TaptionLogs in iCloud Drive."
+            "value" : "Sendet iPhone- und Apple-Watch-Diagnosen sowie den Status der vorherigen unvollständigen Sitzung an den Analysedienst des Entwicklers (PostHog). Die Protokolle enthalten keine Koordinaten oder Rohsensorwerte."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enregistre les diagnostics de l'iPhone et de l'Apple Watch, ainsi que la session précédente inachevée, dans TaptionLogs sur iCloud Drive."
+            "value" : "Envoie les diagnostics de l’iPhone et de l’Apple Watch ainsi que l’état de la session précédente interrompue au service d’analyse du développeur (PostHog). Les journaux ne contiennent ni coordonnées ni valeurs brutes des capteurs."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salva la diagnostica di iPhone e Apple Watch e la sessione precedente non terminata in TaptionLogs su iCloud Drive."
+            "value" : "Invia la diagnostica di iPhone e Apple Watch e lo stato della sessione precedente interrotta al servizio di analisi dello sviluppatore (PostHog). I registri non contengono coordinate né valori grezzi dei sensori."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Guarda diagnósticos del iPhone y del Apple Watch y la sesión anterior sin terminar en TaptionLogs de iCloud Drive."
+            "value" : "Envía los diagnósticos del iPhone y del Apple Watch y el estado de la sesión anterior interrumpida al servicio de análisis del desarrollador (PostHog). Los registros no incluyen coordenadas ni valores sin procesar de los sensores."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salva diagnósticos do iPhone e do Apple Watch, além da sessão anterior não concluída, em TaptionLogs no iCloud Drive."
+            "value" : "Envia os diagnósticos do iPhone e do Apple Watch e o estado da sessão anterior encerrada de forma anormal ao serviço de análise do desenvolvedor (PostHog). Os registros não contêm coordenadas nem valores brutos dos sensores."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lưu chẩn đoán của iPhone và Apple Watch cùng phiên chưa hoàn tất trước đó vào TaptionLogs trong iCloud Drive."
+            "value" : "Gửi nhật ký chẩn đoán của iPhone và Apple Watch cùng trạng thái phiên trước bị kết thúc bất thường đến dịch vụ phân tích của nhà phát triển (PostHog). Nhật ký không chứa tọa độ hay giá trị cảm biến thô."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menyimpan diagnostik iPhone dan Apple Watch beserta sesi sebelumnya yang belum selesai ke TaptionLogs di iCloud Drive."
+            "value" : "Mengirim log diagnostik iPhone dan Apple Watch serta status sesi sebelumnya yang berhenti tak wajar ke layanan analitik pengembang (PostHog). Log tidak berisi koordinat atau nilai sensor mentah."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บันทึกข้อมูลวินิจฉัยของ iPhone และ Apple Watch รวมถึงเซสชันก่อนหน้าที่ยังไม่เสร็จไปยัง TaptionLogs ใน iCloud Drive"
+            "value" : "ส่งบันทึกการวินิจฉัยของ iPhone และ Apple Watch รวมถึงสถานะของเซสชันก่อนหน้าที่ปิดผิดปกติไปยังบริการวิเคราะห์ของนักพัฒนา (PostHog) บันทึกไม่มีพิกัดหรือค่าเซนเซอร์ดิบ"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhone और Apple Watch का डायग्नोस्टिक्स तथा पिछला अधूरा सेशन iCloud Drive के TaptionLogs में सहेजता है।"
+            "value" : "iPhone और Apple Watch के डायग्नोस्टिक लॉग और पिछले असामान्य रूप से बंद सत्र की स्थिति डेवलपर की विश्लेषण सेवा (PostHog) को भेजता है। लॉग में निर्देशांक या कच्चे सेंसर मान शामिल नहीं होते।"
           }
         }
       }
@@ -114731,6 +114731,83 @@
         }
       }
     },
+    "|Failed · {0}{1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "失敗 · {0}{1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "失败 · {0}{1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "失敗 · {0}{1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fehlgeschlagen · {0}{1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec · {0}{1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non riuscito · {0}{1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error · {0}{1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Falhou · {0}{1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thất bại · {0}{1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal · {0}{1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ล้มเหลว · {0}{1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "विफल · {0}{1}"
+          }
+        }
+      }
+    },
     "|Fallingwater" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -144915,6 +144992,83 @@
         }
       }
     },
+    "|Last upload: {0} · {1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の送信: {0} · {1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近发送：{0} · {1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近傳送：{0} · {1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letzter Upload: {0} · {1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dernier envoi : {0} · {1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ultimo invio: {0} · {1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Último envío: {0} · {1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Último envio: {0} · {1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lần gửi gần nhất: {0} · {1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unggahan terakhir: {0} · {1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งล่าสุด: {0} · {1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पिछला अपलोड: {0} · {1}"
+          }
+        }
+      }
+    },
     "|Latest data first" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -144988,83 +145142,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नया डेटा पहले"
-          }
-        }
-      }
-    },
-    "|Latest {0} · {1}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最新{0} · {1}"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最新 {0} · {1}"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最新 {0} · {1}"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neueste {0} · {1}"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dernier {0} · {1}"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ultimo {0} · {1}"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Último {0} · {1}"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mais recente {0} · {1}"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mới nhất {0} · {1}"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terbaru {0} · {1}"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ล่าสุด {0} · {1}"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "नवीनतम {0} · {1}"
           }
         }
       }
@@ -157928,79 +158005,79 @@
         }
       }
     },
-    "|No recent log" : {
+    "|No recent upload" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最近のログなし"
+            "value" : "最近の送信なし"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂无最新日志"
+            "value" : "最近没有发送"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "沒有最新記錄"
+            "value" : "最近沒有傳送"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kein aktuelles Protokoll"
+            "value" : "Kein aktueller Upload"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aucun journal récent"
+            "value" : "Aucun envoi récent"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nessun log recente"
+            "value" : "Nessun invio recente"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sin registro reciente"
+            "value" : "Sin envíos recientes"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nenhum log recente"
+            "value" : "Nenhum envio recente"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chưa có nhật ký gần đây"
+            "value" : "Chưa có lần gửi gần đây"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidak ada log terbaru"
+            "value" : "Belum ada unggahan terbaru"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ไม่มีบันทึกล่าสุด"
+            "value" : "ยังไม่มีการส่งล่าสุด"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "हाल का कोई लॉग नहीं"
+            "value" : "हाल का कोई अपलोड नहीं"
           }
         }
       }
@@ -164858,6 +164935,83 @@
         }
       }
     },
+    "|PostHog key is not set" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHogのキーが設定されていません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未设置PostHog密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未設定PostHog金鑰"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHog-Schlüssel ist nicht festgelegt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La clé PostHog n’est pas définie"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La chiave PostHog non è impostata"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La clave de PostHog no está configurada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A chave do PostHog não está configurada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa đặt khóa PostHog"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci PostHog belum diatur"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยังไม่ได้ตั้งค่าคีย์ PostHog"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHog कुंजी सेट नहीं है"
+          }
+        }
+      }
+    },
     "|Potala Palace" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -165316,6 +165470,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "उल्सान के उलजू काउंटी में ऊपरी तेह्वा नदी के किनारे चट्टान पर प्रागैतिहासिक शैल चित्र। इनमें व्हेल, जानवर और शिकार के दृश्य हैं।"
+          }
+        }
+      }
+    },
+    "|Preparing…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备中…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備中…"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird vorbereitet…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Préparation…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparazione…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang chuẩn bị…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyiapkan…"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังเตรียม…"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "तैयार हो रहा है…"
           }
         }
       }
@@ -166629,6 +166860,83 @@
         }
       }
     },
+    "|Rate limited (429) · try again later{0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上限超過で拒否されました(429) · 後でもう一度{0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超出限额被拒绝(429) · 请稍后再试{0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超出限額遭拒絕(429) · 請稍後再試{0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit überschritten (429) · später erneut versuchen{0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite dépassée (429) · réessayez plus tard{0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite superato (429) · riprova più tardi{0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Límite superado (429) · inténtalo más tarde{0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite excedido (429) · tente novamente mais tarde{0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vượt giới hạn (429) · thử lại sau{0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melebihi batas (429) · coba lagi nanti{0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เกินขีดจำกัด (429) · ลองใหม่ภายหลัง{0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सीमा पार हो गई (429) · बाद में फिर कोशिश करें{0}"
+          }
+        }
+      }
+    },
     "|Reading a map" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -167472,6 +167780,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "रैंस कैथेड्रल"
+          }
+        }
+      }
+    },
+    "|Rejected for quota or billing ({0}){1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上限または課金により拒否されました({0}){1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "因额度或计费被拒绝({0}){1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "因額度或計費遭拒絕({0}){1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wegen Kontingent oder Abrechnung abgelehnt ({0}){1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refusé pour quota ou facturation ({0}){1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rifiutato per quota o fatturazione ({0}){1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechazado por cuota o facturación ({0}){1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recusado por cota ou cobrança ({0}){1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bị từ chối do hạn mức hoặc thanh toán ({0}){1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ditolak karena kuota atau penagihan ({0}){1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ถูกปฏิเสธเพราะโควตาหรือการเรียกเก็บเงิน ({0}){1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कोटा या बिलिंग के कारण अस्वीकृत ({0}){1}"
           }
         }
       }
@@ -171480,83 +171865,6 @@
         }
       }
     },
-    "|Saved · {0}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存済み · {0}"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已保存 · {0}"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已儲存 · {0}"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gespeichert · {0}"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enregistré · {0}"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salvato · {0}"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Guardado · {0}"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salvo · {0}"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã lưu · {0}"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tersimpan · {0}"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "บันทึกแล้ว · {0}"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सहेजा गया · {0}"
-          }
-        }
-      }
-    },
     "|Scenic drives" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -172785,6 +173093,237 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sendai"
+          }
+        }
+      }
+    },
+    "|Sending {0}/{1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信中 {0}/{1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送中 {0}/{1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送中 {0}/{1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senden {0}/{1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi {0}/{1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invio {0}/{1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviando {0}/{1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviando {0}/{1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang gửi {0}/{1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengirim {0}/{1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังส่ง {0}/{1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजा जा रहा है {0}/{1}"
+          }
+        }
+      }
+    },
+    "|Sent · {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信済み · {0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已发送 · {0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已傳送 · {0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesendet · {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyé · {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inviato · {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado · {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado · {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã gửi · {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkirim · {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งแล้ว · {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजा गया · {0}"
+          }
+        }
+      }
+    },
+    "|Sent · {0} events · {1}KB" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信済み · イベント{0}件 · {1}KB"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已发送 · 事件{0}个 · {1}KB"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已傳送 · 事件{0}個 · {1}KB"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesendet · {0} Ereignisse · {1} KB"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyé · {0} événements · {1} Ko"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inviato · {0} eventi · {1} KB"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado · {0} eventos · {1} KB"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado · {0} eventos · {1} KB"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã gửi · {0} sự kiện · {1}KB"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkirim · {0} peristiwa · {1}KB"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งแล้ว · {0} เหตุการณ์ · {1}KB"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजा गया · {0} इवेंट · {1}KB"
           }
         }
       }
@@ -210442,6 +210981,160 @@
         }
       }
     },
+    "|{0} batches · {1} samples · {2}MB (uncompressed)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バッチ{0} · サンプル{1} · {2}MB(圧縮前)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批次{0} · 样本{1} · {2}MB(压缩前)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批次{0} · 樣本{1} · {2}MB(壓縮前)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Batches · {1} Messwerte · {2} MB (unkomprimiert)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lots · {1} échantillons · {2} Mo (non compressé)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} batch · {1} campioni · {2} MB (non compresso)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lotes · {1} muestras · {2} MB (sin comprimir)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lotes · {1} amostras · {2} MB (sem compactar)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lô · {1} mẫu · {2}MB (chưa nén)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} batch · {1} sampel · {2}MB (belum dikompres)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} ชุด · {1} ตัวอย่าง · {2}MB (ก่อนบีบอัด)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} बैच · {1} नमूने · {2}MB (संपीड़ित से पहले)"
+          }
+        }
+      }
+    },
+    "|{0} batches · {1} samples · {2}MB (uncompressed) · latest 20,000 only" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バッチ{0} · サンプル{1} · {2}MB(圧縮前) · 最新20,000件のみ送信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批次{0} · 样本{1} · {2}MB(压缩前) · 仅发送最近20,000个"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批次{0} · 樣本{1} · {2}MB(壓縮前) · 僅傳送最近20,000個"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Batches · {1} Messwerte · {2} MB (unkomprimiert) · nur die letzten 20.000"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lots · {1} échantillons · {2} Mo (non compressé) · seulement les 20 000 derniers"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} batch · {1} campioni · {2} MB (non compresso) · solo gli ultimi 20.000"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lotes · {1} muestras · {2} MB (sin comprimir) · solo las últimas 20.000"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lotes · {1} amostras · {2} MB (sem compactar) · apenas as últimas 20.000"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lô · {1} mẫu · {2}MB (chưa nén) · chỉ gửi 20.000 mẫu gần nhất"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} batch · {1} sampel · {2}MB (belum dikompres) · hanya 20.000 terbaru"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} ชุด · {1} ตัวอย่าง · {2}MB (ก่อนบีบอัด) · ส่งเฉพาะ 20,000 รายการล่าสุด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} बैच · {1} नमूने · {2}MB (संपीड़ित से पहले) · केवल नवीनतम 20,000 भेजे गए"
+          }
+        }
+      }
+    },
     "|{0} ride" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -217291,83 +217984,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "डेवलपर से जोड़ने का अनुरोध"
-          }
-        }
-      }
-    },
-    "개발자에게 보내기|Send to developer" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "開発者に送信"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "发送给开发者"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "傳送給開發者"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "An Entwickler senden"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Envoyer au développeur"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invia allo sviluppatore"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enviar al desarrollador"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enviar ao desenvolvedor"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gửi cho nhà phát triển"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kirim ke developer"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ส่งให้นักพัฒนา"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "डेवलपर को भेजें"
           }
         }
       }
@@ -263880,83 +264496,6 @@
         }
       }
     },
-    "로그 보내기|Logs" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ログ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "日志"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "記錄檔"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Logs senden"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Journaux"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invia log"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enviar registros"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Logs"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nhật ký"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Log"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ล็อก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "लॉग"
-          }
-        }
-      }
-    },
     "로그 업로드|Upload logs" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -278737,6 +279276,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "क्या आपने नाव ली?"
+          }
+        }
+      }
+    },
+    "배치 {0} · 표본 {1} · {2}MB(압축 전) · 최근 20,000개만 전송|{0} batches · {1} samples · {2}MB (uncompressed) · latest 20,000 only" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バッチ{0} · サンプル{1} · {2}MB(圧縮前) · 最新20,000件のみ送信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批次{0} · 样本{1} · {2}MB(压缩前) · 仅发送最近20,000个"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批次{0} · 樣本{1} · {2}MB(壓縮前) · 僅傳送最近20,000個"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Batches · {1} Messwerte · {2} MB (unkomprimiert) · nur die letzten 20.000"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lots · {1} échantillons · {2} Mo (non compressé) · seulement les 20 000 derniers"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} batch · {1} campioni · {2} MB (non compresso) · solo gli ultimi 20.000"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lotes · {1} muestras · {2} MB (sin comprimir) · solo las últimas 20.000"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lotes · {1} amostras · {2} MB (sem compactar) · apenas as últimas 20.000"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lô · {1} mẫu · {2}MB (chưa nén) · chỉ gửi 20.000 mẫu gần nhất"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} batch · {1} sampel · {2}MB (belum dikompres) · hanya 20.000 terbaru"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} ชุด · {1} ตัวอย่าง · {2}MB (ก่อนบีบอัด) · ส่งเฉพาะ 20,000 รายการล่าสุด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} बैच · {1} नमूने · {2}MB (संपीड़ित से पहले) · केवल नवीनतम 20,000 भेजे गए"
+          }
+        }
+      }
+    },
+    "배치 {0} · 표본 {1} · {2}MB(압축 전)|{0} batches · {1} samples · {2}MB (uncompressed)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バッチ{0} · サンプル{1} · {2}MB(圧縮前)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批次{0} · 样本{1} · {2}MB(压缩前)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批次{0} · 樣本{1} · {2}MB(壓縮前)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Batches · {1} Messwerte · {2} MB (unkomprimiert)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lots · {1} échantillons · {2} Mo (non compressé)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} batch · {1} campioni · {2} MB (non compresso)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lotes · {1} muestras · {2} MB (sin comprimir)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lotes · {1} amostras · {2} MB (sem compactar)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} lô · {1} mẫu · {2}MB (chưa nén)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} batch · {1} sampel · {2}MB (belum dikompres)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} ชุด · {1} ตัวอย่าง · {2}MB (ก่อนบีบอัด)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} बैच · {1} नमूने · {2}MB (संपीड़ित से पहले)"
           }
         }
       }
@@ -310696,6 +311389,83 @@
         }
       }
     },
+    "실패 · {0}{1}|Failed · {0}{1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "失敗 · {0}{1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "失败 · {0}{1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "失敗 · {0}{1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fehlgeschlagen · {0}{1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec · {0}{1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non riuscito · {0}{1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error · {0}{1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Falhou · {0}{1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thất bại · {0}{1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal · {0}{1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ล้มเหลว · {0}{1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "विफल · {0}{1}"
+          }
+        }
+      }
+    },
     "실패 · {0}|Failed · {0}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -315239,83 +316009,6 @@
         }
       }
     },
-    "압축 중…|Compressing…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "圧縮中…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在压缩…"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "壓縮中⋯"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wird komprimiert …"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compression…"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compressione…"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comprimiendo…"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compactando…"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đang nén…"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mengompresi…"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "กำลังบีบอัด…"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "संपीड़ित हो रहा है…"
-          }
-        }
-      }
-    },
     "앞 단계를 먼저 해 주세요.|Do the previous step first." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -319705,79 +320398,79 @@
         }
       }
     },
-    "어제·오늘 데이터|2 days data" : {
+    "어제·오늘 기록한 GPS 좌표와 센서 원본이 개발자 분석 서비스(PostHog)로 전송됩니다. 집·회사 주변이 드러날 수 있습니다.|Yesterday's and today's GPS coordinates and raw sensor samples go to the developer's analytics service (PostHog). They can reveal where home and work are." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "昨日・今日のデータ"
+            "value" : "昨日と今日に記録したGPS座標と生のセンサーデータが、開発者の分析サービス(PostHog)へ送信されます。自宅や職場の周辺が分かる場合があります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "2天数据"
+            "value" : "昨天和今天记录的GPS坐标及原始传感器数据将发送到开发者的分析服务(PostHog)。可能会暴露家和公司周边的位置。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "2 天資料"
+            "value" : "昨天與今天記錄的GPS座標及原始感測器資料將傳送到開發者的分析服務(PostHog)。可能會顯露住家與公司周邊的位置。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Daten von 2 Tagen"
+            "value" : "Die GPS-Koordinaten und Rohsensordaten von gestern und heute werden an den Analysedienst des Entwicklers (PostHog) gesendet. Sie können zeigen, wo Zuhause und Arbeit liegen."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Données de 2 jours"
+            "value" : "Les coordonnées GPS et les données brutes des capteurs d’hier et d’aujourd’hui sont envoyées au service d’analyse du développeur (PostHog). Elles peuvent révéler l’emplacement du domicile et du travail."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dati di 2 giorni"
+            "value" : "Le coordinate GPS e i dati grezzi dei sensori di ieri e di oggi vengono inviati al servizio di analisi dello sviluppatore (PostHog). Possono rivelare dove si trovano casa e lavoro."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Datos de 2 días"
+            "value" : "Las coordenadas GPS y los datos sin procesar de los sensores de ayer y hoy se envían al servicio de análisis del desarrollador (PostHog). Pueden revelar dónde están tu casa y tu trabajo."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dados de 2 dias"
+            "value" : "As coordenadas GPS e os dados brutos dos sensores de ontem e de hoje são enviados ao serviço de análise do desenvolvedor (PostHog). Eles podem revelar onde ficam sua casa e seu trabalho."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dữ liệu 2 ngày"
+            "value" : "Tọa độ GPS và dữ liệu cảm biến thô của hôm qua và hôm nay sẽ được gửi đến dịch vụ phân tích của nhà phát triển (PostHog). Chúng có thể tiết lộ vị trí nhà và nơi làm việc."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Data 2 hari"
+            "value" : "Koordinat GPS dan data sensor mentah kemarin dan hari ini dikirim ke layanan analitik pengembang (PostHog). Data ini dapat mengungkap lokasi rumah dan tempat kerja."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ข้อมูล 2 วัน"
+            "value" : "พิกัด GPS และข้อมูลเซนเซอร์ดิบของเมื่อวานและวันนี้จะถูกส่งไปยังบริการวิเคราะห์ของนักพัฒนา (PostHog) ซึ่งอาจเปิดเผยบริเวณบ้านและที่ทำงานของคุณ"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "2 दिन का डेटा"
+            "value" : "कल और आज के GPS निर्देशांक और कच्चे सेंसर डेटा डेवलपर की विश्लेषण सेवा (PostHog) को भेजे जाते हैं। इनसे घर और कार्यस्थल के आसपास की जगह पता चल सकती है।"
           }
         }
       }
@@ -343960,83 +344653,6 @@
         }
       }
     },
-    "위치 기록이 포함될 수 있어요. 메일 화면에서 보내기를 눌러야 전송됩니다.|May include location history. Nothing is sent until you tap Send in Mail." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置情報の履歴が含まれる場合があります。メールで送信をタップするまで、何も送信されません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可能包含位置历史。在“邮件”中点按“发送”之前不会发送任何内容。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可能包含位置記錄。在郵件中點一下「傳送」之前，不會傳送任何內容。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kann den Standortverlauf enthalten. Es wird nichts gesendet, bis du in Mail auf Senden tippst."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Peut inclure l'historique de position. Rien n'est envoyé tant que vous ne touchez pas Envoyer dans Mail."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Può includere la cronologia delle posizioni. Non viene inviato nulla finché non tocchi Invia in Mail."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Puede incluir el historial de ubicaciones. No se envía nada hasta que toques Enviar en Mail."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pode incluir o histórico de localização. Nada é enviado até você tocar em Enviar no Mail."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Có thể gồm lịch sử vị trí. Sẽ không có gì được gửi cho đến khi bạn nhấn Gửi trong Mail."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mungkin berisi riwayat lokasi. Tidak ada yang dikirim sampai Anda mengetuk Kirim di Mail."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "อาจมีประวัติตำแหน่ง จะไม่ส่งอะไรจนกว่าคุณจะแตะส่งใน Mail"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "इसमें स्थान इतिहास हो सकता है। जब तक आप Mail में भेजें नहीं दबाते, कुछ नहीं भेजा जाता।"
-          }
-        }
-      }
-    },
     "위치 다시 고르기|Choose again" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -344649,6 +345265,237 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "लोकेशन छिपी है · {0} तक"
+          }
+        }
+      }
+    },
+    "위치 원본 전송에 동의함 · 다시 묻기|Raw location upload allowed · Ask again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "位置の生データの送信を許可済み · もう一度確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已允许发送原始位置数据 · 重新询问"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已允許傳送原始位置資料 · 重新詢問"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload roher Standortdaten erlaubt · Erneut fragen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi des données brutes de localisation autorisé · Redemander"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invio dei dati grezzi di posizione consentito · Chiedi di nuovo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envío de datos de ubicación sin procesar permitido · Preguntar de nuevo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envio de dados brutos de localização permitido · Perguntar de novo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã cho phép gửi dữ liệu vị trí thô · Hỏi lại"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengiriman data lokasi mentah diizinkan · Tanya lagi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อนุญาตการส่งข้อมูลตำแหน่งดิบแล้ว · ถามอีกครั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कच्चा स्थान डेटा भेजने की अनुमति दी गई · फिर पूछें"
+          }
+        }
+      }
+    },
+    "위치 원본(GPS·모션·기압)이 개발자 분석 서비스 PostHog로 전송됩니다.|Raw location data (GPS, motion, pressure) is sent to the developer's analytics service, PostHog." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "位置の生データ(GPS・モーション・気圧)が開発者の分析サービスPostHogへ送信されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原始位置数据(GPS、运动、气压)将发送到开发者的分析服务PostHog。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原始位置資料(GPS、動作、氣壓)將傳送到開發者的分析服務PostHog。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rohe Standortdaten (GPS, Bewegung, Luftdruck) werden an den Analysedienst des Entwicklers, PostHog, gesendet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les données brutes de localisation (GPS, mouvement, pression) sont envoyées au service d’analyse du développeur, PostHog."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I dati grezzi di posizione (GPS, movimento, pressione) vengono inviati al servizio di analisi dello sviluppatore, PostHog."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los datos sin procesar de ubicación (GPS, movimiento, presión) se envían al servicio de análisis del desarrollador, PostHog."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os dados brutos de localização (GPS, movimento, pressão) são enviados ao serviço de análise do desenvolvedor, PostHog."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dữ liệu vị trí thô (GPS, chuyển động, áp suất) được gửi đến dịch vụ phân tích của nhà phát triển, PostHog."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data lokasi mentah (GPS, gerakan, tekanan) dikirim ke layanan analitik pengembang, PostHog."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อมูลตำแหน่งดิบ (GPS, การเคลื่อนไหว, ความกดอากาศ) จะถูกส่งไปยังบริการวิเคราะห์ของนักพัฒนา PostHog"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कच्चा स्थान डेटा (GPS, गति, दबाव) डेवलपर की विश्लेषण सेवा PostHog को भेजा जाता है।"
+          }
+        }
+      }
+    },
+    "위치 원본을 보낼까요?|Send raw location data?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "位置の生データを送信しますか?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送原始位置数据？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送原始位置資料？"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rohe Standortdaten senden?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer les données brutes de localisation ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inviare i dati grezzi di posizione?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Enviar los datos de ubicación sin procesar?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar os dados brutos de localização?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi dữ liệu vị trí thô?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim data lokasi mentah?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งข้อมูลตำแหน่งดิบหรือไม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कच्चा स्थान डेटा भेजें?"
           }
         }
       }
@@ -369139,79 +369986,79 @@
         }
       }
     },
-    "저장 중…|Saving…" : {
+    "재시도|Retry" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存中…"
+            "value" : "再試行"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在保存…"
+            "value" : "重试"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "儲存中⋯"
+            "value" : "重試"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wird gespeichert …"
+            "value" : "Erneut versuchen"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enregistrement…"
+            "value" : "Réessayer"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salvataggio…"
+            "value" : "Riprova"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Guardando…"
+            "value" : "Reintentar"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salvando…"
+            "value" : "Tentar novamente"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Đang lưu…"
+            "value" : "Thử lại"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menyimpan…"
+            "value" : "Coba lagi"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "กำลังบันทึก…"
+            "value" : "ลองอีกครั้ง"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "सहेजा जा रहा है…"
+            "value" : "फिर कोशिश करें"
           }
         }
       }
@@ -369597,83 +370444,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सहेजा हुआ स्थान हटाएँ?"
-          }
-        }
-      }
-    },
-    "저장됨 · {0}|Saved · {0}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存済み · {0}"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已保存 · {0}"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已儲存 · {0}"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gespeichert · {0}"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enregistré · {0}"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salvato · {0}"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Guardado · {0}"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salvo · {0}"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã lưu · {0}"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tersimpan · {0}"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "บันทึกแล้ว · {0}"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सहेजा गया · {0}"
           }
         }
       }
@@ -371141,6 +371911,160 @@
         }
       }
     },
+    "전송 · 다시 묻지 않기|Send · Don't ask again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信・今後は確認しない"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送 · 不再询问"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送 · 不再詢問"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senden · Nicht mehr fragen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer · Ne plus demander"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia · Non chiedere più"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar · No volver a preguntar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar · Não perguntar de novo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi · Không hỏi lại"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim · Jangan tanya lagi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่ง · ไม่ต้องถามอีก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजें · फिर न पूछें"
+          }
+        }
+      }
+    },
+    "전송 중 {0}/{1}|Sending {0}/{1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信中 {0}/{1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送中 {0}/{1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送中 {0}/{1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senden {0}/{1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi {0}/{1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invio {0}/{1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviando {0}/{1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviando {0}/{1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang gửi {0}/{1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengirim {0}/{1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังส่ง {0}/{1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजा जा रहा है {0}/{1}"
+          }
+        }
+      }
+    },
     "전송 중|Exporting" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -371214,6 +372138,237 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "एक्सपोर्ट हो रहा है"
+          }
+        }
+      }
+    },
+    "전송|Send" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजें"
+          }
+        }
+      }
+    },
+    "전송됨 · {0}|Sent · {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信済み · {0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已发送 · {0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已傳送 · {0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesendet · {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyé · {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inviato · {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado · {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado · {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã gửi · {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkirim · {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งแล้ว · {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजा गया · {0}"
+          }
+        }
+      }
+    },
+    "전송됨 · 이벤트 {0} · {1}KB|Sent · {0} events · {1}KB" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信済み · イベント{0}件 · {1}KB"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已发送 · 事件{0}个 · {1}KB"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已傳送 · 事件{0}個 · {1}KB"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesendet · {0} Ereignisse · {1} KB"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyé · {0} événements · {1} Ko"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inviato · {0} eventi · {1} KB"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado · {0} eventos · {1} KB"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado · {0} eventos · {1} KB"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã gửi · {0} sự kiện · {1}KB"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkirim · {0} peristiwa · {1}KB"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งแล้ว · {0} เหตุการณ์ · {1}KB"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजा गया · {0} इवेंट · {1}KB"
           }
         }
       }
@@ -376758,6 +377913,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "साप्ताहिक अवकाश भत्ता शामिल"
+          }
+        }
+      }
+    },
+    "준비 중…|Preparing…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备中…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備中…"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird vorbereitet…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Préparation…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparazione…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang chuẩn bị…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyiapkan…"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังเตรียม…"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "तैयार हो रहा है…"
           }
         }
       }
@@ -389775,6 +391007,160 @@
         }
       }
     },
+    "최근 전송 없음|No recent upload" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の送信なし"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近没有发送"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近沒有傳送"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein aktueller Upload"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun envoi récent"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessun invio recente"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin envíos recientes"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhum envio recente"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa có lần gửi gần đây"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada unggahan terbaru"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยังไม่มีการส่งล่าสุด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हाल का कोई अपलोड नहीं"
+          }
+        }
+      }
+    },
+    "최근 전송: {0} · {1}|Last upload: {0} · {1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の送信: {0} · {1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近发送：{0} · {1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近傳送：{0} · {1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letzter Upload: {0} · {1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dernier envoi : {0} · {1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ultimo invio: {0} · {1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Último envío: {0} · {1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Último envio: {0} · {1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lần gửi gần nhất: {0} · {1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unggahan terakhir: {0} · {1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งล่าสุด: {0} · {1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पिछला अपलोड: {0} · {1}"
+          }
+        }
+      }
+    },
     "최근 제목: {0}|Recent titles: {0}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -390006,83 +391392,6 @@
         }
       }
     },
-    "최신 {0} · {1}|Latest {0} · {1}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最新{0} · {1}"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最新 {0} · {1}"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最新 {0} · {1}"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neueste {0} · {1}"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dernier {0} · {1}"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ultimo {0} · {1}"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Último {0} · {1}"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mais recente {0} · {1}"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mới nhất {0} · {1}"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terbaru {0} · {1}"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ล่าสุด {0} · {1}"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "नवीनतम {0} · {1}"
-          }
-        }
-      }
-    },
     "최신 데이터 우선|Latest data first" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -390156,83 +391465,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नवीनतम डेटा पहले"
-          }
-        }
-      }
-    },
-    "최신 로그 없음|No recent log" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最近のログなし"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无最新日志"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有最新記錄"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kein aktuelles Protokoll"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucun journal récent"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessun log recente"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sin registro reciente"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nenhum log recente"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chưa có nhật ký gần đây"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak ada log terbaru"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ไม่มีล็อกล่าสุด"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "हाल का कोई लॉग नहीं"
           }
         }
       }
@@ -401094,6 +402326,83 @@
         }
       }
     },
+    "포스트호그 로그 업로드|PostHog Log Upload" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHogログ送信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHog日志上传"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHog記錄上傳"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHog-Log-Upload"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi des journaux vers PostHog"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invio log a PostHog"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envío de registros a PostHog"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envio de logs ao PostHog"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi nhật ký tới PostHog"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unggah Log ke PostHog"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อัปโหลดบันทึกไปยัง PostHog"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PostHog लॉग अपलोड"
+          }
+        }
+      }
+    },
     "표본| samples" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -406480,6 +407789,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "महीने का औसत"
+          }
+        }
+      }
+    },
+    "한도 초과로 거절됨(429) · 나중에 다시{0}|Rate limited (429) · try again later{0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上限超過で拒否されました(429) · 後でもう一度{0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超出限额被拒绝(429) · 请稍后再试{0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超出限額遭拒絕(429) · 請稍後再試{0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit überschritten (429) · später erneut versuchen{0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite dépassée (429) · réessayez plus tard{0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite superato (429) · riprova più tardi{0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Límite superado (429) · inténtalo más tarde{0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite excedido (429) · tente novamente mais tarde{0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vượt giới hạn (429) · thử lại sau{0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melebihi batas (429) · coba lagi nanti{0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เกินขีดจำกัด (429) · ลองใหม่ภายหลัง{0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सीमा पार हो गई (429) · बाद में फिर कोशिश करें{0}"
+          }
+        }
+      }
+    },
+    "한도·결제로 거절됨({0}){1}|Rejected for quota or billing ({0}){1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上限または課金により拒否されました({0}){1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "因额度或计费被拒绝({0}){1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "因額度或計費遭拒絕({0}){1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wegen Kontingent oder Abrechnung abgelehnt ({0}){1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refusé pour quota ou facturation ({0}){1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rifiutato per quota o fatturazione ({0}){1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechazado por cuota o facturación ({0}){1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recusado por cota ou cobrança ({0}){1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bị từ chối do hạn mức hoặc thanh toán ({0}){1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ditolak karena kuota atau penagihan ({0}){1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ถูกปฏิเสธเพราะโควตาหรือการเรียกเก็บเงิน ({0}){1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कोटा या बिलिंग के कारण अस्वीकृत ({0}){1}"
           }
         }
       }

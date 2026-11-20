@@ -33,7 +33,8 @@ enum DiagnosticsExportStatusKey: Sendable {
 }
 
 extension AppModel {
-    func exportTodaySensorRawURL() async throws -> URL {
+    /// 어제·오늘 센서 원본 자료(PHG1120A01: 만들기와 파일 쓰기를 나눴다).
+    func todaySensorRawExports() async -> [TodaySensorRawExport] {
         let now = Date.now
         // 어제·오늘을 한 파일에 담는다(SUB1029A01 — 어제 지하철·오늘 자동차 대조).
         var payload: [TodaySensorRawExport] = []
@@ -49,6 +50,11 @@ extension AppModel {
                     return safe
                 }))
         }
+        return payload
+    }
+
+    func exportTodaySensorRawURL() async throws -> URL {
+        let payload = await todaySensorRawExports()
         return try await Task.detached(priority: .utility) {
             let directory = FileManager.default.temporaryDirectory
                 .appendingPathComponent("TaptionPlanRawExport", isDirectory: true)
@@ -99,98 +105,18 @@ extension AppModel {
         )
     }
 
-    /// 어제·오늘 센서 원본을 iCloud Drive › TaptionLogs에 바로 저장하고 결과 문구를 돌려준다(SUB1029A01).
-    func exportSensorRawToICloud() async -> String {
-        do {
-            let url = try await exportTodaySensorRawURL()
-            let saved = try await Task.detached(priority: .utility) {
-                try TaptionPlanDiagnosticsICloudExporter().export(url, updatesLatest: false)
-            }.value
-            return AppLanguagePreference.text(korean: "저장됨 · \(saved.lastPathComponent)", english: "Saved · \(saved.lastPathComponent)")
-        } catch {
-            return AppLanguagePreference.text(korean: "실패 · \(error.localizedDescription)", english: "Failed · \(error.localizedDescription)")
-        }
-    }
-
-    func exportDiagnosticsToICloud() async {
-        guard !isExportingDiagnostics else { return }
-        isExportingDiagnostics = true
-        diagnosticsExportStatusKey = .exporting
-        defer { isExportingDiagnostics = false }
+    /// 네트워크 없이 로컬 진단 패키지만 만든다(무인 벤치용, PHG1120A01). USB로 꺼내 본다.
+    func makeDiagnosticsPackageLocally() async {
         let logger = TaptionPlanDiagnosticsLogger.shared
-        let operation = logger.beginOperation(
-            "diagnostics_export",
-            fields: ["destination": "icloud_drive"]
-        )
-        var iphoneLogBytes = 0
-        var watchLogBytes = 0
         do {
-            logger.record("diagnostics_export_requested")
-            let watchLog = await watchConnectivityService
-                .requestDiagnosticsLog()
-                ?? WatchLaunchReportStore.read()?.report
-            let builder = try TaptionPlanDiagnosticsLogPackageBuilder
-                .applicationSupport()
-            let iphoneLog = logger.combinedLog()
-            iphoneLogBytes = iphoneLog.utf8.count
-            watchLogBytes = watchLog?.utf8.count ?? 0
-            let package = try builder.makePackage(
-                summary: diagnosticsSummary,
-                iphoneLog: iphoneLog,
-                watchLog: watchLog
-            )
-            let destination = try await Task.detached(priority: .utility) {
-                try TaptionPlanDiagnosticsICloudExporter().export(package)
-            }.value
-            diagnosticsExportStatusKey = .exported
-            let defaults = UserDefaults(
-                suiteName: TaptionWidgetSharedStore.appGroupIdentifier
-            ) ?? .standard
-            defaults.set(
-                destination.lastPathComponent,
-                forKey: Self.diagnosticsLatestFileKey
-            )
-            defaults.set(
-                Date.now,
-                forKey: Self.diagnosticsLatestSavedAtKey
-            )
-            logger.record(
-                "diagnostics_export_completed",
-                fields: [
-                    "file": destination.lastPathComponent,
-                    "latest_pointer": TaptionDiagnosticsLatestLogManifest.fileName,
-                ]
-            )
-            logger.finishOperation(
-                operation,
-                outcome: "success",
-                fields: [
-                    "file": destination.lastPathComponent,
-                    "iphone_log_bytes": String(iphoneLogBytes),
-                    "watch_log_bytes": String(watchLogBytes),
-                ]
-            )
+            _ = try await diagnosticsPackageURL()
+            logger.record("diagnostics_package_local")
         } catch {
-            diagnosticsExportStatusKey = .failed
-            logger.finishOperation(
-                operation,
-                outcome: "failure",
-                fields: [
-                    "iphone_log_bytes": String(iphoneLogBytes),
-                    "watch_log_bytes": String(watchLogBytes),
-                ],
-                error: error
-            )
-            logger.record(
-                "diagnostics_export_failed",
-                level: .error,
-                fields: TaptionDiagnosticError.compactFields(for: error)
-            )
-            userFacingError = error.localizedDescription
+            logger.record("diagnostics_package_failed", level: .error, fields: TaptionDiagnosticError.compactFields(for: error))
         }
     }
 
-    private var diagnosticsSummary: [String: String] {
+    var diagnosticsSummary: [String: String] {
         let bundle = Bundle.main
         var summary: [String: String] = [
             "app_version": bundle.object(

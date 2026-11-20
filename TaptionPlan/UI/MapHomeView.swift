@@ -624,7 +624,7 @@ struct MapHomeView: View {
             MapHomeInteractionMonitor.shared.end("bench_pan")
             MapHomePlaybackProbe.stopAndRecord()
             try? await Task.sleep(nanoseconds: 1_000_000_000)
-            await model.exportDiagnosticsToICloud()
+            await model.makeDiagnosticsPackageLocally()
             return
         }
         if ProcessInfo.processInfo.arguments.contains("-autoStartDayPlayback") {
@@ -654,7 +654,7 @@ struct MapHomeView: View {
             }
             if isDayPlaybackRunning { stopDayPlayback(resetProgress: false) }
             try? await Task.sleep(nanoseconds: 1_000_000_000)
-            await model.exportDiagnosticsToICloud()
+            await model.makeDiagnosticsPackageLocally()
         }
     }
 
