@@ -6358,6 +6358,7 @@
 "항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.": "Khóa tra cứu chuyến bay chưa được đăng ký. Hãy thêm thủ công hoặc tìm theo số hiệu chuyến bay.",
 " · 왕복 결제| · round trip": " · khứ hồi",
 "결제 문자|payment text": "tin nhắn thanh toán",
-"직접|manual": "thủ công"
+"직접|manual": "thủ công",
+"실시간 동기화|Instant sync": "Đồng bộ tức thì"
 }
 }

@@ -525,7 +525,7 @@
    "ko": "1초",
    "en": "1 s",
    "files": [
-    "AssistantLiveSync.swift:251"
+    "AssistantLiveSync.swift:254"
    ],
    "args": [],
    "targets": [
@@ -537,7 +537,7 @@
    "ko": "1초는 통화 중 빠른 모드로, 30분 뒤 3초로 돌아와요. 저전력 모드에서는 3초로 확인해요.",
    "en": "1 s is a fast mode for calls and returns to 3 s after 30 minutes. Low Power Mode checks every 3 s.",
    "files": [
-    "AssistantLiveSync.swift:255"
+    "AssistantLiveSync.swift:261"
    ],
    "args": [],
    "targets": [
@@ -694,7 +694,7 @@
    "ko": "3초",
    "en": "3 s",
    "files": [
-    "AssistantLiveSync.swift:250"
+    "AssistantLiveSync.swift:253"
    ],
    "args": [],
    "targets": [
@@ -39809,7 +39809,7 @@
    "ko": "나중에",
    "en": "Later",
    "files": [
-    "AssistantLiveSync.swift:226",
+    "AssistantLiveSync.swift:228",
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419"
    ],
@@ -44960,7 +44960,7 @@
    "ko": "반영",
    "en": "Apply",
    "files": [
-    "AssistantLiveSync.swift:228"
+    "AssistantLiveSync.swift:230"
    ],
    "args": [],
    "targets": [
@@ -48029,7 +48029,7 @@
    "ko": "새 계획이 도착했어요",
    "en": "A new plan arrived",
    "files": [
-    "AssistantLiveSync.swift:223"
+    "AssistantLiveSync.swift:225"
    ],
    "args": [],
    "targets": [
@@ -50618,11 +50618,23 @@
    ]
   },
   {
+   "key": "실시간 동기화|Instant sync",
+   "ko": "실시간 동기화",
+   "en": "Instant sync",
+   "files": [
+    "AssistantLiveSync.swift:258"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "실시간 반영|Live updates",
    "ko": "실시간 반영",
    "en": "Live updates",
    "files": [
-    "AssistantLiveSync.swift:248"
+    "AssistantLiveSync.swift:251"
    ],
    "args": [],
    "targets": [
@@ -67815,7 +67827,7 @@
    "ko": "화면 녹화",
    "en": "Screen recording",
    "files": [
-    "MapHomeView+Support.swift:318"
+    "MapHomeView+Support.swift:335"
    ],
    "args": [],
    "targets": [

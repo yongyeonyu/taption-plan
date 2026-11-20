@@ -2,6 +2,7 @@
 // ctx = { kv, store: 암호화 KV, state: 주인 DO, ring, auth, master: 주인 해시, now: 밀리초, legacy: DO의 이전 표시 }
 // SEC1110A02: 하루 기록 이름은 `act:<주인>:<HMAC(날짜)>`이고 날짜 목록은 DO가 잠근 채 가진다(KV list를 쓰지 않는다).
 // 명령 큐와 24시간 한도는 DO가 가진다. 여행 계획·명령 결과·추가 칸(goals·trips·placeBook)은 KV에 잠가 둔다.
+import { publish } from "./realtime.js";
 import { registry } from "./actions.js";
 import { notify, pushForCommand, pushForTask } from "./apns.js";
 import { nameKey, openJson, sealJson, tagOf } from "./crypto.js";
@@ -58,6 +59,7 @@ export async function savePlan(ctx, value) {
   const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
   if (!charge.ok) return overBudget(charge);
   await ctx.store.put(planName(ctx), JSON.stringify(value), { expirationTtl: PLAN_TTL_SECONDS });
+  publish(ctx, { type: "patch", entity: "plan" });
   return json({ ok: true, tripId: value.tripId, expiresInSeconds: PLAN_TTL_SECONDS }, 201);
 }
 
@@ -81,6 +83,7 @@ export async function savePolish(ctx, value) {
   if (!charge.ok) return overBudget(charge);
   const memos = value.memos.map(({ id, text, date }) => (date ? { id, text, date } : { id, text }));
   await ctx.store.put(polishName(ctx), JSON.stringify({ format: "bokki-polish", version: 1, memos }), { expirationTtl: POLISH_TTL_SECONDS });
+  publish(ctx, { type: "patch", entity: "memo" });
   return json({ ok: true, count: memos.length, expiresInSeconds: POLISH_TTL_SECONDS }, 201);
 }
 
@@ -130,6 +133,7 @@ export async function saveAppState(ctx, value) {
   if (!charge.ok) return overBudget(charge);
   const ttl = value.retentionDays * DAY;
   await ctx.store.put(appName(ctx), JSON.stringify(cleanAppState(value)), { expirationTtl: ttl });
+  publish(ctx, { type: "patch", entity: "app" });
   return json({ ok: true, expiresInSeconds: ttl }, 201);
 }
 
@@ -201,6 +205,7 @@ export async function saveTasks(ctx, value) {
     items.push({ id, kind, ...(date ? { date } : {}), sealed: await sealTask(ctx, id, { text, ...(context ? { context } : {}) }) });
   }
   const { added } = items.length ? await ctx.state.call("taskAdd", { items, now: ctx.now }) : { added: 0 };
+  publish(ctx, { type: "patch", entity: "tasks" });
   return json({ ok: true, added, expiresInSeconds: TASKS_TTL_SECONDS }, 201);
 }
 
@@ -385,6 +390,7 @@ export async function saveActivity(ctx, value) {
   }
   // S5: 합치는 칸을 차례로 쓰지 못하면(다른 요청이 쓰는 중) 503. 하루 기록은 이미 올라가 있고 같은 내용은 다시 쓰지 않으므로 앱이 다시 올려도 된다.
   if (!(await saveExtras(ctx, value, ttl))) return json({ error: "busy" }, 503, { "retry-after": "2" });
+  publish(ctx, { type: "patch", entity: "day" });
   return json({ ok: true, dates: value.days.map((day) => day.date), expiresInSeconds: ttl, written: changed.length }, 201);
 }
 
@@ -534,6 +540,7 @@ export async function queueCommand(ctx, value, source = "rest") {
     return json({ error: result.error, limit, retryAfter: retry, retryAfterSeconds: retry }, 429, { "retry-after": String(retry) });
   }
   notify(ctx, pushForCommand(command));
+  publish(ctx, { type: "cmd", id: command.id, kind: command.action });
   return json({ ok: true, id: command.id, queued: result.queued, remainingToday: result.remaining, expiresInSeconds: QUEUE_TTL_SECONDS }, 201);
 }
 

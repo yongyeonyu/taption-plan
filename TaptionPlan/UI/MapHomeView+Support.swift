@@ -229,12 +229,29 @@ extension MapHomeView {
         // 갱신 입구는 `AssistantLiveSync.refresh` 하나이고, 전면이 아니면 이 반복이 취소돼 요청이 0건이다.
         .task(id: scenePhase == .active) {
             guard scenePhase == .active else { return }
-            await AssistantLiveSync.runLoop(
-                isActive: { scenePhase == .active },
-                interval: { AssistantLiveSync.liveInterval() },
-                wait: { try? await Task.sleep(for: .seconds($0)) },
-                refresh: { await AssistantLiveSync.shared.refresh(reason: .poll, language: language) }
-            )
+            // 소켓(실시간)은 이 작업이 취소되면(전면이 아니면) 함께 닫힌다(RTA1120A02).
+            let socket = Task { @MainActor in
+                await AssistantRealtime.shared.run(
+                    makeSocket: { AssistantRealtime.liveSocket(since: $0) },
+                    wait: { try? await Task.sleep(for: .seconds($0)) },
+                    apply: { action in
+                        switch action {
+                        case .refresh, .fullRefresh: await AssistantLiveSync.shared.refresh(reason: .socket, language: language)
+                        case .tasks: await AITaskQueue.refresh()
+                        case .rules: await AssistantRuleStore.sync()
+                        }
+                    }
+                )
+            }
+            await withTaskCancellationHandler {
+                await AssistantLiveSync.runLoop(
+                    isActive: { scenePhase == .active },
+                    interval: { AssistantLiveSync.liveInterval() },
+                    wait: { try? await Task.sleep(for: .seconds($0)) },
+                    refresh: { await AssistantLiveSync.shared.refresh(reason: .poll, language: language) }
+                )
+            } onCancel: { socket.cancel() }
+            socket.cancel()
         }
         // 통화 중 여행 계획이 와서 「반영」을 누르면 지금의 미리보기(가져오기)로 이어 준다.
         .onChange(of: AssistantLiveSync.shared.acceptedPlan) { _, text in

@@ -1,5 +1,5 @@
 // 시험용 KV·Durable Object 가짜(SEC1110A02). DO는 진짜 `UserState`를 메모리 저장소 위에서 돌린다.
-import { ShareRoom, UserState } from "../src/index.js";
+import { RealtimeRoom, ShareRoom, UserState } from "../src/index.js";
 
 export class MemoryKV {
   constructor() { this.map = new Map(); this.options = new Map(); this.writes = 0; this.lists = 0; }
@@ -93,7 +93,7 @@ export class FakeSocket {
 }
 
 export class FakeRooms {
-  constructor(env) { this.env = env; this.instances = new Map(); this.requests = 0; this.pairs = []; }
+  constructor(env, RoomClass = ShareRoom) { this.env = env; this.RoomClass = RoomClass; this.instances = new Map(); this.requests = 0; this.pairs = []; }
   idFromName(name) { return { name, toString: () => name }; }
   instance(name) {
     if (!this.instances.has(name)) {
@@ -104,7 +104,7 @@ export class FakeRooms {
         getWebSockets(tag) { return sockets.filter((ws) => !ws.closed && (!tag || ws.tags.includes(tag))); },
         setWebSocketAutoResponse() {},
       };
-      this.instances.set(name, { room: new ShareRoom(ctx, this.env), ctx });
+      this.instances.set(name, { room: new this.RoomClass(ctx, this.env), ctx });
     }
     return this.instances.get(name);
   }
@@ -158,4 +158,16 @@ export class MemoryBucket {
       writeHttpMetadata(headers) { if (entry.contentType) headers.set("content-type", entry.contentType); },
     };
   }
+}
+
+/** RTA1120A02: 실시간 방(`RealtimeRoom`)과 가짜 소켓 짝을 더한 env. */
+export function makeRealtimeEnv(extra = {}) {
+  const made = makeEnv(extra);
+  const rooms = new FakeRooms(made.env, RealtimeRoom);
+  made.env.REALTIME_ROOM = rooms;
+  made.env.SOCKETS = {
+    pair: () => { const pair = [new FakeSocket(), new FakeSocket()]; rooms.pairs.push(pair); return pair; },
+    response: () => new Response(null, { status: 200, headers: { "x-test-upgrade": "websocket" } }),
+  };
+  return { ...made, rooms };
 }

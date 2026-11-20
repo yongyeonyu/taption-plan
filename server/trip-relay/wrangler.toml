@@ -79,3 +79,12 @@ class_name = "ShareRoom"
 [[migrations]]
 tag = "v2-share-room"
 new_sqlite_classes = ["ShareRoom"]
+
+# RTA1120A02: 앱 전면 실시간 반영(주인마다 방 하나, Hibernation). 새 클래스라 migration 태그를 하나 더한다. 처음 배포할 때 한 번 적용되고 되돌릴 수 없다.
+[[durable_objects.bindings]]
+name = "REALTIME_ROOM"
+class_name = "RealtimeRoom"
+
+[[migrations]]
+tag = "v3-realtime-room"
+new_sqlite_classes = ["RealtimeRoom"]

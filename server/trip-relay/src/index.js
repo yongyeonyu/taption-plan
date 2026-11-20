@@ -9,6 +9,7 @@ import { withD1 } from "./d1kv.js";
 import * as apns from "./apns.js";
 import * as rules from "./rules.js";
 import * as share from "./share.js";
+import { realtimeRoute } from "./realtime.js";
 import * as shared from "./shared.js";
 import { createSetup, readSetup } from "./setup.js";
 import { exFare, exUnits } from "./expressway.js";
@@ -29,6 +30,7 @@ import * as store from "./store.js";
 export { open, seal, storageCryptoKey, vault };
 export { UserState } from "./state.js";
 export { ShareRoom } from "./share.js";
+export { RealtimeRoom } from "./realtime.js";
 export { isActivityUpload, isCommand, isCommandResults, isTripPlan } from "./validate.js";
 
 export async function storageKey(token) {
@@ -369,6 +371,8 @@ const ROUTES = {
     POST: ["master", (request, ctx) => classifier.upload(request, ctx)],
     DELETE: ["master", (request, ctx) => classifier.erase(ctx)],
   },
+  // RTA1120A02: 앱 전면 실시간 반영 소켓(주인 키만).
+  "/rt/ws": { GET: ["master", (request, ctx) => realtimeRoute(request, ctx)] },
   "/plan": {
     GET: ["read", (request, ctx) => store.readPlan(ctx)],
     POST: ["write", withBody(store.savePlan)],

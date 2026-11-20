@@ -94,7 +94,7 @@ final class AssistantLiveSync {
 
     // MARK: 확인
 
-    enum Reason { case poll, push, manual }
+    enum Reason { case poll, push, manual, socket }
 
     @ObservationIgnored private var isRefreshing = false
     @ObservationIgnored private var lastHeavyAt: Date?
@@ -176,7 +176,9 @@ final class AssistantLiveSync {
     }
 
     static func liveInterval(info: ProcessInfo = .processInfo) -> TimeInterval {
-        interval(mode: mode(), lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState)
+        // 소켓이 살아 있으면 짧은 폴링은 멈추고 5분 안전망만 둔다(RTA1120A02). 끊기면 곧바로 3초·1초로 돌아온다.
+        if AssistantRealtime.shared.isConnected { return AssistantCommandPolling.idleInterval }
+        return interval(mode: mode(), lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState)
     }
 }
 
@@ -242,6 +244,7 @@ struct AssistantPlanArrivalCard: View {
 struct AssistantLiveSyncSettingRow: View {
     let language: MapHomeLanguage
     @State private var mode = AssistantLiveSync.mode()
+    @State private var realtime = AssistantRealtime.isEnabled()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -252,6 +255,9 @@ struct AssistantLiveSyncSettingRow: View {
             }
             .pickerStyle(.segmented)
             .onChange(of: mode) { _, next in AssistantLiveSync.setMode(next) }
+            Toggle(language.text("실시간 동기화", "Instant sync"), isOn: $realtime)
+                .disabled(mode == .off)
+                .onChange(of: realtime) { _, next in AssistantRealtime.setEnabled(next) }
             Text(language.text("1초는 통화 중 빠른 모드로, 30분 뒤 3초로 돌아와요. 저전력 모드에서는 3초로 확인해요.",
                                "1 s is a fast mode for calls and returns to 3 s after 30 minutes. Low Power Mode checks every 3 s."))
                 .font(.taptionStyle(.caption))

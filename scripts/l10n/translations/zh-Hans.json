@@ -6358,6 +6358,7 @@
 "항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.|The flight lookup key is not registered yet. Add it manually or search the flight number.": "航班查询密钥尚未登记。请手动添加或搜索航班号。",
 " · 왕복 결제| · round trip": " · 往返一次付款",
 "결제 문자|payment text": "支付短信",
-"직접|manual": "手动"
+"직접|manual": "手动",
+"실시간 동기화|Instant sync": "实时同步"
 }
 }

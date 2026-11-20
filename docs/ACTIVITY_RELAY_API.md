@@ -29,6 +29,7 @@
 | `GET /activity/summary?range=week\|month[&end=YYYY-MM-DD]` | AI·읽기 | 없음 | `200` 묶음(8장), `204` 그 기간에 날 없음, `400` 기간·날짜 틀림 |
 | `POST /command` | AI·쓰기 | 아래 명령 하나 | `201` `{"ok":true,"id":"…","queued":n,"remainingToday":n,"expiresInSeconds":604800}`, `422` 형식 틀림(`{"error":"not_command","reason"?}`, `reason`은 `bad_id` 또는 말풍선 이유), `409` `{"error":"id_conflict"}` 다른 연결이 넣어 둔 같은 `id`, `429` 24시간 100개 초과(`{"error":"daily_command_limit","retryAfterSeconds"}`, `Retry-After` 헤더) |
 | `GET /command` | 앱 | 없음 | `200` `{"commands":[…]}`, `204` 없음 |
+| `GET /rt/ws` | 앱(주인 키) | 헤더 `Authorization: Bearer <주인 키>`, `Upgrade: websocket`, 선택 `?since=<마지막 이벤트 id>` | `101` 업그레이드 후 `hello`·`events`·`ready`·`cmd`·`patch`·`resync`(본문 없는 알림). `426` 업그레이드가 아님, `401`·`403` 키 없음·AI 키, `503` 바인딩 없음 |
 | `DELETE /command?ids=a,b` | 앱 | `ids`가 없으면 전부 | `204` |
 | `POST /command/result` | 앱 | `{"results":[{"id","status":"applied"\|"rejected","reason"?}]}` | `201` |
 | `GET /command/result` | AI·읽기 | 없음 | `200` `{"results":[{"id","status","reason"?,"at"}]}`, `204` 없음 |
