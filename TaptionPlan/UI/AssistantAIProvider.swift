@@ -20,12 +20,12 @@ enum AssistantClipboard {
 
 /// 「AI 연결」에 보이는 AI(AIR1110A03). 연결 방식·앱 스킴·App Store 번호·요금제 표시를 한곳에 둔다.
 enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
-    case pickle, chatGPT, claude, gemini, cue, other
+    case pickle, chatGPT, claude, gemini, cue, muse, other
 
     var id: String { rawValue }
 
-    /// 튜토리얼과 「AI 연결」 맨 위에 함께 보이는 AI(AIR1110A04, Cue는 AIC1111A01).
-    static let featured: [Self] = [.pickle, .chatGPT, .claude, .gemini, .cue]
+    /// 튜토리얼과 「AI 연결」 맨 위에 함께 보이는 AI(AIR1110A04, Cue는 AIC1111A01, Muse는 MUS1120A01).
+    static let featured: [Self] = [.pickle, .chatGPT, .claude, .gemini, .cue, .muse]
 
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
@@ -34,6 +34,7 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .claude: "Claude"
         case .gemini: "Gemini"
         case .cue: "Cue"
+        case .muse: "Muse"
         case .other: language.text("기타", "Other")
         }
     }
@@ -47,6 +48,8 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .gemini: "6477489729"
         // Cue by Manus(대표 확인 2026-11-11, iTunes 조회 ai.manus.agents). 앱 스킴은 확인하지 못해 없다.
         case .cue: "6808613358"
+        // Muse from Meta(대표 확인 2026-11-20, App Store). 앱 스킴은 확인하지 못해 없다(MUS1120A01).
+        case .muse: "6760173601"
         case .other: nil
         }
     }
@@ -62,7 +65,8 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .claude: "claude"
         case .gemini: "googlegemini"
         // Cue(Manus) 스킴은 공개 문서에서 확인하지 못해 두지 않는다. 연결돼 있으면 「열기」로 App Store 화면을 연다(CUE1111A01).
-        case .cue, .other: nil
+        // Muse 스킴도 공개 문서에서 확인하지 못했다(MUS1120A01). `LSApplicationQueriesSchemes`에 넣지 않는다.
+        case .cue, .muse, .other: nil
         }
     }
 
@@ -94,11 +98,16 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .gemini: language.text("유료 · API 키 필요", "Paid · API key needed")
         // 대표 확인(2026-11-11): Cue는 무료로 연결된다.
         case .cue: language.text("무료", "Free")
+        // Muse: 무료(앱 내 구입 있음, App Store 2026-11-20).
+        case .muse: language.text("무료", "Free")
         case .other: nil
         }
     }
 
-    var isFreePlan: Bool { self == .pickle || self == .claude || self == .cue }
+    /// 연결 키를 만들어 그 AI 화면에서 MCP 주소·키를 직접 등록하는 방식(Cue CUE1110A01, Muse MUS1120A01).
+    var usesKeyConnector: Bool { self == .cue || self == .muse }
+
+    var isFreePlan: Bool { self == .pickle || self == .claude || self == .cue || self == .muse }
 
     static func planFootnote(_ language: MapHomeLanguage) -> String {
         language.text("요금제 조건은 각 서비스 사정에 따라 바뀔 수 있어요.", "Plan requirements may change at each service's discretion.")
@@ -113,6 +122,7 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .gemini: return lower.contains("gemini")
         case .pickle: return lower.contains("pickle")
         case .cue: return lower == "cue" || lower.hasPrefix("cue ")
+        case .muse: return lower.contains("muse")
         case .other: return false
         }
     }
@@ -201,6 +211,25 @@ extension TripRelay {
         If you can't add MCP servers, use the web API below with the same key.
 
         """ + assistantSetupText(host: host, key: key, scope: scope, expiresAt: expiresAt)
+    }
+
+    /// Muse용 안내: Cue와 같이 MCP 연결을 먼저 적고, 이어서 REST 사용법을 붙인다(MUS1120A01).
+    static func museSetupText(host: String, key: String, scope: AssistantKeyScope, expiresAt: Date?) -> String {
+        """
+        BOKKI Plan connection for Muse.
+        Preferred: add a remote MCP server (custom connector) with URL \(mcpURL(host: host)) and the request header Authorization: Bearer \(key). If your connector only takes a URL, use \(mcpKeyURL(host: host, key: key)) with no sign-in.
+        If you can't add MCP servers, use the web API below with the same key.
+
+        """ + assistantSetupText(host: host, key: key, scope: scope, expiresAt: expiresAt)
+    }
+
+    /// 연결 키 + MCP 직접 등록 방식(Cue·Muse)의 안내 글. 다른 AI는 nil.
+    static func keyConnectorSetupText(for provider: AssistantAIProvider, host: String, key: String, scope: AssistantKeyScope, expiresAt: Date?) -> String? {
+        switch provider {
+        case .cue: cueSetupText(host: host, key: key, scope: scope, expiresAt: expiresAt)
+        case .muse: museSetupText(host: host, key: key, scope: scope, expiresAt: expiresAt)
+        default: nil
+        }
     }
 
     static func setupLinkMessage(_ url: String) -> String {

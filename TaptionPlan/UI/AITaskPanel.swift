@@ -590,6 +590,7 @@ enum AITaskRequest {
         switch provider {
         case .claude: base = "https://claude.ai/new"
         case .chatGPT: base = "https://chatgpt.com/"
+        // Muse 등 나머지: 웹 채팅이 프롬프트를 받는 주소가 확인되지 않아 없다(MUS1120A01).
         default: return nil
         }
         var parts = URLComponents(string: base)

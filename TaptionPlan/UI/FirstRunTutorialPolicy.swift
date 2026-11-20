@@ -12,7 +12,7 @@ enum FirstRunTutorialChapter: Int, CaseIterable {
 /// 처음 실행 튜토리얼 단계. 저장 값이 이름이라 순서를 바꿔도 이어 보기가 어긋나지 않는다.
 enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     case welcome
-    /// AI 연결(AIR1110A04, AIT1116A01에서 첫 소개 바로 뒤로). 피클·ChatGPT·Claude·Gemini를 받고 잇는다.
+    /// AI 연결(AIR1110A04, AIT1116A01에서 첫 소개 바로 뒤로). 피클·ChatGPT·Claude·Gemini·Cue·Muse를 받고 잇는다.
     case aiConnect
     case permissions
     case dayCardTime

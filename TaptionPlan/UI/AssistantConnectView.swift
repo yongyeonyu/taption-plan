@@ -54,7 +54,7 @@ final class AssistantConnectionStore {
     }
 }
 
-/// 피클·ChatGPT·Claude·Gemini 한 줄: 이름, 요금제 배지, 받기/열기, 연결(AIR1110A04). 튜토리얼과 메뉴가 같이 쓴다.
+/// 피클·ChatGPT·Claude·Gemini·Cue·Muse 한 줄: 이름, 요금제 배지, 받기/열기, 연결(AIR1110A04). 튜토리얼과 메뉴가 같이 쓴다.
 struct AssistantProviderRow: View {
     let provider: AssistantAIProvider
     let language: MapHomeLanguage
@@ -103,7 +103,7 @@ struct AssistantProviderRow: View {
     }
 }
 
-/// AI별 연결 방법(AIR1110A03). 피클·기타·Gemini는 연결 키, ChatGPT·Claude는 OAuth 커넥터와 1회용 연결 코드.
+/// AI별 연결 방법(AIR1110A03). 피클·기타·Gemini는 연결 키, Cue·Muse는 연결 키 + MCP 직접 등록, ChatGPT·Claude는 OAuth 커넥터와 1회용 연결 코드.
 struct AssistantProviderView: View {
     let provider: AssistantAIProvider
     let language: MapHomeLanguage
@@ -117,9 +117,9 @@ struct AssistantProviderView: View {
     @State private var message: String?
     @State private var isWorking = false
     @State private var installed = false
-    /// Cue: 권한과 사용 기간을 고른다(CUE1110A01). 기본은 읽기 전용·90일.
-    @State private var cueAllowsEdits = false
-    @State private var cuePeriod = AssistantKeyPeriod.quarter
+    /// Cue·Muse: 권한과 사용 기간을 고른다(CUE1110A01, MUS1120A01). 기본은 읽기 전용·90일.
+    @State private var connectorAllowsEdits = false
+    @State private var connectorPeriod = AssistantKeyPeriod.quarter
     /// 다시 복사할 수 있는 연결 키. 키체인은 나타날 때와 만든 뒤에만 읽는다.
     @State private var existing: (key: AssistantScopedKey, token: String)?
     /// 복사한 뒤 「붙여 넣어 주세요」 창. PIN 시트가 닫힌 뒤에 띄운다.
@@ -151,7 +151,7 @@ struct AssistantProviderView: View {
                 ),
                 language: language, isConnected: store.isConnected(provider), perform: performGuide
             )
-            if provider == .cue { cueSections } else if provider.usesOAuth { oauthSections } else { keySection }
+            if provider.usesKeyConnector { keyConnectorSections } else if provider.usesOAuth { oauthSections } else { keySection }
             if provider.appStoreURL != nil {
                 Section {
                     Button(installed ? language.text("\(name) 열기", "Open \(name)")
@@ -224,40 +224,41 @@ struct AssistantProviderView: View {
             : language.text("\(name) 연결 키를 만들어요.", "Creates a connection key for \(name).")
     }
 
-    // MARK: Cue (CUE1110A01)
+    // MARK: 연결 키 + MCP 직접 등록 (Cue CUE1110A01, Muse MUS1120A01)
 
-    /// Cue에는 MCP 주소와 연결 키를 따로 넣는다. 자동으로 이어 주지 않으니 Cue에서 직접 등록한다.
+    /// Cue·Muse에는 MCP 주소와 연결 키를 따로 넣는다. 자동으로 이어 주지 않으니 그 AI에서 직접 등록한다.
     /// 주 키는 보이지도 복사되지도 않는다. 키는 피클과 같이 이 기기 키체인에만 둔다.
     @ViewBuilder
-    private var cueSections: some View {
+    private var keyConnectorSections: some View {
         Section {
-            Toggle(language.text("기록 수정 허용", "Allow record edits"), isOn: $cueAllowsEdits)
-            Picker(language.text("사용 기간", "Valid for"), selection: $cuePeriod) {
+            Toggle(language.text("기록 수정 허용", "Allow record edits"), isOn: $connectorAllowsEdits)
+            Picker(language.text("사용 기간", "Valid for"), selection: $connectorPeriod) {
                 ForEach(AssistantKeyPeriod.allCases) { Text($0.title(language)).tag($0) }
             }
-            if cuePeriod == .never {
+            if connectorPeriod == .never {
                 Text(language.text("키가 새면 직접 끊어야 해요.", "If the key leaks, you have to cut it yourself.")).font(.taptionStyle(.footnote)).foregroundStyle(.orange)
             }
-            Button(existing == nil ? language.text("Cue 연결 키 만들기", "Make a Cue key") : language.text("새 키로 다시 만들기", "Make a new key")) { isAskingPIN = true }
+            Button(existing == nil ? language.text("\(name) 연결 키 만들기", "Make a \(name) key") : language.text("새 키로 다시 만들기", "Make a new key")) { isAskingPIN = true }
         } header: {
             Text(language.text("권한과 기간", "Access and period"))
         } footer: {
-            Text(cueAllowsEdits
-                 ? language.text("Cue가 기록을 읽고 메모·일정·기록 수정을 보낼 수 있어요. 보낸 것은 앱에서 되돌릴 수 있어요.", "Cue can read records and send memo, schedule and record edits. You can undo them in the app.")
-                 : language.text("Cue는 기록을 읽기만 해요.", "Cue can only read records."))
+            Text(connectorAllowsEdits
+                 ? language.text("\(name)가 기록을 읽고 메모·일정·기록 수정을 보낼 수 있어요. 보낸 것은 앱에서 되돌릴 수 있어요.", "\(name) can read records and send memo, schedule and record edits. You can undo them in the app.")
+                 : language.text("\(name)는 기록을 읽기만 해요.", "\(name) can only read records."))
         }
         Section {
-            Text(cueSteps).font(.taptionStyle(.footnote))
+            Text(keySteps).font(.taptionStyle(.footnote))
             LabeledContent(language.text("MCP 주소", "MCP URL"), value: TripRelay.mcpURL(host: host)).font(.taptionStyle(.footnote))
             Button(language.text("MCP 주소 복사", "Copy MCP URL")) {
                 copy(TripRelay.mcpURL(host: host))
                 message = language.text("MCP 주소를 복사했어요.", "MCP URL copied.")
             }
             if let existing {
-                // 주소·MCP·키를 한 번에: 1회용 주소 한 줄만 복사하고, Cue가 열면 안내 전체가 나온다(SET1110A01).
+                // 주소·MCP·키를 한 번에: 1회용 주소 한 줄만 복사하고, AI가 열면 안내 전체가 나온다(SET1110A01).
                 Button(language.text("연결 안내 한 번에 복사 (추천)", "Copy everything at once (recommended)")) {
                     Task {
-                        let full = TripRelay.cueSetupText(host: host, key: existing.token, scope: existing.key.scope, expiresAt: existing.key.expiresAt)
+                        let full = TripRelay.keyConnectorSetupText(for: provider, host: host, key: existing.token, scope: existing.key.scope, expiresAt: existing.key.expiresAt)
+                            ?? TripRelay.assistantSetupText(host: host, key: existing.token, scope: existing.key.scope, expiresAt: existing.key.expiresAt)
                         copy(await TripRelay.setupLinkText(for: full) ?? full)
                         isShowingPasteGuide = true
                     }
@@ -269,11 +270,11 @@ struct AssistantProviderView: View {
                 }
             }
         } header: {
-            Text(language.text("Cue에서 직접 등록", "Register in Cue"))
+            Text(language.text("\(name)에서 직접 등록", "Register in \(name)"))
         } footer: {
             Text(language.text(
-                "앱이 Cue에 자동으로 연결해 주지는 않아요. 연결 키는 이 연결에만 쓰는 키이고, 앱의 주 키는 보내지 않아요. 아래 「연결 키 관리」에서 언제든 끊을 수 있어요.",
-                "The app doesn't connect to Cue for you. The key is only for this connection; the app's own key is never sent. You can cut it anytime under connection keys."
+                "앱이 \(name)에 자동으로 연결해 주지는 않아요. 연결 키는 이 연결에만 쓰는 키이고, 앱의 주 키는 보내지 않아요. 아래 「연결 키 관리」에서 언제든 끊을 수 있어요.",
+                "The app doesn't connect to \(name) for you. The key is only for this connection; the app's own key is never sent. You can cut it anytime under connection keys."
             ))
         }
     }
@@ -318,6 +319,14 @@ struct AssistantProviderView: View {
             )
         case .pickle:
             language.text("연결하기를 누르면 연결 안내가 복사되고 피클이 열려요. 피클 채팅창에 붙여 넣어 주세요.", "Connect copies the setup and opens Pickle. Paste it into the Pickle chat.")
+        case .cue:
+            cueSteps
+        // Muse는 채팅에 붙여 넣는 방식이 아니라 커스텀 커넥터(MCP 서버)로 등록한다(MUS1120A01).
+        case .muse:
+            language.text(
+                "1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요.\n2. Muse에서 커스텀 커넥터(MCP 서버)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Muse 화면을 따라 주세요. 주소만 받는 화면이면 「연결 안내 한 번에 복사」 안내에 든 키 포함 주소를 써요.\n5. 저장한 뒤 Muse에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.",
+                "1. Pick access and period above, then tap Make a Muse key.\n2. In Muse, open the screen for adding a custom connector (MCP server).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Muse's screen. If it only takes a URL, use the key URL in the setup from Copy everything at once.\n5. Save, then ask Muse something like \"read today's records\" to check."
+            )
         default:
             language.text("연결하기를 누르면 연결 안내가 복사돼요. 웹 요청을 할 수 있는 AI에 붙여 넣어 주세요.", "Connect copies the setup. Paste it into any AI that can make web requests.")
         }
@@ -502,8 +511,8 @@ struct AssistantProviderView: View {
     private func afterPIN(_ pin: String) async -> String? {
         // 다시 만들면 예전 키는 끊는다. 앱은 AI마다 마지막 키만 기억해 남은 키를 화면에서 다룰 수 없다(REV1117A02).
         let old = existing?.key
-        let made = provider == .cue
-            ? await store.create(for: provider, pin: pin, language: language, scope: cueAllowsEdits ? .write : .read, period: cuePeriod)
+        let made = provider.usesKeyConnector
+            ? await store.create(for: provider, pin: pin, language: language, scope: connectorAllowsEdits ? .write : .read, period: connectorPeriod)
             : await store.create(for: provider, pin: pin, language: language)
         switch made {
         case let .failure(text): return text
@@ -514,11 +523,12 @@ struct AssistantProviderView: View {
                 _ = await TripRelay.revokeScopedKey(old.id)
                 await store.reload()
             }
-            if provider == .cue {
+            if let full = TripRelay.keyConnectorSetupText(for: provider, host: host, key: token, scope: key.scope, expiresAt: key.expiresAt) {
                 // 주소와 키는 화면에서 따로 복사한다.
-                let full = TripRelay.cueSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)
                 copy(await TripRelay.setupLinkText(for: full) ?? full)
-                message = language.text("연결 안내를 복사했어요. Cue 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.", "Setup copied. Paste it into the Cue chat, or enter the MCP URL and key separately.")
+                message = provider == .muse
+                    ? language.text("연결 안내를 복사했어요. Muse의 커스텀 커넥터에 MCP 주소와 연결 키를 넣어 주세요.", "Setup copied. Add the MCP URL and connection key as a custom connector in Muse.")
+                    : language.text("연결 안내를 복사했어요. \(name) 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.", "Setup copied. Paste it into the \(name) chat, or enter the MCP URL and key separately.")
                 pendingPasteGuide = true
                 return nil
             }
@@ -652,6 +662,8 @@ enum AssistantPasteGuide {
                 "연결 키를 복사했어요. GPT 구성 → 작업 → 인증에서 API 키·Bearer를 고르고 붙여 넣어 주세요. 스키마 주소는 이 화면에서 따로 복사해요. 클립보드는 10분 뒤 지워져요.",
                 "Key copied. In the GPT's Configure → Actions → Authentication, choose API key and Bearer, then paste it. Copy the schema URL from this screen. The clipboard is cleared in 10 minutes."
             )
+        case .muse:
+            place = language.text("Muse 설정에서 커스텀 커넥터(MCP 서버)를 추가하고, 이 화면의 MCP 주소와 연결 키를 넣어 주세요. 복사한 안내 주소를 열면 같은 내용을 다시 볼 수 있어요.", "In Muse settings, add a custom connector (MCP server) and enter the MCP URL and connection key from this screen. Open the copied link to see the same instructions.")
         case .cue:
             place = language.text("Cue 채팅창에 붙여 넣고 보내 주세요. Cue가 주소를 열어 MCP 주소와 키를 받아 가요. 안 되면 아래에서 MCP 주소와 키를 따로 넣어 주세요.", "Paste it into the Cue chat and send. Cue opens the link to get the MCP URL and key. If that fails, enter them separately below.")
         default:

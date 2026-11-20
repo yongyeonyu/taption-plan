@@ -352,7 +352,7 @@ final class AssistantPhase3Tests: XCTestCase {
         }
         for app in TripImportAIApp.allCases { XCTAssertEqual(app.fallbackURL, app.provider.appStoreURL) }
         XCTAssertEqual(AssistantAIProvider.pickle.planBadge(.korean), "무료")
-        XCTAssertEqual(AssistantAIProvider.featured, [.pickle, .chatGPT, .claude, .gemini, .cue])
+        XCTAssertEqual(AssistantAIProvider.featured, [.pickle, .chatGPT, .claude, .gemini, .cue, .muse])
     }
 
     func testOAuthCodeParsingCapsAtTenMinutes() {
@@ -875,6 +875,32 @@ final class AssistantPhase3Tests: XCTestCase {
         let token = String(repeating: "a", count: 39) + "WXYZ"
         XCTAssertEqual(AssistantCueText.masked(token), "aaaa…WXYZ", "only the ends are shown")
         XCTAssertTrue(AssistantKeyText.revokeWarning("Cue", language: .korean).contains("아직 앱에 반영되지 않은 명령도 함께 지워져요"))
+    }
+
+    /// MUS1120A01: Muse(Meta)는 Cue와 같은 연결 키 + MCP 직접 등록 방식, 피클과는 다른 제공자.
+    func testMuseIsAKeyConnectorProviderWithVerifiedStoreIDOnly() {
+        XCTAssertEqual(AssistantAIProvider.muse.title(.korean), "Muse")
+        XCTAssertEqual(AssistantAIProvider.muse.title(.english), "Muse")
+        XCTAssertEqual(AssistantAIProvider.muse.appStoreURL?.absoluteString, "https://apps.apple.com/app/id6760173601", "Muse from Meta")
+        XCTAssertNil(AssistantAIProvider.muse.scheme, "no unverified URL scheme")
+        XCTAssertNil(AssistantAIProvider.muse.appURL)
+        XCTAssertFalse(AssistantAIProvider.muse.usesOAuth)
+        XCTAssertTrue(AssistantAIProvider.muse.usesKeyConnector)
+        XCTAssertTrue(AssistantAIProvider.cue.usesKeyConnector)
+        XCTAssertFalse(AssistantAIProvider.pickle.usesKeyConnector)
+        XCTAssertEqual(AssistantAIProvider.muse.planBadge(.korean), "무료")
+        XCTAssertEqual(AssistantAIProvider.muse.planBadge(.english), "Free")
+        XCTAssertTrue(AssistantAIProvider.muse.isFreePlan)
+        XCTAssertTrue(AssistantAIProvider.muse.matchesClient("Muse from Meta"))
+        XCTAssertFalse(AssistantAIProvider.muse.matchesClient("Pickle"))
+        XCTAssertFalse(AssistantAIProvider.pickle.matchesClient("Muse"))
+        XCTAssertNil(AITaskRequest.chatURL(.muse), "no unverified web chat URL")
+        let setup = TripRelay.museSetupText(host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil)
+        XCTAssertTrue(setup.hasPrefix("BOKKI Plan connection for Muse."))
+        XCTAssertTrue(setup.contains("https://trip.bokkiyaw.com/mcp and the request header Authorization: Bearer K"))
+        XCTAssertTrue(setup.contains("https://trip.bokkiyaw.com/mcp/K"))
+        XCTAssertEqual(TripRelay.keyConnectorSetupText(for: .muse, host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil), setup)
+        XCTAssertNil(TripRelay.keyConnectorSetupText(for: .pickle, host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil))
     }
 
     func testAIEditMarkShowsOnlyWhileTheTextIsTheAIText() {

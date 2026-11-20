@@ -119,6 +119,20 @@ enum AssistantGuidePlan {
                       button: language.text("연결 키 복사", "Copy key"), action: token.map(AssistantGuideStep.Action.copy)),
                 check,
             ]
+        // Muse는 채팅에 붙여 넣지 않고 커스텀 커넥터(MCP 서버)로 등록한다(MUS1120A01). 앱 스킴이 없어 「열기」는 App Store 화면이다.
+        case .muse:
+            return [
+                .init(id: "key", title: language.text("연결 키 만들기", "Make a key"),
+                      detail: language.text("아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요.", "Pick access and period below, then enter your app password to make a key just for Muse."),
+                      button: language.text("키 만들기", "Make key"), action: .makeKey),
+                .init(id: "mcp", title: language.text("MCP 주소 복사", "Copy the MCP URL"),
+                      detail: language.text("Muse에서 커스텀 커넥터(MCP 서버)를 추가하는 화면의 서버 주소 칸에 붙여 넣어요.", "Paste it into the server URL field when adding a custom connector (MCP server) in Muse."),
+                      button: language.text("MCP 주소 복사", "Copy MCP URL"), action: .copy(TripRelay.mcpURL(host: host))),
+                .init(id: "auth", title: language.text("인증에 키 넣기", "Add the key"),
+                      detail: language.text("인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣고 저장해요. 칸 이름은 Muse 화면을 따라 주세요.", "In the auth field (request header), enter Authorization: Bearer followed by the key, then save. Field names follow Muse's screen."),
+                      button: language.text("연결 키 복사", "Copy key"), action: token.map(AssistantGuideStep.Action.copy)),
+                check,
+            ]
         default:
             let appStep: [AssistantGuideStep] = provider.destination(installed: provider.isInstalled).map { url in
                 [.init(id: "open", title: language.text("\(provider.title(language)) 열기", "Open \(provider.title(language))"),

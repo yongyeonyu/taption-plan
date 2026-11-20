@@ -452,10 +452,13 @@ extension MapHomeView {
         hasUserAdjustedMap = true
         // 집 버튼도 배율 80으로 맞춘다. 자동 줌이 곧바로 덮어쓰지 않도록 잠시 멈춘다.
         liveZoomGovernor.pauseForUserAdjustment(uptime: ProcessInfo.processInfo.systemUptime)
+        let distance = MapHomeCameraZoomMath.distance(forScale: 80)
+        let coordinate = CLLocationCoordinate2D(latitude: home.latitude, longitude: home.longitude)
+        // 사이드바가 열려 있으면 집이 가려지지 않은 지도의 가운데(사이드바 왼쪽)에 오게 한다(CTR1120A01).
         setMapPosition(.camera(
             MapCamera(
-                centerCoordinate: CLLocationCoordinate2D(latitude: home.latitude, longitude: home.longitude),
-                distance: MapHomeCameraZoomMath.distance(forScale: 80),
+                centerCoordinate: visibleAreaCenter(placing: coordinate, distance: distance, heading: 0),
+                distance: distance,
                 heading: 0,
                 pitch: 0
             )
@@ -535,22 +538,25 @@ extension MapHomeView {
         }
     }
 
+    /// `coordinate`가 하루요약 시트·시간 사이드바(날씨 칸 포함)에 가리지 않고 남은 지도의 가운데에 오게 하는 카메라 중심(CTR1111A01).
+    /// 사이드바가 오른쪽을 덮으면 그 폭의 절반만큼 왼쪽에 놓인다. 현재 위치·집 버튼이 함께 쓴다(CTR1120A01).
+    func visibleAreaCenter(placing coordinate: CLLocationCoordinate2D, distance: CLLocationDistance, heading: CLLocationDirection) -> CLLocationCoordinate2D {
+        guard let camera = visibleMapCamera, camera.distance > 0, mapViewportSize.height > 0 else { return coordinate }
+        let target = currentLocationTargetPoint
+        return MapHomeDaySummaryLayout.cameraCenter(
+            placing: coordinate,
+            at: CGPoint(x: target.x - mapViewportSize.width / 2, y: target.y - mapViewportSize.height / 2),
+            heading: heading,
+            latitudeDegreesPerPoint: visibleMapSpan.latitudeDelta * distance / camera.distance / Double(mapViewportSize.height)
+        )
+    }
+
     /// 현재 위치 버튼: 배율은 80으로 고정한다(현재 배율에서 80으로 옮긴다). 방향과 기울기는 그대로 둔다.
     func focusCurrentLocationAtFixedScale() {
         let camera = visibleMapCamera
         let coordinate = currentCoordinate ?? visibleMapCenter
         let distance = MapHomeCameraZoomMath.distance(forScale: 80)
-        // 하루요약 시트·시간 사이드바에 가리지 않고 남은 지도의 가운데에 오게 중심을 옮긴다(CTR1111A01).
-        var center = coordinate
-        if let camera, camera.distance > 0, mapViewportSize.height > 0 {
-            let target = currentLocationTargetPoint
-            center = MapHomeDaySummaryLayout.cameraCenter(
-                placing: coordinate,
-                at: CGPoint(x: target.x - mapViewportSize.width / 2, y: target.y - mapViewportSize.height / 2),
-                heading: camera.heading,
-                latitudeDegreesPerPoint: visibleMapSpan.latitudeDelta * distance / camera.distance / Double(mapViewportSize.height)
-            )
-        }
+        let center = visibleAreaCenter(placing: coordinate, distance: distance, heading: camera?.heading ?? 0)
         setMapPosition(.camera(MapCamera(
             centerCoordinate: center,
             distance: distance,
