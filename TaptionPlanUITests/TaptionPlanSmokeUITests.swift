@@ -1178,7 +1178,16 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         let mealHeader = try XCTUnwrap(app.staticTexts.matching(NSPredicate(format: "label == %@", "식사")).allElementsBoundByIndex
             .first { $0.frame.minY > frame.maxY && $0.frame.maxY < playheadFrame.minY }, "계획표에 식사 열 머리말이 있다")
         let headerFrame = mealHeader.frame
-        let cellSpot = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: headerFrame.midX, dy: (headerFrame.maxY + playheadFrame.minY) / 2))
+        // 견본 일정은 시각이 고정이고 재생 헤드는 지금 시각을 따라 움직인다. 한가운데를 누르면 시각에 따라 일정 위를 눌러
+        // 「+」 대신 그 일정이 잡힌다(UIT1120A01). 식사 열에서 일정이 없는 자리(위아래 40pt 여유)를 찾아 누른다.
+        let mealBlocks = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "travelPlanBlock-")).allElementsBoundByIndex
+            .map { $0.frame }.filter { $0.minX <= headerFrame.midX && $0.maxX >= headerFrame.midX }
+        let emptyY = stride(from: headerFrame.maxY + 40, through: playheadFrame.minY - 40, by: 10).first { y in
+            !mealBlocks.contains { $0.minY - 40 < y && $0.maxY + 40 > y }
+        }
+        try XCTSkipUnless(emptyY != nil, "지금 시각에는 재생 헤드 위 식사 열에 빈자리가 없다")
+        let cellY = CGFloat(emptyY ?? 0)
+        let cellSpot = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: headerFrame.midX, dy: cellY))
         cellSpot.tap()
         let plus = app.buttons["일정 넣기"]
         XCTAssertTrue(plus.waitForExistence(timeout: 3), "빈 셀을 누르면 선택 칸과 +가 뜬다")
