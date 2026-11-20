@@ -117,7 +117,7 @@ struct AssistantBubbleText: Equatable, Sendable {
 
 /// 말풍선 하나. 그날 그 시각 사이에 활동 이름 대신 보인다.
 /// BUB1110A02: routine은 기록으로 남아 재생·사이드바 핸들로 그 시각을 보면 다시 보인다.
-/// event는 그날 하루 맨 앞에 보이고, 날이 지나면 기기에서 지운다.
+/// event는 앱을 켤 때 한 번 맨 앞에 보이고(BUB1120A01, `AssistantBubbleLaunchReveal`) 시간대 말풍선으로 넘어가며, 날이 지나면 기기에서 지운다.
 struct AssistantBubble: Codable, Equatable, Identifiable, Sendable {
     typealias Kind = AssistantBubbleKind
 
@@ -205,9 +205,37 @@ enum AssistantBubbleStore {
     /// 그 시각에 보일 말풍선(BUB1110A02). 1순위 그날의 event(시간대가 있으면 그 안), 2순위 그 시각의 routine.
     /// 겹치면 늦게 시작한 것. 3순위(대분류 기본 문구)는 `MapHomeDefaultBubblePool`이 맡는다.
     static func active(at now: Date, in bubbles: [AssistantBubble]) -> AssistantBubble? {
-        let shown = bubbles.filter { !$0.hidden && $0.start <= now && now < $0.end && $0.parsed != nil }
+        let shown = valid(at: now, in: bubbles)
         return shown.filter { $0.kind == .event }.max { $0.start < $1.start }
             ?? shown.filter { $0.kind == .routine }.max { $0.start < $1.start }
+    }
+}
+
+extension AssistantBubbleStore {
+    /// 그 시각에 창 안에 있고 숨기지 않았으며 글이 읽히는 것.
+    nonisolated static func valid(at now: Date, in bubbles: [AssistantBubble]) -> [AssistantBubble] {
+        bubbles.filter { !$0.hidden && $0.start <= now && now < $0.end && $0.parsed != nil }
+    }
+}
+
+/// 오늘의 event 하나를 켤 때 한 번 보여 주고 시간대 말풍선으로 넘기는 규칙(BUB1120A01). 시계·싱글턴 없이 시험한다.
+enum AssistantBubbleLaunchReveal {
+    /// event를 먼저 보여 주는 시간(초). 다른 곳에 10을 흩어 쓰지 않는다.
+    static let seconds: TimeInterval = 10
+    struct Session: Equatable { var bubbleID: UUID; var until: Date }
+
+    /// 켤 때 연출할 event. 지금 창 안의 것 중 늦게 시작한 하나(`excluding`은 이미 보여 준 것). 없으면 nil.
+    static func start(at now: Date, in bubbles: [AssistantBubble], excluding: Set<UUID> = [], seconds: TimeInterval = seconds) -> Session? {
+        guard let event = AssistantBubbleStore.valid(at: now, in: bubbles)
+            .filter({ $0.kind == .event && !excluding.contains($0.id) }).max(by: { $0.start < $1.start }) else { return nil }
+        return Session(bubbleID: event.id, until: now.addingTimeInterval(seconds))
+    }
+
+    /// 지금 보일 말풍선. 연출 중이면 그 event, 아니면 event를 뺀 시간대 말풍선(routine).
+    static func shown(at now: Date, in bubbles: [AssistantBubble], session: Session?) -> AssistantBubble? {
+        let valid = AssistantBubbleStore.valid(at: now, in: bubbles)
+        if let session, now < session.until, let event = valid.first(where: { $0.id == session.bubbleID && $0.kind == .event }) { return event }
+        return valid.filter { $0.kind == .routine }.max { $0.start < $1.start }
     }
 }
 
@@ -226,10 +254,78 @@ final class AssistantBubbleBoard {
     @ObservationIgnored private(set) var viewedTime: Date?
     @ObservationIgnored private var triedArchive = false
 
+    // 켤 때 연출(BUB1120A01). 세션 상태는 이 보드에만 있고 저장하지 않는다(다음 실행은 새 세션).
+    @ObservationIgnored private var reveal: AssistantBubbleLaunchReveal.Session?
+    @ObservationIgnored private var revealed: Set<UUID> = []
+    @ObservationIgnored private var revealPending = false
+    @ObservationIgnored private var revealArmed = false
+    @ObservationIgnored private var coldRequested = false
+    @ObservationIgnored private var sawBackground = false
+    @ObservationIgnored private var revealTask: Task<Void, Never>?
+
+    /// 앱이 처음 전면에 올랐다. 한 실행에 한 번만 받는다(지도 화면이 다시 만들어져도 새 시작이 아니다).
+    func noteColdLaunch() {
+        guard !coldRequested else { return }
+        coldRequested = true
+        requestReveal()
+    }
+
+    /// 장면 단계가 바뀌었다. 백그라운드를 다녀온 전면 복귀만 새 시작이고, 알림 센터 같은 `.inactive`는 아니다.
+    func noteScene(background: Bool, active: Bool) {
+        if background { sawBackground = true }
+        if active, sawBackground { sawBackground = false; requestReveal() }
+    }
+
+    private func requestReveal() {
+        revealPending = true
+        revealArmed = false
+        reveal = nil
+        revealTask?.cancel()
+    }
+
+    /// 지도가 실제로 보이는 때(잠금·덮개 없음)에 시작한다. 이미 시작했거나 과거 시각을 보는 중이면 하지 않는다.
+    func startPendingReveal(covered: Bool, now: Date = .now) {
+        guard revealPending, !covered, viewedTime == nil else { return }
+        revealPending = false
+        revealArmed = true
+        revealed = []
+        refresh(now: now)
+    }
+
+    /// 연출 중이면 곧바로 시간대 말풍선으로 넘기고 true(말풍선 누름).
+    @discardableResult
+    func endLaunchReveal(now: Date = .now) -> Bool {
+        guard reveal != nil else { return false }
+        reveal = nil
+        revealTask?.cancel()
+        refresh(now: now)
+        return true
+    }
+
+    private func beginReveal(_ session: AssistantBubbleLaunchReveal.Session, now: Date) {
+        reveal = session
+        revealed.insert(session.bubbleID)
+        revealTask?.cancel()
+        let wait = max(session.until.timeIntervalSince(now), 0)
+        revealTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(wait))
+            if !Task.isCancelled { self?.refresh() }
+        }
+    }
+
     func refresh(now: Date = .now) {
         let list = bubbles ?? AssistantBubbleStore.load(from: file)
         bubbles = list
-        let next = AssistantBubbleStore.active(at: viewedTime ?? now, in: list)
+        let next: AssistantBubble?
+        if let viewedTime {
+            next = AssistantBubbleStore.active(at: viewedTime, in: list)
+        } else {
+            if let session = reveal, now >= session.until { reveal = nil }
+            // 켠 뒤에 창이 열린 새 event(항공편 등)도 한 번 먼저 보여 준다. 같은 event는 이 실행에서 다시 오지 않는다.
+            if reveal == nil, revealArmed,
+               let session = AssistantBubbleLaunchReveal.start(at: now, in: list, excluding: revealed) { beginReveal(session, now: now) }
+            next = AssistantBubbleLaunchReveal.shown(at: now, in: list, session: reveal)
+        }
         if next != active { active = next }
         // 새 기기·백업 복원처럼 파일이 비었으면 앱 DB에서 한 번 되살린다.
         if list.isEmpty, !triedArchive, file == AssistantBubbleStore.url {
@@ -246,6 +342,7 @@ final class AssistantBubbleBoard {
         let minute = time.map { floor($0.timeIntervalSinceReferenceDate / 60) }
         guard minute != viewedTime.map({ floor($0.timeIntervalSinceReferenceDate / 60) }) else { return }
         viewedTime = time
+        if time != nil { reveal = nil; revealTask?.cancel() } // 과거 시각을 보면 연출은 취소
         refresh()
     }
 

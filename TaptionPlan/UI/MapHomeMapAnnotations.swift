@@ -545,6 +545,8 @@ final class MapHomeCatBubbleState {
     func toggleIfTapped(viewportPoint: CGPoint) -> Bool {
         let point = CGPoint(x: viewportPoint.x + viewportOrigin.x, y: viewportPoint.y + viewportOrigin.y)
         guard let frame, frame.insetBy(dx: -8, dy: -8).contains(point) else { return false }
+        // 켤 때 연출 중이면 이 탭은 접기가 아니라 연출 종료(BUB1120A01).
+        if AssistantBubbleBoard.current.endLaunchReveal() { return true }
         isCollapsed.toggle()
         return true
     }

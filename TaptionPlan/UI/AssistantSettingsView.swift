@@ -148,22 +148,29 @@ private struct AssistantActivityObserver: View {
                 await AssistantActivitySync.run(model: model)
             }
             .onChange(of: scenePhase) { _, phase in
+                AssistantBubbleBoard.current.noteScene(background: phase == .background, active: phase == .active)
+                AssistantBubbleBoard.current.startPendingReveal(covered: model.isAppLocked)
                 switch phase {
                 case .active: Task { await AssistantActivitySync.run(model: model) }
                 case .background: AssistantActivitySync.runInBackground(model: model)
                 default: break
                 }
             }
+            .onChange(of: model.isAppLocked) { _, locked in
+                AssistantBubbleBoard.current.startPendingReveal(covered: locked)
+            }
             .task {
                 // 말풍선 파일은 한 번만 읽고, 시간 창은 30초마다 메모리에서만 본다. 바뀔 때만 다시 그려진다(BUB1110A01).
                 // 앱을 켤 때와 날이 바뀔 때 지난 날의 event 말풍선을 지운다(BUB1110A02).
                 var cleanedDay: Date?
+                AssistantBubbleBoard.current.noteColdLaunch()
                 while !Task.isCancelled {
                     let today = Calendar.autoupdatingCurrent.startOfDay(for: .now)
                     if cleanedDay != today {
                         AssistantBubbleStore.cleanExpired()
                         cleanedDay = today
                     }
+                    AssistantBubbleBoard.current.startPendingReveal(covered: model.isAppLocked)
                     AssistantBubbleBoard.current.refresh()
                     try? await Task.sleep(for: .seconds(30))
                 }

@@ -668,6 +668,93 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertEqual(AssistantBubbleStore.load(from: file).map(\.id), [routine.id])
     }
 
+    // BUB1120A01: 일정(event) 말풍선은 켤 때 한 번 먼저, 그다음 시간대 말풍선.
+    private func revealSample() -> (event: AssistantBubble, routine: AssistantBubble) {
+        (AssistantBubble(start: at(0), end: at(0, day: 11), text: "여권 챙기세요", kind: .event),
+         AssistantBubble(start: at(9), end: at(10), text: "출근길 조심"))
+    }
+
+    func testLaunchRevealShowsTodaysEventFirst() throws {
+        let (event, routine) = revealSample()
+        let session = try XCTUnwrap(AssistantBubbleLaunchReveal.start(at: at(9, 30), in: [routine, event]))
+        XCTAssertEqual(session.bubbleID, event.id)
+        XCTAssertEqual(AssistantBubbleLaunchReveal.shown(at: at(9, 30), in: [routine, event], session: session)?.id, event.id)
+    }
+
+    func testLaunchRevealMovesToRoutineAfterTenSeconds() throws {
+        let (event, routine) = revealSample()
+        let start = at(9, 30)
+        let session = try XCTUnwrap(AssistantBubbleLaunchReveal.start(at: start, in: [routine, event]))
+        let before = start.addingTimeInterval(AssistantBubbleLaunchReveal.seconds - 1)
+        let after = start.addingTimeInterval(AssistantBubbleLaunchReveal.seconds)
+        XCTAssertEqual(AssistantBubbleLaunchReveal.shown(at: before, in: [routine, event], session: session)?.id, event.id)
+        XCTAssertEqual(AssistantBubbleLaunchReveal.shown(at: after, in: [routine, event], session: session)?.id, routine.id)
+    }
+
+    @MainActor
+    func testLaunchRevealDoesNotRepeatWithinOneRun() throws {
+        let (event, routine) = revealSample()
+        let board = AssistantBubbleBoard()
+        board.replace([event, routine], file: AssistantBubbleStore.url, now: at(9, 30))
+        board.noteColdLaunch()
+        board.startPendingReveal(covered: false, now: at(9, 30))
+        XCTAssertEqual(board.active?.id, event.id)
+        board.refresh(now: at(9, 30).addingTimeInterval(AssistantBubbleLaunchReveal.seconds + 1))   // 연출 시간이 지남
+        board.refresh(now: at(9, 31))
+        XCTAssertEqual(board.active?.id, routine.id)
+        // 30초 갱신·저장·다시 읽기 어느 쪽으로도 event가 돌아오지 않는다.
+        board.refresh(now: at(9, 32))
+        board.replace([event, routine], file: AssistantBubbleStore.url, now: at(9, 33))
+        XCTAssertEqual(board.active?.id, routine.id)
+        // 백그라운드를 다녀오면 새 시작.
+        board.noteScene(background: true, active: false)
+        board.noteScene(background: false, active: true)
+        board.startPendingReveal(covered: false, now: at(9, 40))
+        XCTAssertEqual(board.active?.id, event.id)
+        // 누르면 곧바로 넘어간다.
+        XCTAssertTrue(board.endLaunchReveal(now: at(9, 40)))
+        XCTAssertEqual(board.active?.id, routine.id)
+        XCTAssertFalse(board.endLaunchReveal(now: at(9, 40)))
+    }
+
+    @MainActor
+    func testLaunchRevealWaitsWhileCoveredAndSkipsReplayTimes() throws {
+        let (event, routine) = revealSample()
+        let board = AssistantBubbleBoard()
+        board.replace([event, routine], file: AssistantBubbleStore.url, now: at(9, 30))
+        board.noteColdLaunch()
+        board.startPendingReveal(covered: true, now: at(9, 30))   // 잠금이 덮고 있으면 시작하지 않는다
+        XCTAssertEqual(board.active?.id, routine.id)
+        board.startPendingReveal(covered: false, now: at(9, 31))
+        XCTAssertEqual(board.active?.id, event.id)
+        board.show(at: at(9, 15))   // 과거 시각을 보면 연출은 취소되고 그 시각의 규칙(event 먼저)을 그대로 쓴다
+        XCTAssertEqual(board.active?.id, event.id)
+        board.show(at: nil)   // 지금(실제 시계)으로 돌아오면 새 시작 전까지 event를 다시 앞세우지 않는다
+        XCTAssertNotEqual(board.active?.id, event.id)
+    }
+
+    func testLaunchRevealWithoutEventKeepsCurrentOrder() {
+        let (_, routine) = revealSample()
+        XCTAssertNil(AssistantBubbleLaunchReveal.start(at: at(9, 30), in: [routine]))
+        XCTAssertEqual(AssistantBubbleLaunchReveal.shown(at: at(9, 30), in: [routine], session: nil)?.id, routine.id)
+        XCTAssertNil(AssistantBubbleLaunchReveal.shown(at: at(12), in: [routine], session: nil))
+    }
+
+    func testLaunchRevealPicksOneOfSeveralEvents() throws {
+        let early = AssistantBubble(start: at(0), end: at(0, day: 11), text: "아침", kind: .event)
+        let late = AssistantBubble(start: at(8), end: at(0, day: 11), text: "저녁 일정", kind: .event)
+        XCTAssertEqual(AssistantBubbleLaunchReveal.start(at: at(9), in: [early, late])?.bubbleID, late.id)
+    }
+
+    func testLaunchRevealEndsWhenEventBecomesInvalid() throws {
+        var (event, routine) = revealSample()
+        let session = try XCTUnwrap(AssistantBubbleLaunchReveal.start(at: at(9, 30), in: [routine, event]))
+        event.hidden = true
+        XCTAssertEqual(AssistantBubbleLaunchReveal.shown(at: at(9, 30), in: [routine, event], session: session)?.id, routine.id)
+        event.hidden = false
+        XCTAssertEqual(AssistantBubbleLaunchReveal.shown(at: at(0, 1, day: 11), in: [routine, event], session: session)?.id, nil, "window over")
+    }
+
     func testOldBubbleFilesStillDecodeAsRoutine() throws {
         let old = #"[{"id":"7E2C3F0A-7E1D-4F2A-9C77-1B9F0F0E0A11","start":0,"end":3600,"text":"예전","hidden":false}]"#
         let bubbles = try JSONDecoder().decode([AssistantBubble].self, from: Data(old.utf8))
