@@ -124,6 +124,29 @@ struct RenderTests {
         }
     }
 
+    @Test func snowflakeTrackReproducesTheDrawnMotion() {
+        // Core Animation에 옮기는 값(track)과 그리는 값(make)이 같은 식이다(LAG1120A01).
+        let config = christmas.manifest.slots!.effects!.snow!
+        for i in 0..<config.count {
+            let k = SeasonPackSnowflake.track(index: i, config: config, height: 800)
+            for t in [0.0, 7.3, 91.0] {
+                let f = SeasonPackSnowflake.make(index: i, count: config.count, config: config, at: t, height: 800)
+                let fall = (k.fallPhase + t * k.speed).truncatingRemainder(dividingBy: k.travel)
+                #expect(abs(f.y - (fall - k.size * 2) / 800) < 1e-9)
+                #expect(abs(f.x - (k.baseX + sin(t * k.swayOmega + k.swayPhase) * k.swayAmp / 400)) < 1e-9)
+                #expect(abs(f.rotation - (k.spin0 + t * k.spinRate)) < 1e-9)
+            }
+        }
+    }
+
+    @Test func snowSpritesAreSharedBySizeBucket() throws {
+        let config = christmas.manifest.slots!.effects!.snow!
+        let a = try #require(SeasonPackSnowSprites.sprite(index: 0, config: config))
+        let again = try #require(SeasonPackSnowSprites.sprite(index: 0, config: config))
+        #expect(a.image === again.image) // 만들어 둔 그림을 다시 쓴다
+        #expect(a.side >= 6)
+    }
+
     @Test func yearTextSlotDrawsTheRuntimeYearAndRollsWhenTheYearChanges() {
         let slot = christmas.manifest.textSlots!.first { $0.id == "year" }!
         #expect(SeasonPackTextSlots.text(for: slot, year: 2026, memoLine: nil) == "2026")

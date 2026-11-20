@@ -109,7 +109,7 @@ public final class SeasonPackCenter {
             downloader: downloader,
             onStatus: report
         )
-#if DEBUG
+#if DEBUG || BENCH
         let arguments = ProcessInfo.processInfo.arguments
         if let index = arguments.firstIndex(of: "-seasonPackPreview"), arguments.indices.contains(index + 1) { previewID = arguments[index + 1] }
         if let date = SeasonPackClock.debugDateFromLaunchArguments() { clock.setDebugDate({ date }) }
@@ -151,7 +151,7 @@ public final class SeasonPackCenter {
         if let date {
             chosen = windows.activePack(in: packs.map(\.manifest), at: date).flatMap { manifest in packs.first { $0.id == manifest.id && $0.version == manifest.version } }
         }
-#if DEBUG
+#if DEBUG || BENCH
         if let previewID, let pack = packs.first(where: { $0.id == previewID }), let host {
             if previewBase == nil { previewBase = (host.now(), previewDate(for: pack, fallback: date ?? host.now())) }
             if let base = previewBase { date = base.event.addingTimeInterval(host.now().timeIntervalSince(base.device)) }
@@ -197,7 +197,7 @@ public final class SeasonPackCenter {
         }
     }
 
-#if DEBUG
+#if DEBUG || BENCH
     private func previewDate(for pack: SeasonPack, fallback: Date) -> Date {
         let year = calendar.component(.year, from: fallback)
         for window in pack.manifest.event.windows {

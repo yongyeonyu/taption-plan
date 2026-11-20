@@ -9,12 +9,23 @@ public struct SeasonPackOverlay: View {
 
     public init(center: SeasonPackCenter = .shared, homeOrigin: CGPoint? = nil) { self.center = center; self.homeOrigin = homeOrigin }
 
+    /// 측정 전용(LAG1120A01): `-seasonHide snow,actors,icons`로 조각을 빼고 대기 CPU를 비교한다. BENCH·DEBUG 판에만 있다.
+    private static func hides(_ part: String) -> Bool {
+#if DEBUG || BENCH
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-seasonHide"), arguments.indices.contains(index + 1) else { return false }
+        return arguments[index + 1].split(separator: ",").contains { $0 == part }
+#else
+        return false
+#endif
+    }
+
     public var body: some View {
         ZStack {
             if center.active != nil {
-                if let snow = center.activeSnow { SeasonPackSnowLayer(config: snow, motion: center.motion) }
-                SeasonPackActorLayer(center: center)
-                SeasonPackIconLayer(center: center, origin: homeOrigin)
+                if let snow = center.activeSnow, !Self.hides("snow") { SeasonPackSnowLayer(config: snow, motion: center.motion) }
+                if !Self.hides("actors") { SeasonPackActorLayer(center: center) }
+                if !Self.hides("icons") { SeasonPackIconLayer(center: center, origin: homeOrigin) }
                 if let cue = center.stage.lyricText {
                     GeometryReader { proxy in
                         SeasonPackKaraokeBubble(text: cue)

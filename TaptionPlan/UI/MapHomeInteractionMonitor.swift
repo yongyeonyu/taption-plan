@@ -1,6 +1,7 @@
 import Foundation
 import MachO
 import QuartzCore
+import SeasonPackKit
 import UIKit
 
 /// 손짓별 끊김 계측(대표 지시 "터치·팝업·드래그 최적화", ARC1030A07).
@@ -293,6 +294,8 @@ enum MapHomePerfBench {
         // `-benchLaunchOnly`: 콜드 실행만 잰다(PRF1117A01). 늦게 닫히는 시작 게이트까지 받으려고 잠깐 기다린다.
         if ProcessInfo.processInfo.arguments.contains("-benchLaunchOnly") {
             try? await Task.sleep(for: .seconds(3))
+            // 시즌 팩이 켜져 있었는지(LAG1120A01). 팩은 시작 뒤에 읽히므로 3초 뒤에 본다. 켬/끔 비교가 맞는지 확인하는 숫자만 남긴다.
+            emit("season", ["active": SeasonPackCenter.shared.active == nil ? 0 : 1, "version": Double(SeasonPackCenter.shared.active?.version ?? 0)])
             print("PRFBENCH done")
             return
         }

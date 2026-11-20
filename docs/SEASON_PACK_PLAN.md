@@ -95,6 +95,13 @@ packs/season/<packId>/<version>/<파일…>
 
 **음원(대표 확인 필요)**: 지시서 후보(Freesound CC0 녹음)는 내려받을 수 없어(외부 내려받기·로그인) 쓰지 않았습니다. 대신 「Jingle Bells」(James Pierpont 1857, 퍼블릭 도메인 멜로디)를 오르골 음색으로 코드 합성해 AAC 96kbps 모노 m4a(약 350KB, 34초)로 넣었고 가사 큐 시각은 합성한 음표에서 계산합니다. 라이선스 표기는 「Public-domain melody; original synthesis」입니다. Freesound CC0 녹음으로 바꾸려면 파일을 `audio/`에 넣고 `assets`·`audio`·`lyrics` 시각만 바꾸면 되며 앱 코드는 그대로입니다(실제 음원 기준 큐 시각 ±150ms 눈 확인 필요).
 
+## 시작 경로 규칙 (LAG1120A01)
+
+- 팩이 켜져 있어도 앱 시작(콜드 실행)과 대기 CPU는 팩이 없을 때와 같아야 한다. 새 효과를 넣으면 같은 판에서 `-seasonPackDate`(끔)와 번갈아 대기 CPU를 재고, 켬−끔이 눈에 띄면 그 효과를 뺀 판(`-seasonHide`)으로 원인을 가른다.
+- 프레임마다 앱이 다시 그리는 효과(Canvas·TimelineView)는 쓰지 않는다. 시각만으로 정해지는 움직임은 Core Animation 반복 애니메이션으로 옮긴다(눈꽃송이가 그 예).
+- 팩 이미지·그림은 크기별로 한 번 만들어 재사용하고, 팩 불러오기·그림 만들기는 시작 경로(첫 화면 전)에 두지 않는다.
+- 측정 전용 인자(`-seasonHide`, `-seasonSnowCount`)는 BENCH·DEBUG 판에만 있다.
+
 ## 9. 배포 순서 (대표 몫 — 이 요청에서 실행하지 않음)
 
 1. R2 버킷이 있어야 합니다(`R2PUB1119A01`: 버킷 생성·배포·업로드는 대표 몫).

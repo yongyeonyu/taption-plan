@@ -72,7 +72,7 @@ public final class SeasonPackClock: Sendable {
     private let deviceNow: @Sendable () -> Date
     private let monotonic: @Sendable () -> TimeInterval
     private let live: Mutex<Live>
-#if DEBUG
+#if DEBUG || BENCH
     private let debugDate = Mutex<(@Sendable () -> Date?)?>(nil)
 #endif
 
@@ -107,7 +107,7 @@ public final class SeasonPackClock: Sendable {
     }
 
     public func reading() -> Reading {
-#if DEBUG
+#if DEBUG || BENCH
         if let override = debugDate.withLock({ $0 })?() { return .verified(override) }
 #endif
         let device = deviceNow()
@@ -141,7 +141,7 @@ public final class SeasonPackClock: Sendable {
     /// 이벤트 판정에 쓸 시각. 의심이면 nil(이벤트를 켜지 않는다).
     public var eventDate: Date? { reading().date }
 
-#if DEBUG
+#if DEBUG || BENCH
     /// DEBUG 빌드 전용: 기준 시각 훅. Release에는 이 코드가 컴파일되지 않는다.
     public func setDebugDate(_ provider: (@Sendable () -> Date?)?) { debugDate.withLock { $0 = provider } }
 
