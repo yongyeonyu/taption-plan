@@ -264,12 +264,14 @@ async function loadPacks() {
       const onServer = live.find((entry) => entry.id === pack.id);
       const blocked = Boolean(onServer && onServer.version >= pack.version);
       const state = !onServer ? "서버에 없음" : blocked ? `서버에 v${onServer.version} 있음 — 기간만 바꾸려면 위에서, 새로 올리려면 manifest.json의 version을 올리세요` : `서버 v${onServer.version} → v${pack.version} (기기는 옛 버전을 지우고 새로 받음)`;
-      const editor = blocked ? null : scheduleEditor(onServer ? onServer.schedule ?? null : [], pack.windows);
+      const editor = blocked ? null : scheduleEditor(onServer ? onServer.schedule ?? null : null, pack.windows);
       return el("li", { class: "stack" },
         el("div", {}, el("strong", { textContent: `${pack.title} (${pack.id}) · v${pack.version}` }),
           el("div", { class: "meta", textContent: [pack.dir, `파일 ${pack.assets}개 ${kb(pack.bytes)}`, state].join(" · ") })),
         editor?.node ?? null,
-        blocked ? null : el("div", { class: "row" }, el("button", { textContent: "묶어서 미리보기", onclick: () => build(pack, editor.value()) })));
+        blocked ? null : el("div", { class: "row" },
+          el("button", { class: "primary", textContent: "배포", onclick: () => deployNow(pack, editor.value()) }),
+          el("button", { textContent: "묶어서 미리보기", onclick: () => build(pack, editor.value()) })));
     }));
   } catch (error) { $("catalogList").replaceChildren(el("li", { class: "bad", textContent: error.message })); }
 }
@@ -283,6 +285,23 @@ async function deploySchedule(entry, schedule) {
     $("packOut").textContent = `${result.dryRun ? "[연습] " : ""}기간을 배포했습니다: ${entry.id}\n${describe(schedule)}`;
     setTimeout(loadPacks, 1500);
   } catch (error) { fail(error); }
+  refreshState();
+}
+
+/** 묶기 → 확인 → 올리기를 한 번에. */
+async function deployNow(pack, schedule) {
+  const ok = await confirmDialog(`${pack.id} v${pack.version}을(를) 묶어서 바로 배포합니다.\n공개 기간: ${describe(schedule)}\n파일을 먼저, 카탈로그를 나중에 올립니다. 앱 사용자 모두에게 보입니다. 계속할까요?`);
+  if (!ok) return;
+  try {
+    $("packOut").hidden = false;
+    $("packOut").textContent = "묶는 중…";
+    const built = await api("POST", "/api/packs/build", { dir: pack.dir, schedule });
+    $("packOut").textContent = `묶었습니다(${built.entry.archive.bytes.toLocaleString()}바이트). 올리는 중…`;
+    const result = await api("POST", "/api/packs/publish", { buildId: built.buildId });
+    $("packOut").textContent = `${result.dryRun ? "[연습] " : ""}배포했습니다: ${result.entry.id} v${result.entry.version}\n이어받기(Range) 확인: ${result.check.skipped ? "생략" : result.check.ok ? "206 통과" : `실패 (${result.check.status})`}`;
+    $("publishPack").hidden = true; lastBuild = null;
+    setTimeout(loadPacks, 1500);
+  } catch (error) { $("packOut").textContent = `배포 실패: ${error.message}`; }
   refreshState();
 }
 
