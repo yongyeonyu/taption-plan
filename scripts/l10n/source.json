@@ -79,7 +79,7 @@
    "ko": " · 왕복 결제",
    "en": " · round trip",
    "files": [
-    "FlightFare.swift:111"
+    "FlightFare.swift:112"
    ],
    "args": [],
    "targets": [
@@ -428,7 +428,7 @@
    "en": "1 year",
    "files": [
     "AssistantKeys.swift:19",
-    "MapHomePlaybackVideoSheet.swift:393"
+    "MapHomePlaybackVideoSheet.swift:408"
    ],
    "args": [],
    "targets": [
@@ -440,7 +440,7 @@
    "ko": "1달",
    "en": "1 month",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:392"
+    "MapHomePlaybackVideoSheet.swift:407"
    ],
    "args": [],
    "targets": [
@@ -489,7 +489,7 @@
    "en": "1 day",
    "files": [
     "AssistantRelay.swift:17",
-    "MapHomePlaybackVideoSheet.swift:390"
+    "MapHomePlaybackVideoSheet.swift:405"
    ],
    "args": [],
    "targets": [
@@ -513,7 +513,7 @@
    "ko": "1주일",
    "en": "1 week",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:391"
+    "MapHomePlaybackVideoSheet.swift:406"
    ],
    "args": [],
    "targets": [
@@ -525,7 +525,7 @@
    "ko": "1초",
    "en": "1 s",
    "files": [
-    "AssistantLiveSync.swift:254"
+    "AssistantLiveSync.swift:282"
    ],
    "args": [],
    "targets": [
@@ -537,7 +537,7 @@
    "ko": "1초는 통화 중 빠른 모드로, 30분 뒤 3초로 돌아와요. 저전력 모드에서는 3초로 확인해요.",
    "en": "1 s is a fast mode for calls and returns to 3 s after 30 minutes. Low Power Mode checks every 3 s.",
    "files": [
-    "AssistantLiveSync.swift:261"
+    "AssistantLiveSync.swift:289"
    ],
    "args": [],
    "targets": [
@@ -694,7 +694,7 @@
    "ko": "3초",
    "en": "3 s",
    "files": [
-    "AssistantLiveSync.swift:253"
+    "AssistantLiveSync.swift:281"
    ],
    "args": [],
    "targets": [
@@ -1166,7 +1166,7 @@
    "ko": "AI 연결을 확인하지 못했어요",
    "en": "Couldn't reach the AI connection",
    "files": [
-    "AssistantLiveSync.swift:156"
+    "AssistantLiveSync.swift:161"
    ],
    "args": [],
    "targets": [
@@ -3202,7 +3202,7 @@
    "ko": "iCloud 동기화 시작",
    "en": "iCloud sync started",
    "files": [
-    "AssistantCommandRunner.swift:418"
+    "AssistantCommandRunner.swift:420"
    ],
    "args": [],
    "targets": [
@@ -5016,7 +5016,7 @@
    "ko": "{0}분 {1}초",
    "en": "{0}m {1}s",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:199"
+    "MapHomePlaybackVideoSheet.swift:201"
    ],
    "args": [
     "seconds / 60",
@@ -5576,7 +5576,7 @@
    "ko": "{0}일, 이동 {1}를 {2} 영상으로 그립니다.",
    "en": "{0} days, {1} in a {2} video.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:288"
+    "MapHomePlaybackVideoSheet.swift:303"
    ],
    "args": [
     "rangePlan.dayCount",
@@ -5693,7 +5693,7 @@
    "en": "{0}s",
    "files": [
     "HealthAndSensorModels.swift:707",
-    "MapHomePlaybackVideoSheet.swift:198",
+    "MapHomePlaybackVideoSheet.swift:200",
     "MapHomeSalaryPolicy.swift:430"
    ],
    "args": [
@@ -18514,7 +18514,7 @@
    "ko": "빈 저장본",
    "en": "Empty snapshot",
    "files": [
-    "AppModel+Backup.swift:561"
+    "AppModel+Backup.swift:563"
    ],
    "args": [],
    "targets": [
@@ -28023,7 +28023,7 @@
    "ko": "전송 중 {0}/{1}",
    "en": "Sending {0}/{1}",
    "files": [
-    "PostHogUploadModel.swift:121"
+    "PostHogUploadModel.swift:136"
    ],
    "args": [
     "done",
@@ -28038,7 +28038,7 @@
    "ko": "전송됨 · {0}",
    "en": "Sent · {0}",
    "files": [
-    "PostHogUploadModel.swift:133"
+    "PostHogUploadModel.swift:148"
    ],
    "args": [
     "rawSummary"
@@ -28052,7 +28052,7 @@
    "ko": "전송됨 · 이벤트 {0} · {1}KB",
    "en": "Sent · {0} events · {1}KB",
    "files": [
-    "PostHogUploadModel.swift:132"
+    "PostHogUploadModel.swift:147"
    ],
    "args": [
     "job.events.count",
@@ -29160,7 +29160,7 @@
    "ko": "일부 데이터를 삭제하지 못했습니다: ",
    "en": "Some data could not be deleted: ",
    "files": [
-    "AppModel+Backup.swift:567"
+    "AppModel+Backup.swift:569"
    ],
    "args": [],
    "targets": [
@@ -34085,7 +34085,7 @@
    "ko": "배치 {0} · 표본 {1} · {2}MB(압축 전)",
    "en": "{0} batches · {1} samples · {2}MB (uncompressed)",
    "files": [
-    "PostHogUploadModel.swift:111"
+    "PostHogUploadModel.swift:126"
    ],
    "args": [
     "raw.batches",
@@ -34101,7 +34101,7 @@
    "ko": "배치 {0} · 표본 {1} · {2}MB(압축 전) · 최근 20,000개만 전송",
    "en": "{0} batches · {1} samples · {2}MB (uncompressed) · latest 20,000 only",
    "files": [
-    "PostHogUploadModel.swift:109"
+    "PostHogUploadModel.swift:124"
    ],
    "args": [
     "raw.batches",
@@ -35576,7 +35576,7 @@
    "ko": "건강 연동 끔",
    "en": "Health sync off",
    "files": [
-    "AssistantCommandRunner.swift:520"
+    "AssistantCommandRunner.swift:522"
    ],
    "args": [],
    "targets": [
@@ -36098,7 +36098,7 @@
    "ko": "결제 문자",
    "en": "payment text",
    "files": [
-    "FlightFare.swift:110"
+    "FlightFare.swift:111"
    ],
    "args": [],
    "targets": [
@@ -36293,7 +36293,7 @@
    "ko": "경로 재생",
    "en": "Route playback",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:95"
+    "MapHomePlaybackVideoSheet.swift:97"
    ],
    "args": [],
    "targets": [
@@ -37450,7 +37450,7 @@
    "ko": "공항 코드·날짜·방향·편명만 서버로 보냅니다. 예약번호·이름은 보내지 않습니다.",
    "en": "Only the airport code, date, direction and flight number are sent. Booking numbers and names are never sent.",
    "files": [
-    "FlightPickerSheet.swift:134"
+    "FlightPickerSheet.swift:142"
    ],
    "args": [],
    "targets": [
@@ -37743,7 +37743,7 @@
    "ko": "구글 캘린더",
    "en": "Google Calendar",
    "files": [
-    "AssistantCommandRunner.swift:449"
+    "AssistantCommandRunner.swift:451"
    ],
    "args": [],
    "targets": [
@@ -37887,7 +37887,7 @@
    "ko": "국내선",
    "en": "Domestic",
    "files": [
-    "FlightPickerSheet.swift:118"
+    "FlightPickerSheet.swift:126"
    ],
    "args": [],
    "targets": [
@@ -38050,7 +38050,7 @@
    "ko": "귀국편",
    "en": "Return",
    "files": [
-    "FlightPickerSheet.swift:122"
+    "FlightPickerSheet.swift:130"
    ],
    "args": [],
    "targets": [
@@ -38544,8 +38544,8 @@
    "ko": "기간",
    "en": "Period",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:401",
-    "MapHomePlaybackVideoSheet.swift:409"
+    "MapHomePlaybackVideoSheet.swift:416",
+    "MapHomePlaybackVideoSheet.swift:424"
    ],
    "args": [],
    "targets": [
@@ -38642,7 +38642,7 @@
    "ko": "기기 캘린더",
    "en": "Device calendars",
    "files": [
-    "AssistantCommandRunner.swift:444"
+    "AssistantCommandRunner.swift:446"
    ],
    "args": [],
    "targets": [
@@ -38771,7 +38771,7 @@
    "ko": "기록 새로고침",
    "en": "Records refreshed",
    "files": [
-    "AssistantCommandRunner.swift:414"
+    "AssistantCommandRunner.swift:416"
    ],
    "args": [],
    "targets": [
@@ -38982,7 +38982,7 @@
    "ko": "기록을 읽는 중입니다. 처음에는 기간이 길수록 오래 걸리고, 한 번 읽은 날은 다음부터 바로 열립니다.",
    "en": "Reading your records. The first read takes longer for long periods; days already read open instantly next time.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:279"
+    "MapHomePlaybackVideoSheet.swift:294"
    ],
    "args": [],
    "targets": [
@@ -39551,7 +39551,7 @@
    "en": "To",
    "files": [
     "GPXExportCard.swift:20",
-    "MapHomePlaybackVideoSheet.swift:434"
+    "MapHomePlaybackVideoSheet.swift:449"
    ],
    "args": [],
    "targets": [
@@ -39809,7 +39809,7 @@
    "ko": "나중에",
    "en": "Later",
    "files": [
-    "AssistantLiveSync.swift:228",
+    "AssistantLiveSync.swift:254",
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419"
    ],
@@ -41298,7 +41298,7 @@
    "ko": "다시 시도",
    "en": "Try again",
    "files": [
-    "FlightPickerSheet.swift:191"
+    "FlightPickerSheet.swift:199"
    ],
    "args": [],
    "targets": [
@@ -42167,7 +42167,7 @@
    "ko": "도시 여행 지도",
    "en": "City travel map",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:95"
+    "MapHomePlaybackVideoSheet.swift:97"
    ],
    "args": [],
    "targets": [
@@ -42302,7 +42302,7 @@
    "ko": "도착 공항",
    "en": "To",
    "files": [
-    "FlightPickerSheet.swift:91"
+    "FlightPickerSheet.swift:98"
    ],
    "args": [],
    "targets": [
@@ -42328,7 +42328,7 @@
    "ko": "도착 빠른 순",
    "en": "Earliest arrival",
    "files": [
-    "FlightPickerSheet.swift:162"
+    "FlightPickerSheet.swift:170"
    ],
    "args": [],
    "targets": [
@@ -42352,7 +42352,7 @@
    "ko": "도착",
    "en": "To",
    "files": [
-    "FlightPickerSheet.swift:115"
+    "FlightPickerSheet.swift:123"
    ],
    "args": [],
    "targets": [
@@ -42388,7 +42388,7 @@
    "ko": "도착할 공항을 골라 주세요.",
    "en": "Pick an arrival airport.",
    "files": [
-    "FlightPickerSheet.swift:193"
+    "FlightPickerSheet.swift:201"
    ],
    "args": [],
    "targets": [
@@ -44960,7 +44960,7 @@
    "ko": "반영",
    "en": "Apply",
    "files": [
-    "AssistantLiveSync.swift:230"
+    "AssistantLiveSync.swift:256"
    ],
    "args": [],
    "targets": [
@@ -45385,7 +45385,7 @@
    "ko": "방향",
    "en": "Direction",
    "files": [
-    "FlightPickerSheet.swift:120"
+    "FlightPickerSheet.swift:128"
    ],
    "args": [],
    "targets": [
@@ -45438,7 +45438,7 @@
    "ko": "배치 {0} · 표본 {1} · {2}MB(압축 전) · 최근 20,000개만 전송",
    "en": "{0} batches · {1} samples · {2}MB (uncompressed) · latest 20,000 only",
    "files": [
-    "PostHogUploadModel.swift:109"
+    "PostHogUploadModel.swift:124"
    ],
    "args": [
     "raw.batches",
@@ -45454,7 +45454,7 @@
    "ko": "배치 {0} · 표본 {1} · {2}MB(압축 전)",
    "en": "{0} batches · {1} samples · {2}MB (uncompressed)",
    "files": [
-    "PostHogUploadModel.swift:111"
+    "PostHogUploadModel.swift:126"
    ],
    "args": [
     "raw.batches",
@@ -46356,7 +46356,7 @@
    "ko": "보여 줄 위치 기록이 없습니다.",
    "en": "No location records to show.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:356"
+    "MapHomePlaybackVideoSheet.swift:371"
    ],
    "args": [],
    "targets": [
@@ -47159,7 +47159,7 @@
    "ko": "비행 시간(분, 비우면 거리로 어림)",
    "en": "Flight minutes (empty = estimate)",
    "files": [
-    "FlightPickerSheet.swift:242"
+    "FlightPickerSheet.swift:250"
    ],
    "args": [],
    "targets": [
@@ -47223,7 +47223,7 @@
    "ko": "빈 저장본",
    "en": "Empty snapshot",
    "files": [
-    "AppModel+Backup.swift:560"
+    "AppModel+Backup.swift:562"
    ],
    "args": [],
    "targets": [
@@ -47637,7 +47637,7 @@
    "ko": "사진 앱에 저장하는 중입니다.",
    "en": "Saving to Photos.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:266",
+    "MapHomePlaybackVideoSheet.swift:281",
     "TravelMapVideoSection.swift:123"
    ],
    "args": [],
@@ -47686,7 +47686,7 @@
    "ko": "사진 저장 권한이 필요합니다.",
    "en": "Photo saving permission is needed.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:351",
+    "MapHomePlaybackVideoSheet.swift:366",
     "TravelMapVideoSection.swift:245"
    ],
    "args": [],
@@ -47772,8 +47772,8 @@
    "ko": "사진에 저장됨",
    "en": "Saved to Photos",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:268",
-    "MapHomePlaybackVideoSheet.swift:308",
+    "MapHomePlaybackVideoSheet.swift:283",
+    "MapHomePlaybackVideoSheet.swift:323",
     "TravelMapVideoSection.swift:125"
    ],
    "args": [],
@@ -48029,7 +48029,7 @@
    "ko": "새 계획이 도착했어요",
    "en": "A new plan arrived",
    "files": [
-    "AssistantLiveSync.swift:225"
+    "AssistantLiveSync.swift:248"
    ],
    "args": [],
    "targets": [
@@ -49292,7 +49292,7 @@
    "ko": "소요 짧은 순",
    "en": "Shortest",
    "files": [
-    "FlightPickerSheet.swift:163"
+    "FlightPickerSheet.swift:171"
    ],
    "args": [],
    "targets": [
@@ -50304,7 +50304,7 @@
    "ko": "시간표를 불러오지 못했어요. 직접 넣거나 편명으로 검색해 보세요.",
    "en": "Could not load the timetable. Add it manually or search the flight number.",
    "files": [
-    "FlightPickerSheet.swift:268"
+    "FlightPickerSheet.swift:276"
    ],
    "args": [],
    "targets": [
@@ -50444,7 +50444,7 @@
    "en": "From",
    "files": [
     "GPXExportCard.swift:18",
-    "MapHomePlaybackVideoSheet.swift:425",
+    "MapHomePlaybackVideoSheet.swift:440",
     "TripLiveLocationBand.swift:244"
    ],
    "args": [],
@@ -50622,7 +50622,7 @@
    "ko": "실시간 동기화",
    "en": "Instant sync",
    "files": [
-    "AssistantLiveSync.swift:258"
+    "AssistantLiveSync.swift:286"
    ],
    "args": [],
    "targets": [
@@ -50634,7 +50634,8 @@
    "ko": "실시간 반영",
    "en": "Live updates",
    "files": [
-    "AssistantLiveSync.swift:251"
+    "AssistantLiveSync.swift:278",
+    "AssistantLiveSync.swift:279"
    ],
    "args": [],
    "targets": [
@@ -50646,7 +50647,7 @@
    "ko": "실시간 운항 반영",
    "en": "With live status",
    "files": [
-    "FlightPickerSheet.swift:258"
+    "FlightPickerSheet.swift:266"
    ],
    "args": [],
    "targets": [
@@ -53402,8 +53403,8 @@
    "ko": "연결 끊음",
    "en": "Disconnected",
    "files": [
-    "AssistantCommandRunner.swift:444",
-    "AssistantCommandRunner.swift:449"
+    "AssistantCommandRunner.swift:446",
+    "AssistantCommandRunner.swift:451"
    ],
    "args": [],
    "targets": [
@@ -54494,7 +54495,7 @@
    "ko": "영상 만들기",
    "en": "Make video",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:313",
+    "MapHomePlaybackVideoSheet.swift:328",
     "TravelMapVideoSection.swift:170"
    ],
    "args": [],
@@ -54559,7 +54560,7 @@
    "ko": "영상을 그리는 중입니다. 앱을 켜 둔 채 기다려 주세요.",
    "en": "Rendering. Keep the app open.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:264",
+    "MapHomePlaybackVideoSheet.swift:279",
     "TravelMapVideoSection.swift:121"
    ],
    "args": [],
@@ -54572,7 +54573,7 @@
    "ko": "영상을 만들지 못했습니다.",
    "en": "Could not make the video.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:358",
+    "MapHomePlaybackVideoSheet.swift:373",
     "TravelMapVideoSection.swift:249"
    ],
    "args": [],
@@ -55196,7 +55197,7 @@
    "ko": "오늘 조회 한도에 도달했어요. 직접 넣거나 편명으로 검색해 보세요.",
    "en": "Today's lookup limit is reached. Add it manually or search the flight number.",
    "files": [
-    "FlightPickerSheet.swift:267"
+    "FlightPickerSheet.swift:275"
    ],
    "args": [],
    "targets": [
@@ -56339,7 +56340,7 @@
    "ko": "위치 기록이 없는 {0}일은 경로가 없어 앞뒤 지점을 바로 잇습니다.",
    "en": "{0} days have no location records; the points around them are joined directly.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:293"
+    "MapHomePlaybackVideoSheet.swift:308"
    ],
    "args": [
     "missingRangeDays"
@@ -57072,7 +57073,7 @@
    "ko": "이 기간에는 보여 줄 위치 기록이 없습니다.",
    "en": "No location records to show in this period.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:285"
+    "MapHomePlaybackVideoSheet.swift:300"
    ],
    "args": [],
    "targets": [
@@ -57483,7 +57484,7 @@
    "ko": "이 날짜는 조회할 수 없어요. 직접 넣거나 편명으로 검색해 보세요.",
    "en": "This date can't be looked up. Add it manually or search the flight number.",
    "files": [
-    "FlightPickerSheet.swift:266"
+    "FlightPickerSheet.swift:274"
    ],
    "args": [],
    "targets": [
@@ -57886,7 +57887,7 @@
    "ko": "이 조건에 맞는 편이 없어요. 날짜나 공항을 바꿔 보세요.",
    "en": "No flights match. Try another date or airport.",
    "files": [
-    "FlightPickerSheet.swift:176"
+    "FlightPickerSheet.swift:184"
    ],
    "args": [],
    "targets": [
@@ -58872,7 +58873,7 @@
    "ko": "일부 데이터를 삭제하지 못했습니다: ",
    "en": "Some data could not be deleted: ",
    "files": [
-    "AppModel+Backup.swift:566"
+    "AppModel+Backup.swift:568"
    ],
    "args": [],
    "targets": [
@@ -59276,7 +59277,7 @@
    "ko": "일정에 넣지 못했어요. 시각이나 공항을 확인해 주세요.",
    "en": "Could not add it. Check the time and airports.",
    "files": [
-    "FlightPickerSheet.swift:81"
+    "FlightPickerSheet.swift:83"
    ],
    "args": [],
    "targets": [
@@ -59718,7 +59719,7 @@
    "ko": "자동",
    "en": "Auto",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:196",
+    "MapHomePlaybackVideoSheet.swift:198",
     "MapHomeTodayCalendar.swift:64"
    ],
    "args": [],
@@ -60367,7 +60368,7 @@
    "ko": "재생 영상 만들기",
    "en": "Make playback video",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:81"
+    "MapHomePlaybackVideoSheet.swift:83"
    ],
    "args": [],
    "targets": [
@@ -60443,7 +60444,7 @@
    "ko": "재생할 기록이 없습니다.",
    "en": "Nothing to play back.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:328"
+    "MapHomePlaybackVideoSheet.swift:343"
    ],
    "args": [],
    "targets": [
@@ -60776,7 +60777,7 @@
    "ko": "전송 중 {0}/{1}",
    "en": "Sending {0}/{1}",
    "files": [
-    "PostHogUploadModel.swift:121"
+    "PostHogUploadModel.swift:136"
    ],
    "args": [
     "done",
@@ -60827,7 +60828,7 @@
    "ko": "전송됨 · {0}",
    "en": "Sent · {0}",
    "files": [
-    "PostHogUploadModel.swift:133"
+    "PostHogUploadModel.swift:148"
    ],
    "args": [
     "rawSummary"
@@ -60841,7 +60842,7 @@
    "ko": "전송됨 · 이벤트 {0} · {1}KB",
    "en": "Sent · {0} events · {1}KB",
    "files": [
-    "PostHogUploadModel.swift:132"
+    "PostHogUploadModel.swift:147"
    ],
    "args": [
     "job.events.count",
@@ -61017,7 +61018,7 @@
    "en": "Scheduled timetable",
    "files": [
     "FlightDayBanner.swift:20",
-    "FlightPickerSheet.swift:258"
+    "FlightPickerSheet.swift:266"
    ],
    "args": [],
    "targets": [
@@ -61029,7 +61030,7 @@
    "ko": "정렬",
    "en": "Sort",
    "files": [
-    "FlightPickerSheet.swift:160"
+    "FlightPickerSheet.swift:168"
    ],
    "args": [],
    "targets": [
@@ -61411,7 +61412,7 @@
    "ko": "조회 서버에 항공편 경로가 아직 없어요. 직접 넣거나 편명으로 검색해 보세요.",
    "en": "The lookup server has no flight route yet. Add it manually or search the flight number.",
    "files": [
-    "FlightPickerSheet.swift:263"
+    "FlightPickerSheet.swift:271"
    ],
    "args": [],
    "targets": [
@@ -61423,7 +61424,7 @@
    "ko": "조회",
    "en": "Search",
    "files": [
-    "FlightPickerSheet.swift:132"
+    "FlightPickerSheet.swift:140"
    ],
    "args": [],
    "targets": [
@@ -61842,7 +61843,7 @@
    "ko": "중계 서버 주소가 없어 조회할 수 없어요. 직접 넣거나 편명으로 검색해 보세요.",
    "en": "No relay server address, so it can't be looked up. Add it manually or search the flight number.",
    "files": [
-    "FlightPickerSheet.swift:265"
+    "FlightPickerSheet.swift:273"
    ],
    "args": [],
    "targets": [
@@ -63201,8 +63202,8 @@
    "ko": "직접 넣기",
    "en": "Add manually",
    "files": [
-    "FlightPickerSheet.swift:244",
-    "FlightPickerSheet.swift:251"
+    "FlightPickerSheet.swift:252",
+    "FlightPickerSheet.swift:259"
    ],
    "args": [],
    "targets": [
@@ -63350,7 +63351,7 @@
    "ko": "직접",
    "en": "manual",
    "files": [
-    "FlightFare.swift:110"
+    "FlightFare.swift:111"
    ],
    "args": [],
    "targets": [
@@ -63362,7 +63363,7 @@
    "ko": "직항 {0}편 · 공동운항 {1}편 제외",
    "en": "{0} direct · {1} codeshare hidden",
    "files": [
-    "FlightPickerSheet.swift:184"
+    "FlightPickerSheet.swift:192"
    ],
    "args": [
     "found.rows.count",
@@ -63389,7 +63390,7 @@
    "ko": "직항만",
    "en": "Direct only",
    "files": [
-    "FlightPickerSheet.swift:168"
+    "FlightPickerSheet.swift:176"
    ],
    "args": [],
    "targets": [
@@ -63513,7 +63514,7 @@
    "ko": "집·직장 주변 가리기",
    "en": "Hide home and work areas",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:173"
+    "MapHomePlaybackVideoSheet.swift:175"
    ],
    "args": [],
    "targets": [
@@ -64179,7 +64180,7 @@
    "ko": "추적 끝냄",
    "en": "Tracking stopped",
    "files": [
-    "AssistantCommandRunner.swift:430"
+    "AssistantCommandRunner.swift:432"
    ],
    "args": [],
    "targets": [
@@ -64242,7 +64243,7 @@
    "ko": "출국편",
    "en": "Outbound",
    "files": [
-    "FlightPickerSheet.swift:121"
+    "FlightPickerSheet.swift:129"
    ],
    "args": [],
    "targets": [
@@ -64278,7 +64279,7 @@
    "ko": "출발 공항",
    "en": "From",
    "files": [
-    "FlightPickerSheet.swift:91"
+    "FlightPickerSheet.swift:98"
    ],
    "args": [],
    "targets": [
@@ -64290,7 +64291,7 @@
    "ko": "출발 빠른 순",
    "en": "Earliest departure",
    "files": [
-    "FlightPickerSheet.swift:161"
+    "FlightPickerSheet.swift:169"
    ],
    "args": [],
    "targets": [
@@ -64302,7 +64303,7 @@
    "ko": "출발 시각",
    "en": "Departure time",
    "files": [
-    "FlightPickerSheet.swift:239"
+    "FlightPickerSheet.swift:247"
    ],
    "args": [],
    "targets": [
@@ -64314,7 +64315,19 @@
    "ko": "출발",
    "en": "From",
    "files": [
-    "FlightPickerSheet.swift:110"
+    "FlightPickerSheet.swift:117"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "출발·도착 바꾸기|Swap airports",
+   "ko": "출발·도착 바꾸기",
+   "en": "Swap airports",
+   "files": [
+    "FlightPickerSheet.swift:120"
    ],
    "args": [],
    "targets": [
@@ -64497,7 +64510,7 @@
    "ko": "취소됨",
    "en": "Canceled",
    "files": [
-    "FlightFare.swift:105",
+    "FlightFare.swift:106",
     "LedgerMemoPanel.swift:268",
     "LedgerSheet.swift:296"
    ],
@@ -65753,7 +65766,7 @@
    "ko": "특정 날짜",
    "en": "Custom",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:394"
+    "MapHomePlaybackVideoSheet.swift:409"
    ],
    "args": [],
    "targets": [
@@ -65827,7 +65840,7 @@
    "ko": "편명(예: AB123)",
    "en": "Flight number (e.g. AB123)",
    "files": [
-    "FlightPickerSheet.swift:236"
+    "FlightPickerSheet.swift:244"
    ],
    "args": [],
    "targets": [
@@ -65839,7 +65852,7 @@
    "ko": "편명으로 검색",
    "en": "Search the flight number",
    "files": [
-    "FlightPickerSheet.swift:248"
+    "FlightPickerSheet.swift:256"
    ],
    "args": [],
    "targets": [
@@ -65863,7 +65876,7 @@
    "ko": "편명으로 좁히기(선택)",
    "en": "Filter by flight number (optional)",
    "files": [
-    "FlightPickerSheet.swift:128"
+    "FlightPickerSheet.swift:136"
    ],
    "args": [],
    "targets": [
@@ -65887,7 +65900,7 @@
    "ko": "편집 중이라 잠시 미뤘어요",
    "en": "Paused while you edit",
    "files": [
-    "AssistantLiveSync.swift:140"
+    "AssistantLiveSync.swift:145"
    ],
    "args": [],
    "targets": [
@@ -66413,7 +66426,7 @@
    "ko": "하루 재생을 60fps 영상으로 그립니다. 끊김 없이 저장됩니다.",
    "en": "Renders the day at 60 fps with no dropped frames.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:276"
+    "MapHomePlaybackVideoSheet.swift:291"
    ],
    "args": [],
    "targets": [
@@ -67107,7 +67120,7 @@
    "ko": "항공사 문자나 알림톡을 복사한 뒤 붙이면 읽어서 이 여행의 항공편 카드에 붙입니다. 이름·예약번호는 이 기기 안에서만 쓰고 보내지 않습니다.",
    "en": "Copy an airline text or notice, then paste it: it is read and attached to this trip's flight card. Names and booking numbers stay on this device and are never sent.",
    "files": [
-    "FlightPickerSheet.swift:228"
+    "FlightPickerSheet.swift:236"
    ],
    "args": [],
    "targets": [
@@ -67119,7 +67132,7 @@
    "ko": "항공사 알림 붙여넣기",
    "en": "Paste an airline notice",
    "files": [
-    "FlightPickerSheet.swift:226"
+    "FlightPickerSheet.swift:234"
    ],
    "args": [],
    "targets": [
@@ -67132,7 +67145,7 @@
    "en": "Could not read this as a flight notice.",
    "files": [
     "FlightIngest.swift:110",
-    "FlightPickerSheet.swift:223"
+    "FlightPickerSheet.swift:231"
    ],
    "args": [],
    "targets": [
@@ -67144,7 +67157,7 @@
    "ko": "항공편 조회 키가 아직 등록되지 않았어요. 직접 넣거나 편명으로 검색해 보세요.",
    "en": "The flight lookup key is not registered yet. Add it manually or search the flight number.",
    "files": [
-    "FlightPickerSheet.swift:264"
+    "FlightPickerSheet.swift:272"
    ],
    "args": [],
    "targets": [
@@ -67156,7 +67169,7 @@
    "ko": "항공편 찾기",
    "en": "Find a flight",
    "files": [
-    "FlightPickerSheet.swift:84",
+    "FlightPickerSheet.swift:91",
     "TravelModeView.swift:835"
    ],
    "args": [],
@@ -67399,7 +67412,7 @@
    "ko": "행선지를 위에서 고른 뒤 시각을 적으면 그 공항의 현지 시각으로 넣습니다. 도착 시각은 비행 시간이나 거리로 어림합니다.",
    "en": "Pick the other airport above, then enter the local time. The arrival is computed from the flight time or estimated from the distance.",
    "files": [
-    "FlightPickerSheet.swift:253"
+    "FlightPickerSheet.swift:261"
    ],
    "args": [],
    "targets": [

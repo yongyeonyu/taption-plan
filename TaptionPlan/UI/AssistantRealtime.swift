@@ -56,16 +56,19 @@ enum AssistantRealtimeAction: Equatable, Sendable {
 struct AssistantRealtimeCursor: Equatable, Sendable {
     var value = 0
     private(set) var catchUpDone = false
+    /// 이번 접속에서 서버가 알려 준 마지막 이벤트 번호. `resync`는 전체 확인으로 따라잡으므로 그 번호로 커서를 옮긴다.
+    private var helloLatest = 0
 
     mutating func beginConnection() { catchUpDone = false }
 
     mutating func apply(_ message: AssistantRealtimeMessage) -> [AssistantRealtimeAction] {
         switch message {
-        case .hello, .bye: return []
+        case let .hello(latest, _): helloLatest = latest; return []
+        case .bye: return []
         case let .event(event): return take([event])
         case let .events(items, _): return take(items)
         case let .ready(latest): catchUpDone = true; value = max(value, latest); return []
-        case .resync: value = 0; return [.fullRefresh]
+        case .resync: value = helloLatest; return [.fullRefresh]
         }
     }
 

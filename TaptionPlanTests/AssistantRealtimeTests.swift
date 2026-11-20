@@ -48,7 +48,7 @@ final class AssistantRealtimeTests: XCTestCase {
         XCTAssertEqual(cursor.value, 10)
         XCTAssertEqual(cursor.apply(.event(RealtimeEvent(e: 9, type: "cmd", entity: nil, id: "old"))), [], "이미 본 이벤트는 다시 일하지 않는다")
         XCTAssertEqual(cursor.apply(.resync), [.fullRefresh])
-        XCTAssertEqual(cursor.value, 0)
+        XCTAssertEqual(cursor.value, 10, "resync는 전체 확인으로 따라잡으므로 hello의 마지막 번호로 옮겨 다시 resync가 되지 않게 한다")
     }
 
     func testPatchEntitiesMapToOnlyTheScreensThatNeedThem() {

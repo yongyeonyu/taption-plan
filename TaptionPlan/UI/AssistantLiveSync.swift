@@ -97,6 +97,7 @@ final class AssistantLiveSync {
     enum Reason { case poll, push, manual, socket }
 
     @ObservationIgnored private var isRefreshing = false
+    @ObservationIgnored private var rerunRequested = false
     @ObservationIgnored private var lastHeavyAt: Date?
     @ObservationIgnored private(set) var failures = 0
     @ObservationIgnored private var lastNoticeAt: Date?
@@ -121,9 +122,13 @@ final class AssistantLiveSync {
 
     /// 갱신 입구. 겹치면 건너뛰고, 편집 중이면 명령을 반영하지 않고 다음 주기로 미룬다(서버 큐에 그대로 둔다).
     func refresh(reason: Reason, language: MapHomeLanguage, hooks: Hooks? = nil, now: Date = .now) async {
-        guard !isRefreshing else { return }
+        // 다른 갱신이 진행 중이면 소켓·푸시 알림은 버리지 않고 끝난 뒤 한 번 더 돈다(커서가 이미 앞서 있어 다시 오지 않는다).
+        guard !isRefreshing else { if reason != .poll { rerunRequested = true }; return }
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            if rerunRequested { rerunRequested = false; Task { @MainActor in await self.refresh(reason: .socket, language: language, hooks: hooks, now: .now) } }
+        }
         let hooks = hooks ?? .live(language: language)
         if editing > 0 && reason == .poll {
             noteDeferred(language: language)
@@ -220,22 +225,44 @@ struct AssistantPlanArrivalCard: View {
     @State private var sync = AssistantLiveSync.shared
 
     var body: some View {
-        if sync.pendingPlan != nil {
-            HStack(spacing: 10) {
-                Text(language.text("새 계획이 도착했어요", "A new plan arrived"))
-                    .font(.taptionStyle(.subheadline).weight(.semibold))
-                Spacer(minLength: 4)
-                Button(language.text("나중에", "Later")) { sync.dismissPlan() }
-                    .buttonStyle(.bordered)
-                Button(language.text("반영", "Apply")) { sync.acceptPlan() }
-                    .buttonStyle(.borderedProminent)
-            }
-            .padding(12)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .transition(.move(edge: .top).combined(with: .opacity))
-            .onAppear { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+        Group {
+            if sync.pendingPlan != nil { card }
+        }
+        .animation(UIAccessibility.isReduceMotionEnabled ? nil : .snappy, value: sync.pendingPlan != nil)
+    }
+
+    private var card: some View {
+        ViewThatFits(in: .horizontal) {
+            cardRow
+            VStack(alignment: .leading, spacing: 8) { cardTitle; HStack { Spacer(); cardButtons } }
+        }
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: TaptionCorner.large))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .onAppear { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+    }
+
+    private var cardTitle: some View {
+        Text(language.text("새 계획이 도착했어요", "A new plan arrived"))
+            .font(.taptionStyle(.subheadline).weight(.semibold))
+    }
+
+    private var cardButtons: some View {
+        HStack(spacing: 8) {
+            Button(language.text("나중에", "Later")) { sync.dismissPlan() }
+                .buttonStyle(.bordered)
+            Button(language.text("반영", "Apply")) { sync.acceptPlan() }
+                .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private var cardRow: some View {
+        HStack(spacing: 10) {
+            cardTitle
+            Spacer(minLength: 4)
+            cardButtons
         }
     }
 }
@@ -248,6 +275,7 @@ struct AssistantLiveSyncSettingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            Text(language.text("실시간 반영", "Live updates")).font(.taptionStyle(.subheadline).weight(.semibold))
             Picker(language.text("실시간 반영", "Live updates"), selection: $mode) {
                 Text(language.text("끔", "Off")).tag(AgentSyncMode.off)
                 Text(language.text("3초", "3 s")).tag(AgentSyncMode.three)

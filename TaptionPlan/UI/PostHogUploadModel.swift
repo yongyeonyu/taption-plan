@@ -89,6 +89,21 @@ final class PostHogUploadModel {
         await run(kind: .raw, config: config)
     }
 
+    /// 「모든 데이터 삭제」가 부른다: 위치 원본 사본(`RawUploads`)·전송 상태 파일·동의·익명 ID·마지막 결과를 지운다.
+    func eraseLocalTraces(defaults: UserDefaults = .standard) {
+        if let directory = try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+            .appendingPathComponent("TaptionPlan/Diagnostics", isDirectory: true) {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent("RawUploads", isDirectory: true))
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent("upload-state.json"))
+        }
+        for key in [Self.consentKey, Self.anonIDKey, Self.lastResultKey] {
+            UserDefaults.standard.removeObject(forKey: key)
+            defaults.removeObject(forKey: key)
+        }
+        logJob = nil; rawJob = nil
+        logStatus = ""; rawStatus = ""; canRetryLog = false; canRetryRaw = false
+    }
+
     private enum Kind { case log, raw }
 
     /// 로컬 사본(원본 JSON, 최근 3개)을 쓰고 이벤트를 만든다. 무거운 일이라 메인 밖에서 한다.

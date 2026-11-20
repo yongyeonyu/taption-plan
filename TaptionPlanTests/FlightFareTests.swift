@@ -79,3 +79,10 @@ final class FlightFareTests: XCTestCase {
         XCTAssertNil(decoded.fareAmount)
     }
 }
+
+extension FlightFareTests {
+    func testNightsWordOnlyCountsAfterANumberAndSurnameIsNotLodging() {
+        XCTAssertEqual(FlightFare.classify("박OO 대한항공 KE1201 항공권 승인 89,000원"), .flight(airline: "KE"), "이름의 박은 숙박 단서가 아니다")
+        XCTAssertEqual(FlightFare.classify("야놀자 2박 3일 제주 89,000원 승인"), .notFlight)
+    }
+}

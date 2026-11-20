@@ -90,7 +90,9 @@ enum AssistantCommandRunner {
     static func run(
         model: AppModel, defaults: UserDefaults = .standard, env: AssistantRegistration.Environment = .live
     ) async -> Result {
-        guard env.host != nil, AssistantRegistration.isReady(env), !isRunning, AssistantRelayGate.begin() else { return .nothing }
+        // 연결이 없으면 이전 실패 값을 남기지 않는다(연결을 끊은 사용자에게 오래된 오류 문구가 다시 뜨지 않게).
+        guard env.host != nil, AssistantRegistration.isReady(env) else { lastFetchFailed = false; return .nothing }
+        guard !isRunning, AssistantRelayGate.begin() else { return .nothing }
         isRunning = true
         defer {
             isRunning = false

@@ -529,6 +529,8 @@ extension AppModel {
         diagnosticsDefaults.removeObject(forKey: Self.diagnosticsLatestFileKey)
         diagnosticsDefaults.removeObject(forKey: Self.diagnosticsLatestSavedAtKey)
         diagnosticsExportStatusKey = .ready
+        // PostHog 진단 업로드가 남긴 위치 원본 사본·상태와 동의·익명 ID·마지막 결과까지 지운다(PHG1120A01).
+        PostHogUploadModel.shared.eraseLocalTraces(defaults: diagnosticsDefaults)
         if let applicationSupport = try? FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,

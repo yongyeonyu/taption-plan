@@ -14,6 +14,7 @@ struct FlightPickerSheet: View {
     private enum Side: Identifiable { case from, to; var id: Int { self == .from ? 0 : 1 } }
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("flightDirectOnlyDomestic") private var directOnlyDomestic = true
     @AppStorage("flightDirectOnlyInternational") private var directOnlyInternational = false
     @State private var from = FlightPlacement.AirportChoice(code: "ICN", nameKo: "인천", nameEn: "Incheon")
@@ -73,14 +74,20 @@ struct FlightPickerSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                searchCard
-                resultSection
-                pasteSection
-                manualSection
-                if didFail {
-                    Section { Text(language.text("일정에 넣지 못했어요. 시각이나 공항을 확인해 주세요.", "Could not add it. Check the time and airports.")).foregroundStyle(.red) }
+                Group {
+                    searchCard
+                    resultSection
+                    pasteSection
+                    manualSection
+                    if didFail {
+                        Section { Text(language.text("일정에 넣지 못했어요. 시각이나 공항을 확인해 주세요.", "Could not add it. Check the time and airports.")).foregroundStyle(Color.tpReferenceRose) }
+                    }
                 }
+                .listRowBackground(Color.tpSurface)
             }
+            .tpListStyle()
+            // 조회 중 → 결과 → 실패가 툭 바뀌지 않게(동작 줄이기면 끈다).
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: "\(isLoading)|\(found?.rows.count ?? -1)|\(failure == nil)")
             .navigationTitle(language.text("항공편 찾기", "Find a flight"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(language.text("닫기", "Close")) { dismiss() } } }
@@ -110,6 +117,7 @@ struct FlightPickerSheet: View {
                 airportButton(from, side: .from, id: "flightAirportFrom", placeholder: language.text("출발", "From"))
                 Button(action: swap) { Image(systemName: "arrow.left.arrow.right").frame(width: 44, height: 44) }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(language.text("출발·도착 바꾸기", "Swap airports"))
                     .foregroundStyle(Color.tpReferenceBlue)
                     .accessibilityIdentifier("flightSwap")
                 airportButton(to, side: .to, id: "flightAirportTo", placeholder: language.text("도착", "To"))
@@ -198,7 +206,7 @@ struct FlightPickerSheet: View {
     }
 
     private var skeletonRow: some View {
-        RoundedRectangle(cornerRadius: TaptionCorner.small).fill(Color.tpReferenceGray.opacity(0.15)).frame(height: 54)
+        RoundedRectangle(cornerRadius: TaptionCorner.small).fill(Color.tpReferenceGray.opacity(0.15)).frame(minHeight: 54)
             .accessibilityHidden(true)
     }
 
@@ -220,7 +228,7 @@ struct FlightPickerSheet: View {
             }
             .accessibilityIdentifier("flightPasteAlert")
             if pasteUnreadable {
-                Text(language.text("항공편 알림으로 읽지 못했어요.", "Could not read this as a flight notice.")).font(.callout).foregroundStyle(.orange)
+                Text(language.text("항공편 알림으로 읽지 못했어요.", "Could not read this as a flight notice.")).font(.callout).foregroundStyle(Color.tpReferenceRose)
             }
         } header: {
             Text(language.text("항공사 알림 붙여넣기", "Paste an airline notice"))

@@ -60,7 +60,7 @@ struct FlightAirportSheet: View {
             dismiss()
         } label: {
             HStack {
-                Text(airport.code).font(.body.monospaced().weight(.semibold)).frame(width: 48, alignment: .leading)
+                Text(airport.code).font(.body.monospaced().weight(.semibold)).frame(minWidth: 48, alignment: .leading)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(language.runtimeText(airport.nameKo, airport.nameEn))
                     Text(airport.nameEn).font(.caption).foregroundStyle(.secondary)
@@ -154,7 +154,7 @@ struct FlightResultRow: View {
                 VStack(alignment: .trailing, spacing: 1) {
                     HStack(spacing: 2) {
                         Text(FlightSearch.clockText(row.arrivalMinute)).font(.title3.monospacedDigit().weight(.semibold))
-                        if row.arrivalDayOffset > 0 { Text("+\(row.arrivalDayOffset)").font(.caption2.weight(.bold)).foregroundStyle(.orange) }
+                        if row.arrivalDayOffset > 0 { Text("+\(row.arrivalDayOffset)").font(.caption2.weight(.bold)).foregroundStyle(Color.tpReferenceRose) }
                     }
                     Text(row.listing.destination).font(.caption.monospaced()).foregroundStyle(.secondary)
                 }
@@ -165,7 +165,7 @@ struct FlightResultRow: View {
                 if row.isEstimated { Text(language.text("도착 어림", "Estimated")).font(.caption2).foregroundStyle(.tertiary) }
                 if let status = row.listing.status, status.isProblem {
                     Text(status.state == "cancelled" ? language.text("결항", "Cancelled") : language.runtimeText("\(status.delayMinutes)분 지연", "Delayed \(status.delayMinutes) min"))
-                        .font(.caption).foregroundStyle(.orange)
+                        .font(.caption).foregroundStyle(Color.tpReferenceRose)
                 }
                 Spacer()
             }

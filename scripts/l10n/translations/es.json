@@ -6359,6 +6359,7 @@
 " · 왕복 결제| · round trip": " · ida y vuelta",
 "결제 문자|payment text": "SMS de pago",
 "직접|manual": "manual",
-"실시간 동기화|Instant sync": "Sincronización instantánea"
+"실시간 동기화|Instant sync": "Sincronización instantánea",
+"출발·도착 바꾸기|Swap airports": "Intercambiar salida y llegada"
 }
 }

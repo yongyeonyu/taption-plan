@@ -22,7 +22,7 @@ enum FlightFare {
     /// 항공권과 숙박을 같이 파는 곳이 많아 이름만으로 항공권이라 정하지 않는다.
     static let agencies = ["마이리얼트립", "야놀자", "트립닷컴", "스카이스캐너", "하나투어", "모두투어", "노랑풍선", "Expedia", "Booking"]
     /// 숙박 단서(H-3이 정본). 있으면 항공권이 아니다.
-    static let lodgingClues = ["체크인", "체크아웃", "투숙", "객실", "숙소", "호텔", "펜션", "리조트", "박 "]
+    static let lodgingClues = ["체크인", "체크아웃", "투숙", "객실", "숙소", "호텔", "펜션", "리조트"]
     static let flightClues = ["탑승", "편명", "항공권", "항공편", "출발", "도착", "공항"]
 
     static func airlineCode(in text: String) -> String? {
@@ -45,7 +45,8 @@ enum FlightFare {
 
     static func classify(_ text: String) -> Verdict {
         let named = airlines.contains { text.contains($0.name) } || agencies.contains { text.localizedCaseInsensitiveContains($0) }
-        if lodgingClues.contains(where: { text.contains($0) }) { return .notFlight }
+        // 「2박 3일」처럼 숫자 뒤의 박만 숙박 단서다(이름의 「박」은 아니다).
+        if lodgingClues.contains(where: { text.contains($0) }) || text.range(of: #"\d\s?박"#, options: .regularExpression) != nil { return .notFlight }
         let number = flightNumber(in: text)
         let clues = flightClues.contains { text.contains($0) }
         if number != nil || (named && clues && text.contains("항공")) { return .flight(airline: airlineCode(in: text) ?? number.map { String($0.prefix(2)) }) }

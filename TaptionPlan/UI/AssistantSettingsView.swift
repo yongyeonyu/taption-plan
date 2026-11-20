@@ -186,10 +186,14 @@ private struct AssistantNoticeHost: View {
     private var inbox: AssistantInbox { .current }
 
     var body: some View {
-        if let notice = inbox.notice {
-            AssistantNoticeBanner(text: notice) { inbox.show(nil) }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+        Group {
+            if let notice = inbox.notice {
+                AssistantNoticeBanner(text: notice) { inbox.show(nil) }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        // 알림이 툭 나타났다 사라지지 않게(동작 줄이기면 끈다).
+        .animation(UIAccessibility.isReduceMotionEnabled ? nil : .easeOut(duration: 0.2), value: inbox.notice)
     }
 }
 
@@ -211,6 +215,8 @@ private struct AssistantNoticeBanner: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 96)
         .task(id: text) {
+            // 자동으로 닫히는 알림이라 VoiceOver 사용자에게 한 번 읽어 준다.
+            AccessibilityNotification.Announcement(text).post()
             try? await Task.sleep(for: .seconds(4))
             onClose()
         }

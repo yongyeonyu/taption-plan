@@ -16,7 +16,7 @@ struct AnnouncementBanner: View {
                     Text(AnnouncementPolicy.title(of: item, code: code))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
                         .foregroundStyle(Color.tpInk)
-                        .lineLimit(1)
+                        .lineLimit(2)
                     Text(AnnouncementPolicy.body(of: item, code: code))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .regular))
                         .foregroundStyle(Color.tpSecondary)
@@ -128,5 +128,12 @@ extension MapHomeView {
             FlightAlertNotice(model: model, language: language)
             tripClipboardBanner
         }
+        // 공지·항공 알림·계획 배너가 나타나고 사라질 때 아래 내용이 한 번에 점프하지 않게 한다(동작 줄이기면 끈다).
+        .animation(reduceMotionAwareEase, value: AnnouncementService.shared.visible.first?.id)
+        .animation(reduceMotionAwareEase, value: FlightAlertCenter.shared.message)
+    }
+
+    private var reduceMotionAwareEase: Animation? {
+        UIAccessibility.isReduceMotionEnabled ? nil : .easeOut(duration: 0.2)
     }
 }

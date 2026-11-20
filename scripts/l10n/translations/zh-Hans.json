@@ -6359,6 +6359,7 @@
 " · 왕복 결제| · round trip": " · 往返一次付款",
 "결제 문자|payment text": "支付短信",
 "직접|manual": "手动",
-"실시간 동기화|Instant sync": "实时同步"
+"실시간 동기화|Instant sync": "实时同步",
+"출발·도착 바꾸기|Swap airports": "交换出发与到达"
 }
 }
