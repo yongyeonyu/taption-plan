@@ -1,7 +1,7 @@
 ---
 id: 20261120-1820-realtime-websocket-sync
 created_at: 2026-11-20T18:20+09:00
-status: pending
+status: blocked
 request_id: RTA1120A02
 title: 통화 중 지시가 화면에 즉시 — 중계 WebSocket(Durable Object Hibernation) 실시간 반영
 from: 비야
@@ -289,3 +289,18 @@ new_sqlite_classes = ["RealtimeRoom"]
 - 2절의 파일:줄은 18:4x `origin/main`에서 **그대로 맞았습니다** — `share.js` 148·695~706·708~735·736~750·757·773~783, `wrangler.toml` 73~81, `state.js` 781, `store.js` 56·78·127·194·363·512·536, `apns.js` 74·90, `index.js` 366(ROUTES)·559~566(authorized), `fakes.mjs` 121~125.
 - 처리 순서를 머리에 넣고 FLT 배포와의 경합을 한 줄 더했습니다. 고치지 않은 것: 라우트 모양(`/rt/ws`)·이벤트 규격·요금 계산·대안 판단(새 `RealtimeRoom` 클래스)은 비야 제안이라 그대로 두었습니다.
 - 근거(Cloudflare): `developers.cloudflare.com/durable-objects/platform/pricing/`(플랜·한도·WebSocket 과금·SQLite 저장 한도), `developers.cloudflare.com/durable-objects/best-practices/websockets/`(Hibernation API·`acceptWebSocket`·`webSocketClose`).
+
+## 클로드 코드 회신
+
+- 처리: 일부(**서버·앱 코드와 시험까지. 서버 배포는 대표 확인 대기라 문서를 `done/`으로 옮기지 않음**)
+- 요청 ID: RTA1120A02 (`test.md` 「AI·PCC」·「요청 상세」, `AGENTS.md` 4절 대표 결정, `docs/AI_RELAY_PLAN.md`·`docs/ACTIVITY_RELAY_API.md`)
+- 시작·끝: 2026-11-21 00:50 ~ 01:50 (KST)
+- 커밋: `bef8ed82`
+- 만든 것: 서버 `server/trip-relay/src/realtime.js`(`RealtimeRoom` — SQLite·Hibernation, 이벤트 200건 보관, 50건씩 따라잡기, `resync`, 연결 5개 상한(4408), `ping` 자동 응답, 타이머·알람 없음, `POST /event`는 DO 바인딩으로만), `src/index.js`(`GET /rt/ws`, 주인 키만), 발행 자리 `store.js`(`queueCommand`→`cmd`, `savePlan`→plan, `savePolish`→memo, `saveAppState`→app, `saveTasks`→tasks, `saveActivity`→day)·`rules.js`(`putRules`·`deleteRules`→rules). 주인 키가 쓴 것은 발행하지 않고, 바인딩이 없거나 발행이 실패해도 명령은 201 그대로. migration 태그 `v3-realtime-room`(`wrangler.toml`, 맥의 `wrangler.local.toml`에도 넣음 — git 제외). 앱 `AssistantRealtime.swift`(파서·커서·백오프·3회 실패 폴링 전환·30분 재시도·`ping` 30초), 소켓이 살아 있으면 짧은 폴링을 멈추고 5분 안전망만, 설정에 「실시간 동기화」 스위치(기본 켬), `MapHomeView+Support.swift`에서 같은 작업 안에 붙여 전면이 아니면 함께 닫힘.
+- 서버 시험: `npm test` 326건·실패 0(기존 `share.test.mjs` 포함). 새 시험 9건: 426/401/AI 키 거절/바인딩 없음 503, hello→이벤트 50건씩 `more`→ready, 205건 중 최근 200건 유지와 `resync`, AI 명령 1건→`cmd` 1건·plan→patch·주인 키 쓰기→발행 0, 이벤트에 본문 없음, `ping` 자동 응답·타이머 없음(코드 검사), 재접속 따라잡기·잘못된 글자 무시, 발행 실패해도 201, 여섯째 연결 시 가장 오래된 것 4408, 바인딩 없어도 명령 동작.
+- 앱 시험: 새 `AssistantRealtimeTests` 9건(파서·커서·hello.latest 유실 방지·patch 종류별 처리·백오프·같은 id 반영 1회·토글 끔/세그먼트 끔→소켓 0개·3회 실패 폴링 전환) 포함 `TaptionPlanTests` 3,273건·실패 0·건너뜀 26(시험 러너 멈춤이 반복되어 내 시뮬레이터만 재부팅해 재실행). 구조 지표·엔진 임포트 경계·번역 검사(12개 언어) 통과.
+- **dry-run**: `npx wrangler deploy --dry-run --config wrangler.local.toml` 출력에 `env.REALTIME_ROOM (RealtimeRoom)`이 보임. **실제 `wrangler deploy`는 하지 않았음**(처음 배포 때 migration이 한 번 적용되고 되돌릴 수 없음).
+- `POST /plan`은 푸시를 보내지 않습니다(`store.js`). 소켓 `patch/plan`만 밉니다. 서버 배포가 남았습니다. 앞서 FLT1120A01 배포(2026-11-21 00:33)는 이 코드가 main에 들어가기 전이라 `/rt/ws`는 아직 404입니다(앱은 폴링).
+- 확인 못 한 것: 실기기 반영 초(소켓/폴링 3초/1초)·배터리·데이터·백그라운드 0건, 대시보드 요금 숫자(배포 뒤). 시험은 가짜 소켓이라 실제 `URLSessionWebSocketTask` 접속·101 응답은 미확인.
+- 대표 확인 필요: ① 서버 배포(워커 전체가 올라가고 migration `v3-realtime-room`이 적용됨) ② 배포 직후 키 없이 `GET /rt/ws`가 401인지 확인. 대표가 원치 않으면 `wrangler.local.toml`에서 `REALTIME_ROOM` 바인딩만 빼면 라우트 503·발행 무동작이 됨.
+- PRIVACY: 새로 모으는 개인정보 없음(좌표·기기 ID·본문을 싣지 않음), 문구 변경 없음. `docs/pipeline/CHANGELOG.md`는 없어 `test.md`로 대신함.
