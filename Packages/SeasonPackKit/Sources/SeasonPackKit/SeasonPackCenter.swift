@@ -53,6 +53,8 @@ public final class SeasonPackCenter {
     @ObservationIgnored private let phraseBook = SeasonPackPhraseBook()
 
     @ObservationIgnored private let publishesPhrases: Bool
+    /// 서버 카탈로그의 운영 기간(마지막으로 받은 것). 들어 있는 팩은 매니페스트 기간 대신 이 기간에만 켠다.
+    @ObservationIgnored public private(set) var schedules: [String: [DateInterval]] = [:]
 
     public init() { publishesPhrases = false }
 
@@ -64,7 +66,7 @@ public final class SeasonPackCenter {
     public var windows: SeasonPackWindows {
         let host = host
         let preview = previewID != nil
-        return SeasonPackWindows(calendar: calendar, sun: { day in
+        return SeasonPackWindows(calendar: calendar, schedules: preview ? [:] : schedules, sun: { day in
             let events: (sunrise: Date?, sunset: Date?) = host?.sunEvents(on: day) ?? (nil, nil)
             if events.sunrise == nil, events.sunset == nil, preview {
                 let cal = Calendar.current
@@ -112,6 +114,7 @@ public final class SeasonPackCenter {
         if let index = arguments.firstIndex(of: "-seasonPackPreview"), arguments.indices.contains(index + 1) { previewID = arguments[index + 1] }
         if let date = SeasonPackClock.debugDateFromLaunchArguments() { clock.setDebugDate({ date }) }
 #endif
+        schedules = SeasonPackFetcher.savedSchedules(defaults)
         stage.attach(center: self)
         Task { await reload() }
     }
@@ -136,6 +139,7 @@ public final class SeasonPackCenter {
     public func refresh() async {
         guard let fetcher else { return }
         let result = await fetcher.refresh()
+        schedules = SeasonPackFetcher.savedSchedules(defaults)
         if !result.installed.isEmpty { await reload() } else { recompute() }
     }
 

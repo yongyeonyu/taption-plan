@@ -12,7 +12,7 @@ process.env.ADMIN_CONSOLE_CONFIG = join(dir, "config.json");
 process.env.ADMIN_CONSOLE_BUILD_ROOT = join(dir, "build");
 writeFileSync(process.env.ADMIN_CONSOLE_CONFIG, JSON.stringify({ host: "relay.test", bucket: "test-bucket", wranglerConfig: join(dir, "wrangler.local.toml") }));
 
-const { allowedHost, cleanItem, createConsole, localPacks, planAnnouncements, putArgs, validateConfig, withoutPack } = await import("./server.mjs");
+const { allowedHost, checkSchedule, cleanItem, createConsole, localPacks, mainCheckout, planAnnouncements, putArgs, validateConfig, withSchedule, withoutPack } = await import("./server.mjs");
 
 const remote = {
   announcements: { version: 4, items: [{ id: "old-1", title: "예전", body: "예전 공지", kind: "info" }] },
@@ -130,4 +130,54 @@ test("설정 검사와 wrangler 인자", () => {
   assert.equal(validateConfig({ host: "https://x", bucket: "B", wranglerConfig: "x" }).length, 3);
   assert.deepEqual(putArgs({ bucket: "b", wranglerConfig: "/w.toml" }, "k", "/f", "t", "c"),
     ["wrangler", "r2", "object", "put", "b/k", "--file", "/f", "--content-type", "t", "--cache-control", "c", "--remote", "--config", "/w.toml"]);
+});
+
+const weekend = { from: "2026-11-21T00:00:00+09:00", to: "2026-11-23T00:00:00+09:00" };
+const midweek = { from: "2026-11-25T00:00:00+09:00", to: "2026-11-30T00:00:00+09:00" };
+
+test("운영 기간 검사: 형식·순서·겹침", () => {
+  assert.deepEqual(checkSchedule(null), []);
+  assert.deepEqual(checkSchedule([]), []);
+  assert.deepEqual(checkSchedule([midweek, weekend]), []);
+  assert.equal(checkSchedule([{ from: "2026-11-21", to: "2026-11-23" }]).length, 1);
+  assert.match(checkSchedule([{ from: weekend.to, to: weekend.from }])[0], /끝이 시작보다/);
+  assert.match(checkSchedule([weekend, { from: "2026-11-22T00:00:00+09:00", to: "2026-11-24T00:00:00+09:00" }])[0], /겹칩니다/);
+});
+
+test("기간 바꾸기: 정렬해서 넣고, null이면 칸을 지운다", () => {
+  const catalog = { packs: [{ id: "christmas", version: 1 }, { id: "other", version: 1 }] };
+  const set = withSchedule(catalog, "christmas", [midweek, weekend]);
+  assert.deepEqual(set.packs[0].schedule, [weekend, midweek]);
+  assert.equal(set.packs[1].schedule, undefined);
+  assert.equal("schedule" in withSchedule(set, "christmas", null).packs[0], false);
+});
+
+test("기간 배포(연습): 카탈로그만 올리고, 없는 팩·잘못된 기간은 막는다", async () => {
+  remote.catalog = { format: "bokki-season-packs", schema: 1, packs: [{ id: "christmas", version: 1, archive: { key: "k", bytes: 1, sha256: "0".repeat(64) } }] };
+  const before = (await call("GET", "/api/state")).json.logs.length;
+  const ok = await call("POST", "/api/packs/schedule", { body: { id: "christmas", schedule: [midweek, weekend] } });
+  assert.equal(ok.status, 200, ok.text);
+  assert.deepEqual(ok.json.catalog.packs[0].schedule, [weekend, midweek]);
+  const lines = (await call("GET", "/api/state")).json.logs.slice(before).filter((l) => l.includes("[연습] npx wrangler"));
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /packs\/season\/index\.json/);
+  assert.equal((await call("POST", "/api/packs/schedule", { body: { id: "nope", schedule: [] } })).status, 404);
+  assert.equal((await call("POST", "/api/packs/schedule", { body: { id: "christmas", schedule: [{ from: "x", to: "y" }] } })).status, 422);
+});
+
+test("새 버전 묶기: 보낸 기간을 카탈로그 항목에 넣고, 안 보내면 서버 기간을 이어 쓴다", async () => {
+  const pack = localPacks().find((p) => p.id === "christmas");
+  remote.catalog = { format: "bokki-season-packs", schema: 1, packs: [{ id: "christmas", version: pack.version - 1, schedule: [weekend], archive: { key: "k", bytes: 1, sha256: "0".repeat(64) } }] };
+  const carried = await call("POST", "/api/packs/build", { body: { dir: pack.dir } });
+  assert.equal(carried.status, 200, carried.text);
+  assert.deepEqual(carried.json.entry.schedule, [weekend]);
+  const given = await call("POST", "/api/packs/build", { body: { dir: pack.dir, schedule: [midweek] } });
+  assert.deepEqual(given.json.entry.schedule, [midweek]);
+  const manifestOnly = await call("POST", "/api/packs/build", { body: { dir: pack.dir, schedule: null } });
+  assert.equal(manifestOnly.json.entry.schedule, undefined);
+});
+
+test("작업용 사본에서 실행해도 원래 저장소의 로컬 설정을 찾는다", () => {
+  assert.equal(typeof mainCheckout(), "string");
+  assert.ok(!mainCheckout().includes("/.git/"));
 });

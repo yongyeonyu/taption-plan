@@ -12,7 +12,7 @@ import { execFile } from "node:child_process";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -26,19 +26,33 @@ const CATALOG_KEY = "packs/season/index.json";
 const ANNOUNCE_KEY = "announcements/latest.json";
 const MAX_BODY = 256 * 1024;
 
+/** 작업용 사본(git worktree)이면 원래 저장소 폴더. git 제외 파일(xcconfig·wrangler.local.toml)은 거기에만 있다. */
+export function mainCheckout(repo = REPO) {
+  try {
+    const text = readFileSync(join(repo, ".git"), "utf8"); // worktree에서는 파일: "gitdir: <main>/.git/worktrees/<name>"
+    const gitdir = /^gitdir:\s*(.+)$/m.exec(text)?.[1]?.trim();
+    const marker = gitdir ? gitdir.lastIndexOf(`${sep}.git${sep}worktrees${sep}`) : -1;
+    return marker > 0 ? gitdir.slice(0, marker) : repo;
+  } catch { return repo; }
+}
+
+const firstExisting = (paths) => paths.find((path) => existsSync(path)) ?? paths[0];
+
 /** 기본 설정. 호스트는 앱 빌드 설정(`TRIP_RELAY_HOST`)에서 읽는다(공개 저장소에 적지 않음). */
 export function defaultConfig(repo = REPO) {
+  const roots = [...new Set([repo, mainCheckout(repo)])];
   let host = "";
   try {
-    const line = readFileSync(join(repo, "TaptionPlan/AppSecrets.local.xcconfig"), "utf8").split("\n").find((l) => /^\s*TRIP_RELAY_HOST\s*=/.test(l));
-    host = line ? line.split("=").slice(1).join("=").trim() : "";
+    const file = firstExisting(roots.map((root) => join(root, "TaptionPlan/AppSecrets.local.xcconfig")));
+    const line = readFileSync(file, "utf8").split("\n").find((l) => /^\s*TRIP_RELAY_HOST\s*=/.test(l));
+    host = line ? line.split("=").slice(1).join("=").replace(/\/\/.*$/, "").replace(/^https?:\$\(\)\/\//, "").replace(/^https?:\/\//, "").trim() : "";
   } catch {}
   let bucket = "";
   try {
     const toml = readFileSync(join(repo, "server/trip-relay/wrangler.toml"), "utf8");
     bucket = /binding\s*=\s*"PUBLIC_BUCKET"\s*\n\s*bucket_name\s*=\s*"([^"]+)"/.exec(toml)?.[1] ?? "";
   } catch {}
-  return { host, bucket, wranglerConfig: join(repo, "server/trip-relay/wrangler.local.toml") };
+  return { host, bucket, wranglerConfig: firstExisting(roots.map((root) => join(root, "server/trip-relay/wrangler.local.toml"))) };
 }
 
 export function loadConfig() {
@@ -60,15 +74,18 @@ export function validateConfig(config) {
 // ---- 서버에서 읽기(공개 GET만) ----
 
 async function fetchJSON(url, fallback) {
-  const response = await fetch(url, { headers: { "cache-control": "no-cache" } });
+  let response;
+  try { response = await fetch(url, { headers: { "cache-control": "no-cache" } }); }
+  catch (error) { throw new Error(`${url} 에 연결하지 못했습니다(${error.cause?.code ?? error.message}). 설정의 서버 주소와 인터넷 연결을 확인하세요.`); }
   if (response.status === 404 && fallback !== undefined) return fallback;
   if (!response.ok) throw new Error(`${url} 읽기 실패(${response.status})`);
   return response.json();
 }
 
 const emptyCatalog = () => ({ format: "bokki-season-packs", schema: 1, packs: [] });
-const currentAnnouncements = (config) => fetchJSON(`https://${config.host}/public/announcements`);
-const currentCatalog = (config) => fetchJSON(`https://${config.host}/public/assets/${CATALOG_KEY}`, emptyCatalog());
+const needHost = (config) => { if (validateConfig(config).length) throw Object.assign(new Error("설정 탭에서 서버 주소·버킷·wrangler 설정을 먼저 채우세요"), { status: 422 }); };
+const currentAnnouncements = (config) => needHost(config) ?? fetchJSON(`https://${config.host}/public/announcements`);
+const currentCatalog = (config) => needHost(config) ?? fetchJSON(`https://${config.host}/public/assets/${CATALOG_KEY}`, emptyCatalog());
 
 // ---- 올리기(wrangler) ----
 
@@ -147,6 +164,37 @@ export function localPacks(root = SEED_ROOT) {
     }
   }
   return out;
+}
+
+const SPAN_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/;
+export const MAX_SPANS = 24;
+
+/** 운영 기간 검사. null = 매니페스트 기간 그대로, [] = 꺼 둠. 칸은 [from, to), 겹치면 안 된다. */
+export function checkSchedule(schedule) {
+  if (schedule === null) return [];
+  if (!Array.isArray(schedule)) return ["기간은 목록이어야 합니다"];
+  if (schedule.length > MAX_SPANS) return [`기간은 ${MAX_SPANS}칸까지`];
+  const errors = [];
+  const spans = schedule.map((span, i) => {
+    const ok = span && SPAN_TIME.test(span.from ?? "") && SPAN_TIME.test(span.to ?? "");
+    const from = ok ? Date.parse(span.from) : NaN, to = ok ? Date.parse(span.to) : NaN;
+    if (!ok || Number.isNaN(from) || Number.isNaN(to)) errors.push(`${i + 1}번째 기간: 시각 형식(예: 2026-11-21T00:00:00+09:00)`);
+    else if (to <= from) errors.push(`${i + 1}번째 기간: 끝이 시작보다 늦어야 합니다`);
+    return { from, to, i };
+  }).filter((span) => span.to > span.from).sort((a, b) => a.from - b.from);
+  for (let k = 1; k < spans.length; k++) if (spans[k].from < spans[k - 1].to) errors.push(`${spans[k - 1].i + 1}번째와 ${spans[k].i + 1}번째 기간이 겹칩니다`);
+  return errors;
+}
+
+/** 카탈로그 항목의 기간을 바꾼다(null이면 칸을 지워 매니페스트 기간으로 돌아간다). 시작 순으로 정렬한다. */
+export function withSchedule(catalog, id, schedule) {
+  return { ...catalog, packs: (catalog.packs ?? []).map((entry) => {
+    if (entry.id !== id) return entry;
+    const next = { ...entry };
+    if (schedule === null) delete next.schedule;
+    else next.schedule = [...schedule].map(({ from, to }) => ({ from, to })).sort((a, b) => Date.parse(a.from) - Date.parse(b.from));
+    return next;
+  }) };
 }
 
 export function withoutPack(catalog, id) {
@@ -241,6 +289,10 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
       if (live && live.version >= pack.version && !body.allowSameVersion) {
         return { status: 422, body: { errors: [`서버에 이미 ${pack.id} ${live.version}이(가) 있습니다. 고쳐 올리려면 manifest.json의 version을 ${live.version + 1} 이상으로 올리세요.`] } };
       }
+      // 기간: 보내지 않으면 서버의 지금 기간을 이어 쓰고, null이면 매니페스트 기간, 목록이면 그 기간.
+      const schedule = body.schedule === undefined ? (live?.schedule ?? null) : body.schedule;
+      const scheduleErrors = checkSchedule(schedule);
+      if (scheduleErrors.length) return { status: 422, body: { errors: scheduleErrors } };
       const buildId = `${pack.id}-${pack.version}-${now().toISOString().replace(/[:.]/g, "-")}`;
       const dir = join(BUILD_ROOT, buildId);
       mkdirSync(dir, { recursive: true });
@@ -250,7 +302,8 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
       log(`$ build_bpack.py ${pack.dir}`);
       log(result.output.split("\n[대표가 직접 실행]")[0]);
       if (!result.ok) return { status: 422, body: { errors: ["묶기 실패 — 기록을 보세요"], output: result.output } };
-      const next = JSON.parse(readFileSync(index, "utf8"));
+      const next = withSchedule(JSON.parse(readFileSync(index, "utf8")), pack.id, schedule);
+      writeFileSync(index, JSON.stringify(next, null, 2) + "\n");
       const entry = next.packs.find((e) => e.id === pack.id);
       builds.set(buildId, { pack, entry, index, file: join(dir, `${pack.id}-${pack.version}.bpack`) });
       return { buildId, entry, catalogBefore: catalog, catalogAfter: next };
@@ -266,6 +319,24 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
       const check = dryRun ? { skipped: true } : await rangeCheck(config, build.entry.archive.key);
       log(dryRun ? "[연습] 확인 생략" : `이어받기 확인: ${check.ok ? "206 통과" : `실패(${check.status})`}`);
       return { entry: build.entry, check, dryRun };
+    }),
+    "POST /api/packs/schedule": (body) => exclusive("기간 배포", async () => {
+      const schedule = body.schedule === undefined ? null : body.schedule;
+      const errors = checkSchedule(schedule);
+      if (errors.length) return { status: 422, body: { errors } };
+      const config = loadConfig();
+      const catalog = await currentCatalog(config);
+      if (!(catalog.packs ?? []).some((entry) => entry.id === body.id)) return { status: 404, body: { errors: ["서버 카탈로그에 없는 팩입니다. 먼저 팩을 올리세요."] } };
+      const next = withSchedule(catalog, body.id, schedule);
+      const dir = join(BUILD_ROOT, `schedule-${body.id}-${now().toISOString().replace(/[:.]/g, "-")}`);
+      mkdirSync(dir, { recursive: true });
+      const index = join(dir, "index.json");
+      writeFileSync(index, JSON.stringify(next, null, 2) + "\n");
+      await upload({ config, dryRun, log }, CATALOG_KEY, index, "application/json", "public, max-age=300");
+      const spans = next.packs.find((entry) => entry.id === body.id).schedule;
+      log(`${body.id} 기간: ${spans === undefined ? "매니페스트 기간 그대로" : spans.length ? spans.map((s) => `${s.from} ~ ${s.to}`).join(", ") : "꺼 둠"}`);
+      log("앱은 다음 확인 때(최대 5분 엣지 캐시 + 30분 앱 확인 간격) 새 기간을 따릅니다.");
+      return { catalog: next, dryRun };
     }),
     "POST /api/packs/withdraw": (body) => exclusive("팩 내리기", async () => {
       const config = loadConfig();

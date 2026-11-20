@@ -12,6 +12,28 @@ public struct SeasonPackIndex: Codable, Sendable, Equatable {
         public init(key: String, bytes: Int, sha256: String) { self.key = key; self.bytes = bytes; self.sha256 = sha256 }
     }
 
+    /// 운영자가 정한 공개 기간 한 칸(절대 시각, 오프셋이 있는 ISO 8601). `[from, to)`.
+    public struct Span: Codable, Sendable, Equatable {
+        public var from: String
+        public var to: String
+        public init(from: String, to: String) { self.from = from; self.to = to }
+
+        /// 읽지 못하거나 끝이 시작보다 이르면 nil(그 칸만 버린다).
+        public var interval: DateInterval? {
+            guard let start = Self.parse(from), let end = Self.parse(to), end > start else { return nil }
+            return DateInterval(start: start, end: end)
+        }
+
+        static func parse(_ text: String) -> Date? {
+            let plain = ISO8601DateFormatter()
+            plain.formatOptions = [.withInternetDateTime]
+            if let date = plain.date(from: text) { return date }
+            let fractional = ISO8601DateFormatter()
+            fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return fractional.date(from: text)
+        }
+    }
+
     public struct Entry: Codable, Sendable, Equatable {
         public var id: String
         public var version: Int
@@ -22,15 +44,28 @@ public struct SeasonPackIndex: Codable, Sendable, Equatable {
         /// 매니페스트 `event.windows`의 사본: 받기 전에 「곧 쓸 팩인가」를 가려 먼 팩의 큰 파일을 받지 않는다.
         public var windows: [SeasonPackManifest.Window]?
         public var updatedAt: String?
-        public init(id: String, version: Int, archive: Archive? = nil, manifest: String? = nil, requiresAppBuild: Int? = nil, windows: [SeasonPackManifest.Window]? = nil, updatedAt: String? = nil) {
+        /// 운영 기간. 있으면 매니페스트 `windows` 대신 이 기간에만 켠다(빈 목록이면 꺼 둔다). 없으면 매니페스트 기간 그대로.
+        /// 같은 팩을 여러 번 열 수 있다(칸을 여러 개 둔다). 기기에 같은 버전이 있으면 다시 받지 않는다.
+        public var schedule: [Span]?
+        public init(id: String, version: Int, archive: Archive? = nil, manifest: String? = nil, requiresAppBuild: Int? = nil, windows: [SeasonPackManifest.Window]? = nil, updatedAt: String? = nil,
+                    schedule: [Span]? = nil) {
             self.id = id; self.version = version; self.archive = archive; self.manifest = manifest
-            self.requiresAppBuild = requiresAppBuild; self.windows = windows; self.updatedAt = updatedAt
+            self.requiresAppBuild = requiresAppBuild; self.windows = windows; self.updatedAt = updatedAt; self.schedule = schedule
         }
+
+        public var scheduleIntervals: [DateInterval]? { schedule.map { $0.compactMap(\.interval) } }
     }
 
     public var format: String
     public var schema: Int
     public var packs: [Entry]
+
+    /// 운영 기간이 있는 팩만: id → 기간들. 앱은 이것을 저장해 두고 오프라인에서도 따른다.
+    public var schedules: [String: [DateInterval]] {
+        var out: [String: [DateInterval]] = [:]
+        for entry in packs { if let spans = entry.scheduleIntervals { out[entry.id] = spans } }
+        return out
+    }
 
     /// 읽지 못하면 nil(받기를 그만두고 지금 팩을 그대로 쓴다).
     public static func decode(_ data: Data) -> SeasonPackIndex? {

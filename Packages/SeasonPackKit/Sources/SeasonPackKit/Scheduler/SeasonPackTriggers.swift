@@ -9,8 +9,9 @@ public enum SeasonPackTriggers {
         var candidates: [Date] = []
         let today = calendar.startOfDay(for: after)
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) { candidates.append(tomorrow) }
+        for spans in windows.schedules.values { for span in spans { candidates += [span.start, span.end] } }
         for pack in packs {
-            for window in pack.event.windows {
+            for window in pack.event.windows where windows.schedules[pack.id] == nil {
                 for startYear in [year - 1, year, year + 1] {
                     if let span = windows.interval(of: window, startYear: startYear) { candidates += [span.start, span.end] }
                 }

@@ -34,9 +34,11 @@ public enum SeasonPackDateParsing {
 public struct SeasonPackWindows: Sendable {
     public var calendar: Calendar
     public var sun: SeasonPackSunProvider
+    /// 서버 카탈로그의 운영 기간(id → 기간들). 들어 있는 id는 매니페스트 창 대신 이 기간만 본다.
+    public var schedules: [String: [DateInterval]]
 
-    public init(calendar: Calendar = .current, sun: @escaping SeasonPackSunProvider = { _ in SeasonPackSunTimes() }) {
-        self.calendar = calendar; self.sun = sun
+    public init(calendar: Calendar = .current, schedules: [String: [DateInterval]] = [:], sun: @escaping SeasonPackSunProvider = { _ in SeasonPackSunTimes() }) {
+        self.calendar = calendar; self.sun = sun; self.schedules = schedules
     }
 
     /// `startYear`에서 시작하는 창 한 번의 구간. 규칙 창은 그해 하루, 연말을 넘는 창은 다음 해에 끝난다.
@@ -72,7 +74,8 @@ public struct SeasonPackWindows: Sendable {
     }
 
     public func isActive(_ manifest: SeasonPackManifest, at date: Date) -> Bool {
-        manifest.event.windows.contains { isActive($0, at: date) }
+        if let spans = schedules[manifest.id] { return spans.contains { $0.start <= date && date < $0.end } }
+        return manifest.event.windows.contains { isActive($0, at: date) }
     }
 
     /// 지금 켜질 팩 하나. 겹치면 `priority`가 높은 쪽, 같으면 `version`이 큰 쪽, 그래도 같으면 id 순.

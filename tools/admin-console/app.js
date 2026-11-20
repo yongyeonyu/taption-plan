@@ -205,35 +205,94 @@ let lastBuild = null;
 const kb = (bytes) => `${(bytes / 1024).toFixed(0)}KB`;
 const windowText = (windows) => (windows ?? []).map((w) => `${w.from?.month}/${w.from?.day}~${w.to?.month}/${w.to?.day}`).join(", ");
 
+/** 운영 기간 편집기. spans가 null이면 「매니페스트 기간 그대로」. value()는 null 또는 [{from,to}]. */
+function scheduleEditor(spans, manifestWindows) {
+  const rows = el("div", { class: "spans" });
+  const mode = el("select", {},
+    el("option", { value: "schedule", textContent: "운영 기간에만 공개" }),
+    el("option", { value: "manifest", textContent: `매니페스트 기간 그대로 (${windowText(manifestWindows) || "없음"}, 매년)` }));
+  const add = el("button", { type: "button", textContent: "+ 기간 추가", onclick: () => addRow() });
+  const spanState = (from, to) => {
+    const now = Date.now(), a = Date.parse(from), b = Date.parse(to);
+    if (Number.isNaN(a) || Number.isNaN(b)) return "";
+    return now < a ? "예정" : now < b ? "공개 중" : "끝남";
+  };
+  function addRow(span) {
+    const from = el("input", { type: "datetime-local", value: span ? toLocal(span.from) : "" });
+    const to = el("input", { type: "datetime-local", value: span ? toLocal(span.to) : "" });
+    const badge = el("span", { class: "meta" });
+    const update = () => { badge.textContent = from.value && to.value ? spanState(toIso(from.value), toIso(to.value)) : ""; };
+    from.addEventListener("input", update); to.addEventListener("input", update); update();
+    const row = el("div", { class: "span-row" }, from, el("span", { textContent: "~" }), to, badge,
+      el("button", { type: "button", class: "danger", textContent: "빼기", onclick: () => row.remove() }));
+    row.read = () => ({ from: from.value ? `${from.value}:00${offset()}` : "", to: to.value ? `${to.value}:00${offset()}` : "" });
+    rows.append(row);
+  }
+  const sync = () => { rows.hidden = add.hidden = mode.value !== "schedule"; };
+  mode.value = spans === null || spans === undefined ? "manifest" : "schedule";
+  for (const span of spans ?? []) addRow(span);
+  if (mode.value === "schedule" && !(spans ?? []).length) addRow();
+  mode.addEventListener("change", () => { if (mode.value === "schedule" && !rows.children.length) addRow(); sync(); });
+  sync();
+  return {
+    node: el("div", { class: "editor" }, mode, rows, add),
+    value: () => mode.value === "manifest" ? null : [...rows.children].map((row) => row.read()).filter((s) => s.from || s.to),
+  };
+}
+
+const describe = (schedule) => schedule === null ? "매니페스트 기간 그대로" : schedule.length
+  ? schedule.map((s) => `${new Date(s.from).toLocaleString("ko-KR")} ~ ${new Date(s.to).toLocaleString("ko-KR")}`).join("\n") : "꺼 둠(기간 없음)";
+
 async function loadPacks() {
   try {
     const data = await api("GET", "/api/packs");
     const live = data.catalog?.packs ?? [];
     $("catalogList").replaceChildren(...(data.catalogError ? [el("li", { class: "bad", textContent: data.catalogError })]
-      : live.length ? live.map((entry) => el("li", {},
-        el("div", {}, el("strong", { textContent: `${entry.id} · v${entry.version}` }),
-          el("div", { class: "meta", textContent: [windowText(entry.windows), entry.archive && kb(entry.archive.bytes), entry.updatedAt && `올린 때 ${new Date(entry.updatedAt).toLocaleString("ko-KR")}`].filter(Boolean).join(" · ") })),
-        el("div", { class: "actions" }, el("button", { class: "danger", textContent: "카탈로그에서 내리기", onclick: () => withdraw(entry.id) }))))
+      : live.length ? live.map((entry) => {
+        const editor = scheduleEditor(entry.schedule ?? null, entry.windows);
+        return el("li", { class: "stack" },
+          el("div", { class: "row between" },
+            el("div", {}, el("strong", { textContent: `${entry.id} · v${entry.version}` }),
+              el("div", { class: "meta", textContent: [entry.archive && kb(entry.archive.bytes), entry.updatedAt && `올린 때 ${new Date(entry.updatedAt).toLocaleString("ko-KR")}`].filter(Boolean).join(" · ") })),
+            el("div", { class: "actions" }, el("button", { class: "danger", textContent: "카탈로그에서 내리기", onclick: () => withdraw(entry.id) }))),
+          editor.node,
+          el("div", { class: "row" }, el("button", { class: "primary", textContent: "기간 배포", onclick: () => deploySchedule(entry, editor.value()) })));
+      })
       : [el("li", { class: "muted", textContent: "서버에 올라간 팩이 없습니다(앱은 번들 시드를 씁니다)" })]));
     $("localList").replaceChildren(...data.local.map((pack) => {
       if (pack.error) return el("li", { class: "bad", textContent: `${pack.dir}: ${pack.error}` });
       const onServer = live.find((entry) => entry.id === pack.id);
-      const state = !onServer ? "서버에 없음" : onServer.version >= pack.version ? `서버 v${onServer.version} — 올리려면 version을 올리세요` : `서버 v${onServer.version} → v${pack.version}로 갱신`;
-      return el("li", {},
+      const blocked = Boolean(onServer && onServer.version >= pack.version);
+      const state = !onServer ? "서버에 없음" : blocked ? `서버에 v${onServer.version} 있음 — 기간만 바꾸려면 위에서, 새로 올리려면 manifest.json의 version을 올리세요` : `서버 v${onServer.version} → v${pack.version} (기기는 옛 버전을 지우고 새로 받음)`;
+      const editor = blocked ? null : scheduleEditor(onServer ? onServer.schedule ?? null : [], pack.windows);
+      return el("li", { class: "stack" },
         el("div", {}, el("strong", { textContent: `${pack.title} (${pack.id}) · v${pack.version}` }),
-          el("div", { class: "meta", textContent: [pack.dir, windowText(pack.windows), `파일 ${pack.assets}개 ${kb(pack.bytes)}`, state].join(" · ") })),
-        el("div", { class: "actions" }, el("button", { textContent: "묶어 보기", disabled: Boolean(onServer && onServer.version >= pack.version), onclick: () => build(pack) })));
+          el("div", { class: "meta", textContent: [pack.dir, `파일 ${pack.assets}개 ${kb(pack.bytes)}`, state].join(" · ") })),
+        editor?.node ?? null,
+        blocked ? null : el("div", { class: "row" }, el("button", { textContent: "묶어서 미리보기", onclick: () => build(pack, editor.value()) })));
     }));
   } catch (error) { $("catalogList").replaceChildren(el("li", { class: "bad", textContent: error.message })); }
 }
 
-async function build(pack) {
+async function deploySchedule(entry, schedule) {
+  const ok = await confirmDialog(`${entry.id} v${entry.version}의 공개 기간을 배포합니다.\n\n${describe(schedule)}\n\n같은 버전을 이미 받은 기기는 다시 받지 않고 그대로 씁니다. 앱은 최대 35분 안에 따릅니다. 계속할까요?`);
+  if (!ok) return;
+  try {
+    const result = await api("POST", "/api/packs/schedule", { id: entry.id, schedule });
+    $("packOut").hidden = false;
+    $("packOut").textContent = `${result.dryRun ? "[연습] " : ""}기간을 배포했습니다: ${entry.id}\n${describe(schedule)}`;
+    setTimeout(loadPacks, 1500);
+  } catch (error) { fail(error); }
+  refreshState();
+}
+
+async function build(pack, schedule) {
   try {
     $("packOut").hidden = false;
     $("packOut").textContent = "묶는 중…";
-    const result = await api("POST", "/api/packs/build", { dir: pack.dir });
+    const result = await api("POST", "/api/packs/build", { dir: pack.dir, schedule });
     lastBuild = result;
-    $("packOut").textContent = `묶었습니다: ${result.entry.archive.key} (${result.entry.archive.bytes.toLocaleString()}바이트)\nsha256 ${result.entry.archive.sha256}\n\n올릴 카탈로그:\n${JSON.stringify(result.catalogAfter, null, 2)}`;
+    $("packOut").textContent = `묶었습니다: ${result.entry.archive.key} (${result.entry.archive.bytes.toLocaleString()}바이트)\nsha256 ${result.entry.archive.sha256}\n공개 기간: ${describe(result.entry.schedule ?? null)}\n\n올릴 카탈로그:\n${JSON.stringify(result.catalogAfter, null, 2)}`;
     $("publishPack").hidden = false;
   } catch (error) { $("packOut").textContent = error.message; $("publishPack").hidden = true; }
   refreshState();

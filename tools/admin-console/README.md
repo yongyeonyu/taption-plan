@@ -7,11 +7,12 @@ node tools/admin-console/server.mjs             # 실제로 올림
 node tools/admin-console/server.mjs --dry-run   # 연습: 명령을 기록만 하고 올리지 않음
 ```
 
-실행하면 `http://127.0.0.1:8742/?t=<토큰>` 주소를 터미널에 찍고 브라우저를 엽니다. 끄려면 Ctrl+C. 의존 패키지는 없습니다(Node 20 이상, 팩 묶기에 `python3`).
+작업용 사본(worktree)에서 실행해도 서버 주소·wrangler 설정은 원래 저장소의 로컬 파일에서 읽습니다. 실행하면 `http://127.0.0.1:8742/?t=<토큰>` 주소를 터미널에 찍고 브라우저를 엽니다. 끄려면 Ctrl+C. 의존 패키지는 없습니다(Node 20 이상, 팩 묶기에 `python3`).
 
 ## 할 수 있는 것
 - **공지**: 지금 올라간 공지(`GET /public/announcements`)를 보고, 새로 쓰거나 고치거나 내립니다. 「미리보기」로 검사를 통과해야 「서버에 올리기」가 켜집니다. 검사·합치기 규칙은 `server/trip-relay/scripts/announce.mjs`와 같고, 그 사이 서버 공지가 바뀌었으면(version이 다르면) 올리지 않습니다.
 - **시즌 팩**: 번들 시드 폴더(`Packages/SeasonPackKit/Sources/SeasonPackKit/Resources/seed/<id>/<version>/`)를 `scripts/season-pack/build_bpack.py`로 묶어, 서버 카탈로그에 합친 결과를 보여 줍니다. 올리면 **파일을 먼저, 카탈로그를 나중에** 올리고 `Range` 이어받기(206)를 확인합니다. 서버에 같은 버전 이상이 있으면 묶지 않습니다(`manifest.json`의 `version`을 올리세요). 「카탈로그에서 내리기」는 카탈로그 항목만 뺍니다.
+- **공개 기간**: 서버 카탈로그의 팩마다 「운영 기간에만 공개」를 고르고 기간 칸(시작~끝, 이 맥 시간대)을 여러 개 넣은 뒤 「기간 배포」를 누르면 카탈로그만 고쳐 올립니다. 앱은 그 기간에만 팩을 켜고(같은 버전은 다시 받지 않음), 기간이 끝나면 꺼집니다. 「매니페스트 기간 그대로」는 칸을 지워 매년 기간(예: 12/19~12/30)으로 돌아갑니다. 새 버전을 올릴 때도 같은 편집기로 기간을 정해 「묶어서 미리보기 → 업그레이드 배포」를 누르면 됩니다(기기는 옛 버전을 지우고 새로 받음).
 - **설정**: 중계 서버 호스트, R2 버킷, `wrangler.local.toml` 경로. 처음에는 `TaptionPlan/AppSecrets.local.xcconfig`의 `TRIP_RELAY_HOST`와 `server/trip-relay/wrangler.toml`의 버킷을 읽고, 저장하면 `tools/admin-console/config.local.json`(git 제외)에 둡니다.
 
 ## 바깥으로 열리지 않게
