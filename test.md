@@ -16,7 +16,7 @@
 
 ### AI·PCC
 
-- MUS1120A01 · AI 연결에 Muse(Meta, 연결 키 + MCP) 공식 제공자 추가 · 코드 → 실기기(Muse 앱에 MCP 커넥터 등록 왕복) · 대표 지시 2026-11-20
+- MUS1120A01 · AI 연결에 Muse(Meta, 연결 키 + MCP) 공식 제공자 추가. MUS1120A02(같은 날 정정): 한국 스토어 조회가 0이라 `appStoreID` nil(받기 단추 없음), Muse에는 「MCP 서버 추가」 화면이 없어 안내·단계를 「채팅에 붙여 넣고 맞춤 커넥터 요청 + 키는 보안 입력창」으로 · 실기기(Muse 웹/앱 채팅으로 커넥터 만들어지는지), 한국 스토어 조회가 1이 되면 ID 넣기 · 대표 지시 2026-11-20
 - NTR1119A01 · 서버 `notification_review` 일 종류 추가(앱이 가계부로 읽지 않은 일반 알림을 AI가 일정·메모로 처리) · 대표 몫(서버 배포 `npx wrangler deploy`) · 앱 쪽 업로드는 별도 ID(메인 세션)
 - PCC1118A01 · PCC는 entitlement 승인 전까지 꺼 둠(`AppleModelEnvironment.isPrivateCloudComputeEnabled = false`). 승인 뒤 entitlement 넣기·스위치 켜기·`PRIVACY.md` 한 줄(초안: 메모 다듬기 등 일부 글은 Apple Private Cloud Compute에서 처리될 수 있고, 좌표가 든 글은 보내지 않으며, Apple은 처리 뒤 보관하지 않음)을 **같은 커밋**에 넣고 지원 기기에서 확인. 지출·일정 초안·하루 요약은 라우터에 아직 잇지 않음 · 승인(PCC entitlement), 대표 몫(Apple Small Business Program 가입 신청함 — 접수되면 대표가 알려 줌), 코드(초안·요약 연결) · `docs/APPLE_FOUNDATION_MODELS.md`
 - CRV1118A01 후속 ① · 메모 저장 상한(`TaptionPlanMemoRecord.maximumTextLength` 1,000자)이 다듬기 상한(기기 1,500 / PCC 12,000)보다 작아, 1,500자 넘는 메모를 연결된 AI로 넘기는 길은 저장되지 않음 · 대표 결정(상한을 어떻게 맞출지)
@@ -146,6 +146,7 @@
 - 원인: 「AI 연결」 목록에 Muse(Muse from Meta, iOS 앱)가 없어 사용자가 Muse에 연결 키·MCP 주소를 넣는 안내를 받을 수 없었다.
 - 해결: `AssistantAIProvider.muse`(App Store 6760173601, 무료, 스킴 없음, 연결 키 방식)를 `featured` 끝에 더하고, Cue와 같은 연결 키 섹션(권한·기간·MCP 주소·키 복사·1회용 연결 안내)을 공통화해 Muse에도 쓴다. `museSetupText`는 MCP 우선. 연결 단계 문구는 커넥터/MCP 등록 흐름. 웹 채팅 주소·앱 스킴은 확인되지 않아 넣지 않는다. 피클 항목은 그대로.
 - 검증 기준: `AssistantPhase3Tests`(featured·Muse appStoreURL·title·planBadge) 통과, 앱 Debug 빌드 성공, 실기기에서 Muse 앱에 MCP 커넥터를 등록해 읽기 도구가 응답하는지.
+- 정정(MUS1120A02, 2026-11-20): `https://itunes.apple.com/kr/lookup?id=6760173601`이 다시 봐도 `resultCount: 0`이라 `appStoreID`는 nil(미국 ID 하드코딩 금지, 시험 `XCTAssertNil(.muse.appStoreURL)`). Muse 앱에는 「MCP 서버 추가」 설정 화면이 없다는 제3자 확인에 따라 안내 글(`museSetupText`: 「원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청, 키는 보안 자격증명 입력창」)·`keySteps`·연결 단계·붙여 넣기 안내를 고치고 「공식 MCP 설정 화면」이라고 단정하지 않는다. 한국 미출시라 앱이 없으면 웹으로 이용한다고 안내(주소는 확인된 것이 없어 넣지 않음). 바뀐 문구 9개는 12개 언어로 `scripts/l10n/translations`에 넣었고 `check.py` 실패 0, `generate.py`는 메인 세션 몫.
 - 상태: 진행 중(2026-11-20).
 
 #### NTR1119A01 · 서버 notification_review 일 종류
@@ -891,7 +892,7 @@
 
 | ID | 할 일(손 순서) | 기대 결과 | 결과 |
 | --- | --- | --- | --- |
-| MUS1120A01 | 메인 메뉴 → 연결 → AI 연결 → Muse: 권한(읽기 전용)·기간 고르고 「Muse 연결 키 만들기」 → Muse 앱에서 커스텀 커넥터(MCP 서버)에 MCP 주소와 `Authorization: Bearer <키>` 등록 → Muse에서 「오늘 기록 읽어 줘」 | 목록에 Muse(무료)가 Cue 뒤에 보이고, Muse가 오늘 기록을 읽어 답하며 앱 상태가 「연결됨」. Muse 커넥터 화면 칸 이름이 안내와 다르면 기록 | |
+| MUS1120A01 | 메인 메뉴 → 연결 → AI 연결 → Muse: 권한(읽기 전용)·기간 고르고 「Muse 연결 키 만들기」(「받기」 단추는 없어야 함) → 복사된 안내를 Muse 채팅(웹 또는 앱)에 붙여 넣고 맞춤 커넥터 생성 요청 → Muse가 묻는 보안 입력창에 연결 키 입력 → 「오늘 기록 읽어 줘」 | 목록에 Muse(무료)가 Cue 뒤에 보이고, Muse가 커넥터를 만들어 오늘 기록을 읽어 답하며 앱 상태가 「연결됨」. Muse가 키를 채팅 본문으로 받으려 하거나 안내와 다르게 동작하면 기록 | |
 | CTR1120A01 | 시간 사이드바(날씨 칸)를 켠 채 하단 「집」·「현재 위치」 누르기 | 집·화랑이가 사이드바 왼쪽 남은 지도의 가로 가운데에 옴(화면 정가운데보다 왼쪽) | |
 | FLT1119A01 | 여행 모드 하단 「항공편 찾기」: 서버 키 배포 전이면 조회 실패 안내만 나오고 「직접 넣기」로 이어지는지, 직접 넣기로 출국편(인천 → 방콕 09:05) 넣기 | 오류 화면 없이 일정 칸이 생기고 도착은 방콕 현지 시각, 지도에 도착 공항 핀 | |
 | FLT1119A01 | 단축어 자동화 「메시지를 받을 때」에 「항공 알림 넣기」를 걸고 가짜 문자(`FlightAlertParserTests`의 예약번호 안내·여정 두 통) 받기 | 두 통이 한 카드(출국)로 합쳐지고 귀국 카드가 생기며 같은 문자를 다시 받아도 중복 없음 | |

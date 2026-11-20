@@ -214,9 +214,9 @@
    ]
   },
   {
-   "key": "1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요.\n2. Muse에서 커스텀 커넥터(MCP 서버)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Muse 화면을 따라 주세요. 주소만 받는 화면이면 「연결 안내 한 번에 복사」 안내에 든 키 포함 주소를 써요.\n5. 저장한 뒤 Muse에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.|1. Pick access and period above, then tap Make a Muse key.\n2. In Muse, open the screen for adding a custom connector (MCP server).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Muse's screen. If it only takes a URL, use the key URL in the setup from Copy everything at once.\n5. Save, then ask Muse something like \"read today's records\" to check.",
-   "ko": "1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요.\n2. Muse에서 커스텀 커넥터(MCP 서버)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Muse 화면을 따라 주세요. 주소만 받는 화면이면 「연결 안내 한 번에 복사」 안내에 든 키 포함 주소를 써요.\n5. 저장한 뒤 Muse에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.",
-   "en": "1. Pick access and period above, then tap Make a Muse key.\n2. In Muse, open the screen for adding a custom connector (MCP server).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Muse's screen. If it only takes a URL, use the key URL in the setup from Copy everything at once.\n5. Save, then ask Muse something like \"read today's records\" to check.",
+   "key": "1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요. 연결 안내가 복사돼요.\n2. Muse 채팅에 연결 안내를 붙여 넣고, 원격 MCP 서버에 연결하는 맞춤 커넥터를 만들어 달라고 요청해요.\n3. Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.\n4. 「오늘 기록 읽어 줘」처럼 물어 확인해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|1. Pick access and period above, then tap Make a Muse key. The setup is copied.\n2. Paste the setup into the Muse chat and ask it to create a custom connector to the remote MCP server.\n3. When Muse asks for the key, enter the connection key in Muse's secure input, not in the chat text.\n4. Ask something like \"read today's records\" to check. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
+   "ko": "1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요. 연결 안내가 복사돼요.\n2. Muse 채팅에 연결 안내를 붙여 넣고, 원격 MCP 서버에 연결하는 맞춤 커넥터를 만들어 달라고 요청해요.\n3. Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.\n4. 「오늘 기록 읽어 줘」처럼 물어 확인해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
+   "en": "1. Pick access and period above, then tap Make a Muse key. The setup is copied.\n2. Paste the setup into the Muse chat and ask it to create a custom connector to the remote MCP server.\n3. When Muse asks for the key, enter the connection key in Muse's secure input, not in the chat text.\n4. Ask something like \"read today's records\" to check. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
    "files": [
     "AssistantConnectView.swift:326"
    ],
@@ -2375,20 +2375,8 @@
    "ko": "MCP 주소 복사",
    "en": "Copy MCP URL",
    "files": [
-    "AssistantConnectGuide.swift:130",
+    "AssistantConnectGuide.swift:131",
     "AssistantConnectView.swift:252"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "MCP 주소 복사|Copy the MCP URL",
-   "ko": "MCP 주소 복사",
-   "en": "Copy the MCP URL",
-   "files": [
-    "AssistantConnectGuide.swift:128"
    ],
    "args": [],
    "targets": [
@@ -2420,9 +2408,9 @@
    ]
   },
   {
-   "key": "Muse 설정에서 커스텀 커넥터(MCP 서버)를 추가하고, 이 화면의 MCP 주소와 연결 키를 넣어 주세요. 복사한 안내 주소를 열면 같은 내용을 다시 볼 수 있어요.|In Muse settings, add a custom connector (MCP server) and enter the MCP URL and connection key from this screen. Open the copied link to see the same instructions.",
-   "ko": "Muse 설정에서 커스텀 커넥터(MCP 서버)를 추가하고, 이 화면의 MCP 주소와 연결 키를 넣어 주세요. 복사한 안내 주소를 열면 같은 내용을 다시 볼 수 있어요.",
-   "en": "In Muse settings, add a custom connector (MCP server) and enter the MCP URL and connection key from this screen. Open the copied link to see the same instructions.",
+   "key": "Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해 주세요. 키는 채팅 본문이 아니라 Muse의 보안 입력창에 넣어요. 안내 주소를 Muse가 열게 해도 돼요.|Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Enter the key in Muse's secure input, not in the chat text. You can also have Muse open the link.",
+   "ko": "Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해 주세요. 키는 채팅 본문이 아니라 Muse의 보안 입력창에 넣어요. 안내 주소를 Muse가 열게 해도 돼요.",
+   "en": "Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Enter the key in Muse's secure input, not in the chat text. You can also have Muse open the link.",
    "files": [
     "AssistantConnectView.swift:666"
    ],
@@ -2432,11 +2420,47 @@
    ]
   },
   {
-   "key": "Muse에서 커스텀 커넥터(MCP 서버)를 추가하는 화면의 서버 주소 칸에 붙여 넣어요.|Paste it into the server URL field when adding a custom connector (MCP server) in Muse.",
-   "ko": "Muse에서 커스텀 커넥터(MCP 서버)를 추가하는 화면의 서버 주소 칸에 붙여 넣어요.",
-   "en": "Paste it into the server URL field when adding a custom connector (MCP server) in Muse.",
+   "key": "Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
+   "ko": "Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.",
+   "en": "Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.",
+   "files": [
+    "AssistantConnectGuide.swift:130"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Muse 채팅에 붙여 넣기|Paste into the Muse chat",
+   "ko": "Muse 채팅에 붙여 넣기",
+   "en": "Paste into the Muse chat",
    "files": [
     "AssistantConnectGuide.swift:129"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.|When Muse asks for the key, enter it in Muse's secure input, not in the chat text.",
+   "ko": "Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.",
+   "en": "When Muse asks for the key, enter it in Muse's secure input, not in the chat text.",
+   "files": [
+    "AssistantConnectGuide.swift:133"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Muse에 연결|Connect to Muse",
+   "ko": "Muse에 연결",
+   "en": "Connect to Muse",
+   "files": [
+    "AssistantConnectView.swift:273"
    ],
    "args": [],
    "targets": [
@@ -3394,7 +3418,7 @@
    "ko": "{0} / {1} 단계",
    "en": "Step {0} of {1}",
    "files": [
-    "AssistantConnectGuide.swift:168"
+    "AssistantConnectGuide.swift:169"
    ],
    "args": [
     "index + 1",
@@ -4085,7 +4109,7 @@
    "ko": "{0} 열기",
    "en": "Open {0}",
    "files": [
-    "AssistantConnectGuide.swift:138",
+    "AssistantConnectGuide.swift:139",
     "AssistantConnectView.swift:157",
     "AssistantConnectView.swift:211"
    ],
@@ -33918,7 +33942,7 @@
    "ko": "~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작해요.",
    "en": "Paste into ~/.gemini/settings.json and restart gemini.",
    "files": [
-    "AssistantConnectGuide.swift:140"
+    "AssistantConnectGuide.swift:141"
    ],
    "args": [],
    "targets": [
@@ -41139,7 +41163,7 @@
    "ko": "다음",
    "en": "Next",
    "files": [
-    "AssistantConnectGuide.swift:189",
+    "AssistantConnectGuide.swift:190",
     "BokkiShortcutsGuide.swift:227",
     "TravelTodayCard.swift:94"
    ],
@@ -41165,7 +41189,7 @@
    "ko": "단계별 연결",
    "en": "Step by step",
    "files": [
-    "AssistantConnectGuide.swift:194"
+    "AssistantConnectGuide.swift:195"
    ],
    "args": [],
    "targets": [
@@ -44011,7 +44035,7 @@
    "ko": "무료 가능 · 무료는 커넥터 1개",
    "en": "Free OK · 1 connector on Free",
    "files": [
-    "AssistantAIProvider.swift:95"
+    "AssistantAIProvider.swift:96"
    ],
    "args": [],
    "targets": [
@@ -44023,9 +44047,9 @@
    "ko": "무료",
    "en": "Free",
    "files": [
-    "AssistantAIProvider.swift:94",
-    "AssistantAIProvider.swift:100",
-    "AssistantAIProvider.swift:102"
+    "AssistantAIProvider.swift:95",
+    "AssistantAIProvider.swift:101",
+    "AssistantAIProvider.swift:103"
    ],
    "args": [],
    "targets": [
@@ -45905,6 +45929,18 @@
    "en": "A security update disconnected your previous AI connections. Reconnect the AIs you use below.",
    "files": [
     "AssistantSettingsView.swift:60"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "보안 입력창에 키 넣기|Enter the key securely",
+   "ko": "보안 입력창에 키 넣기",
+   "en": "Enter the key securely",
+   "files": [
+    "AssistantConnectGuide.swift:132"
    ],
    "args": [],
    "targets": [
@@ -50472,11 +50508,11 @@
    ]
   },
   {
-   "key": "아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요.|Pick access and period below, then enter your app password to make a key just for Muse.",
-   "ko": "아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들어요.",
-   "en": "Pick access and period below, then enter your app password to make a key just for Muse.",
+   "key": "아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고 연결 안내(1회용 주소)를 복사해요.|Pick access and period below, then enter your app password to make a key just for Muse and copy the setup (a one-time link).",
+   "ko": "아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고 연결 안내(1회용 주소)를 복사해요.",
+   "en": "Pick access and period below, then enter your app password to make a key just for Muse and copy the setup (a one-time link).",
    "files": [
-    "AssistantConnectGuide.swift:126"
+    "AssistantConnectGuide.swift:127"
    ],
    "args": [],
    "targets": [
@@ -51044,7 +51080,7 @@
    "ko": "앞 단계를 먼저 해 주세요.",
    "en": "Do the previous step first.",
    "files": [
-    "AssistantConnectGuide.swift:184"
+    "AssistantConnectGuide.swift:185"
    ],
    "args": [],
    "targets": [
@@ -51315,7 +51351,7 @@
    "ko": "앱 비밀번호를 넣으면 키를 만들고 연결 안내를 복사해요(키 대신 1회용 주소).",
    "en": "Enter your app password to make a key and copy the setup (a one-time link instead of the key).",
    "files": [
-    "AssistantConnectGuide.swift:146"
+    "AssistantConnectGuide.swift:147"
    ],
    "args": [],
    "targets": [
@@ -53044,9 +53080,9 @@
    ]
   },
   {
-   "key": "연결 안내를 복사했어요. Muse의 커스텀 커넥터에 MCP 주소와 연결 키를 넣어 주세요.|Setup copied. Add the MCP URL and connection key as a custom connector in Muse.",
-   "ko": "연결 안내를 복사했어요. Muse의 커스텀 커넥터에 MCP 주소와 연결 키를 넣어 주세요.",
-   "en": "Setup copied. Add the MCP URL and connection key as a custom connector in Muse.",
+   "key": "연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 맞춤 커넥터를 요청하고, 키는 Muse의 보안 입력창에 넣어 주세요.|Setup copied. Paste it into the Muse chat to request a custom connector, and enter the key in Muse's secure input.",
+   "ko": "연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 맞춤 커넥터를 요청하고, 키는 Muse의 보안 입력창에 넣어 주세요.",
+   "en": "Setup copied. Paste it into the Muse chat to request a custom connector, and enter the key in Muse's secure input.",
    "files": [
     "AssistantConnectView.swift:530"
    ],
@@ -53196,8 +53232,8 @@
    "en": "Make a key",
    "files": [
     "AssistantConnectGuide.swift:108",
-    "AssistantConnectGuide.swift:125",
-    "AssistantConnectGuide.swift:145"
+    "AssistantConnectGuide.swift:126",
+    "AssistantConnectGuide.swift:146"
    ],
    "args": [],
    "targets": [
@@ -53223,7 +53259,7 @@
    "en": "Copy key",
    "files": [
     "AssistantConnectGuide.swift:119",
-    "AssistantConnectGuide.swift:133"
+    "AssistantConnectGuide.swift:134"
    ],
    "args": [],
    "targets": [
@@ -53507,7 +53543,7 @@
    "ko": "연결됨",
    "en": "Connected",
    "files": [
-    "AssistantConnectGuide.swift:173",
+    "AssistantConnectGuide.swift:174",
     "AssistantConnectView.swift:81",
     "AssistantConnectView.swift:140"
    ],
@@ -54017,7 +54053,7 @@
    "en": "Open",
    "files": [
     "AssistantBubble.swift:334",
-    "AssistantConnectGuide.swift:142",
+    "AssistantConnectGuide.swift:143",
     "AssistantConnectView.swift:87"
    ],
    "args": [],
@@ -55143,7 +55179,7 @@
    "ko": "요금제 조건은 각 서비스 사정에 따라 바뀔 수 있어요.",
    "en": "Plan requirements may change at each service's discretion.",
    "files": [
-    "AssistantAIProvider.swift:113"
+    "AssistantAIProvider.swift:114"
    ],
    "args": [],
    "targets": [
@@ -56261,7 +56297,7 @@
    "ko": "유료 · API 키 필요",
    "en": "Paid · API key needed",
    "files": [
-    "AssistantAIProvider.swift:98"
+    "AssistantAIProvider.swift:99"
    ],
    "args": [],
    "targets": [
@@ -56273,7 +56309,7 @@
    "ko": "유료 · 맞춤 GPT는 Plus 이상",
    "en": "Paid · Custom GPT on Plus+",
    "files": [
-    "AssistantAIProvider.swift:97"
+    "AssistantAIProvider.swift:98"
    ],
    "args": [],
    "targets": [
@@ -58248,7 +58284,7 @@
    "ko": "이전",
    "en": "Back",
    "files": [
-    "AssistantConnectGuide.swift:187",
+    "AssistantConnectGuide.swift:188",
     "BokkiShortcutsGuide.swift:225",
     "FirstRunTutorialView.swift:77"
    ],
@@ -58294,24 +58330,11 @@
    ]
   },
   {
-   "key": "인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣고 저장해요. 칸 이름은 Muse 화면을 따라 주세요.|In the auth field (request header), enter Authorization: Bearer followed by the key, then save. Field names follow Muse's screen.",
-   "ko": "인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣고 저장해요. 칸 이름은 Muse 화면을 따라 주세요.",
-   "en": "In the auth field (request header), enter Authorization: Bearer followed by the key, then save. Field names follow Muse's screen.",
-   "files": [
-    "AssistantConnectGuide.swift:132"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "인증에 키 넣기|Add the key",
    "ko": "인증에 키 넣기",
    "en": "Add the key",
    "files": [
-    "AssistantConnectGuide.swift:117",
-    "AssistantConnectGuide.swift:131"
+    "AssistantConnectGuide.swift:117"
    ],
    "args": [],
    "targets": [
@@ -63122,7 +63145,7 @@
    "ko": "채팅창에 붙여 넣고 보내요. 앱이 없으면 App Store가 열려요.",
    "en": "Paste into the chat and send. The App Store opens if it isn't installed.",
    "files": [
-    "AssistantConnectGuide.swift:141"
+    "AssistantConnectGuide.swift:142"
    ],
    "args": [],
    "targets": [
@@ -64741,8 +64764,8 @@
    "en": "Make key",
    "files": [
     "AssistantConnectGuide.swift:110",
-    "AssistantConnectGuide.swift:127",
-    "AssistantConnectGuide.swift:147"
+    "AssistantConnectGuide.swift:128",
+    "AssistantConnectGuide.swift:148"
    ],
    "args": [],
    "targets": [

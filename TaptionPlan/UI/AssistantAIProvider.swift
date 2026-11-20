@@ -48,8 +48,9 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .gemini: "6477489729"
         // Cue by Manus(대표 확인 2026-11-11, iTunes 조회 ai.manus.agents). 앱 스킴은 확인하지 못해 없다.
         case .cue: "6808613358"
-        // Muse from Meta(대표 확인 2026-11-20, App Store). 앱 스킴은 확인하지 못해 없다(MUS1120A01).
-        case .muse: "6760173601"
+        // Muse from Meta: 미국 스토어(6760173601)에만 있고 한국 스토어 조회(itunes.apple.com/kr/lookup)는 2026-11-20 resultCount 0이다.
+        // 미국 ID를 넣으면 한국 사용자에게 「받기」가 잘못 뜨므로 nil로 둔다. 한국 조회가 1이 되면 그때 넣는다(MUS1120A01).
+        case .muse: nil
         case .other: nil
         }
     }
@@ -213,12 +214,14 @@ extension TripRelay {
         """ + assistantSetupText(host: host, key: key, scope: scope, expiresAt: expiresAt)
     }
 
-    /// Muse용 안내: Cue와 같이 MCP 연결을 먼저 적고, 이어서 REST 사용법을 붙인다(MUS1120A01).
+    /// Muse용 안내(MUS1120A01). Muse에는 「MCP 서버 추가」 설정 화면이 없다. 사용자가 이 글을 Muse 채팅에 붙여 넣고,
+    /// Muse가 자기 쪽에서 원격 MCP 서버에 붙는 맞춤 커넥터를 만든다. 키는 채팅 본문이 아니라 Muse의 보안 자격증명 입력창에 넣게 한다.
+    /// 공식 MCP 설정 화면이 있다고 단정하지 않는다. MCP를 먼저 적고, 못 쓰면 REST 사용법을 이어 붙인다.
     static func museSetupText(host: String, key: String, scope: AssistantKeyScope, expiresAt: Date?) -> String {
         """
         BOKKI Plan connection for Muse.
-        Preferred: add a remote MCP server (custom connector) with URL \(mcpURL(host: host)) and the request header Authorization: Bearer \(key). If your connector only takes a URL, use \(mcpKeyURL(host: host, key: key)) with no sign-in.
-        If you can't add MCP servers, use the web API below with the same key.
+        Please create a custom connector to the remote MCP server \(mcpURL(host: host)) (Streamable HTTP) with the request header Authorization: Bearer \(key). Take the key through your secure credential input; don't ask me to paste it into this chat and don't repeat it in your replies. If the connector can only take a URL, use \(mcpKeyURL(host: host, key: key)) with no sign-in.
+        If you can't connect to MCP servers, use the web API below with the same key.
 
         """ + assistantSetupText(host: host, key: key, scope: scope, expiresAt: expiresAt)
     }

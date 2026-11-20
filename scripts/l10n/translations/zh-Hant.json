@@ -6241,6 +6241,15 @@
 "AI에게 일정으로 만들어 달라고 맡겼어요. 메모 › AI에서 볼 수 있어요.|Asked your AI to turn it into a plan. See Memo › AI.": "已請 AI 把它整理成行程。可在 備忘 › AI 中查看。",
 "AI 연결이 없어 메모로 남겼어요.|No AI connection, so it was saved as a memo.": "沒有 AI 連接，已儲存為備忘。",
 "받았어요. 앱을 열면 일정으로 넣을게요.|Got it. I'll add it to your schedule when the app opens.": "已收到。開啟 App 後會加入行程。",
-"공유한 일정|Shared plan": "分享的行程"
+"공유한 일정|Shared plan": "分享的行程",
+"1. 위에서 권한·기간을 고르고 「Muse 연결 키 만들기」를 눌러요. 연결 안내가 복사돼요.\n2. Muse 채팅에 연결 안내를 붙여 넣고, 원격 MCP 서버에 연결하는 맞춤 커넥터를 만들어 달라고 요청해요.\n3. Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.\n4. 「오늘 기록 읽어 줘」처럼 물어 확인해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|1. Pick access and period above, then tap Make a Muse key. The setup is copied.\n2. Paste the setup into the Muse chat and ask it to create a custom connector to the remote MCP server.\n3. When Muse asks for the key, enter the connection key in Muse's secure input, not in the chat text.\n4. Ask something like \"read today's records\" to check. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.": "1. 在上方選擇權限和期限，然後點按「建立 Muse 連線金鑰」。連線說明會被複製。\n2. 將連線說明貼到 Muse 聊天中，並請它建立連接遠端 MCP 伺服器的自訂連接器。\n3. 當 Muse 詢問金鑰時，請把連線金鑰輸入 Muse 的安全輸入框，而不是聊天內文。\n4. 問一句「讀取今天的記錄」之類的內容來確認。韓國 App Store 目前沒有 Muse App，沒有 App 時請使用網頁版。",
+"아래에서 권한·기간을 고른 뒤 앱 비밀번호를 넣으면 Muse에만 쓰는 연결 키를 만들고 연결 안내(1회용 주소)를 복사해요.|Pick access and period below, then enter your app password to make a key just for Muse and copy the setup (a one-time link).": "在下方選擇權限和期限，然後輸入 App 密碼，即可建立僅供 Muse 使用的連線金鑰，並複製連線說明（一次性連結）。",
+"Muse 채팅에 붙여 넣기|Paste into the Muse chat": "貼到 Muse 聊天",
+"Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해요. 한국 App Store에는 아직 Muse 앱이 없어서 앱이 없으면 웹으로 이용해요.|Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Muse isn't on the Korean App Store yet, so use the web version if you don't have the app.": "貼到 Muse 聊天中，並請它建立連接遠端 MCP 伺服器的自訂連接器。韓國 App Store 目前沒有 Muse App，沒有 App 時請使用網頁版。",
+"보안 입력창에 키 넣기|Enter the key securely": "在安全輸入框中輸入金鑰",
+"Muse가 키를 물으면 채팅 본문이 아니라 Muse의 보안 입력창에 연결 키를 넣어요.|When Muse asks for the key, enter it in Muse's secure input, not in the chat text.": "當 Muse 詢問金鑰時，請把連線金鑰輸入 Muse 的安全輸入框，而不是聊天內文。",
+"연결 안내를 복사했어요. Muse 채팅에 붙여 넣어 맞춤 커넥터를 요청하고, 키는 Muse의 보안 입력창에 넣어 주세요.|Setup copied. Paste it into the Muse chat to request a custom connector, and enter the key in Muse's secure input.": "已複製連線說明。請貼到 Muse 聊天中請求建立自訂連接器，並把金鑰輸入 Muse 的安全輸入框。",
+"Muse 채팅에 붙여 넣고 원격 MCP 서버 맞춤 커넥터를 만들어 달라고 요청해 주세요. 키는 채팅 본문이 아니라 Muse의 보안 입력창에 넣어요. 안내 주소를 Muse가 열게 해도 돼요.|Paste it into the Muse chat and ask it to create a custom connector to the remote MCP server. Enter the key in Muse's secure input, not in the chat text. You can also have Muse open the link.": "請貼到 Muse 聊天中，並請它建立連接遠端 MCP 伺服器的自訂連接器。金鑰請輸入 Muse 的安全輸入框，而不是聊天內文。也可以讓 Muse 開啟說明連結。",
+"Muse에 연결|Connect to Muse": "連線到 Muse"
 }
 }
