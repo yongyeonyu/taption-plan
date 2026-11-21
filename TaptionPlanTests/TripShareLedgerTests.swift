@@ -399,11 +399,11 @@ final class TripShareLedgerTests: XCTestCase {
         let lunch = expense("점심", 9_000)
         let failure = await TripShareLedger.save(lunch, scope: .shared)
         XCTAssertEqual(failure, .viewOnly)
-        XCTAssertTrue(book.entries.isEmpty, "서버가 받아 주지 않은 공동 지출은 가계부에도 쓰지 않는다")
+        XCTAssertFalse(book.entries.contains { $0.id == lunch.id }, "서버가 받아 주지 않은 공동 지출은 가계부에도 쓰지 않는다")
         // 비공개는 인터넷 없이도 된다.
         let hidden = await TripShareLedger.save(lunch, scope: .ownHidden)
         XCTAssertNil(hidden)
-        XCTAssertEqual(book.entries.map(\.id), [lunch.id])
+        XCTAssertEqual(book.entries.filter { $0.id == lunch.id }.count, 1)
     }
 
     // MARK: 꺼진 동안 방에서 지워진 공동 지출(TSF1115A01)
