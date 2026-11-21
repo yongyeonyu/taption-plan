@@ -50,7 +50,7 @@ for (const tab of document.querySelectorAll(".tab")) {
 
 // ---- 현황: 아이콘을 정하지 못한 가맹점(MER1121A01) ----
 let merchantItems = [];
-const when = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); };
+const seenAt = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); };
 
 async function loadMerchants() {
   const message = $("merchantMessage"), table = $("merchantTable");
@@ -62,7 +62,7 @@ async function loadMerchants() {
     $("merchantTotals").textContent = `이름 ${result.totals.names}개 · 보낸 사람 ${result.totals.users}명 · 요청 ${result.totals.hits}건`;
     $("merchantRows").replaceChildren(...result.items.map((item) => el("tr", {},
       el("td", { textContent: item.name }), el("td", { class: "num", textContent: String(item.hits) }),
-      el("td", { class: "num", textContent: String(item.users) }), el("td", { textContent: when(item.lastAt) }))));
+      el("td", { class: "num", textContent: String(item.users) }), el("td", { textContent: seenAt(item.lastAt) }))));
     message.hidden = result.items.length > 0;
     if (!result.items.length) message.textContent = "아직 모인 이름이 없습니다.";
     table.hidden = result.items.length === 0;

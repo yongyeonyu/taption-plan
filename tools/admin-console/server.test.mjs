@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "n
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { after, before, test } from "node:test";
 
 const dir = mkdtempSync(join(tmpdir(), "admin-console-"));
@@ -526,4 +527,10 @@ test("현황 라우트는 접속 토큰이 있어야 하고, 운영자 토큰이
   assert.equal(response.status, 200);
   assert.equal(response.json.ok, false);
   assert.equal(response.json.reason, "no_token");
+});
+
+test("브라우저 스크립트(app.js)는 문법 오류가 없다 — 오류가 있으면 버튼이 하나도 작동하지 않는다", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const check = spawnSync(process.execPath, ["--check", fileURLToPath(new URL("./app.js", import.meta.url))], { encoding: "utf8" });
+  assert.equal(check.status, 0, check.stderr);
 });
