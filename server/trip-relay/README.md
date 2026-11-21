@@ -152,6 +152,22 @@ npx wrangler secret put KAC_API_KEY --config wrangler.local.toml
 npx wrangler deploy --config wrangler.local.toml
 ```
 
+## 앱 안 AI 대화 — AWS Bedrock (AI1121A01)
+
+앱(주인 키)이 대화를 보내면 Bedrock Runtime `Converse`로 넘기고, 답과 **확인할 명령 후보**를 돌려줍니다. 명령은 큐(`/command`)에 넣지 않습니다. 앱이 화면에서 사용자가 고르고 「반영」을 눌러야 들어갑니다. SDK 없이 Web Crypto로 SigV4 서명합니다(`src/bedrock.js`, AWS 공개 시험 벡터로 확인).
+
+```
+POST /ai/converse   (Authorization: Bearer <주인 키>)
+{ "messages": [{ "role": "user"|"assistant", "text": "..." }], "context": { "today": "YYYY-MM-DD", "timeZone": "+09:00", "language": "ko", "region": "시군구", "trip": { "id", "title" }, "categories": [{ "id", "name" }] }, "maxTokens": 1024 }
+→ 200 { "reply": "...", "commands": [bokki-command…], "trip"?: bokki-trip, "dropped": 0, "redacted": ["coordinates"|"cardNumber"|"idNumber"], "truncated": false, "usage": { "inputTokens", "outputTokens" } }
+```
+
+- 명령은 새로 더하기만: `addSchedule`·`addMemo`·`addExpense`·`addTripStop`·`addGoal`·`addTrip`. 서버가 id를 새로 붙이고 `validate.js`로 다시 검사해 틀린 것은 버립니다(`dropped`). 모델이 낸 좌표 칸은 지우고, 일정의 장소 이름은 메모 글(`장소: …`)로 옮깁니다. 여행 초안의 좌표·지도 주소도 지웁니다.
+- 개인정보(AGENTS.md 4절): 보내기 전에 좌표·카드번호(Luhn)·주민번호를 지우고, 맥락은 위 칸만 받습니다(위도·경도·일기 칸은 이름이 무엇이든 버립니다). 앱도 보내기 전에 한 번 지웁니다.
+- 0원 방어: 한 사람 하루 30회(`AI_USER_DAILY_CALLS`), 서버 전체 하루 300회(`AI_GLOBAL_DAILY_CALLS`), 한 사람 하루 토큰 예약 60,000(`AI_USER_DAILY_TOKENS`, 부르기 전에 「답 상한 + 입력 글자/2 + 600」을 뺌), 답 상한 1,024토큰(`AI_MAX_TOKENS`, 최대 4,096). 넘으면 Bedrock을 부르기 전에 `429 daily_ai_limit`·`daily_ai_server_limit`·`daily_ai_token_limit` + `Retry-After`.
+- 오류: 비밀값 없음 `503 ai_unavailable`, 형식 틀림 `400`, Bedrock 거절 `502 upstream_denied`, Bedrock 혼잡 `429 upstream_throttled`. 상류 본문·키는 돌려주지도 기록하지도 않습니다.
+- 비밀값(관리 페이지에서 반영 예정): `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`(없으면 `us-east-1`), `AWS_BEDROCK_MODEL_ID`(없으면 `us.amazon.nova-lite-v1:0`). 임시 자격 증명이면 `AWS_SESSION_TOKEN`도 받습니다.
+
 ## 등록·PIN·Durable Object·OAuth (SEC1110A02·AIR1110A03)
 
 - `POST /register`: 앱이 만든 키만 등록(서로 다른 글자 20개 미만은 422). 등록하지 않은 키는 모든 경로에서 401.

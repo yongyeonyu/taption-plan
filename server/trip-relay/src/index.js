@@ -14,6 +14,8 @@ import * as shared from "./shared.js";
 import { createSetup, readSetup } from "./setup.js";
 import { exFare, exUnits } from "./expressway.js";
 import { dailyBudget, flightsSchedule, flightsStatus } from "./flights.js";
+import * as algolia from "./algolia.js";
+import { converseRoute } from "./assist.js";
 import { kakaoDirections } from "./directions.js";
 import { fxRoute } from "./fx.js";
 import { publicRoute as publicAssets } from "./public.js";
@@ -513,6 +515,20 @@ const ROUTES = {
   "/flights/status": {
     GET: ["search", flightsRoute],
   },
+  // SRCH1121A01: 도시 팩 검색(Algolia). 앱은 검색 키로 Secured Key만 받고, 색인·설정은 앱 주인 키만.
+  "/search/packs/key": {
+    GET: ["search", (request, ctx) => algolia.keyRoute(request, ctx.env, ctx.now, () => userState(ctx.env, "global:algolia-key").call("countDaily", { name: "algolia-key", limit: algolia.keyDailyBudget(ctx.env), now: ctx.now }))],
+  },
+  "/search/packs/index": {
+    POST: ["master", (request, ctx) => algolia.indexRoute(request, ctx.env, ctx.env.FETCH ?? fetch)],
+  },
+  "/search/packs/settings": {
+    POST: ["master", (request, ctx) => algolia.settingsRoute(ctx.env, ctx.env.FETCH ?? fetch)],
+  },
+  // AI1121A01: 앱 안 AI 대화(Bedrock). 주인 키만, 답과 확인할 명령 후보를 돌려주고 큐에는 넣지 않는다.
+  "/ai/converse": {
+    POST: ["master", withBody(converseRoute)],
+  },
   "/fx": {
     GET: ["search", fxRoute],
   },
@@ -572,7 +588,7 @@ async function authorized(request, env, url, route, exec, pathKey = null) {
   const [need, run, part] = entry;
   const state = userState(env, auth.master);
   const admission = await state.call("admit", {
-    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/") || url.pathname.startsWith("/ex/") || url.pathname.startsWith("/flights/"),
+    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/") || url.pathname.startsWith("/ex/") || url.pathname.startsWith("/flights/") || url.pathname.startsWith("/search/"),
     client: auth.kind === "master" ? clientInfo(request.headers.get("x-bokki-client")) : undefined,
   });
   if (!admission.ok) {
@@ -615,7 +631,7 @@ async function route(request, env, url, exec) {
   if (common) return common;
   if (!env.USER_STATE) return json({ error: "unavailable" }, 503);
   // 인증 전에 IP마다 요청 수를 제한한다(finding 3). 카카오는 자기 제한(KAKAO_LIMIT)을 쓴다(N2: 이것도 인증 전).
-  if (await limited(url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/") || url.pathname.startsWith("/ex/") || url.pathname.startsWith("/flights/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
+  if (await limited(url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/") || url.pathname.startsWith("/ex/") || url.pathname.startsWith("/flights/") || url.pathname.startsWith("/search/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
   switch (url.pathname) {
     case "/register": return registerRoute(request, env, now);
     case "/oauth/register": return registerClient(request, env, now);
