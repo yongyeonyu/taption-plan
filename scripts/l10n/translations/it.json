@@ -6386,6 +6386,12 @@
 "인터넷 연결을 확인해 주세요.|Check your internet connection.": "Controlla la connessione a Internet.",
 "제안을 확인해 주세요.|Please review the suggestions.": "Controlla i suggerimenti.",
 "지금은 다듬을 수 없어요.|Can't polish that right now.": "Al momento non posso riformularlo.",
-"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "Al momento non posso applicare. Riprova tra poco."
+"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "Al momento non posso applicare. Riprova tra poco.",
+"가계부에서 아이콘을 정하지 못한 가게 이름만 개발자에게 보내 아이콘을 늘리는 데 써요. 금액·시각·위치·계정은 보내지 않고, 끄면 보내지 않아요.|Only the names of merchants whose icon couldn't be chosen are sent to the developer to add more icons. Amounts, times, locations and accounts are never sent, and nothing is sent when off.": "Al developer vengono inviati solo i nomi degli esercizi per cui non è stato possibile scegliere un’icona, per aggiungere altre icone. Importi, orari, posizioni e conti non vengono mai inviati e da disattivato non viene inviato nulla.",
+"가맹점 이름 보내기|Share merchant names": "Invia i nomi degli esercizi",
+"보낸 이름 지우기|Delete sent names": "Elimina i nomi inviati",
+"보낼 이름 {0}개|{0} names to send": "{0} nomi da inviare",
+"서버에서 지웠어요|Deleted from the server": "Eliminato dal server",
+"지우지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't delete. Try again shortly.": "Impossibile eliminare. Riprova tra poco."
 }
 }

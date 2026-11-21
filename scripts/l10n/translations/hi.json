@@ -6386,6 +6386,12 @@
 "인터넷 연결을 확인해 주세요.|Check your internet connection.": "अपना इंटरनेट कनेक्शन जाँचें।",
 "제안을 확인해 주세요.|Please review the suggestions.": "कृपया सुझाव देख लें।",
 "지금은 다듬을 수 없어요.|Can't polish that right now.": "अभी इसे सुधारा नहीं जा सकता।",
-"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "अभी लागू नहीं किया जा सकता। थोड़ी देर बाद फिर कोशिश करें।"
+"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "अभी लागू नहीं किया जा सकता। थोड़ी देर बाद फिर कोशिश करें।",
+"가계부에서 아이콘을 정하지 못한 가게 이름만 개발자에게 보내 아이콘을 늘리는 데 써요. 금액·시각·위치·계정은 보내지 않고, 끄면 보내지 않아요.|Only the names of merchants whose icon couldn't be chosen are sent to the developer to add more icons. Amounts, times, locations and accounts are never sent, and nothing is sent when off.": "केवल उन दुकानों के नाम डेवलपर को भेजे जाते हैं जिनका आइकन चुना नहीं जा सका, ताकि और आइकन जोड़े जा सकें। राशि, समय, स्थान और खाते कभी नहीं भेजे जाते, और बंद होने पर कुछ नहीं भेजा जाता।",
+"가맹점 이름 보내기|Share merchant names": "दुकानों के नाम भेजें",
+"보낸 이름 지우기|Delete sent names": "भेजे गए नाम हटाएँ",
+"보낼 이름 {0}개|{0} names to send": "भेजने के लिए {0} नाम",
+"서버에서 지웠어요|Deleted from the server": "सर्वर से हटा दिया गया",
+"지우지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't delete. Try again shortly.": "हटाया नहीं जा सका। थोड़ी देर बाद फिर कोशिश करें।"
 }
 }

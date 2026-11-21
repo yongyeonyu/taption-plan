@@ -6386,6 +6386,12 @@
 "인터넷 연결을 확인해 주세요.|Check your internet connection.": "Hãy kiểm tra kết nối Internet.",
 "제안을 확인해 주세요.|Please review the suggestions.": "Vui lòng xem lại các gợi ý.",
 "지금은 다듬을 수 없어요.|Can't polish that right now.": "Hiện chưa thể chỉnh sửa.",
-"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "Hiện chưa thể áp dụng. Hãy thử lại sau ít phút."
+"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "Hiện chưa thể áp dụng. Hãy thử lại sau ít phút.",
+"가계부에서 아이콘을 정하지 못한 가게 이름만 개발자에게 보내 아이콘을 늘리는 데 써요. 금액·시각·위치·계정은 보내지 않고, 끄면 보내지 않아요.|Only the names of merchants whose icon couldn't be chosen are sent to the developer to add more icons. Amounts, times, locations and accounts are never sent, and nothing is sent when off.": "Chỉ tên các cửa hàng chưa chọn được biểu tượng được gửi cho nhà phát triển để bổ sung thêm biểu tượng. Số tiền, thời gian, vị trí và tài khoản không bao giờ được gửi, và khi tắt sẽ không gửi gì.",
+"가맹점 이름 보내기|Share merchant names": "Gửi tên cửa hàng",
+"보낸 이름 지우기|Delete sent names": "Xóa các tên đã gửi",
+"보낼 이름 {0}개|{0} names to send": "{0} tên chờ gửi",
+"서버에서 지웠어요|Deleted from the server": "Đã xóa khỏi máy chủ",
+"지우지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't delete. Try again shortly.": "Không thể xóa. Hãy thử lại sau ít phút."
 }
 }

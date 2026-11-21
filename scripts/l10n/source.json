@@ -105,7 +105,7 @@
    "ko": " 위치 설정",
    "en": " location",
    "files": [
-    "MapHomeSettingsSheets.swift:975"
+    "MapHomeSettingsSheets.swift:976"
    ],
    "args": [],
    "targets": [
@@ -191,7 +191,7 @@
    "ko": "1 {0} ≈ {1}원",
    "en": "1 {0} ≈ ₩{1}",
    "files": [
-    "LedgerSheet.swift:432"
+    "LedgerSheet.swift:434"
    ],
    "args": [
     "entry.currency",
@@ -1331,7 +1331,7 @@
    "ko": "AI가 넣음",
    "en": "Added by AI",
    "files": [
-    "LedgerSheet.swift:319"
+    "LedgerSheet.swift:321"
    ],
    "args": [],
    "targets": [
@@ -2165,7 +2165,7 @@
    "ko": "BOKKI 가계부 {0}",
    "en": "BOKKI ledger {0}",
    "files": [
-    "LedgerSheet.swift:258"
+    "LedgerSheet.swift:260"
    ],
    "args": [
     "monthTitle"
@@ -2179,7 +2179,7 @@
    "ko": "BOKKI 가계부 전체",
    "en": "BOKKI ledger (all)",
    "files": [
-    "LedgerSheet.swift:262"
+    "LedgerSheet.swift:264"
    ],
    "args": [],
    "targets": [
@@ -3199,7 +3199,7 @@
    "ko": "iCloud Drive/TaptionBackup에 달마다 파일 하나로 압축·암호화해 저장합니다. 자동으로 올리지 않으며, ‘지금 백업’을 누를 때만 올립니다.",
    "en": "Saved to iCloud Drive/TaptionBackup as one compressed, encrypted file per month. Nothing is uploaded automatically; it runs only when you tap Back up now.",
    "files": [
-    "MapHomeSettingsSheets.swift:418"
+    "MapHomeSettingsSheets.swift:419"
    ],
    "args": [],
    "targets": [
@@ -3300,7 +3300,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud Backup",
    "files": [
-    "MapHomeSettingsSheets.swift:417"
+    "MapHomeSettingsSheets.swift:418"
    ],
    "args": [],
    "targets": [
@@ -3336,7 +3336,7 @@
    "ko": "iCloud 백업까지 모두 삭제",
    "en": "Delete iCloud backups too",
    "files": [
-    "MapHomeSettingsSheets.swift:903"
+    "MapHomeSettingsSheets.swift:904"
    ],
    "args": [],
    "targets": [
@@ -3348,7 +3348,7 @@
    "ko": "iCloud 백업도 영구 삭제할까요?",
    "en": "Permanently delete the iCloud backups too?",
    "files": [
-    "MapHomeSettingsSheets.swift:918"
+    "MapHomeSettingsSheets.swift:919"
    ],
    "args": [],
    "targets": [
@@ -3397,7 +3397,7 @@
    "ko": "iCloud에 백업 파일이 없습니다.",
    "en": "No backup files in iCloud.",
    "files": [
-    "MapHomeSettingsSheets.swift:712"
+    "MapHomeSettingsSheets.swift:713"
    ],
    "args": [],
    "targets": [
@@ -3409,7 +3409,7 @@
    "ko": "iCloud에서 내려받는 중 · 불러오기를 눌러도 됩니다",
    "en": "Downloading from iCloud · you can tap Restore",
    "files": [
-    "MapHomeSettingsSheets.swift:719"
+    "MapHomeSettingsSheets.swift:720"
    ],
    "args": [],
    "targets": [
@@ -3421,7 +3421,7 @@
    "ko": "iCloud에서 목록을 읽는 중",
    "en": "Reading the list from iCloud",
    "files": [
-    "MapHomeSettingsSheets.swift:530"
+    "MapHomeSettingsSheets.swift:531"
    ],
    "args": [],
    "targets": [
@@ -3571,7 +3571,7 @@
    "ko": "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 개발자 분석 서비스(PostHog)로 보냅니다. 로그에는 좌표와 원본 센서 값이 들어가지 않습니다.",
    "en": "Sends iPhone and Apple Watch diagnostics plus the previous unfinished session to the developer's analytics service (PostHog). Logs carry no coordinates or raw sensor values.",
    "files": [
-    "MapHomeSettingsSheets.swift:757"
+    "MapHomeSettingsSheets.swift:758"
    ],
    "args": [],
    "targets": [
@@ -3879,7 +3879,7 @@
    "ko": "{0} · 다른 비밀번호로 만든 백업입니다. 위에 그 비밀번호를 넣어 주세요",
    "en": "{0} · made with another password. Enter that password above",
    "files": [
-    "MapHomeSettingsSheets.swift:722"
+    "MapHomeSettingsSheets.swift:723"
    ],
    "args": [
     "size"
@@ -3908,7 +3908,7 @@
    "ko": "{0} · 열 수 없음(손상되었거나 충돌 버전이 있음)",
    "en": "{0} · unreadable (damaged or has conflicting versions)",
    "files": [
-    "MapHomeSettingsSheets.swift:724"
+    "MapHomeSettingsSheets.swift:725"
    ],
    "args": [
     "size"
@@ -4110,7 +4110,7 @@
    "ko": "{0} 불러오는 중",
    "en": "Restoring {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:525"
+    "MapHomeSettingsSheets.swift:526"
    ],
    "args": [
     "name"
@@ -4454,7 +4454,7 @@
    "ko": "{0} 장부 만들기",
    "en": "Start a ledger for {0}",
    "files": [
-    "LedgerSheet.swift:134"
+    "LedgerSheet.swift:136"
    ],
    "args": [
     "trip.name"
@@ -4730,7 +4730,7 @@
    "ko": "{0}개 구간을 ‘{1}’로 합칩니다. 센서 원본은 그대로 남습니다.",
    "en": "Merge {0} spans into ‘{1}’. Sensor data is kept.",
    "files": [
-    "MapHomeNLEClipEditor.swift:168"
+    "MapHomeNLEClipEditor.swift:167"
    ],
    "args": [
     "prompt.chainIDs.count",
@@ -4971,8 +4971,8 @@
    "ko": "{0}년 {1}월",
    "en": "{0}/{1}",
    "files": [
-    "LedgerSheet.swift:271",
-    "MapHomeSettingsSheets.swift:703"
+    "LedgerSheet.swift:273",
+    "MapHomeSettingsSheets.swift:704"
    ],
    "args": [
     "parts[1]",
@@ -5607,7 +5607,7 @@
    "ko": "{0}의 백업을 이 기기로 가져옵니다. 이 기기에 더 새로운 기록이 있으면 그대로 유지됩니다. 위 입력란의 비밀번호는 그 백업을 만들 때 쓴 비밀번호여야 합니다.",
    "en": "Brings the backup for {0} onto this device. Newer records already on this device are kept. The password above must be the one used when that backup was made.",
    "files": [
-    "MapHomeSettingsSheets.swift:395"
+    "MapHomeSettingsSheets.swift:396"
    ],
    "args": [
     "restoreTarget.map(title(of:)) ?? \"\""
@@ -5814,7 +5814,7 @@
    "ko": "{0}행",
    "en": "{0} rows",
    "files": [
-    "MapHomeSettingsSheets.swift:729"
+    "MapHomeSettingsSheets.swift:730"
    ],
    "args": [
     "rows"
@@ -34329,7 +34329,7 @@
    "ko": "‘{0}’ 구간을 ‘{1}’로 합칩니다. 센서 원본은 그대로 남습니다.",
    "en": "Merge ‘{0}’ into ‘{1}’. Sensor data is kept.",
    "files": [
-    "MapHomeNLEClipEditor.swift:173"
+    "MapHomeNLEClipEditor.swift:172"
    ],
    "args": [
     "prompt.neighborTitle",
@@ -34800,7 +34800,7 @@
    "ko": "가계부 {0} 표",
    "en": "Ledger {0} table",
    "files": [
-    "LedgerSheet.swift:259"
+    "LedgerSheet.swift:261"
    ],
    "args": [
     "monthTitle"
@@ -34889,7 +34889,7 @@
    "ko": "가계부 전체 표",
    "en": "Whole ledger table",
    "files": [
-    "LedgerSheet.swift:263"
+    "LedgerSheet.swift:265"
    ],
    "args": [],
    "targets": [
@@ -35008,6 +35008,18 @@
    ]
   },
   {
+   "key": "가계부에서 아이콘을 정하지 못한 가게 이름만 개발자에게 보내 아이콘을 늘리는 데 써요. 금액·시각·위치·계정은 보내지 않고, 끄면 보내지 않아요.|Only the names of merchants whose icon couldn't be chosen are sent to the developer to add more icons. Amounts, times, locations and accounts are never sent, and nothing is sent when off.",
+   "ko": "가계부에서 아이콘을 정하지 못한 가게 이름만 개발자에게 보내 아이콘을 늘리는 데 써요. 금액·시각·위치·계정은 보내지 않고, 끄면 보내지 않아요.",
+   "en": "Only the names of merchants whose icon couldn't be chosen are sent to the developer to add more icons. Amounts, times, locations and accounts are never sent, and nothing is sent when off.",
+   "files": [
+    "LedgerMerchantCollector.swift:184"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "가까운 정류장 |Nearest stop ",
    "ko": "가까운 정류장 ",
    "en": "Nearest stop ",
@@ -35024,7 +35036,7 @@
    "ko": "가르기",
    "en": "Split",
    "files": [
-    "MapHomeNLEClipEditor.swift:489",
+    "MapHomeNLEClipEditor.swift:488",
     "MapHomeNLERawDetail.swift:52",
     "FirstRunTutorialGuides.swift:50"
    ],
@@ -35051,6 +35063,18 @@
    "en": "Hidden",
    "files": [
     "AssistantCommandEdits.swift:243"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "가맹점 이름 보내기|Share merchant names",
+   "ko": "가맹점 이름 보내기",
+   "en": "Share merchant names",
+   "files": [
+    "LedgerMerchantCollector.swift:172"
    ],
    "args": [],
    "targets": [
@@ -36134,7 +36158,7 @@
    "en": "Add payment texts automatically",
    "files": [
     "LedgerExport.swift:156",
-    "LedgerSheet.swift:171"
+    "LedgerSheet.swift:173"
    ],
    "args": [],
    "targets": [
@@ -36159,7 +36183,7 @@
    "en": "Payment text",
    "files": [
     "LedgerExport.swift:50",
-    "LedgerSheet.swift:320"
+    "LedgerSheet.swift:322"
    ],
    "args": [],
    "targets": [
@@ -36639,7 +36663,7 @@
    "ko": "계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 구매 내역과 체험 사용 여부는 유지되며, 이 작업은 되돌릴 수 없습니다.",
    "en": "Plans, actual records, memos and automatic movement records are deleted. Purchases and trial status are kept. This cannot be undone.",
    "files": [
-    "MapHomeSettingsSheets.swift:912"
+    "MapHomeSettingsSheets.swift:913"
    ],
    "args": [],
    "targets": [
@@ -36676,7 +36700,7 @@
    "ko": "계획·실제·메모·위치 등 전체 기록을 JSON 파일 하나로 공유합니다.",
    "en": "Shares every record, including plans, actual records, memos and locations, as one JSON file.",
    "files": [
-    "MapHomeSettingsSheets.swift:880"
+    "MapHomeSettingsSheets.swift:881"
    ],
    "args": [],
    "targets": [
@@ -38495,7 +38519,7 @@
    "ko": "금액(원)",
    "en": "Amount (KRW)",
    "files": [
-    "LedgerSheet.swift:457"
+    "LedgerSheet.swift:459"
    ],
    "args": [],
    "targets": [
@@ -38507,7 +38531,7 @@
    "ko": "금액",
    "en": "Amount",
    "files": [
-    "LedgerSheet.swift:426",
+    "LedgerSheet.swift:428",
     "LedgerSummary.swift:132",
     "LedgerSummary.swift:137"
    ],
@@ -38642,7 +38666,7 @@
    "ko": "기기 데이터와 iCloud 백업 영구 삭제",
    "en": "Permanently delete device data and backups",
    "files": [
-    "MapHomeSettingsSheets.swift:922"
+    "MapHomeSettingsSheets.swift:923"
    ],
    "args": [],
    "targets": [
@@ -38794,7 +38818,7 @@
    "ko": "기록 고치기",
    "en": "Edit entry",
    "files": [
-    "LedgerSheet.swift:403"
+    "LedgerSheet.swift:405"
    ],
    "args": [],
    "targets": [
@@ -38819,7 +38843,7 @@
    "en": "Add entry",
    "files": [
     "LedgerSheet.swift:75",
-    "LedgerSheet.swift:403"
+    "LedgerSheet.swift:405"
    ],
    "args": [],
    "targets": [
@@ -39598,7 +39622,7 @@
    "ko": "끝 자르기",
    "en": "Trim end",
    "files": [
-    "MapHomeNLEClipEditor.swift:429"
+    "MapHomeNLEClipEditor.swift:428"
    ],
    "args": [],
    "targets": [
@@ -39708,7 +39732,7 @@
    "ko": "나",
    "en": "Me",
    "files": [
-    "LedgerSheet.swift:579",
+    "LedgerSheet.swift:581",
     "LedgerTripView.swift:118",
     "TripShareMembersView.swift:73"
    ],
@@ -39782,7 +39806,7 @@
    "ko": "나도 포함해 똑같이 나눠요. 기록의 「낸 사람」이 비었으면 내가 낸 것이에요.",
    "en": "Split equally including you. A blank payer means you paid.",
    "files": [
-    "LedgerSheet.swift:577"
+    "LedgerSheet.swift:579"
    ],
    "args": [],
    "targets": [
@@ -40386,7 +40410,7 @@
    "ko": "내 데이터 내보내기",
    "en": "Export my data",
    "files": [
-    "MapHomeSettingsSheets.swift:875"
+    "MapHomeSettingsSheets.swift:876"
    ],
    "args": [],
    "targets": [
@@ -40814,7 +40838,7 @@
    "ko": "내용 (예: 커피)",
    "en": "What (e.g. Coffee)",
    "files": [
-    "LedgerSheet.swift:421"
+    "LedgerSheet.swift:423"
    ],
    "args": [],
    "targets": [
@@ -40840,7 +40864,7 @@
    "ko": "낸 사람 (비우면 나)",
    "en": "Paid by (blank = me)",
    "files": [
-    "LedgerSheet.swift:376"
+    "LedgerSheet.swift:378"
    ],
    "args": [],
    "targets": [
@@ -40864,7 +40888,7 @@
    "ko": "낸 사람을 적으면 「정산하기」에서 나눌 돈을 계산해요.",
    "en": "Add who paid to split costs in Settle up.",
    "files": [
-    "LedgerSheet.swift:381"
+    "LedgerSheet.swift:383"
    ],
    "args": [],
    "targets": [
@@ -41431,7 +41455,7 @@
    "ko": "다시",
    "en": "Redo",
    "files": [
-    "MapHomeNLEClipEditor.swift:511"
+    "MapHomeNLEClipEditor.swift:510"
    ],
    "args": [],
    "targets": [
@@ -41909,7 +41933,7 @@
    "ko": "대분류",
    "en": "Main",
    "files": [
-    "MapHomeNLEClipEditor.swift:255"
+    "MapHomeNLEClipEditor.swift:254"
    ],
    "args": [],
    "targets": [
@@ -42233,7 +42257,7 @@
    "ko": "데이터 파일을 만들지 못했습니다.",
    "en": "Couldn't create the data file.",
    "files": [
-    "MapHomeSettingsSheets.swift:872"
+    "MapHomeSettingsSheets.swift:873"
    ],
    "args": [],
    "targets": [
@@ -42747,7 +42771,7 @@
    "en": "Undo",
    "files": [
     "AssistantSafetyViews.swift:409",
-    "MapHomeNLEClipEditor.swift:503",
+    "MapHomeNLEClipEditor.swift:502",
     "MapHomeStickerEditor.swift:332"
    ],
    "args": [],
@@ -43073,8 +43097,8 @@
    "ko": "때",
    "en": "When",
    "files": [
-    "LedgerSheet.swift:440",
-    "LedgerSheet.swift:460"
+    "LedgerSheet.swift:442",
+    "LedgerSheet.swift:462"
    ],
    "args": [],
    "targets": [
@@ -43136,7 +43160,7 @@
    "ko": "로그 업로드",
    "en": "Upload logs",
    "files": [
-    "MapHomeSettingsSheets.swift:774"
+    "MapHomeSettingsSheets.swift:775"
    ],
    "args": [],
    "targets": [
@@ -43175,7 +43199,7 @@
    "ko": "로컬 정리",
    "en": "Clear from this device",
    "files": [
-    "MapHomeSettingsSheets.swift:401"
+    "MapHomeSettingsSheets.swift:402"
    ],
    "args": [],
    "targets": [
@@ -43307,7 +43331,7 @@
    "ko": "마지막 기록 {0}",
    "en": "last record {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:731"
+    "MapHomeSettingsSheets.swift:732"
    ],
    "args": [
     "formatted(last)"
@@ -43333,7 +43357,7 @@
    "ko": "마지막 백업: {0}",
    "en": "Last backup: {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:437"
+    "MapHomeSettingsSheets.swift:438"
    ],
    "args": [
     "latestBackupText"
@@ -44124,7 +44148,7 @@
    "ko": "메모",
    "en": "Note",
    "files": [
-    "LedgerSheet.swift:379"
+    "LedgerSheet.swift:381"
    ],
    "args": [],
    "targets": [
@@ -44332,7 +44356,7 @@
    "ko": "모든 BOKKI Plan 데이터를 삭제할까요?",
    "en": "Delete all BOKKI Plan data?",
    "files": [
-    "MapHomeSettingsSheets.swift:896"
+    "MapHomeSettingsSheets.swift:897"
    ],
    "args": [],
    "targets": [
@@ -44368,8 +44392,8 @@
    "ko": "모든 데이터 삭제",
    "en": "Delete all data",
    "files": [
-    "MapHomeSettingsSheets.swift:886",
-    "MapHomeSettingsSheets.swift:900"
+    "MapHomeSettingsSheets.swift:887",
+    "MapHomeSettingsSheets.swift:901"
    ],
    "args": [],
    "targets": [
@@ -44442,7 +44466,7 @@
    "ko": "목록 새로고침",
    "en": "Refresh list",
    "files": [
-    "MapHomeSettingsSheets.swift:552"
+    "MapHomeSettingsSheets.swift:553"
    ],
    "args": [],
    "targets": [
@@ -44806,7 +44830,7 @@
    "en": "Unconfirmed",
    "files": [
     "AssistantDataActions.swift:142",
-    "MapHomeNLEClipEditor.swift:459",
+    "MapHomeNLEClipEditor.swift:458",
     "MapHomeStickmanAction.swift:183"
    ],
    "args": [],
@@ -45669,7 +45693,7 @@
    "ko": "백업 {0}",
    "en": "backed up {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:734"
+    "MapHomeSettingsSheets.swift:735"
    ],
    "args": [
     "formatted(created)"
@@ -45695,7 +45719,7 @@
    "ko": "백업 목록과 복원",
    "en": "Backups and restore",
    "files": [
-    "MapHomeSettingsSheets.swift:504"
+    "MapHomeSettingsSheets.swift:505"
    ],
    "args": [],
    "targets": [
@@ -45709,7 +45733,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:709",
     "FirstRunTutorialView.swift:189",
-    "MapHomeSettingsSheets.swift:512"
+    "MapHomeSettingsSheets.swift:513"
    ],
    "args": [],
    "targets": [
@@ -45772,7 +45796,7 @@
    "ko": "백업 중 {0}/{1}",
    "en": "Backing up {0}/{1}",
    "files": [
-    "MapHomeSettingsSheets.swift:446"
+    "MapHomeSettingsSheets.swift:447"
    ],
    "args": [
     "completed",
@@ -45859,7 +45883,7 @@
    "ko": "백업 후 로컬 정리",
    "en": "Clear after backup",
    "files": [
-    "MapHomeSettingsSheets.swift:492"
+    "MapHomeSettingsSheets.swift:493"
    ],
    "args": [],
    "targets": [
@@ -45871,7 +45895,7 @@
    "ko": "백업 후 로컬 정리",
    "en": "Clear from device after backup",
    "files": [
-    "MapHomeSettingsSheets.swift:469"
+    "MapHomeSettingsSheets.swift:470"
    ],
    "args": [],
    "targets": [
@@ -45895,7 +45919,7 @@
    "ko": "백업을 다시 읽어 확인된 지난 달만 이 기기에서 지웁니다. 먼저 ‘지금 백업’을 해야 하며, 설정은 지우지 않습니다.",
    "en": "Only past months whose backup was read back and verified are removed from this device. Run ‘Back up now’ first; settings are never removed.",
    "files": [
-    "MapHomeSettingsSheets.swift:483"
+    "MapHomeSettingsSheets.swift:484"
    ],
    "args": [],
    "targets": [
@@ -46398,13 +46422,39 @@
    ]
   },
   {
+   "key": "보낸 이름 지우기|Delete sent names",
+   "ko": "보낸 이름 지우기",
+   "en": "Delete sent names",
+   "files": [
+    "LedgerMerchantCollector.swift:196"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "보낼 돈|Transfers",
    "ko": "보낼 돈",
    "en": "Transfers",
    "files": [
-    "LedgerSheet.swift:582"
+    "LedgerSheet.swift:584"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "보낼 이름 {0}개|{0} names to send",
+   "ko": "보낼 이름 {0}개",
+   "en": "{0} names to send",
+   "files": [
+    "LedgerMerchantCollector.swift:192"
+   ],
+   "args": [
+    "pending"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -46478,7 +46528,7 @@
    "ko": "보안 설정을 저장했습니다.",
    "en": "Security settings saved.",
    "files": [
-    "MapHomeSettingsSheets.swift:672"
+    "MapHomeSettingsSheets.swift:673"
    ],
    "args": [],
    "targets": [
@@ -46890,8 +46940,8 @@
    "ko": "분류",
    "en": "Category",
    "files": [
-    "LedgerSheet.swift:437",
-    "MapHomeNLEClipEditor.swift:566",
+    "LedgerSheet.swift:439",
+    "MapHomeNLEClipEditor.swift:565",
     "MapHomeNLERawDetail.swift:50"
    ],
    "args": [],
@@ -46928,8 +46978,8 @@
    "ko": "불러오기",
    "en": "Restore",
    "files": [
-    "MapHomeSettingsSheets.swift:393",
-    "MapHomeSettingsSheets.swift:577"
+    "MapHomeSettingsSheets.swift:394",
+    "MapHomeSettingsSheets.swift:578"
    ],
    "args": [],
    "targets": [
@@ -47003,7 +47053,7 @@
    "ko": "비밀번호 {0}자리를 넣으면 iCloud 백업이 보입니다.",
    "en": "Enter your {0}-digit password to see iCloud backups.",
    "files": [
-    "MapHomeSettingsSheets.swift:710"
+    "MapHomeSettingsSheets.swift:711"
    ],
    "args": [
     "securityPINDigits"
@@ -47082,7 +47132,7 @@
    "en": "Passwords do not match.",
    "files": [
     "FirstRunTutorialView.swift:391",
-    "MapHomeSettingsSheets.swift:645"
+    "MapHomeSettingsSheets.swift:646"
    ],
    "args": [],
    "targets": [
@@ -47095,7 +47145,7 @@
    "en": "Password",
    "files": [
     "MapHomeSettingsSheets.swift:291",
-    "MapHomeSettingsSheets.swift:425",
+    "MapHomeSettingsSheets.swift:426",
     "TripShareCreateSheet.swift:180"
    ],
    "args": [],
@@ -47208,7 +47258,7 @@
    "ko": "비밀번호를 넣으면 같은 iCloud의 다른 기기에서 만든 백업까지 보입니다. 백업을 만들 때 쓴 비밀번호로 열립니다.",
    "en": "Enter the password to see backups from every device on this iCloud account. They open with the password used when they were made.",
    "files": [
-    "MapHomeSettingsSheets.swift:505"
+    "MapHomeSettingsSheets.swift:506"
    ],
    "args": [],
    "targets": [
@@ -47220,7 +47270,7 @@
    "ko": "비밀번호를 먼저 입력해 주세요.",
    "en": "Enter your password first.",
    "files": [
-    "MapHomeSettingsSheets.swift:579"
+    "MapHomeSettingsSheets.swift:580"
    ],
    "args": [],
    "targets": [
@@ -47292,7 +47342,7 @@
    "ko": "비밀번호를 저장했습니다.",
    "en": "Password saved.",
    "files": [
-    "MapHomeSettingsSheets.swift:652"
+    "MapHomeSettingsSheets.swift:653"
    ],
    "args": [],
    "targets": [
@@ -48066,7 +48116,7 @@
    "ko": "상세 활동",
    "en": "Detail",
    "files": [
-    "MapHomeNLEClipEditor.swift:256"
+    "MapHomeNLEClipEditor.swift:255"
    ],
    "args": [],
    "targets": [
@@ -48286,7 +48336,7 @@
    "ko": "새 여행 장부",
    "en": "New trip ledger",
    "files": [
-    "LedgerSheet.swift:138"
+    "LedgerSheet.swift:140"
    ],
    "args": [],
    "targets": [
@@ -48762,6 +48812,18 @@
    "en": "The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use.",
    "files": [
     "AssistantSettingsView.swift:96"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "서버에서 지웠어요|Deleted from the server",
+   "ko": "서버에서 지웠어요",
+   "en": "Deleted from the server",
+   "files": [
+    "LedgerMerchantCollector.swift:200"
    ],
    "args": [],
    "targets": [
@@ -50598,7 +50660,7 @@
    "ko": "시작 자르기",
    "en": "Trim start",
    "files": [
-    "MapHomeNLEClipEditor.swift:428"
+    "MapHomeNLEClipEditor.swift:427"
    ],
    "args": [],
    "targets": [
@@ -52451,7 +52513,7 @@
    "ko": "어제·오늘 기록한 GPS 좌표와 센서 원본이 개발자 분석 서비스(PostHog)로 전송됩니다. 집·회사 주변이 드러날 수 있습니다.",
    "en": "Yesterday's and today's GPS coordinates and raw sensor samples go to the developer's analytics service (PostHog). They can reveal where home and work are.",
    "files": [
-    "MapHomeSettingsSheets.swift:850"
+    "MapHomeSettingsSheets.swift:851"
    ],
    "args": [],
    "targets": [
@@ -52463,7 +52525,7 @@
    "ko": "어제·오늘 원본 업로드",
    "en": "Upload raw (2 days)",
    "files": [
-    "MapHomeSettingsSheets.swift:808"
+    "MapHomeSettingsSheets.swift:809"
    ],
    "args": [],
    "targets": [
@@ -53161,7 +53223,7 @@
    "ko": "여행 예산은 일상에서 「여행 경비」로 나가고, 여행이 끝나면 남은 돈이 「여행 정산」으로 돌아와요.",
    "en": "A trip budget leaves daily as a trip expense; leftovers come back as a trip refund when it ends.",
    "files": [
-    "LedgerSheet.swift:143"
+    "LedgerSheet.swift:145"
    ],
    "args": [],
    "targets": [
@@ -53173,7 +53235,7 @@
    "ko": "여행 예산이에요. 고치면 일상의 「여행 경비」와 여행의 「경비 받음」이 함께 바뀌어요.",
    "en": "This is the trip budget. Editing it changes both the daily and trip sides.",
    "files": [
-    "LedgerSheet.swift:463"
+    "LedgerSheet.swift:465"
    ],
    "args": [],
    "targets": [
@@ -53367,7 +53429,7 @@
    "ko": "여행 장부",
    "en": "Trip ledgers",
    "files": [
-    "LedgerSheet.swift:141"
+    "LedgerSheet.swift:143"
    ],
    "args": [],
    "targets": [
@@ -53391,7 +53453,7 @@
    "ko": "여행 정산이에요. 고치면 그 금액으로 고정돼요. 일상 쪽 수입이면 반납, 지출이면 추가 경비예요.",
    "en": "This is the trip settlement. Editing fixes it to this amount. Daily income means returned, expense means extra.",
    "files": [
-    "LedgerSheet.swift:464"
+    "LedgerSheet.swift:466"
    ],
    "args": [],
    "targets": [
@@ -54818,7 +54880,7 @@
    "en": "Receipt",
    "files": [
     "LedgerExport.swift:51",
-    "LedgerSheet.swift:321"
+    "LedgerSheet.swift:323"
    ],
    "args": [],
    "targets": [
@@ -54830,7 +54892,7 @@
    "ko": "영수증·캡처",
    "en": "Receipt or capture",
    "files": [
-    "LedgerSheet.swift:165"
+    "LedgerSheet.swift:167"
    ],
    "args": [],
    "targets": [
@@ -54933,7 +54995,7 @@
    "ko": "예산 남음",
    "en": "Budget left",
    "files": [
-    "LedgerSheet.swift:233",
+    "LedgerSheet.swift:235",
     "LedgerSummary.swift:94"
    ],
    "args": [],
@@ -54982,7 +55044,7 @@
    "ko": "예산",
    "en": "Budget",
    "files": [
-    "LedgerSheet.swift:542",
+    "LedgerSheet.swift:544",
     "LedgerSummary.swift:94",
     "LedgerTripView.swift:23"
    ],
@@ -55332,7 +55394,7 @@
    "ko": "오늘 손익(세후 월급 기준)",
    "en": "Today's net (after-tax pay)",
    "files": [
-    "LedgerSheet.swift:238"
+    "LedgerSheet.swift:240"
    ],
    "args": [],
    "targets": [
@@ -56685,7 +56747,7 @@
    "ko": "위치 원본 전송에 동의함 · 다시 묻기",
    "en": "Raw location upload allowed · Ask again",
    "files": [
-    "MapHomeSettingsSheets.swift:827"
+    "MapHomeSettingsSheets.swift:828"
    ],
    "args": [],
    "targets": [
@@ -56697,7 +56759,7 @@
    "ko": "위치 원본(GPS·모션·기압)이 개발자 분석 서비스 PostHog로 전송됩니다.",
    "en": "Raw location data (GPS, motion, pressure) is sent to the developer's analytics service, PostHog.",
    "files": [
-    "MapHomeSettingsSheets.swift:797"
+    "MapHomeSettingsSheets.swift:798"
    ],
    "args": [],
    "targets": [
@@ -56709,7 +56771,7 @@
    "ko": "위치 원본을 보낼까요?",
    "en": "Send raw location data?",
    "files": [
-    "MapHomeSettingsSheets.swift:836"
+    "MapHomeSettingsSheets.swift:837"
    ],
    "args": [],
    "targets": [
@@ -57376,7 +57438,7 @@
    "ko": "이 기기에 남길 최근 {0}개 달(이번 달 포함)",
    "en": "Keep the latest {0} months on this device (this month included)",
    "files": [
-    "MapHomeSettingsSheets.swift:477"
+    "MapHomeSettingsSheets.swift:478"
    ],
    "args": [
     "security.localMonthsToKeep"
@@ -57499,7 +57561,7 @@
    "ko": "이 기기에서는 정리됨 · 불러올 수 있음",
    "en": "Cleared from this device · can be restored",
    "files": [
-    "MapHomeSettingsSheets.swift:571"
+    "MapHomeSettingsSheets.swift:572"
    ],
    "args": [],
    "targets": [
@@ -57547,7 +57609,7 @@
    "ko": "이 기기의 모든 기록과 iCloud Drive의 BOKKI Plan 백업 파일이 모두 삭제됩니다. 백업을 지우면 복원할 방법이 없으며, 이 작업은 되돌릴 수 없습니다.",
    "en": "All records on this device and every BOKKI Plan backup file in iCloud Drive will be deleted. Once the backups are gone they cannot be restored, and this cannot be undone.",
    "files": [
-    "MapHomeSettingsSheets.swift:927"
+    "MapHomeSettingsSheets.swift:928"
    ],
    "args": [],
    "targets": [
@@ -57787,7 +57849,7 @@
    "ko": "이 달 지출 예산(원)",
    "en": "Spending budget this month (KRW)",
    "files": [
-    "LedgerSheet.swift:536"
+    "LedgerSheet.swift:538"
    ],
    "args": [],
    "targets": [
@@ -57823,7 +57885,7 @@
    "ko": "이 달을 불러올까요?",
    "en": "Restore this month?",
    "files": [
-    "MapHomeSettingsSheets.swift:386"
+    "MapHomeSettingsSheets.swift:387"
    ],
    "args": [],
    "targets": [
@@ -58675,7 +58737,7 @@
    "ko": "이름을 넣으면 계산해요.",
    "en": "Enter names to calculate.",
    "files": [
-    "LedgerSheet.swift:584"
+    "LedgerSheet.swift:586"
    ],
    "args": [],
    "targets": [
@@ -58940,7 +59002,7 @@
    "en": "Carried over",
    "files": [
     "LedgerExport.swift:86",
-    "LedgerSheet.swift:226",
+    "LedgerSheet.swift:228",
     "LedgerSummary.swift:92"
    ],
    "args": [],
@@ -58978,7 +59040,7 @@
    "ko": "이전 버전에서 만든 백업 {0}개는 이 버전에서 열 수 없어 목록에서 뺐습니다. 파일은 그대로 있습니다.",
    "en": "{0} backups from an earlier version cannot be opened here and are not listed. The files are untouched.",
    "files": [
-    "MapHomeSettingsSheets.swift:542"
+    "MapHomeSettingsSheets.swift:543"
    ],
    "args": [
     "model.backupUnsupportedFileCount"
@@ -59761,7 +59823,7 @@
    "ko": "읽지 못해 AI에게 확인을 맡겼어요. 메모 › AI에서 볼 수 있어요.",
    "en": "Couldn't read it, so it was sent to your AI. See Memo › AI.",
    "files": [
-    "LedgerSheet.swift:184"
+    "LedgerSheet.swift:186"
    ],
    "args": [],
    "targets": [
@@ -59773,7 +59835,7 @@
    "ko": "읽지 못했어요. + 로 직접 넣어 주세요.",
    "en": "Couldn't read it. Tap + to enter it yourself.",
    "files": [
-    "LedgerSheet.swift:187"
+    "LedgerSheet.swift:189"
    ],
    "args": [],
    "targets": [
@@ -59986,7 +60048,7 @@
    "ko": "자동 정산으로 되돌리기",
    "en": "Back to automatic settlement",
    "files": [
-    "LedgerSheet.swift:468"
+    "LedgerSheet.swift:470"
    ],
    "args": [],
    "targets": [
@@ -60309,7 +60371,7 @@
    "ko": "작업 중입니다",
    "en": "Working",
    "files": [
-    "MapHomeSettingsSheets.swift:450"
+    "MapHomeSettingsSheets.swift:451"
    ],
    "args": [],
    "targets": [
@@ -60334,7 +60396,7 @@
    "en": "Balance",
    "files": [
     "LedgerExport.swift:24",
-    "LedgerSheet.swift:229",
+    "LedgerSheet.swift:231",
     "LedgerSummary.swift:93"
    ],
    "args": [],
@@ -60574,8 +60636,8 @@
    "ko": "장소",
    "en": "Place",
    "files": [
-    "LedgerSheet.swift:378",
-    "MapHomeNLEClipEditor.swift:254"
+    "LedgerSheet.swift:380",
+    "MapHomeNLEClipEditor.swift:253"
    ],
    "args": [],
    "targets": [
@@ -60735,8 +60797,8 @@
    "ko": "재시도",
    "en": "Retry",
    "files": [
-    "MapHomeSettingsSheets.swift:787",
-    "MapHomeSettingsSheets.swift:821"
+    "MapHomeSettingsSheets.swift:788",
+    "MapHomeSettingsSheets.swift:822"
    ],
    "args": [],
    "targets": [
@@ -60760,8 +60822,8 @@
    "ko": "저장",
    "en": "Save",
    "files": [
-    "LedgerSheet.swift:408",
-    "LedgerSheet.swift:548",
+    "LedgerSheet.swift:410",
+    "LedgerSheet.swift:550",
     "LedgerTripView.swift:305"
    ],
    "args": [],
@@ -60786,8 +60848,8 @@
    "ko": "저장된 위치 삭제",
    "en": "Delete saved location",
    "files": [
-    "MapHomeSettingsSheets.swift:1083",
-    "MapHomeSettingsSheets.swift:1114"
+    "MapHomeSettingsSheets.swift:1084",
+    "MapHomeSettingsSheets.swift:1115"
    ],
    "args": [],
    "targets": [
@@ -60799,7 +60861,7 @@
    "ko": "저장된 위치를 삭제할까요?",
    "en": "Delete the saved location?",
    "files": [
-    "MapHomeSettingsSheets.swift:1106"
+    "MapHomeSettingsSheets.swift:1107"
    ],
    "args": [],
    "targets": [
@@ -60923,7 +60985,7 @@
    "en": "Floor to save",
    "files": [
     "MapHomeLocationSheets.swift:249",
-    "MapHomeSettingsSheets.swift:1029",
+    "MapHomeSettingsSheets.swift:1030",
     "MapHomeTransitSheets.swift:430"
    ],
    "args": [],
@@ -60960,7 +61022,7 @@
    "ko": "적용",
    "en": "Apply",
    "files": [
-    "MapHomeNLEClipEditor.swift:221"
+    "MapHomeNLEClipEditor.swift:220"
    ],
    "args": [],
    "targets": [
@@ -61044,7 +61106,7 @@
    "ko": "전송 · 다시 묻지 않기",
    "en": "Send · Don't ask again",
    "files": [
-    "MapHomeSettingsSheets.swift:842"
+    "MapHomeSettingsSheets.swift:843"
    ],
    "args": [],
    "targets": [
@@ -61083,7 +61145,7 @@
    "ko": "전송",
    "en": "Send",
    "files": [
-    "MapHomeSettingsSheets.swift:837"
+    "MapHomeSettingsSheets.swift:838"
    ],
    "args": [],
    "targets": [
@@ -61321,7 +61383,7 @@
    "ko": "정리",
    "en": "Clear",
    "files": [
-    "MapHomeSettingsSheets.swift:405"
+    "MapHomeSettingsSheets.swift:406"
    ],
    "args": [],
    "targets": [
@@ -61455,7 +61517,7 @@
    "en": "Settle up",
    "files": [
     "LedgerExport.swift:155",
-    "LedgerSheet.swift:598"
+    "LedgerSheet.swift:600"
    ],
    "args": [],
    "targets": [
@@ -61793,8 +61855,8 @@
    "ko": "종류",
    "en": "Type",
    "files": [
-    "LedgerSheet.swift:416",
-    "LedgerSheet.swift:450"
+    "LedgerSheet.swift:418",
+    "LedgerSheet.swift:452"
    ],
    "args": [],
    "targets": [
@@ -62283,7 +62345,7 @@
    "ko": "지금 백업",
    "en": "Back up now",
    "files": [
-    "MapHomeSettingsSheets.swift:450"
+    "MapHomeSettingsSheets.swift:451"
    ],
    "args": [],
    "targets": [
@@ -63156,7 +63218,7 @@
    "en": "Clear",
    "files": [
     "MapHomeMenuShortcuts.swift:245",
-    "MapHomeNLEClipEditor.swift:496",
+    "MapHomeNLEClipEditor.swift:495",
     "MapHomeNLERawDetail.swift:54"
    ],
    "args": [],
@@ -63170,7 +63232,7 @@
    "en": "Delete",
    "files": [
     "LedgerSheet.swift:49",
-    "LedgerSheet.swift:385",
+    "LedgerSheet.swift:387",
     "LedgerTripView.swift:36"
    ],
    "args": [],
@@ -63195,7 +63257,19 @@
    "ko": "지우면 이 메모는 「메모로만」이 돼 다시 가계부에 들어오지 않아요.",
    "en": "Deleting makes this memo note-only so it won't come back to the ledger.",
    "files": [
-    "LedgerSheet.swift:394"
+    "LedgerSheet.swift:396"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지우지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't delete. Try again shortly.",
+   "ko": "지우지 못했어요. 잠시 뒤 다시 해 주세요.",
+   "en": "Couldn't delete. Try again shortly.",
+   "files": [
+    "LedgerMerchantCollector.swift:200"
    ],
    "args": [],
    "targets": [
@@ -63312,7 +63386,7 @@
    "ko": "지출",
    "en": "Spent",
    "files": [
-    "LedgerSheet.swift:228",
+    "LedgerSheet.swift:230",
     "MapHomeInteractionPolicy.swift:455"
    ],
    "args": [],
@@ -63530,7 +63604,7 @@
    "ko": "직접 넣는 환율 (1단위 = 원)",
    "en": "Manual rate (1 unit = KRW)",
    "files": [
-    "LedgerSheet.swift:435"
+    "LedgerSheet.swift:437"
    ],
    "args": [],
    "targets": [
@@ -64303,7 +64377,7 @@
    "ko": "최근 {0}개 달을 뺀 지난 달 중 백업을 다시 읽어 확인된 달만 이 기기에서 지웁니다. 지운 달은 백업 목록에서 다시 불러올 수 있습니다.",
    "en": "Past months older than the latest {0} are removed from this device only after their backup is read back and verified. You can restore them from the backup list.",
    "files": [
-    "MapHomeSettingsSheets.swift:407"
+    "MapHomeSettingsSheets.swift:408"
    ],
    "args": [
     "security.localMonthsToKeep"
@@ -64827,7 +64901,7 @@
    "files": [
     "FlightFare.swift:106",
     "LedgerMemoPanel.swift:268",
-    "LedgerSheet.swift:296"
+    "LedgerSheet.swift:298"
    ],
    "args": [],
    "targets": [
@@ -64911,7 +64985,7 @@
    "ko": "층수 저장",
    "en": "Save floor",
    "files": [
-    "MapHomeSettingsSheets.swift:1045"
+    "MapHomeSettingsSheets.swift:1046"
    ],
    "args": [],
    "targets": [
@@ -64994,7 +65068,7 @@
    "ko": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진·결제 화면 캡처를 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.",
    "en": "Paste a card payment text, or pick a receipt photo or a payment screenshot, to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.",
    "files": [
-    "LedgerSheet.swift:174"
+    "LedgerSheet.swift:176"
    ],
    "args": [],
    "targets": [
@@ -65712,7 +65786,7 @@
    "ko": "클립을 고르세요",
    "en": "Select a clip",
    "files": [
-    "MapHomeNLEClipEditor.swift:467"
+    "MapHomeNLEClipEditor.swift:466"
    ],
    "args": [],
    "targets": [
@@ -67347,7 +67421,7 @@
    "ko": "함께 쓴 돈",
    "en": "Total spent",
    "files": [
-    "LedgerSheet.swift:591"
+    "LedgerSheet.swift:593"
    ],
    "args": [],
    "targets": [
@@ -67374,7 +67448,7 @@
    "ko": "함께한 사람 (쉼표로, 예: 민수, 지영)",
    "en": "People (comma separated)",
    "files": [
-    "LedgerSheet.swift:575"
+    "LedgerSheet.swift:577"
    ],
    "args": [],
    "targets": [
@@ -67399,7 +67473,7 @@
    "ko": "합치기",
    "en": "Merge",
    "files": [
-    "MapHomeNLEClipEditor.swift:164"
+    "MapHomeNLEClipEditor.swift:163"
    ],
    "args": [],
    "targets": [
@@ -67423,7 +67497,7 @@
    "ko": "합칠까요?",
    "en": "Merge?",
    "files": [
-    "MapHomeNLEClipEditor.swift:160"
+    "MapHomeNLEClipEditor.swift:159"
    ],
    "args": [],
    "targets": [
@@ -67883,7 +67957,7 @@
    "ko": "현재 위치로 다시 저장",
    "en": "Update current location",
    "files": [
-    "MapHomeSettingsSheets.swift:1066"
+    "MapHomeSettingsSheets.swift:1067"
    ],
    "args": [],
    "targets": [
@@ -67908,7 +67982,7 @@
    "ko": "현재 위치로 저장",
    "en": "Save current location",
    "files": [
-    "MapHomeSettingsSheets.swift:1065"
+    "MapHomeSettingsSheets.swift:1066"
    ],
    "args": [],
    "targets": [
@@ -67944,7 +68018,7 @@
    "ko": "현재 위치를 기준으로 저장할 수 있습니다",
    "en": "Save this place from your current location",
    "files": [
-    "MapHomeSettingsSheets.swift:988"
+    "MapHomeSettingsSheets.swift:989"
    ],
    "args": [],
    "targets": [
@@ -67968,7 +68042,7 @@
    "ko": "현재 위치를 받는 중입니다. 위치 기록이 잡히면 저장할 수 있습니다.",
    "en": "Waiting for location. Save becomes available when a location is recorded.",
    "files": [
-    "MapHomeSettingsSheets.swift:1019"
+    "MapHomeSettingsSheets.swift:1020"
    ],
    "args": [],
    "targets": [
@@ -67994,7 +68068,7 @@
    "ko": "현재 위치를 이 장소의 기준 위치로 저장합니다. 좌표는 화면에 표시하지 않습니다.",
    "en": "Save the current location as this place. Coordinates are not shown.",
    "files": [
-    "MapHomeSettingsSheets.swift:1015"
+    "MapHomeSettingsSheets.swift:1016"
    ],
    "args": [],
    "targets": [
@@ -68006,7 +68080,7 @@
    "ko": "현재 저장 상태",
    "en": "Saved",
    "files": [
-    "MapHomeSettingsSheets.swift:980"
+    "MapHomeSettingsSheets.swift:981"
    ],
    "args": [],
    "targets": [
@@ -68253,7 +68327,7 @@
    "ko": "확대",
    "en": "Zoom",
    "files": [
-    "MapHomeNLEClipEditor.swift:530",
+    "MapHomeNLEClipEditor.swift:529",
     "MapHomeNLEToolbar.swift:70"
    ],
    "args": [],
@@ -68509,7 +68583,7 @@
    "ko": "환율을 몰라요. 아래에 직접 넣어 주세요.",
    "en": "Rate unknown. Enter it below.",
    "files": [
-    "LedgerSheet.swift:433"
+    "LedgerSheet.swift:435"
    ],
    "args": [],
    "targets": [

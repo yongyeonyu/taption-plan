@@ -216525,6 +216525,83 @@
         }
       }
     },
+    "가계부에서 아이콘을 정하지 못한 가게 이름만 개발자에게 보내 아이콘을 늘리는 데 써요. 금액·시각·위치·계정은 보내지 않고, 끄면 보내지 않아요.|Only the names of merchants whose icon couldn't be chosen are sent to the developer to add more icons. Amounts, times, locations and accounts are never sent, and nothing is sent when off." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家計簿でアイコンを決められなかったお店の名前だけを開発者に送り、アイコンを増やすために使います。金額・時刻・位置・アカウントは送らず、オフにすると送りません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅将记账中未能确定图标的商家名称发送给开发者，用于增加图标。不会发送金额、时间、位置和账户，关闭后也不会发送。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "僅將記帳中未能確定圖示的商家名稱傳送給開發者，用於增加圖示。不會傳送金額、時間、位置和帳戶，關閉後也不會傳送。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur die Namen von Geschäften, für die kein Symbol gewählt werden konnte, werden an den Entwickler gesendet, um weitere Symbole hinzuzufügen. Beträge, Uhrzeiten, Orte und Konten werden nie gesendet, und bei Aus wird nichts gesendet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seuls les noms des commerces dont l’icône n’a pas pu être choisie sont envoyés au développeur pour ajouter des icônes. Les montants, heures, lieux et comptes ne sont jamais envoyés, et rien n’est envoyé quand c’est désactivé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al developer vengono inviati solo i nomi degli esercizi per cui non è stato possibile scegliere un’icona, per aggiungere altre icone. Importi, orari, posizioni e conti non vengono mai inviati e da disattivato non viene inviato nulla."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo se envían al desarrollador los nombres de los comercios cuyo icono no se pudo elegir, para añadir más iconos. Nunca se envían importes, horas, ubicaciones ni cuentas, y no se envía nada si está desactivado."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apenas os nomes dos estabelecimentos cujo ícone não pôde ser escolhido são enviados ao desenvolvedor para adicionar mais ícones. Valores, horários, locais e contas nunca são enviados, e nada é enviado quando está desativado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ tên các cửa hàng chưa chọn được biểu tượng được gửi cho nhà phát triển để bổ sung thêm biểu tượng. Số tiền, thời gian, vị trí và tài khoản không bao giờ được gửi, và khi tắt sẽ không gửi gì."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya nama toko yang ikonnya tidak dapat dipilih yang dikirim ke pengembang untuk menambah ikon. Jumlah, waktu, lokasi, dan akun tidak pernah dikirim, dan tidak ada yang dikirim saat dimatikan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จะส่งเฉพาะชื่อร้านที่เลือกไอคอนไม่ได้ให้ผู้พัฒนาเพื่อเพิ่มไอคอน ไม่ส่งจำนวนเงิน เวลา ตำแหน่ง และบัญชี และเมื่อปิดจะไม่ส่งอะไรเลย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "केवल उन दुकानों के नाम डेवलपर को भेजे जाते हैं जिनका आइकन चुना नहीं जा सका, ताकि और आइकन जोड़े जा सकें। राशि, समय, स्थान और खाते कभी नहीं भेजे जाते, और बंद होने पर कुछ नहीं भेजा जाता।"
+          }
+        }
+      }
+    },
     "가까운 정류장 |Nearest stop " : {
       "extractionState" : "manual",
       "localizations" : {
@@ -216829,6 +216906,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "छिपा हुआ"
+          }
+        }
+      }
+    },
+    "가맹점 이름 보내기|Share merchant names" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "店名を送る"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送商家名称"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送商家名稱"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Händlernamen senden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer les noms de commerces"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia i nomi degli esercizi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar nombres de comercios"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar nomes de estabelecimentos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi tên cửa hàng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim nama toko"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งชื่อร้านค้า"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दुकानों के नाम भेजें"
           }
         }
       }
@@ -285517,6 +285671,83 @@
         }
       }
     },
+    "보낸 이름 지우기|Delete sent names" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信した名前を削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除已发送的名称"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除已傳送的名稱"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesendete Namen löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer les noms envoyés"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elimina i nomi inviati"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar nombres enviados"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluir nomes enviados"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa các tên đã gửi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus nama yang terkirim"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบชื่อที่ส่งแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजे गए नाम हटाएँ"
+          }
+        }
+      }
+    },
     "보낼 돈|Transfers" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -285590,6 +285821,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "भेजने की रकम"
+          }
+        }
+      }
+    },
+    "보낼 이름 {0}개|{0} names to send" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信する名前 {0}件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待发送的名称 {0}个"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待傳送的名稱 {0}個"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Namen zu senden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} noms à envoyer"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} nomi da inviare"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} nombres por enviar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} nomes a enviar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} tên chờ gửi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} nama akan dikirim"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ชื่อที่จะส่ง {0} ชื่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भेजने के लिए {0} नाम"
           }
         }
       }
@@ -300220,6 +300528,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सर्वर पर मौजूद रिकॉर्ड, सभी AI कनेक्शन और PIN मिट जाएँगे। अपने AI फिर से कनेक्ट करने होंगे।"
+          }
+        }
+      }
+    },
+    "서버에서 지웠어요|Deleted from the server" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーから削除しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已从服务器删除"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已從伺服器刪除"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vom Server gelöscht"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimé du serveur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminato dal server"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminado del servidor"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluído do servidor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã xóa khỏi máy chủ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dihapus dari server"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบออกจากเซิร์ฟเวอร์แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर से हटा दिया गया"
           }
         }
       }
@@ -387307,6 +387692,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "हटाने पर यह नोट “सिर्फ़ नोट” बन जाएगा और खाते में वापस नहीं आएगा।"
+          }
+        }
+      }
+    },
+    "지우지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't delete. Try again shortly." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除できませんでした。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法删除。请稍后再试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法刪除。請稍後再試。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löschen nicht möglich. Versuche es gleich noch einmal."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de supprimer. Réessayez dans un instant."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile eliminare. Riprova tra poco."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo eliminar. Inténtalo de nuevo en un momento."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível excluir. Tente novamente em instantes."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể xóa. Hãy thử lại sau ít phút."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak dapat menghapus. Coba lagi sebentar lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบไม่ได้ โปรดลองอีกครั้งในอีกสักครู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हटाया नहीं जा सका। थोड़ी देर बाद फिर कोशिश करें।"
           }
         }
       }

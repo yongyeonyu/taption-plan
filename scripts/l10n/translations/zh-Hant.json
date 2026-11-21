@@ -6386,6 +6386,12 @@
 "인터넷 연결을 확인해 주세요.|Check your internet connection.": "請檢查網路連線。",
 "제안을 확인해 주세요.|Please review the suggestions.": "請確認建議。",
 "지금은 다듬을 수 없어요.|Can't polish that right now.": "現在無法潤飾。",
-"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "現在無法套用。請稍後再試。"
+"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "現在無法套用。請稍後再試。",
+"가계부에서 아이콘을 정하지 못한 가게 이름만 개발자에게 보내 아이콘을 늘리는 데 써요. 금액·시각·위치·계정은 보내지 않고, 끄면 보내지 않아요.|Only the names of merchants whose icon couldn't be chosen are sent to the developer to add more icons. Amounts, times, locations and accounts are never sent, and nothing is sent when off.": "僅將記帳中未能確定圖示的商家名稱傳送給開發者，用於增加圖示。不會傳送金額、時間、位置和帳戶，關閉後也不會傳送。",
+"가맹점 이름 보내기|Share merchant names": "傳送商家名稱",
+"보낸 이름 지우기|Delete sent names": "刪除已傳送的名稱",
+"보낼 이름 {0}개|{0} names to send": "待傳送的名稱 {0}個",
+"서버에서 지웠어요|Deleted from the server": "已從伺服器刪除",
+"지우지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't delete. Try again shortly.": "無法刪除。請稍後再試。"
 }
 }

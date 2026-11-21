@@ -153,8 +153,11 @@ struct LedgerEntryIcon: View {
     var body: some View {
         if let toll = LedgerToll.kind(for: entry) {
             LedgerTollIcon(toll: toll, size: size)
+        } else if let kind = LedgerMerchantKind.classify(entry) {
+            LedgerMerchantBadge(kind: kind, size: size + 4)
         } else {
-            Image(systemName: LedgerEntrySymbol.name(for: entry)).foregroundStyle(Color.tpAccent)
+            // 종류를 알 수 없으면 그 통화의 기호(한국어·원화는 ₩)를 보인다.
+            LedgerCurrencyBadge(currency: entry.currency, size: size + 4)
         }
     }
 }

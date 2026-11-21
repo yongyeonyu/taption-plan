@@ -838,6 +838,9 @@
 		A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */; };
 		C1CA1111A010000000000004 /* MapHomeLaunchPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */; };
 		A1C11121A030000000000002 /* LaunchChoiceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C11121A030000000000001 /* LaunchChoiceSheet.swift */; };
+		A1C11121A040000000000002 /* LedgerMerchantIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C11121A040000000000001 /* LedgerMerchantIcon.swift */; };
+		A1C11121A050000000000002 /* LedgerMerchantCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C11121A050000000000001 /* LedgerMerchantCollector.swift */; };
+		A1C11121A040000000000004 /* LedgerMerchantIconTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C11121A040000000000003 /* LedgerMerchantIconTests.swift */; };
 		CA1A1111A010000000000004 /* AITaskPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1A1111A010000000000003 /* AITaskPanel.swift */; };
 		A1C11121A010000000000002 /* AssistantConverseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C11121A010000000000001 /* AssistantConverseView.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
@@ -1723,6 +1726,9 @@
 		F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSheet.swift; sourceTree = "<group>"; };
 		C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLaunchPrompts.swift; sourceTree = "<group>"; };
 		F1C11121A030000000000001 /* LaunchChoiceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchChoiceSheet.swift; sourceTree = "<group>"; };
+		F1C11121A040000000000001 /* LedgerMerchantIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMerchantIcon.swift; sourceTree = "<group>"; };
+		F1C11121A050000000000001 /* LedgerMerchantCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMerchantCollector.swift; sourceTree = "<group>"; };
+		F1C11121A040000000000003 /* LedgerMerchantIconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMerchantIconTests.swift; sourceTree = "<group>"; };
 		CA1A1111A010000000000003 /* AITaskPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITaskPanel.swift; sourceTree = "<group>"; };
 		A1C11121A010000000000001 /* AssistantConverseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConverseView.swift; sourceTree = "<group>"; };
 		F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionDetailEngine.swift; sourceTree = "<group>"; };
@@ -1972,6 +1978,7 @@
 				F1A1120A0300000000000002 /* FlightFareTests.swift */,
 				F1A1120A0500000000000002 /* TripPackTests.swift */,
 				F1C11121A020000000000002 /* TripPackSearchTests.swift */,
+				F1C11121A040000000000003 /* LedgerMerchantIconTests.swift */,
 				F1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift */,
 				DC0B1116A01000000000B001 /* DailyCardBubblePromptTests.swift */,
 				D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */,
@@ -2366,6 +2373,8 @@
 				F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */,
 				C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */,
 				F1C11121A030000000000001 /* LaunchChoiceSheet.swift */,
+				F1C11121A040000000000001 /* LedgerMerchantIcon.swift */,
+				F1C11121A050000000000001 /* LedgerMerchantCollector.swift */,
 				CA1A1111A010000000000003 /* AITaskPanel.swift */,
 				A1C11121A010000000000001 /* AssistantConverseView.swift */,
 				F1L1111R0200000000000001 /* LedgerReviewBand.swift */,
@@ -3503,6 +3512,8 @@
 				A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */,
 				C1CA1111A010000000000004 /* MapHomeLaunchPrompts.swift in Sources */,
 				A1C11121A030000000000002 /* LaunchChoiceSheet.swift in Sources */,
+				A1C11121A040000000000002 /* LedgerMerchantIcon.swift in Sources */,
+				A1C11121A050000000000002 /* LedgerMerchantCollector.swift in Sources */,
 				CA1A1111A010000000000004 /* AITaskPanel.swift in Sources */,
 				A1C11121A010000000000002 /* AssistantConverseView.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
@@ -3764,6 +3775,7 @@
 				A1A1120A0300000000000002 /* FlightFareTests.swift in Sources */,
 				A1A1120A0500000000000002 /* TripPackTests.swift in Sources */,
 				A1C11121A020000000000002 /* TripPackSearchTests.swift in Sources */,
+				A1C11121A040000000000004 /* LedgerMerchantIconTests.swift in Sources */,
 				A1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift in Sources */,
 				DC0B1116A01000000000B002 /* DailyCardBubblePromptTests.swift in Sources */,
 				D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */,

@@ -90,6 +90,8 @@ struct LedgerSheet: View {
                 }
                 await book.load()
                 await book.refreshRates()
+                // 아이콘을 정하지 못한 가맹점 이름 보내기(MER1121A01): 사용자가 켰고 6시간이 지났을 때만.
+                _ = await LedgerMerchantCollector.sendIfDue()
                 await book.fillMissingKRW()
                 await book.syncEndedTrips()
                 if let tripID, path.isEmpty { await openTrip(tripID) }
@@ -286,7 +288,7 @@ struct LedgerRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            LedgerEntryIcon(entry: entry, size: 22).frame(width: 24)
+            LedgerEntryIcon(entry: entry, size: 24).frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.title).lineLimit(1)
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .regular))

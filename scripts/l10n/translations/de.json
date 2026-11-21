@@ -6386,6 +6386,12 @@
 "인터넷 연결을 확인해 주세요.|Check your internet connection.": "Prüfe deine Internetverbindung.",
 "제안을 확인해 주세요.|Please review the suggestions.": "Bitte prüfe die Vorschläge.",
 "지금은 다듬을 수 없어요.|Can't polish that right now.": "Das lässt sich gerade nicht überarbeiten.",
-"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "Gerade nicht möglich. Versuche es gleich noch einmal."
+"지금은 반영할 수 없어요. 잠시 뒤 다시 해 주세요.|Can't apply right now. Try again shortly.": "Gerade nicht möglich. Versuche es gleich noch einmal.",
+"가계부에서 아이콘을 정하지 못한 가게 이름만 개발자에게 보내 아이콘을 늘리는 데 써요. 금액·시각·위치·계정은 보내지 않고, 끄면 보내지 않아요.|Only the names of merchants whose icon couldn't be chosen are sent to the developer to add more icons. Amounts, times, locations and accounts are never sent, and nothing is sent when off.": "Nur die Namen von Geschäften, für die kein Symbol gewählt werden konnte, werden an den Entwickler gesendet, um weitere Symbole hinzuzufügen. Beträge, Uhrzeiten, Orte und Konten werden nie gesendet, und bei Aus wird nichts gesendet.",
+"가맹점 이름 보내기|Share merchant names": "Händlernamen senden",
+"보낸 이름 지우기|Delete sent names": "Gesendete Namen löschen",
+"보낼 이름 {0}개|{0} names to send": "{0} Namen zu senden",
+"서버에서 지웠어요|Deleted from the server": "Vom Server gelöscht",
+"지우지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't delete. Try again shortly.": "Löschen nicht möglich. Versuche es gleich noch einmal."
 }
 }
