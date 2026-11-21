@@ -17,6 +17,8 @@ node tools/admin-console/server.mjs --dry-run   # 연습: 명령을 기록만 �
 - **API 키**(KEY1121A01): 아래 「API 키 관리」 참고.
 - **설정**: 중계 서버 호스트, R2 버킷, `wrangler.local.toml` 경로. 처음에는 `TaptionPlan/AppSecrets.local.xcconfig`의 `TRIP_RELAY_HOST`와 `server/trip-relay/wrangler.toml`의 버킷을 읽고, 저장하면 `tools/admin-console/config.local.json`(git 제외)에 둡니다.
 
+- **현황**(MER1121A01): 앱 가계부에서 종류를 알 수 없어 통화 기호(₩)로 보인 가맹점의 이름·요청 수·보낸 사람 수를 서버(`GET /merchants/admin`)에서 읽어 표로 보입니다. 서버 운영자 토큰(`CLASSIFIER_ADMIN_TOKEN`)은 이 맥의 API 키 탭에 저장한 값을 쓰고 화면에는 내보내지 않습니다. 서버에 배포·D1 마이그레이션 `0003`이 아직 없으면 그 이유를 화면에 알려 줍니다. 요청이 많은 가맹점은 앱 `TaptionPlan/UI/LedgerMerchantIcon.swift`의 키워드에 등록합니다.
+
 ## 바깥으로 열리지 않게
 - `127.0.0.1`에만 묶고, `Host` 머리글이 `127.0.0.1:<포트>`·`localhost:<포트>`가 아니면 421(DNS 리바인딩 차단).
 - 로그인 대신 실행마다 새로 만드는 토큰. 페이지는 `?t=` 토큰이 맞아야 열리고, API는 `X-Admin-Token` 머리글이 맞아야 답합니다. POST는 JSON만 받아 다른 사이트의 폼 전송을 막고, CORS에는 답하지 않습니다.
@@ -24,7 +26,7 @@ node tools/admin-console/server.mjs --dry-run   # 연습: 명령을 기록만 �
 - API 키 값은 저장소 밖 파일에만 두고, 화면·API·기록에는 원문을 내보내지 않습니다(아래).
 
 ## API 키 관리 (KEY1121A01)
-탭 순서: `공지 · 시즌 팩 · API 키 · 설정 · 초기화`. `API 키` 탭은 앱과 중계 서버가 쓰는 키를 묶음별로 보여 줍니다. 목록은 `tools/admin-console/keys.mjs`의 `KEY_CATALOG`입니다.
+탭 순서: `공지 · 시즌 팩 · API 키 · 현황 · 설정 · 초기화`. `API 키` 탭은 앱과 중계 서버가 쓰는 키를 묶음별로 보여 줍니다. 목록은 `tools/admin-console/keys.mjs`의 `KEY_CATALOG`입니다.
 
 | 묶음 | 키 |
 |---|---|

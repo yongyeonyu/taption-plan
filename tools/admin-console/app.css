@@ -127,3 +127,8 @@ details.card > summary .chip { white-space: nowrap; }
 .usage.unavailable { color: var(--warn); border-color: var(--warn); }
 .usage.none { color: var(--muted); }
 .notice { border: 1px solid var(--warn); border-radius: 10px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--warn); }
+
+/* 현황: 가맹점 표 */
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th, .table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line, #ddd); }
+.table .num { text-align: right; font-variant-numeric: tabular-nums; }

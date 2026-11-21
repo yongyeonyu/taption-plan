@@ -14,7 +14,7 @@ process.env.ADMIN_CONSOLE_KEYS = join(dir, "keys", "secrets.local.json");
 process.env.ADMIN_CONSOLE_KEYS_LEGACY = join(dir, "legacy", "keys.json");
 writeFileSync(process.env.ADMIN_CONSOLE_CONFIG, JSON.stringify({ host: "relay.test", bucket: "test-bucket", wranglerConfig: join(dir, "wrangler.local.toml") }));
 
-const { allowedHost, catalogHash, checkSchedule, cleanItem, createConsole, localPacks, mainCheckout, planAnnouncements, planReset, putArgs, resetScopes, resolveResetDir, validateConfig, withSchedule, withoutPack } = await import("./server.mjs");
+const { allowedHost, catalogHash, currentMerchants, checkSchedule, cleanItem, createConsole, localPacks, mainCheckout, planAnnouncements, planReset, putArgs, resetScopes, resolveResetDir, validateConfig, withSchedule, withoutPack } = await import("./server.mjs");
 
 const KEYS = await import("./keys.mjs");
 
@@ -484,4 +484,46 @@ test("옛 저장소 밖 키 파일에서 한 번 옮겨 온다: 있는 이름은
   assert.ok(readFileSync(legacy, "utf8").includes("LGCY")); // 옛 파일은 대표가 확인 뒤 지운다
   const state = await call("GET", "/api/state");
   assert.ok(!state.text.includes("fake-legacy"));
+});
+
+// ---- 현황: 아이콘을 정하지 못한 가맹점(MER1121A01) ----
+
+const MERCHANT_CONFIG = { host: "relay.test", bucket: "test-bucket", wranglerConfig: "/x/wrangler.local.toml" };
+const merchantBody = { format: "bokki-merchants-admin", version: 1, totals: { names: 2, users: 2, hits: 8 },
+  items: [{ name: "수리마블", hits: 7, users: 2, lastAt: "2026-11-21T10:00:00.000Z" }, { name: "다이소 부천점", hits: 1, users: 1, lastAt: "2026-11-20T10:00:00.000Z" }] };
+
+test("현황: 운영자 토큰은 저장소에서 읽어 서버로만 보내고 결과에는 싣지 않는다", async () => {
+  const calls = [];
+  const fetcher = async (url, init) => { calls.push({ url: String(url), auth: init.headers.authorization }); return Response.json(merchantBody); };
+  const store = { keys: { CLASSIFIER_ADMIN_TOKEN: { value: "z".repeat(40) } } };
+  const result = await currentMerchants(MERCHANT_CONFIG, store, fetcher);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.items.map((item) => item.name), ["수리마블", "다이소 부천점"]);
+  assert.deepEqual(result.totals, merchantBody.totals);
+  assert.equal(calls[0].url, "https://relay.test/merchants/admin?limit=100");
+  assert.equal(calls[0].auth, `Bearer ${"z".repeat(40)}`);
+  assert.equal(JSON.stringify(result).includes("z".repeat(40)), false, "토큰 원문은 화면으로 가지 않는다");
+});
+
+test("현황: 토큰 없음·미배포·토큰 불일치·서버 오류·연결 실패를 알아듣게 말한다", async () => {
+  const withToken = { keys: { CLASSIFIER_ADMIN_TOKEN: { value: "z".repeat(40) } } };
+  assert.equal((await currentMerchants(MERCHANT_CONFIG, { keys: {} }, async () => { throw new Error("호출되면 안 된다"); })).reason, "no_token");
+  const status = async (code) => (await currentMerchants(MERCHANT_CONFIG, withToken, async () => new Response("", { status: code })));
+  assert.equal((await status(404)).reason, "not_deployed");
+  assert.equal((await status(401)).reason, "unauthorized");
+  assert.equal((await status(503)).reason, "unavailable");
+  assert.equal((await status(500)).reason, "failed");
+  const offline = await currentMerchants(MERCHANT_CONFIG, withToken, async () => { throw Object.assign(new Error("fetch failed"), { cause: { code: "ENOTFOUND" } }); });
+  assert.equal(offline.reason, "offline");
+  assert.match(offline.message, /ENOTFOUND/);
+  const odd = await currentMerchants(MERCHANT_CONFIG, withToken, async () => Response.json({ hello: 1 }));
+  assert.equal(odd.reason, "failed");
+});
+
+test("현황 라우트는 접속 토큰이 있어야 하고, 운영자 토큰이 없으면 안내를 준다", async () => {
+  assert.equal((await call("GET", "/api/dashboard/merchants", { token: null })).status, 401);
+  const response = await call("GET", "/api/dashboard/merchants");
+  assert.equal(response.status, 200);
+  assert.equal(response.json.ok, false);
+  assert.equal(response.json.reason, "no_token");
 });

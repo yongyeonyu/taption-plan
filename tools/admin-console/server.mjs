@@ -83,6 +83,23 @@ async function fetchJSON(url, fallback) {
   return response.json();
 }
 
+/** 현황(MER1121A01): 앱이 아이콘을 정하지 못한 가맹점 이름 모음을 서버의 운영자 길로 읽는다. 토큰은 이 맥의 키 저장소에서 읽고 화면에는 주지 않는다. */
+export async function currentMerchants(config, store, fetcher = fetch) {
+  needHost(config);
+  const token = store.keys?.CLASSIFIER_ADMIN_TOKEN?.value;
+  if (!token) return { ok: false, reason: "no_token", message: "API 키 탭에 CLASSIFIER_ADMIN_TOKEN(서버 운영자 토큰)을 저장하면 읽을 수 있습니다." };
+  let response;
+  try { response = await fetcher(`https://${config.host}/merchants/admin?limit=100`, { headers: { authorization: `Bearer ${token}`, "cache-control": "no-cache" } }); }
+  catch (error) { return { ok: false, reason: "offline", message: `서버에 연결하지 못했습니다(${error.cause?.code ?? error.message}).` }; }
+  if (response.status === 404) return { ok: false, reason: "not_deployed", message: "서버에 이 기능이 아직 배포되지 않았습니다(배포와 D1 마이그레이션 0003 뒤에 보입니다)." };
+  if (response.status === 401) return { ok: false, reason: "unauthorized", message: "서버의 운영자 토큰과 저장한 값이 다릅니다. API 키 탭에서 다시 넣으세요." };
+  if (response.status === 503) return { ok: false, reason: "unavailable", message: "서버에 운영자 토큰이나 D1 저장소가 아직 없습니다." };
+  if (!response.ok) return { ok: false, reason: "failed", message: `서버가 ${response.status}로 답했습니다.` };
+  const body = await response.json().catch(() => null);
+  if (body?.format !== "bokki-merchants-admin" || !Array.isArray(body.items)) return { ok: false, reason: "failed", message: "서버 응답 모양이 다릅니다." };
+  return { ok: true, totals: body.totals, items: body.items };
+}
+
 const emptyCatalog = () => ({ format: "bokki-season-packs", schema: 1, packs: [] });
 const needHost = (config) => { if (validateConfig(config).length) throw Object.assign(new Error("설정 탭에서 서버 주소·버킷·wrangler 설정을 먼저 채우세요"), { status: 422 }); };
 const currentAnnouncements = (config) => needHost(config) ?? fetchJSON(`https://${config.host}/public/announcements`);
@@ -341,6 +358,7 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
       log("설정을 저장했습니다");
       return { config: next };
     },
+    "GET /api/dashboard/merchants": async () => currentMerchants(loadConfig(), readStore()),
     "GET /api/announcements": async () => currentAnnouncements(loadConfig()),
     "POST /api/announcements/preview": async (body) => planAnnouncements(await currentAnnouncements(loadConfig()), specOf(body)),
     "POST /api/announcements/publish": (body) => exclusive("공지 올리기", async () => {

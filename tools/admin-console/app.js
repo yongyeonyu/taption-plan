@@ -40,12 +40,40 @@ function fail(error) { alert(error.message); refreshState(); }
 for (const tab of document.querySelectorAll(".tab")) {
   tab.addEventListener("click", () => {
     for (const other of document.querySelectorAll(".tab")) other.classList.toggle("on", other === tab);
-    for (const id of ["notices", "packs", "reset", "keys", "settings"]) $(id).hidden = id !== tab.dataset.tab;
+    for (const id of ["notices", "packs", "reset", "keys", "status", "settings"]) $(id).hidden = id !== tab.dataset.tab;
     if (tab.dataset.tab === "packs") loadPacks();
     if (tab.dataset.tab === "reset") loadReset();
+    if (tab.dataset.tab === "status") loadMerchants();
     if (tab.dataset.tab === "keys" || tab.dataset.tab === "settings") loadKeys();
   });
 }
+
+// ---- 현황: 아이콘을 정하지 못한 가맹점(MER1121A01) ----
+let merchantItems = [];
+const when = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); };
+
+async function loadMerchants() {
+  const message = $("merchantMessage"), table = $("merchantTable");
+  message.hidden = false; message.textContent = "읽는 중…"; table.hidden = true;
+  try {
+    const result = await api("GET", "/api/dashboard/merchants");
+    if (!result.ok) { merchantItems = []; $("merchantTotals").textContent = ""; message.textContent = result.message; return; }
+    merchantItems = result.items;
+    $("merchantTotals").textContent = `이름 ${result.totals.names}개 · 보낸 사람 ${result.totals.users}명 · 요청 ${result.totals.hits}건`;
+    $("merchantRows").replaceChildren(...result.items.map((item) => el("tr", {},
+      el("td", { textContent: item.name }), el("td", { class: "num", textContent: String(item.hits) }),
+      el("td", { class: "num", textContent: String(item.users) }), el("td", { textContent: when(item.lastAt) }))));
+    message.hidden = result.items.length > 0;
+    if (!result.items.length) message.textContent = "아직 모인 이름이 없습니다.";
+    table.hidden = result.items.length === 0;
+  } catch (error) { message.textContent = error.message; }
+}
+$("reloadMerchants").addEventListener("click", loadMerchants);
+$("copyMerchants").addEventListener("click", async () => {
+  const text = merchantItems.slice(0, 30).map((item) => `${item.name}\t${item.hits}\t${item.users}`).join("\n");
+  try { await navigator.clipboard.writeText(text); $("merchantMessage").hidden = false; $("merchantMessage").textContent = "상위 30개를 복사했습니다(이름·요청 수·보낸 사람)."; }
+  catch { $("merchantMessage").hidden = false; $("merchantMessage").textContent = "복사하지 못했습니다."; }
+});
 
 // ---- 상태·기록 ----
 async function refreshState() {
