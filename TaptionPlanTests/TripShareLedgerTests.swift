@@ -154,6 +154,7 @@ final class TripShareLedgerTests: XCTestCase {
         let taxi = ShareExpenseContent(title: "택시", amount: 12_000, currency: "KRW", amountKRW: 12_000, payer: .member(2), split: [.member(1), .member(2)], category: "transport", at: 1_950_000_100_000, by: 2)
         _ = try await friend.write([.create(id: TripShareMapping.roomItemID(entryID: taxiID), content: .sharedExpense(taxi), group: nil)])
         await waitUntil("투영") { self.book.entries.contains { $0.id == taxiID } }
+        await waitUntil("여행 정보") { self.book.trip(tripID)?.members.isEmpty == false }
         var projected = try XCTUnwrap(book.entries.first { $0.id == taxiID })
         XCTAssertEqual([projected.title, projected.payer ?? "", projected.tripID ?? ""], ["택시", "봄", tripID])
         XCTAssertEqual(Set(projected.shareNames ?? []), [LedgerTrip.me, "봄"])
