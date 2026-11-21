@@ -24,6 +24,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check app/engine import boundary
         run: bash scripts/check-app-engine-import-boundary.sh
+      - name: Set time zone to Asia/Seoul
+        run: sudo systemsetup -settimezone Asia/Seoul
       - name: Test shared packages
         run: |
           # CI-1(CRV1120A01): 테스트가 있는 패키지를 모두 돈다. TaptionLedgerCore는 테스트가 아직 없어 뺀다(테스트를 더한 뒤 넣는다).
@@ -76,11 +78,14 @@ jobs:
         run: |
           udid=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d, reverse=True) if 'iOS' in k for x in d[k] if x['name'].startswith('iPhone')))")
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
+      # 시험은 한국 시각·한국어·미터법을 기대한다(로컬 기본값). 러너는 UTC·영어·미국 지역이라 시각·문구·단위가 어긋나 실패했다(CIF1121A01).
+      - name: Set time zone to Asia/Seoul
+        run: sudo systemsetup -settimezone Asia/Seoul
       - name: Test app (unit tests)
         run: |
           xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
             -configuration Debug -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             -derivedDataPath build/CIDD -skipPackagePluginValidation -parallel-testing-enabled NO \
-            -only-testing:TaptionPlanTests \
+            -only-testing:TaptionPlanTests -testLanguage ko -testRegion KR \
             COMPILER_INDEX_STORE_ENABLE=NO \
             OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox'
