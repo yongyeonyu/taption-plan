@@ -993,15 +993,16 @@ struct TravelModeView: View {
     /// 일정 넣기. 고른 셀이 있으면 그 열·그 시각·그 길이, 없으면 그날 마지막 일정 끝에서 잇는다.
     private func addEntry(_ entry: TravelTripDirectory.Entry, cell: TravelPlanCell? = nil, detailOf parent: TravelPlanTableModel.Block? = nil) {
         let column = cell?.column
+        let dayTable = table(entry)
         // 세부 계획이면 그 코스 곳 안의 시각으로 연다.
-        let detail = parent.map { TravelCourse.detailSlot(parent: $0, details: TravelCourse.details(of: $0, in: table(entry).blocks)) }
+        let detail = parent.map { TravelCourse.detailSlot(parent: $0, details: TravelCourse.details(of: $0, in: dayTable.blocks)) }
         let minute = detail?.start ?? cell?.minute
         if planCell != nil { planCell = nil }
-        let key = dayKey(entry), table = table(entry)
-        let kind = column.map { TravelPlanColumns.kind(forColumn: $0, in: table.columns) }.flatMap(TripImportItem.Kind.init(rawValue:)) ?? (parent == nil ? .sight : .other)
+        let key = dayKey(entry)
+        let kind = column.map { TravelPlanColumns.kind(forColumn: $0, in: dayTable.columns) }.flatMap(TripImportItem.Kind.init(rawValue:)) ?? (parent == nil ? .sight : .other)
         var target = TravelQuickEntrySheet.Target.new(
             trip: entry.trip, dayKey: key, dayLabel: dayLabel(entry, key: key),
-            startMinute: minute ?? TravelCoursePlanner.nextStart(blocks: table.blocks, nowMinute: table.nowMinute), kind: kind
+            startMinute: minute ?? TravelCoursePlanner.nextStart(blocks: dayTable.blocks, nowMinute: dayTable.nowMinute), kind: kind
         )
         target.anchor = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops).point
         target.duration = detail?.duration ?? cell?.chosenDuration
