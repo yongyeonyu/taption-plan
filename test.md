@@ -4241,3 +4241,8 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 단위 시험: `MapHomeLiveGateTests` 11 + `MapHomeLiveMapTests` 96 + `LedgerTests` 34 = 141개 실패 0, `** TEST SUCCEEDED **`, 같은 실행에서 Debug 시험 빌드 통과(시뮬레이터 99AC6F35). 로그 `build/validation/HUX1116A06/merge-1.log`.
 - l10n `check.py` 실패 0. 구조 지표 「총 줄 수 +10% 초과」 실패는 main 단독에서도 같음(248,597줄) — 이 브랜치 몫 아님.
 - 실기기 시험 없음.
+
+### SRCH1121A01 — 도시 팩 Algolia 검색(1순위) 서버·앱
+- 서버: `src/algolia.js`(색인 레코드·배치 색인·이전 버전 삭제·설정·동의어·Secured Key·키 발급 한도), 라우트 `/search/packs/key`(검색 키)·`/search/packs/index`·`/search/packs/settings`(주인 키). `test/algolia.test.mjs` 9건, 서버 전체 349건 통과. 키 원문은 어디에도 없고 가짜 값만 씀.
+- 앱: `TripPackSearch.swift`(Algolia 우선, 오프라인·키 없음·시간 초과·빈 결과는 기기 팩 검색으로 폴백, 디바운스 400ms·캐시 10분·하루 60회 상한, 처방 경로 제외, 병원·약국 오래된 정보 표시, 거리 정렬은 기기에서). `TripPackSearchTests` 9건 + `TripPackTests` 통과(새 시뮬레이터 SRCH-STL, `** TEST SUCCEEDED **`). 좌표·위치는 보내지 않음.
+- 미완: 여행 팩 검색 화면(UI 연결)은 도시 팩 목록·일정 칸 화면(ARCH 2단계)이 생긴 뒤. 배포·키 등록·Algolia 인덱스 초기 설정은 대표 승인 후.
