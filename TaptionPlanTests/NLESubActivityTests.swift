@@ -186,35 +186,21 @@ final class NLESubActivityTests: XCTestCase {
 
     // MARK: - 선택 취소
 
-    private func clears(
-        before: String? = "a",
-        touched: String? = "a",
-        main: Bool = true,
-        left: Bool = false,
-        edit: Bool = false,
-        lifted: Bool = false
-    ) -> Bool {
-        NLESelectionTapPolicy.clearsSelection(
-            selectedAtTouchStart: before, touchedClipID: touched, isMainLaneTouch: main,
-            leftSlop: left, didEdit: edit, isLifted: lifted
-        )
+    func testNothingSelectedSelectsTheTouchedClip() {
+        XCTAssertEqual(NLESelectionTapPolicy.outcome(selected: nil, touched: "main:a"), .select)
+        XCTAssertEqual(NLESelectionTapPolicy.outcome(selected: nil, touched: nil), .cancel, "빈 곳을 누르면 고를 것이 없다")
     }
 
-    func testSecondTapOnSelectedClipClearsSelection() {
-        XCTAssertTrue(clears())
+    func testTappingTheSelectedClipAgainKeepsItAndItsMenu() {
+        XCTAssertEqual(NLESelectionTapPolicy.outcome(selected: "main:a", touched: "main:a"), .keep, "다시 눌러도 풀리지 않는다")
+        XCTAssertEqual(NLESelectionTapPolicy.outcome(selected: "sub:s", touched: "sub:s"), .keep)
     }
 
-    func testFirstTapOrOtherClipKeepsSelection() {
-        XCTAssertFalse(clears(before: nil), "처음 누르면 고르기만 한다")
-        XCTAssertFalse(clears(before: "b"), "다른 클립을 누르면 그 클립을 고른다")
-        XCTAssertFalse(clears(before: nil, touched: nil))
-    }
-
-    func testDragTrimAndLiftAreNotCancels() {
-        XCTAssertFalse(clears(left: true), "끌기")
-        XCTAssertFalse(clears(edit: true), "경계 다듬기")
-        XCTAssertFalse(clears(lifted: true), "길게 눌러 집어 들기")
-        XCTAssertFalse(clears(main: false), "상세·센서 칸과 재생 헤드")
+    func testTappingAnywhereElseCancels() {
+        XCTAssertEqual(NLESelectionTapPolicy.outcome(selected: "main:a", touched: "main:b"), .cancel, "다른 클립")
+        XCTAssertEqual(NLESelectionTapPolicy.outcome(selected: "main:a", touched: nil), .cancel, "빈 곳·장소 칸")
+        XCTAssertEqual(NLESelectionTapPolicy.outcome(selected: "main:a", touched: "sub:a"), .cancel, "같은 id라도 다른 칸이면 다른 것")
+        XCTAssertEqual(NLESelectionTapPolicy.outcome(selected: "sub:s", touched: "main:a"), .cancel)
     }
 
     func testTapSlopBoundary() {

@@ -348,17 +348,14 @@ enum NLESelectionTapPolicy {
         abs(translation.width) + abs(translation.height) >= slop
     }
 
-    /// 터치 시작에 이미 고른 클립을 그대로 다시 눌렀을 때만 푼다.
-    /// 움직였거나, 경계를 다듬었거나, 집어 들었으면 탭이 아니다.
-    static func clearsSelection(
-        selectedAtTouchStart: String?,
-        touchedClipID: String?,
-        isMainLaneTouch: Bool,
-        leftSlop: Bool,
-        didEdit: Bool,
-        isLifted: Bool
-    ) -> Bool {
-        guard isMainLaneTouch, !leftSlop, !didEdit, !isLifted, let touchedClipID else { return false }
-        return touchedClipID == selectedAtTouchStart
+    /// 누른 자리가 고르기·그대로 두기·취소 가운데 무엇이 되는가(대표 지시 2026-11-21).
+    /// 고른 것이 없으면 누른 클립을 고른다. 고른 것이 있으면 그것을 다시 눌러도 그대로 두고(떠 있는 메뉴도 그대로),
+    /// 그 밖의 어디를 눌러도 취소한다. 다시 눌러 풀리는 일이 없어야 메뉴 순서가 꼬이지 않는다.
+    /// 고른 것과 누른 것은 `main:<id>`·`sub:<id>`처럼 칸이 붙은 이름이다.
+    enum Outcome: Equatable { case select, keep, cancel }
+
+    static func outcome(selected: String?, touched: String?) -> Outcome {
+        guard let selected else { return touched == nil ? .cancel : .select }
+        return touched == selected ? .keep : .cancel
     }
 }

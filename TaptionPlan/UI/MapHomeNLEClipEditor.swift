@@ -24,8 +24,7 @@ struct MapHomeNLEClipEditor: View {
     @State var selectedSubClipID: String?
     /// 상세 층 클립의 자동·수동 근거(NLE1103A02).
     @State var subProvenance: [String: NLESubActivityProvenance] = [:]
-    /// 이번 터치가 시작될 때 골라져 있던 클립과, 탭 범위를 벗어났는지(NLE1103A03).
-    @State private var selectedAtTouchStart: String?
+    /// 이번 터치가 탭 범위를 벗어났는지(NLE1103A03).
     @State private var touchLeftTapSlop = false
     @State var playheadMinute: Int
     @State var minuteHeight: CGFloat = 2.4
@@ -596,7 +595,6 @@ struct MapHomeNLEClipEditor: View {
                     if !touchLeftTapSlop { touchLeftTapSlop = true }
                 }
                 if dragMode == .none {
-                    selectedAtTouchStart = selectedClipID
                     dragMode = resolveDragMode(at: value.startLocation, geometry: geometry, width: width)
                     didPushUndoForDrag = false
                     panBaseStartMinute = visibleStartMinute
@@ -706,7 +704,6 @@ struct MapHomeNLEClipEditor: View {
         didPushUndoForDrag = false
         dragScrollShift = 0
         touchLeftTapSlop = false
-        selectedAtTouchStart = nil
         scrubAnchor = nil
     }
 
@@ -976,37 +973,50 @@ struct MapHomeNLEClipEditor: View {
     }
 
     /// 손가락이 거의 움직이지 않았으면 누른 것이다. 선택은 여기서만 바뀐다(NLE1104A01).
+    /// 고른 것이 없으면 누른 클립을 고르고 메뉴를 띄운다. 고른 것을 다시 눌러도 그대로이고 메뉴는 계속 보인다.
+    /// 고른 것 밖을 누르면 취소한다(대표 지시 2026-11-21: 다시 눌러 메뉴가 사라지며 순서가 꼬이던 것).
     private func handleTap(at point: CGPoint, geometry: NLETimelineGeometry, width: CGFloat) {
+        let selectedKey = selectedClipID.map { "main:" + $0 } ?? selectedSubClipID.map { "sub:" + $0 }
+        let minute = Int(geometry.minute(forY: point.y).rounded(.down))
         if laneWidths(width).lane(atX: point.x) == .right {
-            let minute = Int(geometry.minute(forY: point.y).rounded(.down))
             UISelectionFeedbackGenerator().selectionChanged()
             let tapped = subClip(atMinute: minute)
-            selectedSubClipID = tapped?.id == selectedSubClipID ? nil : tapped?.id
-            quickMenuMinute = nil
-            if tapped != nil { selectedClipID = nil }
+            switch NLESelectionTapPolicy.outcome(selected: selectedKey, touched: tapped.map { "sub:" + $0.id }) {
+            case .select:
+                selectedSubClipID = tapped?.id
+                selectedClipID = nil
+                quickMenuMinute = nil
+            case .keep:
+                break
+            case .cancel:
+                clearSelection()
+            }
             return
         }
-        guard dragMode.touchesMainLane else { return }
-        let minute = Int(geometry.minute(forY: point.y).rounded(.down))
-        guard let clip = track.clip(atMinute: minute) else { return }
+        // 클립이 아닌 곳(장소 칸·여백·빈 시간)을 눌렀으면 고른 것을 취소한다.
+        guard dragMode.touchesMainLane, let clip = track.clip(atMinute: minute) else {
+            if selectedKey != nil { clearSelection() }
+            return
+        }
         if !pickedClipIDs.isEmpty { return togglePicked(clip.id) }
         UISelectionFeedbackGenerator().selectionChanged()
-        // 고른 클립을 다시 눌렀으면 선택을 푼다(NLE1103A03).
-        if NLESelectionTapPolicy.clearsSelection(
-            selectedAtTouchStart: selectedAtTouchStart,
-            touchedClipID: clip.id,
-            isMainLaneTouch: true,
-            leftSlop: touchLeftTapSlop,
-            didEdit: didPushUndoForDrag,
-            isLifted: isLifted
-        ) {
-            selectedClipID = nil
-            quickMenuMinute = nil
-            return
+        switch NLESelectionTapPolicy.outcome(selected: selectedKey, touched: "main:" + clip.id) {
+        case .select:
+            selectedClipID = clip.id
+            selectedSubClipID = nil
+            quickMenuMinute = minute
+        case .keep:
+            // 끌다 숨은 메뉴는 다시 띄우고, 떠 있는 메뉴는 그 자리에 둔다.
+            if quickMenuMinute == nil { quickMenuMinute = minute }
+        case .cancel:
+            clearSelection()
         }
-        selectedClipID = clip.id
+    }
+
+    private func clearSelection() {
+        selectedClipID = nil
         selectedSubClipID = nil
-        quickMenuMinute = quickMenuMinute == nil ? minute : nil
+        quickMenuMinute = nil
     }
 
     /// 자석 거리는 화면에서 10pt. 1분 편집 배율에서는 0분이 되어 1분씩 그대로 움직인다.
