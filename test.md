@@ -4246,3 +4246,9 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 서버: `src/algolia.js`(색인 레코드·배치 색인·이전 버전 삭제·설정·동의어·Secured Key·키 발급 한도), 라우트 `/search/packs/key`(검색 키)·`/search/packs/index`·`/search/packs/settings`(주인 키). `test/algolia.test.mjs` 9건, 서버 전체 349건 통과. 키 원문은 어디에도 없고 가짜 값만 씀.
 - 앱: `TripPackSearch.swift`(Algolia 우선, 오프라인·키 없음·시간 초과·빈 결과는 기기 팩 검색으로 폴백, 디바운스 400ms·캐시 10분·하루 60회 상한, 처방 경로 제외, 병원·약국 오래된 정보 표시, 거리 정렬은 기기에서). `TripPackSearchTests` 9건 + `TripPackTests` 통과(새 시뮬레이터 SRCH-STL, `** TEST SUCCEEDED **`). 좌표·위치는 보내지 않음.
 - 미완: 여행 팩 검색 화면(UI 연결)은 도시 팩 목록·일정 칸 화면(ARCH 2단계)이 생긴 뒤. 배포·키 등록·Algolia 인덱스 초기 설정은 대표 승인 후.
+
+### TFB1121A02 — TestFlight 빌드 361
+- 로컬 전체 단위 시험 3,316건 실패 0(`** TEST SUCCEEDED **`, 첫 실행의 `SensorDayStoreTests` 30일 부하 p95 속도 시험 1건은 부하로 흔들려 단독·재실행에서 통과). CI는 `eef70c8c`까지 전부 성공.
+- 사전 점검 → 아카이브 → 업로드 → 처리 상태 VALID → 내부 그룹 연결 확인. 보고서 `build/validation/TFB1121A02/testflight-report.json`(git 제외).
+- 담긴 것: CI 컴파일·시험 환경 수정, 도시 팩 Algolia 검색 서비스(화면 연결 전), AI 대화 화면(서버 Bedrock 배포 전이라 안내 문구만), 앱 스타일 고르기 시트, AI 화면 번역 12개 언어, 새 알림 단축어 링크, **PostHog 키 포함**(로그 업로드 켜짐).
+- 실기기 시험 없음.
