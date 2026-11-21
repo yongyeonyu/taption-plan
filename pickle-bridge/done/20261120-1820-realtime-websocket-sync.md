@@ -1,7 +1,7 @@
 ---
 id: 20261120-1820-realtime-websocket-sync
 created_at: 2026-11-20T18:20+09:00
-status: blocked
+status: done
 request_id: RTA1120A02
 title: 통화 중 지시가 화면에 즉시 — 중계 WebSocket(Durable Object Hibernation) 실시간 반영
 from: 비야
@@ -304,3 +304,10 @@ new_sqlite_classes = ["RealtimeRoom"]
 - 확인 못 한 것: 실기기 반영 초(소켓/폴링 3초/1초)·배터리·데이터·백그라운드 0건, 대시보드 요금 숫자(배포 뒤). 시험은 가짜 소켓이라 실제 `URLSessionWebSocketTask` 접속·101 응답은 미확인.
 - 대표 확인 필요: ① 서버 배포(워커 전체가 올라가고 migration `v3-realtime-room`이 적용됨) ② 배포 직후 키 없이 `GET /rt/ws`가 401인지 확인. 대표가 원치 않으면 `wrangler.local.toml`에서 `REALTIME_ROOM` 바인딩만 빼면 라우트 503·발행 무동작이 됨.
 - PRIVACY: 새로 모으는 개인정보 없음(좌표·기기 ID·본문을 싣지 않음), 문구 변경 없음. `docs/pipeline/CHANGELOG.md`는 없어 `test.md`로 대신함.
+
+### 회신 추가 (2026-11-21 대표 승인 뒤)
+
+- 대표 확인(채팅): 「서버 재배포 — 지금 제가 배포」.
+- **배포 완료**: 새 버전 `178b8af9…`(직전 `d0a000d8…`), migration `v3-realtime-room` 적용, `REALTIME_ROOM` 바인딩 확인(dry-run 출력). 배포 전 서버 시험 326건 통과. 함께 나간 서버 변경은 이 지시서의 `realtime.js`·발행 자리와 FLT1120A01 A-1 이후 변경.
+- **배포 직후 확인**: 키 없이 `Upgrade: websocket`으로 `GET /rt/ws` → **401**(라우트 살아 있음). 업그레이드 없는 비인증 GET은 404(기존 동작). 앱 360은 이미 TestFlight에 있어 소켓을 시도하고, 붙지 못하면 폴링으로 그대로 돕니다.
+- **아직 못 한 것**: 실제 `URLSessionWebSocketTask` 접속·반영 초(소켓/폴링 3초·1초)·배터리·백그라운드 요청 0건·DO 대시보드 요금 숫자(첫날 값)는 실기기와 배포 뒤 대시보드에서만 가능해 대표 확인 목록(`test.md` 「RTA1120A02」)에 남김.
