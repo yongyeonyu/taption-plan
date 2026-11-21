@@ -110,9 +110,14 @@ final class AssistantRealtimeTests: XCTestCase {
         XCTAssertFalse(realtime.isConnected, "끊기면 짧은 폴링이 다시 맡는다")
     }
 
-    func testLiveIntervalDropsToSafetyNetOnlyWhileConnected() async {
-        let realtime = AssistantRealtime.shared
-        XCTAssertFalse(realtime.isConnected)
-        XCTAssertEqual(AssistantLiveSync.liveInterval(), AssistantLiveSync.interval(mode: AssistantLiveSync.mode(), lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled, thermal: ProcessInfo.processInfo.thermalState))
+    func testLiveIntervalDropsToSafetyNetOnlyWhileConnected() {
+        // 전역 소켓 상태(시험 호스트 앱이 실제로 붙을 수 있음)에 기대지 않고 값을 직접 넘긴다.
+        let info = ProcessInfo.processInfo
+        XCTAssertEqual(AssistantLiveSync.liveInterval(info: info, realtimeConnected: true, mode: .three), AssistantCommandPolling.idleInterval)
+        XCTAssertEqual(AssistantLiveSync.liveInterval(info: info, realtimeConnected: true, mode: .one), AssistantCommandPolling.idleInterval)
+        XCTAssertEqual(AssistantLiveSync.liveInterval(info: info, realtimeConnected: false, mode: .three),
+                       AssistantLiveSync.interval(mode: .three, lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState), "끊기면 3초로 돌아온다")
+        XCTAssertEqual(AssistantLiveSync.liveInterval(info: info, realtimeConnected: false, mode: .one),
+                       AssistantLiveSync.interval(mode: .one, lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState))
     }
 }

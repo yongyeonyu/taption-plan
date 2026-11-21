@@ -1,0 +1,17 @@
+{
+  "format": "bokki-trip-seed",
+  "schema": 1,
+  "city": "fixture-city",
+  "version": 1,
+  "nameKo": "예시 도시(시험용 가짜)",
+  "country": "ZZ",
+  "categories": ["restaurant", "sight", "stay"],
+  "items": [
+    {"id": "r-001", "category": "restaurant", "name": "Example Diner A", "nameKo": "예시 식당 A", "area": "예시구", "lat": 10.0, "lng": 20.0,
+     "tags": ["예시", "점심"], "note": "시험용 가짜 항목입니다.", "source": "seed", "checkedAt": "2026-11-01", "checkedBy": "대표"},
+    {"id": "s-001", "category": "sight", "name": "Example Park", "nameKo": "예시 공원", "area": "예시구", "lat": 10.01, "lng": 20.01,
+     "note": "시험용 가짜 항목입니다.", "source": "seed", "checkedAt": "2026-11-02", "checkedBy": "비야"},
+    {"id": "h-001", "category": "stay", "name": "Example Inn", "nameKo": "예시 숙소", "area": "예시구", "lat": 10.02, "lng": 20.02,
+     "note": "시험용 가짜 항목입니다.", "source": "seed", "checkedAt": "2026-11-03", "checkedBy": "대표"}
+  ]
+}

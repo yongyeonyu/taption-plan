@@ -428,7 +428,7 @@
    "en": "1 year",
    "files": [
     "AssistantKeys.swift:19",
-    "MapHomePlaybackVideoSheet.swift:408"
+    "MapHomePlaybackVideoSheet.swift:411"
    ],
    "args": [],
    "targets": [
@@ -440,7 +440,7 @@
    "ko": "1달",
    "en": "1 month",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:407"
+    "MapHomePlaybackVideoSheet.swift:410"
    ],
    "args": [],
    "targets": [
@@ -489,7 +489,7 @@
    "en": "1 day",
    "files": [
     "AssistantRelay.swift:17",
-    "MapHomePlaybackVideoSheet.swift:405"
+    "MapHomePlaybackVideoSheet.swift:408"
    ],
    "args": [],
    "targets": [
@@ -513,7 +513,7 @@
    "ko": "1주일",
    "en": "1 week",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:406"
+    "MapHomePlaybackVideoSheet.swift:409"
    ],
    "args": [],
    "targets": [
@@ -5576,7 +5576,7 @@
    "ko": "{0}일, 이동 {1}를 {2} 영상으로 그립니다.",
    "en": "{0} days, {1} in a {2} video.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:303"
+    "MapHomePlaybackVideoSheet.swift:306"
    ],
    "args": [
     "rangePlan.dayCount",
@@ -37492,7 +37492,7 @@
    "ko": "과거 위치 {0}",
    "en": "Past location {0}",
    "files": [
-    "MapHomeView+Playback.swift:878"
+    "MapHomeView+Playback.swift:862"
    ],
    "args": [
     "time"
@@ -38544,8 +38544,8 @@
    "ko": "기간",
    "en": "Period",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:416",
-    "MapHomePlaybackVideoSheet.swift:424"
+    "MapHomePlaybackVideoSheet.swift:419",
+    "MapHomePlaybackVideoSheet.swift:427"
    ],
    "args": [],
    "targets": [
@@ -38982,7 +38982,7 @@
    "ko": "기록을 읽는 중입니다. 처음에는 기간이 길수록 오래 걸리고, 한 번 읽은 날은 다음부터 바로 열립니다.",
    "en": "Reading your records. The first read takes longer for long periods; days already read open instantly next time.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:294"
+    "MapHomePlaybackVideoSheet.swift:297"
    ],
    "args": [],
    "targets": [
@@ -39551,7 +39551,7 @@
    "en": "To",
    "files": [
     "GPXExportCard.swift:20",
-    "MapHomePlaybackVideoSheet.swift:449"
+    "MapHomePlaybackVideoSheet.swift:452"
    ],
    "args": [],
    "targets": [
@@ -46356,7 +46356,7 @@
    "ko": "보여 줄 위치 기록이 없습니다.",
    "en": "No location records to show.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:371"
+    "MapHomePlaybackVideoSheet.swift:374"
    ],
    "args": [],
    "targets": [
@@ -47637,7 +47637,7 @@
    "ko": "사진 앱에 저장하는 중입니다.",
    "en": "Saving to Photos.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:281",
+    "MapHomePlaybackVideoSheet.swift:284",
     "TravelMapVideoSection.swift:123"
    ],
    "args": [],
@@ -47686,7 +47686,7 @@
    "ko": "사진 저장 권한이 필요합니다.",
    "en": "Photo saving permission is needed.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:366",
+    "MapHomePlaybackVideoSheet.swift:369",
     "TravelMapVideoSection.swift:245"
    ],
    "args": [],
@@ -47772,8 +47772,8 @@
    "ko": "사진에 저장됨",
    "en": "Saved to Photos",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:283",
-    "MapHomePlaybackVideoSheet.swift:323",
+    "MapHomePlaybackVideoSheet.swift:286",
+    "MapHomePlaybackVideoSheet.swift:326",
     "TravelMapVideoSection.swift:125"
    ],
    "args": [],
@@ -50444,7 +50444,7 @@
    "en": "From",
    "files": [
     "GPXExportCard.swift:18",
-    "MapHomePlaybackVideoSheet.swift:440",
+    "MapHomePlaybackVideoSheet.swift:443",
     "TripLiveLocationBand.swift:244"
    ],
    "args": [],
@@ -54495,7 +54495,7 @@
    "ko": "영상 만들기",
    "en": "Make video",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:328",
+    "MapHomePlaybackVideoSheet.swift:331",
     "TravelMapVideoSection.swift:170"
    ],
    "args": [],
@@ -54560,7 +54560,7 @@
    "ko": "영상을 그리는 중입니다. 앱을 켜 둔 채 기다려 주세요.",
    "en": "Rendering. Keep the app open.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:279",
+    "MapHomePlaybackVideoSheet.swift:282",
     "TravelMapVideoSection.swift:121"
    ],
    "args": [],
@@ -54573,7 +54573,7 @@
    "ko": "영상을 만들지 못했습니다.",
    "en": "Could not make the video.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:373",
+    "MapHomePlaybackVideoSheet.swift:376",
     "TravelMapVideoSection.swift:249"
    ],
    "args": [],
@@ -56340,7 +56340,7 @@
    "ko": "위치 기록이 없는 {0}일은 경로가 없어 앞뒤 지점을 바로 잇습니다.",
    "en": "{0} days have no location records; the points around them are joined directly.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:308"
+    "MapHomePlaybackVideoSheet.swift:311"
    ],
    "args": [
     "missingRangeDays"
@@ -57073,7 +57073,7 @@
    "ko": "이 기간에는 보여 줄 위치 기록이 없습니다.",
    "en": "No location records to show in this period.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:300"
+    "MapHomePlaybackVideoSheet.swift:303"
    ],
    "args": [],
    "targets": [
@@ -60444,7 +60444,7 @@
    "ko": "재생할 기록이 없습니다.",
    "en": "Nothing to play back.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:343"
+    "MapHomePlaybackVideoSheet.swift:346"
    ],
    "args": [],
    "targets": [
@@ -65766,7 +65766,7 @@
    "ko": "특정 날짜",
    "en": "Custom",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:409"
+    "MapHomePlaybackVideoSheet.swift:412"
    ],
    "args": [],
    "targets": [
@@ -66426,7 +66426,7 @@
    "ko": "하루 재생을 60fps 영상으로 그립니다. 끊김 없이 저장됩니다.",
    "en": "Renders the day at 60 fps with no dropped frames.",
    "files": [
-    "MapHomePlaybackVideoSheet.swift:291"
+    "MapHomePlaybackVideoSheet.swift:294"
    ],
    "args": [],
    "targets": [

@@ -224,6 +224,7 @@
 		A1A1120A0400000000000002 /* AssistantRealtimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0400000000000002 /* AssistantRealtimeTests.swift */; };
 		A1A1120A0200000000000003 /* FlightSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0200000000000003 /* FlightSearchTests.swift */; };
 		A1A1120A0300000000000002 /* FlightFareTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0300000000000002 /* FlightFareTests.swift */; };
+		A1A1120A0500000000000002 /* TripPackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0500000000000002 /* TripPackTests.swift */; };
 		A1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift */; };
 		D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */; };
 		D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */; };
@@ -604,6 +605,7 @@
 		A1A1120A0400000000000001 /* AssistantRealtime.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0400000000000001 /* AssistantRealtime.swift */; };
 		A1A1120A0200000000000002 /* FlightSearchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0200000000000002 /* FlightSearchViews.swift */; };
 		A1A1120A0300000000000001 /* FlightFare.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0300000000000001 /* FlightFare.swift */; };
+		A1A1120A0500000000000001 /* TripPackModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0500000000000001 /* TripPackModels.swift */; };
 		A1A1120A0200000000000001 /* FlightSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0200000000000001 /* FlightSearch.swift */; };
 		A1A1120A0100000000000004 /* PostHogUploadModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0100000000000004 /* PostHogUploadModel.swift */; };
 		A1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift */; };
@@ -1146,6 +1148,7 @@
 		F1A1120A0400000000000002 /* AssistantRealtimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRealtimeTests.swift; sourceTree = "<group>"; };
 		F1A1120A0200000000000003 /* FlightSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightSearchTests.swift; sourceTree = "<group>"; };
 		F1A1120A0300000000000002 /* FlightFareTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightFareTests.swift; sourceTree = "<group>"; };
+		F1A1120A0500000000000002 /* TripPackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPackTests.swift; sourceTree = "<group>"; };
 		F1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogDiagnosticsUploaderTests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLastKnownLocationPolicyTests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeExpectedRouteRefreshGateTests.swift; sourceTree = "<group>"; };
@@ -1501,6 +1504,7 @@
 		F1A1120A0400000000000001 /* AssistantRealtime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRealtime.swift; sourceTree = "<group>"; };
 		F1A1120A0200000000000002 /* FlightSearchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightSearchViews.swift; sourceTree = "<group>"; };
 		F1A1120A0300000000000001 /* FlightFare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightFare.swift; sourceTree = "<group>"; };
+		F1A1120A0500000000000001 /* TripPackModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPackModels.swift; sourceTree = "<group>"; };
 		F1A1120A0200000000000001 /* FlightSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightSearch.swift; sourceTree = "<group>"; };
 		F1A1120A0100000000000004 /* PostHogUploadModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogUploadModel.swift; sourceTree = "<group>"; };
 		F1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogDiagnosticsUploader.swift; sourceTree = "<group>"; };
@@ -1958,6 +1962,7 @@
 				F1A1120A0400000000000002 /* AssistantRealtimeTests.swift */,
 				F1A1120A0200000000000003 /* FlightSearchTests.swift */,
 				F1A1120A0300000000000002 /* FlightFareTests.swift */,
+				F1A1120A0500000000000002 /* TripPackTests.swift */,
 				F1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift */,
 				DC0B1116A01000000000B001 /* DailyCardBubblePromptTests.swift */,
 				D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */,
@@ -2173,6 +2178,7 @@
 				F1A1120A0400000000000001 /* AssistantRealtime.swift */,
 				F1A1120A0200000000000002 /* FlightSearchViews.swift */,
 				F1A1120A0300000000000001 /* FlightFare.swift */,
+				F1A1120A0500000000000001 /* TripPackModels.swift */,
 				F1A1120A0200000000000001 /* FlightSearch.swift */,
 				F1A1120A0100000000000004 /* PostHogUploadModel.swift */,
 				F1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift */,
@@ -3295,6 +3301,7 @@
 				A1A1120A0400000000000001 /* AssistantRealtime.swift in Sources */,
 				A1A1120A0200000000000002 /* FlightSearchViews.swift in Sources */,
 				A1A1120A0300000000000001 /* FlightFare.swift in Sources */,
+				A1A1120A0500000000000001 /* TripPackModels.swift in Sources */,
 				A1A1120A0200000000000001 /* FlightSearch.swift in Sources */,
 				A1A1120A0100000000000004 /* PostHogUploadModel.swift in Sources */,
 				A1A1120A0100000000000003 /* PostHogDiagnosticsUploader.swift in Sources */,
@@ -3740,6 +3747,7 @@
 				A1A1120A0400000000000002 /* AssistantRealtimeTests.swift in Sources */,
 				A1A1120A0200000000000003 /* FlightSearchTests.swift in Sources */,
 				A1A1120A0300000000000002 /* FlightFareTests.swift in Sources */,
+				A1A1120A0500000000000002 /* TripPackTests.swift in Sources */,
 				A1A1120A0100000000000005 /* PostHogDiagnosticsUploaderTests.swift in Sources */,
 				DC0B1116A01000000000B002 /* DailyCardBubblePromptTests.swift in Sources */,
 				D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */,

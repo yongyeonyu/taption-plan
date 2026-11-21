@@ -565,6 +565,17 @@ public struct CalendarTitleDetail: Codable, Hashable, Sendable {
     }
 }
 
+/// 도시 팩에서 온 일정 칸이 가리키는 팩 항목(ARCH1120A01). 팩이 사라져도 칸은 남는다(이름·좌표는 칸이 가진다).
+public struct TravelPackRef: Codable, Hashable, Sendable {
+    public var city: String
+    public var packID: String
+    public var itemID: String
+
+    public init(city: String, packID: String, itemID: String) {
+        self.city = city; self.packID = packID; self.itemID = itemID
+    }
+}
+
 /// AI로 만든 여행의 일정 한 칸. 시작·끝마다 그곳의 UTC 차(초)를 함께 둔다.
 public struct TravelTripItem: Codable, Hashable, Sendable {
     public var tripID: String
@@ -607,11 +618,19 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public var fareCurrency: String?
     public var fareSource: String?
     public var fareExpenseID: String?
+    /// 이 칸이 어디서 왔는지(ARCH1120A01): `alert`(알림 자동)·`pack`(도시 팩)·`ai`·`manual`. 없으면 예전 저장본이라 알 수 없다. 키를 쓰지 않아 예전 바이트가 그대로다.
+    public var source: String?
+    /// 도시 팩 항목 참조(`source == "pack"`일 때).
+    public var packRef: TravelPackRef?
+    /// 예약·안내 링크(표시용, https만)와 제공처 이름. 앱은 예약·결제·가격을 다루지 않고 링크로 넘긴다.
+    public var externalLink: String?
+    public var externalProvider: String?
 
     public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil, colorHex: String? = nil, plannedSpendKRW: Double? = nil, parentItemID: String? = nil,
                 flightNumber: String? = nil, originCode: String? = nil, destinationCode: String? = nil, terminal: String? = nil, gate: String? = nil, baggageClaim: String? = nil,
                 legIndex: Int? = nil, itineraryID: String? = nil, pnrLocal: String? = nil, flightLog: String? = nil,
-                fareAmount: Int? = nil, fareCurrency: String? = nil, fareSource: String? = nil, fareExpenseID: String? = nil) {
+                fareAmount: Int? = nil, fareCurrency: String? = nil, fareSource: String? = nil, fareExpenseID: String? = nil,
+                source: String? = nil, packRef: TravelPackRef? = nil, externalLink: String? = nil, externalProvider: String? = nil) {
         self.tripID = tripID
         self.itemID = itemID
         self.kind = kind
@@ -640,6 +659,17 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
         self.fareCurrency = fareCurrency
         self.fareSource = fareSource
         self.fareExpenseID = fareExpenseID
+        self.source = source
+        self.packRef = packRef
+        self.externalLink = Self.cleanExternalLink(externalLink)
+        self.externalProvider = externalProvider
+    }
+
+    /// 외부 링크는 https이고 300자 이하인 것만 저장한다(그 밖은 nil).
+    public static func cleanExternalLink(_ text: String?) -> String? {
+        guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), text.count <= 300, text.lowercased().hasPrefix("https://"),
+              let url = URL(string: text), url.host?.isEmpty == false else { return nil }
+        return text
     }
 
     /// 결제한 항공권 가격을 붙인다(지출 하나에 카드 하나).

@@ -180,10 +180,10 @@ final class AssistantLiveSync {
         }
     }
 
-    static func liveInterval(info: ProcessInfo = .processInfo) -> TimeInterval {
+    static func liveInterval(info: ProcessInfo = .processInfo, realtimeConnected: Bool = AssistantRealtime.shared.isConnected, mode current: AgentSyncMode = mode()) -> TimeInterval {
         // 소켓이 살아 있으면 짧은 폴링은 멈추고 5분 안전망만 둔다(RTA1120A02). 끊기면 곧바로 3초·1초로 돌아온다.
-        if AssistantRealtime.shared.isConnected { return AssistantCommandPolling.idleInterval }
-        return interval(mode: mode(), lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState)
+        if realtimeConnected, current != .off { return AssistantCommandPolling.idleInterval }
+        return interval(mode: current, lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState)
     }
 }
 

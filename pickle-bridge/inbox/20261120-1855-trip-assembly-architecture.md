@@ -272,3 +272,11 @@ packs/trip/<city>/<version>/images/…        썸네일(선택)
   1. 0단계: 이 설계 그대로 진행해도 되는지(추천: 「이대로」).
   2. 라쿠텐·핫페퍼 앱 등록은 대표 계정이 필요 — 언제 하시는지(추천: 시드·조립기를 먼저 하고 API는 마지막).
   3. 시즌 팩 다운로더를 공용 `PackKit`으로 뺄지, 도시 팩 전용 해석기만 새로 둘지(추천: 먼저 읽어 보고 작은 쪽).
+
+### 회신 추가 (2026-11-21, 대표 확인 후 진행분)
+
+- 대표 확인(채팅): ARCH 0단계 「이대로 진행」, 다음 「2단계: 도시 팩 파이프라인」.
+- **1단계 완료**: `TravelTripItem`에 옵셔널 `source`(`alert|pack|ai|manual`)·`packRef`(`TravelPackRef{city,packID,itemID}`)·`externalLink`(https만)·`externalProvider`. 비어 있으면 키를 쓰지 않아 예전 저장본 바이트가 그대로이고 마이그레이션이 필요 없음(시험으로 고정).
+- **2단계 첫 조각**: ① 시드 형식·생성기 `scripts/trip-pack/build_trip_pack.py`(필수 `checkedAt`·`checkedBy`, `checkedBy` 비식별, `source`는 `seed`만, 모르는 칸·API 응답 거절, 카테고리는 팩이 선언, 빈 도시 팩 금지, 같은 입력이면 같은 출력) + python 시험 6건 + 가짜 시드 `seed/trip/_fixture`(시험용, 실제 도시·장소 아님). ② 앱 `TripPackModels.swift`(읽기·스키마·크기 검사, 모르는 카테고리·범위 밖 좌표·겹친 id 제외, 병원·약국 확인일 90일 초과 표시, 카테고리·문구 거르기, 팩 항목 → 일정 칸 변환) + `TripPackTests` 6건. ③ `docs/TRIP_PACK_PLAN.md`. 다운로더는 `SeasonPackDownloader`가 카탈로그 항목의 `archive{key,bytes,sha256}`만 보므로 도시 팩 항목을 같은 모양으로 옮겨 그대로 재사용 가능(남은 확인: `SeasonPackLimits.packBytes` 상한, 저장 폴더 분리).
+- **안 한 것**: 서버 올리기(운영 콘솔 도시 팩 경로)·앱의 팩 카탈로그 받기·목록 화면·일정에 넣기 UI·조립기(5절)·알골리아 10절(`SRCH1121A01`로 따로). **시드 내용은 대표가 수기로 조사한 것만 넣어야 해서 이 저장소에는 가짜만 있음.** 라쿠텐·핫페퍼는 키와 약관 표기 조건 원문을 읽기 전에는 팩에 넣지 않음.
+- 대표 확인 필요: 후쿠오카 시드(수기 조사분)를 언제 `seed/trip/fukuoka/seed.json`에 넣을지, 라쿠텐·핫페퍼 계정 등록 시점.

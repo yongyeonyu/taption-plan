@@ -86,3 +86,31 @@ extension FlightFareTests {
         XCTAssertEqual(FlightFare.classify("야놀자 2박 3일 제주 89,000원 승인"), .notFlight)
     }
 }
+
+/// ARCH1120A01 1단계: 카드 모델에 더한 출처·팩 참조·외부 링크 칸이 예전 저장본을 건드리지 않는다.
+extension FlightFareTests {
+    func testSourcePackRefAndExternalFieldsStayOutOfOldBytesAndRoundTrip() throws {
+        let plain = card("KE1201")
+        let oldText = String(decoding: try JSONEncoder().encode(plain), as: UTF8.self)
+        for key in ["source", "packRef", "externalLink", "externalProvider"] { XCTAssertFalse(oldText.contains(key), key) }
+        var item = card("KE1201")
+        item.source = "pack"
+        item.packRef = TravelPackRef(city: "fixture-city", packID: "fixture-city.v1", itemID: "r-001")
+        item.externalLink = "https://example.test/book"
+        item.externalProvider = "예시"
+        let decoded = try JSONDecoder().decode(TravelTripItem.self, from: try JSONEncoder().encode(item))
+        XCTAssertEqual(decoded.source, "pack")
+        XCTAssertEqual(decoded.packRef, TravelPackRef(city: "fixture-city", packID: "fixture-city.v1", itemID: "r-001"))
+        XCTAssertEqual(decoded.externalLink, "https://example.test/book")
+    }
+
+    func testExternalLinkMustBeHttps() {
+        XCTAssertNil(TravelTripItem.cleanExternalLink("http://example.test"))
+        XCTAssertNil(TravelTripItem.cleanExternalLink("javascript:alert(1)"))
+        XCTAssertNil(TravelTripItem.cleanExternalLink("https://" + String(repeating: "a", count: 300)))
+        XCTAssertEqual(TravelTripItem.cleanExternalLink(" https://example.test/x "), "https://example.test/x")
+        let built = TravelTripItem(tripID: "t", itemID: "i", kind: "lodging", title: "x", start: .now, end: .now.addingTimeInterval(60),
+                                   startOffsetSeconds: 0, endOffsetSeconds: 0, planID: nil, externalLink: "http://bad.test")
+        XCTAssertNil(built.externalLink, "만들 때도 https가 아니면 버린다")
+    }
+}
