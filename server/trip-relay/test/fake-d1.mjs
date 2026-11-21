@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 export class FakeD1 {
   constructor() {
     this.db = new DatabaseSync(":memory:");
-    for (const file of ["0001_kv_entries.sql", "0002_misclass_samples.sql", "0003_unknown_merchants.sql"]) {
+    for (const file of ["0001_kv_entries.sql", "0002_misclass_samples.sql", "0003_unknown_merchants.sql", "0004_ai_core.sql"]) {
       this.db.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
     }
     this.writes = 0; // INSERT·UPDATE·DELETE 실행 수
@@ -17,7 +17,7 @@ export class FakeD1 {
       bind: (...args) => ({
         first: async () => stmt.get(...args) ?? null,
         all: async () => ({ results: stmt.all(...args) }),
-        run: async () => { if (isWrite) this.writes++; stmt.run(...args); return { success: true }; },
+        run: async () => { if (isWrite) this.writes++; const info = stmt.run(...args); return { success: true, meta: { changes: Number(info?.changes ?? 0) } }; },
       }),
     };
   }

@@ -168,6 +168,18 @@ POST /ai/converse   (Authorization: Bearer <주인 키>)
 - 오류: 비밀값 없음 `503 ai_unavailable`, 형식 틀림 `400`, Bedrock 거절 `502 upstream_denied`, Bedrock 혼잡 `429 upstream_throttled`. 상류 본문·키는 돌려주지도 기록하지도 않습니다.
 - 비밀값(관리 페이지에서 반영 예정): `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`(없으면 `us-east-1`), `AWS_BEDROCK_MODEL_ID`(없으면 `us.amazon.nova-lite-v1:0`). 임시 자격 증명이면 `AWS_SESSION_TOKEN`도 받습니다.
 
+## 복희 AI 2단 구조 — Step 1: 쿼터·16자리 ID·선점 락 (AIG1122A01)
+
+설계서 `pickle-bridge/inbox/20261122-0030-bokki-ai-two-tier-architecture.md` 3·5·10·11절의 서버 바탕. 코드는 `src/ai-core.js`, D1 `migrations/0004_ai_core.sql`.
+
+- **표**: `user_ai_quotas`(usr_·플랜·현지 날짜별 사용량), `merchant_rules`, `ai_feedback_logs`, `ai_learning_events`(봉인 본문만), `system_ai_config`(운영 레버), `agent_tokens`(에이전트 신원, 토큰 원문 없음), `ai_tasks`(선점·완료 잠금). 좌표·글 원문·주인 키 원문은 두지 않는다.
+- **ID**: `usr_`·`agt_`·`req_` + 혼동 문자(0 O 1 l I)를 뺀 57자 중 16자. 내장 AI는 `agt_BokkiHouseAgent2`.
+- **쿼터**: Free 첫 7일 하루 15회(월 상한 없음) → 이후 하루 5회·월 30회, Pro(원타임 A안) 월 100회·하루 상한 없음. 사용자 현지 자정(`?tz=`) 리셋. 성공한 서버 AI 응답만 조건부 UPDATE 한 번으로 센다(동시 요청도 상한을 넘지 않음). 넘으면 `429 {error:"quota_exceeded", fallback:"on_device"}`.
+- **작업 선점**: `UPDATE ai_tasks SET status='claimed' … WHERE req_id=? AND status IN (…)` 한 번. 외부 에이전트가 있으면 `pending_external`로 기다리고 `fallback_minutes`(기본 10분, 0/3/10/30) 뒤 내장 AI가 맡는다. 끝내기는 맡은 AI + `version` 일치만, 끝난 것은 사용자가 다시 요청할 때만 다시 연다.
+- **라우트**: `GET /ai/quota?tz=`(주인 키), `GET/POST/DELETE /ai/agents`(주인 키). 운영자 토큰(`CLASSIFIER_ADMIN_TOKEN`): `GET/PUT /ai/admin/config`, `POST /ai/admin/plan {userId, plan}`, `GET /ai/admin/usage`.
+- **아직 아님**: 기존 `/tasks`·`/command`(Durable Object 큐)는 그대로이고 `ai_tasks`와는 Step 2 게이트웨이에서 잇는다. Pro 판정은 운영자 수동(`plan_source = manual`)뿐이고 App Store 구매 확인은 앱 구매 화면과 함께 붙인다. 그때까지 `byo_agent_requires_pro`는 꺼 둔다(지금 연결해 쓰는 사용자를 끊지 않게).
+- **배포**: `npx wrangler d1 migrations apply taption-trip-relay --remote --config wrangler.local.toml` 뒤 `npx wrangler deploy --config wrangler.local.toml`(대표 확인 사안).
+
 ## 등록·PIN·Durable Object·OAuth (SEC1110A02·AIR1110A03)
 
 - `POST /register`: 앱이 만든 키만 등록(서로 다른 글자 20개 미만은 422). 등록하지 않은 키는 모든 경로에서 401.

@@ -20,6 +20,7 @@ import { kakaoDirections } from "./directions.js";
 import { fxRoute } from "./fx.js";
 import { publicRoute as publicAssets } from "./public.js";
 import * as classifier from "./classifier.js";
+import * as aiCore from "./ai-core.js";
 import * as merchants from "./merchants.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
 import { bearer, json, limited, readBody, tooMany, writeAllowed } from "./http.js";
@@ -455,6 +456,15 @@ const ROUTES = {
     POST: ["master", withBody(apns.saveToken)],
     DELETE: ["master", (request, ctx) => apns.deleteToken(ctx)],
   },
+  // AIG1122A01 Step 1: 복희 AI 쿼터·에이전트(설계서 3·10절). 앱(주인 키)만.
+  "/ai/quota": {
+    GET: ["master", (request, ctx) => aiCore.quotaRoute(request, ctx)],
+  },
+  "/ai/agents": {
+    GET: ["master", (request, ctx) => aiCore.agentsRoute(request, ctx)],
+    POST: ["master", async (request, ctx) => ((await writeAllowed(request, ctx.env)) ? aiCore.agentsRoute(request, ctx) : tooMany())],
+    DELETE: ["master", (request, ctx) => aiCore.agentsRoute(request, ctx)],
+  },
   "/command/result": {
     POST: ["master", withBody(store.saveResults)],
     GET: ["read", (request, ctx) => store.readResults(ctx)],
@@ -650,6 +660,7 @@ async function route(request, env, url, exec) {
       if (url.pathname.startsWith("/shared/admin/")) return shared.adminRoute(request, env, url, now);
       if (url.pathname === "/classifier-samples/admin") return classifier.adminRoute(request, env, url);
       if (url.pathname === "/merchants/admin") return merchants.adminRoute(request, env, url);
+      if (url.pathname.startsWith("/ai/admin/")) return aiCore.adminRoute(request, env, url, now);
       const room = share.ROOM_PATH.exec(url.pathname);
       if (room) return share.roomRoute(request, env, room, now);
       const keyed = MCP_KEY_PATH.exec(url.pathname);
