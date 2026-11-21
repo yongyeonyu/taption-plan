@@ -20,6 +20,7 @@ import { kakaoDirections } from "./directions.js";
 import { fxRoute } from "./fx.js";
 import { publicRoute as publicAssets } from "./public.js";
 import * as classifier from "./classifier.js";
+import * as merchants from "./merchants.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
 import { bearer, json, limited, readBody, tooMany, writeAllowed } from "./http.js";
 import { allows, buryLegacyWrap, importLegacyKeys, keyring, keysRoute, pinResetRoute, pinRoute, registerRoute, resealLegacyWrap, resolveKey, sealInfo } from "./keys.js";
@@ -369,6 +370,11 @@ async function kakaoRoute(request, ctx) {
 
 const ROUTES = {
   // CLS1119A01: 오분류 교정 표본. 앱이 사용자가 「보내기」를 눌렀을 때만 올린다.
+  // MER1121A01: 아이콘을 정하지 못한 가맹점 이름 모으기(앱 동의 뒤에만). 운영자 읽기는 `/merchants/admin`.
+  "/merchants/unknown": {
+    POST: ["master", (request, ctx) => merchants.upload(request, ctx)],
+    DELETE: ["master", (request, ctx) => merchants.erase(ctx)],
+  },
   "/classifier-samples": {
     POST: ["master", (request, ctx) => classifier.upload(request, ctx)],
     DELETE: ["master", (request, ctx) => classifier.erase(ctx)],
@@ -643,6 +649,7 @@ async function route(request, env, url, exec) {
       if (setup) return request.method === "GET" ? readSetup(env, setup[1], now) : json({ error: "method_not_allowed" }, 405);
       if (url.pathname.startsWith("/shared/admin/")) return shared.adminRoute(request, env, url, now);
       if (url.pathname === "/classifier-samples/admin") return classifier.adminRoute(request, env, url);
+      if (url.pathname === "/merchants/admin") return merchants.adminRoute(request, env, url);
       const room = share.ROOM_PATH.exec(url.pathname);
       if (room) return share.roomRoute(request, env, room, now);
       const keyed = MCP_KEY_PATH.exec(url.pathname);

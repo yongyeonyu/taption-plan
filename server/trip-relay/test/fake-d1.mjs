@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 export class FakeD1 {
   constructor() {
     this.db = new DatabaseSync(":memory:");
-    for (const file of ["0001_kv_entries.sql", "0002_misclass_samples.sql"]) {
+    for (const file of ["0001_kv_entries.sql", "0002_misclass_samples.sql", "0003_unknown_merchants.sql"]) {
       this.db.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
     }
     this.writes = 0; // INSERT·UPDATE·DELETE 실행 수
