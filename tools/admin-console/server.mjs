@@ -9,6 +9,7 @@
 // - 올리는 길은 기존과 같다: `npx wrangler r2 object put … --remote --config <wrangler.local.toml>`. 비밀값은 다루지 않는다(wrangler 로그인 그대로).
 // - 공지 검사·합치기는 `server/trip-relay/scripts/announce.mjs`, 팩 묶기는 `scripts/season-pack/build_bpack.py`를 그대로 부른다.
 import { execFile } from "node:child_process";
+import { tmpdir } from "node:os";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
@@ -98,6 +99,33 @@ export async function currentMerchants(config, store, fetcher = fetch) {
   const body = await response.json().catch(() => null);
   if (body?.format !== "bokki-merchants-admin" || !Array.isArray(body.items)) return { ok: false, reason: "failed", message: "서버 응답 모양이 다릅니다." };
   return { ok: true, totals: body.totals, items: body.items };
+}
+
+// ---- 공지 영어 번역(대표 지시 2026-11-22) ----
+// 이 맥의 `claude` 명령(구독 로그인)으로 번역한다. API 키가 따로 필요 없고, 보내는 글은 어차피 공개할 공지 제목·본문뿐이다.
+// 프로젝트 폴더가 아닌 임시 폴더에서, 도구 없이, 세션을 남기지 않고 부른다.
+const TRANSLATE_PROMPT = "You are a translation function for a mobile app named BOKKI Plan. Translate the Korean string values of the JSON on stdin into natural, concise, friendly English suitable for an in-app notice. Keep the keys and any line breaks. Terms: 가계부 = ledger, 기록 = log, 여행 = trip, 설정 = Settings. Output only the JSON object, with no code fences or commentary.";
+
+export function runClaudeTranslate(input) {
+  return new Promise((resolveRun, reject) => {
+    const child = execFile("claude", ["-p", "--model", "haiku", "--tools", "", "--no-session-persistence", "--system-prompt", TRANSLATE_PROMPT],
+      { cwd: tmpdir(), timeout: 90_000, maxBuffer: 1 << 20 },
+      (error, stdout) => (error ? reject(error) : resolveRun(stdout)));
+    child.stdin.end(input);
+  });
+}
+
+/** 제목·본문(한국어)을 영어로. 어느 한쪽이 비어 있으면 그 칸은 비워서 돌려준다. */
+export async function translateNotice({ title = "", body = "" }, runner = runClaudeTranslate) {
+  const source = { title: String(title).trim(), body: String(body).trim() };
+  if (!source.title && !source.body) return { titleEn: "", bodyEn: "" };
+  let raw;
+  try { raw = await runner(JSON.stringify(source)); }
+  catch (error) { throw Object.assign(new Error(error.code === "ENOENT" ? "이 맥에서 claude 명령을 찾지 못했습니다" : `번역하지 못했습니다(${error.killed ? "시간 초과" : error.message})`), { status: 502 }); }
+  let parsed;
+  try { parsed = JSON.parse(String(raw).trim().replace(/^```(?:json)?\s*|\s*```$/g, "")); } catch { parsed = null; }
+  if (!parsed || typeof parsed.title !== "string" || typeof parsed.body !== "string") throw Object.assign(new Error("번역 결과를 읽지 못했습니다. 다시 눌러 보세요"), { status: 502 });
+  return { titleEn: parsed.title.trim().slice(0, 100), bodyEn: parsed.body.trim().slice(0, 2000) };
 }
 
 const emptyCatalog = () => ({ format: "bokki-season-packs", schema: 1, packs: [] });
@@ -321,7 +349,7 @@ export function allowedHost(header, port) {
 
 const STATIC = { "/app.js": ["app.js", "text/javascript; charset=utf-8"], "/app.css": ["app.css", "text/css; charset=utf-8"] };
 
-export function createConsole({ port, token, dryRun = false, now = () => new Date() }) {
+export function createConsole({ port, token, dryRun = false, now = () => new Date(), translator = runClaudeTranslate }) {
   const logs = [];
   let busy = null;
   const log = (line) => { if (!line) return; for (const part of String(line).split("\n")) logs.push(`${now().toLocaleTimeString("ko-KR", { hour12: false })} ${part}`); while (logs.length > 400) logs.shift(); };
@@ -360,6 +388,7 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
     },
     "GET /api/dashboard/merchants": async () => currentMerchants(loadConfig(), readStore()),
     "GET /api/announcements": async () => currentAnnouncements(loadConfig()),
+    "POST /api/translate": (body) => translateNotice(body, translator),
     "POST /api/announcements/preview": async (body) => planAnnouncements(await currentAnnouncements(loadConfig()), specOf(body)),
     "POST /api/announcements/publish": (body) => exclusive("공지 올리기", async () => {
       const config = loadConfig();
@@ -649,7 +678,7 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
     try {
       const body = req.method === "POST" ? await readBody(req) : {};
       // 설정(호스트·버킷)이 없어도 키 관리는 된다. 서버 시크릿 이름 읽기만 wrangler 설정이 필요하다.
-      if (req.method === "POST" && !url.pathname.startsWith("/api/config") && !(url.pathname.startsWith("/api/keys/") && url.pathname !== "/api/keys/server-list")) {
+      if (req.method === "POST" && !url.pathname.startsWith("/api/config") && url.pathname !== "/api/translate" && !(url.pathname.startsWith("/api/keys/") && url.pathname !== "/api/keys/server-list")) {
         const errors = validateConfig(loadConfig());
         if (errors.length) return send(res, 422, { errors: ["먼저 설정을 채우세요", ...errors] });
       }

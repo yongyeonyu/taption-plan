@@ -111,7 +111,7 @@ const toLocal = (iso) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 const when = (item) => [item.startsAt && `시작 ${new Date(item.startsAt).toLocaleString("ko-KR")}`, item.expiresAt && `끝 ${new Date(item.expiresAt).toLocaleString("ko-KR")}`,
-  item.minBuild && `빌드 ≥ ${item.minBuild}`, item.maxBuild && `빌드 ≤ ${item.maxBuild}`].filter(Boolean).join(" · ");
+ ].filter(Boolean).join(" · ");
 
 function noticeRow(item, actions) {
   const expired = item.expiresAt && new Date(item.expiresAt) < new Date();
@@ -119,7 +119,7 @@ function noticeRow(item, actions) {
     el("div", {},
       el("div", {}, el("span", { class: `kind ${item.kind}`, textContent: item.kind }), el("strong", { textContent: item.title }), expired ? el("span", { class: "muted", textContent: " (기간 끝남)" }) : null),
       el("div", { class: "body", textContent: item.body }),
-      el("div", { class: "meta", textContent: [item.id, when(item), item.link, item.titleByLang?.en && `en: ${item.titleByLang.en}`].filter(Boolean).join(" · ") })),
+      el("div", { class: "meta", textContent: [item.id, when(item), item.titleByLang?.en && `en: ${item.titleByLang.en}`].filter(Boolean).join(" · ") })),
     el("div", { class: "actions" }, actions));
 }
 
@@ -162,7 +162,7 @@ function startEdit(item) {
   editing = item;
   const form = $("noticeForm");
   form.reset();
-  for (const key of ["id", "kind", "title", "body", "link", "minBuild", "maxBuild"]) form[key].value = item[key] ?? "";
+  for (const key of ["id", "kind", "title", "body"]) form[key].value = item[key] ?? "";
   form.titleEn.value = item.titleByLang?.en ?? "";
   form.bodyEn.value = item.bodyByLang?.en ?? "";
   form.startsAt.value = toLocal(item.startsAt);
@@ -185,15 +185,31 @@ function endEdit() {
 
 $("cancelEdit").addEventListener("click", endEdit);
 
-$("noticeForm").addEventListener("submit", (event) => {
+async function translateInto(form, { force }) {
+  const status = $("translateStatus");
+  const needTitle = force || !form.titleEn.value.trim(), needBody = force || !form.bodyEn.value.trim();
+  if (!needTitle && !needBody) return true;
+  status.textContent = "번역 중…";
+  try {
+    const result = await api("POST", "/api/translate", { title: needTitle ? form.title.value : "", body: needBody ? form.body.value : "" });
+    if (needTitle && result.titleEn) form.titleEn.value = result.titleEn;
+    if (needBody && result.bodyEn) form.bodyEn.value = result.bodyEn;
+    status.textContent = "번역했어요. 고칠 곳이 있으면 고친 뒤 넣으세요";
+    return true;
+  } catch (error) { status.textContent = `번역 실패: ${error.message} (영어 칸은 비어 있는 채로 둡니다)`; return false; }
+}
+
+$("translateButton").addEventListener("click", () => translateInto($("noticeForm"), { force: true }));
+
+$("noticeForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
+  await translateInto(form, { force: false });
   const today = new Date(); const stamp = `${String(today.getFullYear()).slice(2)}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
   const item = {
     id: form.id.value.trim() || `notice-${stamp}-${String(Date.now()).slice(-4)}`,
-    title: form.title.value, body: form.body.value, kind: form.kind.value, link: form.link.value,
+    title: form.title.value, body: form.body.value, kind: form.kind.value,
     startsAt: toIso(form.startsAt.value), expiresAt: toIso(form.expiresAt.value),
-    minBuild: form.minBuild.value, maxBuild: form.maxBuild.value,
     titleByLang: { en: form.titleEn.value }, bodyByLang: { en: form.bodyEn.value },
   };
   pending.items = [...pending.items.filter((x) => x.id !== item.id && x !== editing), item];

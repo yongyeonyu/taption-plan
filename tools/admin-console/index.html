@@ -42,13 +42,11 @@
       </label>
       <label class="wide">제목<input name="title" maxlength="100" required></label>
       <label class="wide">본문(평문)<textarea name="body" maxlength="2000" rows="4" required></textarea></label>
-      <label class="wide">영어 제목<input name="titleEn" maxlength="100"></label>
-      <label class="wide">영어 본문<textarea name="bodyEn" maxlength="2000" rows="3"></textarea></label>
+      <label class="wide">영어 제목(비우면 저장할 때 자동 번역)<input name="titleEn" maxlength="100"></label>
+      <label class="wide">영어 본문(비우면 저장할 때 자동 번역)<textarea name="bodyEn" maxlength="2000" rows="3"></textarea></label>
+      <div class="wide row"><button type="button" id="translateButton">영어로 번역</button><span class="muted" id="translateStatus"></span></div>
       <label>시작(비우면 바로)<input name="startsAt" type="datetime-local"></label>
       <label>끝(비우면 계속)<input name="expiresAt" type="datetime-local"></label>
-      <label>최소 빌드<input name="minBuild" type="number" min="1"></label>
-      <label>최대 빌드<input name="maxBuild" type="number" min="1"></label>
-      <label class="wide">링크(https://)<input name="link" maxlength="300" pattern="https://\S+"></label>
       <div class="wide row">
         <button type="submit" class="primary" id="queueButton">변경 목록에 넣기</button>
         <button type="button" id="cancelEdit" hidden>편집 취소</button>

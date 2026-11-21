@@ -15,7 +15,7 @@ process.env.ADMIN_CONSOLE_KEYS = join(dir, "keys", "secrets.local.json");
 process.env.ADMIN_CONSOLE_KEYS_LEGACY = join(dir, "legacy", "keys.json");
 writeFileSync(process.env.ADMIN_CONSOLE_CONFIG, JSON.stringify({ host: "relay.test", bucket: "test-bucket", wranglerConfig: join(dir, "wrangler.local.toml") }));
 
-const { allowedHost, catalogHash, currentMerchants, checkSchedule, cleanItem, createConsole, localPacks, mainCheckout, planAnnouncements, planReset, putArgs, resetScopes, resolveResetDir, validateConfig, withSchedule, withoutPack } = await import("./server.mjs");
+const { allowedHost, catalogHash, currentMerchants, checkSchedule, cleanItem, createConsole, localPacks, mainCheckout, planAnnouncements, planReset, putArgs, resetScopes, resolveResetDir, translateNotice, validateConfig, withSchedule, withoutPack } = await import("./server.mjs");
 
 const KEYS = await import("./keys.mjs");
 
@@ -533,4 +533,18 @@ test("브라우저 스크립트(app.js)는 문법 오류가 없다 — 오류가
   const { spawnSync } = await import("node:child_process");
   const check = spawnSync(process.execPath, ["--check", fileURLToPath(new URL("./app.js", import.meta.url))], { encoding: "utf8" });
   assert.equal(check.status, 0, check.stderr);
+});
+
+test("공지 영어 번역: 제목·본문을 한 번에 번역하고, 코드 울타리·잘못된 답·빈 입력을 다룬다", async () => {
+  const seen = [];
+  const ok = async (input) => { seen.push(JSON.parse(input)); return '```json\n{"title":"New icons","body":"Ledger icons now have colors."}\n```'; };
+  assert.deepEqual(await translateNotice({ title: " 새 아이콘 ", body: "가계부 아이콘에 색이 생겼어요." }, ok), { titleEn: "New icons", bodyEn: "Ledger icons now have colors." });
+  assert.deepEqual(seen[0], { title: "새 아이콘", body: "가계부 아이콘에 색이 생겼어요." });
+  assert.deepEqual(await translateNotice({ title: "", body: "  " }, async () => { throw new Error("부르면 안 됨"); }), { titleEn: "", bodyEn: "" });
+  await assert.rejects(translateNotice({ title: "가", body: "나" }, async () => "번역할 수 없습니다"), /읽지 못했습니다/);
+  await assert.rejects(translateNotice({ title: "가", body: "나" }, async () => { throw Object.assign(new Error("x"), { code: "ENOENT" }); }), /claude 명령을 찾지 못/);
+});
+
+test("번역 길은 토큰이 있어야 열린다", async () => {
+  assert.equal((await call("POST", "/api/translate", { body: { title: "가", body: "나" }, token: "x".repeat(32) })).status, 401);
 });
