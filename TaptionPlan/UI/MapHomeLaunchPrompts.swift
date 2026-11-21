@@ -367,7 +367,6 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
     @AppStorage(MapHomeLaunchPromptDeferral.key) private var deferredDay = ""
     /// 일정 분류 두 번째 단계에서 고른 대분류(CAT1111A01: 대분류 → 상세 두 단계로 묻는다).
     @State private var calendarCategory: String?
-    @State private var isReturningToCategories = false
 
     private func isShowing(_ match: @escaping (MapHomeLaunchPrompt) -> Bool) -> Binding<Bool> {
         Binding(get: { prompt.map(match) ?? false }, set: { if !$0 { prompt = nil } })
@@ -394,67 +393,22 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
                     "‘\(name)’ connected only while you rode. Register it? Trips with it connected will be recorded as car."
                 ))
             }
-            // 1단계: 대분류. 제목 규칙이 고른 상세가 있으면 맨 위에 한 번에 고르는 추천으로 둔다.
-            .confirmationDialog(calendarDialogTitle, isPresented: calendarStepBinding(detail: false), titleVisibility: .visible, presenting: calendarTitle) { title in
-                if let rule = calendarRule(for: title) {
-                    Button(language.text("추천: \(rule.label)", "Suggested: \(rule.label)")) { saveCalendar(rule.id, title: title) }
-                }
-                ForEach(calendarCategories(for: title), id: \.id) { category in
-                    Button(category.localizedTitle(language)) {
-                        if category.details.count == 1, let only = category.details.first {
-                            saveCalendar(only.id, title: title)
-                        } else {
-                            calendarCategory = category.id
-                        }
-                    }
-                }
-                Button(language.text("분류 안 함", "Don't classify")) { saveCalendar(nil, title: title) }
-                Button(laterTitle, role: .cancel) { confirmLater() }
-            } message: { _ in
-                Text(language.text("먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.", "Pick a category first. Once set, events with the same title won't be asked again."))
-            }
-            // 2단계: 고른 대분류 안의 상세.
-            .confirmationDialog(calendarDetailTitle, isPresented: calendarStepBinding(detail: true), titleVisibility: .visible, presenting: calendarTitle) { title in
-                ForEach(calendarDetails, id: \.id) { detail in
-                    Button(detail.localizedTitle(language)) { saveCalendar(detail.id, title: title) }
-                }
-                Button(language.text("뒤로", "Back")) {
-                    isReturningToCategories = true
-                    calendarCategory = nil
-                }
-                Button(laterTitle, role: .cancel) { confirmLater() }
-            } message: { title in
-                Text(language.text("‘\(title)’", "‘\(title)’"))
-            }
+            // 고르기 질문은 시스템 대화상자 대신 앱 시트로 보인다(LaunchChoiceSheet, 대표 지시 2026-11-21).
+            // 일정 분류: 1단계 대분류와 2단계 상세를 한 시트 안에서 바꿔 보여 시트가 겹쳐 뜨지 않는다. 제목 규칙이 고른 상세는 맨 위 추천.
+            .launchChoiceSheet(
+                isPresented: calendarSheetBinding, title: calendarSheetTitle, message: calendarSheetMessage,
+                options: calendarOptions, laterTitle: laterTitle, onLater: confirmLater
+            )
             // 탈것 구간 확인(BCF1114A01): 버스면 노선을 고르고, 아니면 내 차·다른 차로 확정한다.
-            .confirmationDialog(rideTitle, isPresented: isShowing { if case .ride = $0 { true } else { false } }, titleVisibility: .visible, presenting: rideSegment) { segment in
-                if segment.mode == .subway {
-                    ForEach(SubwayLineChoice.candidates(segment), id: \.self) { line in
-                        Button(line) { model.confirmRideLine(segment.id, line: line) }
-                    }
-                } else if segment.mode == .bus || segment.mode == .car {
-                    ForEach(RideConfirmation.routeChoices(segment), id: \.self) { route in
-                        Button(language.text("버스 · \(route.number)번", "Bus \(route.number)")) { model.confirmRide(segment.id, mode: .bus, busRoute: route) }
-                    }
-                    Button(language.text("버스(노선 모름)", "Bus (route unknown)")) { model.confirmRide(segment.id, mode: .bus, busRoute: nil) }
-                } else {
-                    Button(language.text("맞아요", "Yes")) { model.confirmRide(segment.id, mode: segment.mode, busRoute: nil) }
-                }
-                Button(language.text("자동차(내 차·택시)", "Car (mine or a taxi)")) { model.confirmRide(segment.id, mode: .car, busRoute: nil) }
-                if segment.mode == .cycling { Button(language.text("걷기", "Walking")) { model.confirmRide(segment.id, mode: .walking, busRoute: nil) } }
-                Button(laterTitle, role: .cancel) { confirmLater() }
-            } message: { segment in
-                Text(rideMessage(segment))
-            }
-            .confirmationDialog(language.text("자주 머무는 곳이 있어요", "You stay here often"), isPresented: isShowing { if case .frequentPlace = $0 { true } else { false } }, titleVisibility: .visible) {
-                ForEach(FrequentPlaceKind.allCases, id: \.self) { kind in
-                    Button(placeKindTitle(kind)) { model.registerFrequentPlaceSuggestion(as: kind) }
-                }
-                Button(language.text("등록 안 함", "Don't register")) { model.dismissFrequentPlaceSuggestion() }
-                Button(laterTitle, role: .cancel) { confirmLater() }
-            } message: {
-                Text(placeMessage)
-            }
+            .launchChoiceSheet(
+                isPresented: isShowing { if case .ride = $0 { true } else { false } }, title: rideTitle,
+                message: rideSegment.map(rideMessage), options: rideOptions, laterTitle: laterTitle, onLater: confirmLater
+            )
+            .launchChoiceSheet(
+                isPresented: isShowing { if case .frequentPlace = $0 { true } else { false } },
+                title: language.text("자주 머무는 곳이 있어요", "You stay here often"), message: placeMessage,
+                options: frequentPlaceOptions, laterTitle: laterTitle, onLater: confirmLater
+            )
             .alert(language.text("미확인 시간이 있어요", "Some time is unconfirmed"), isPresented: isShowing { if case .unconfirmed = $0 { true } else { false } }, presenting: unconfirmedMinutes) { _ in
                 Button(language.text("지금 정하기", "Review now")) { onReviewUnconfirmed() }
                 Button(laterTitle, role: .cancel) { confirmLater() }
@@ -494,22 +448,113 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
         language.text("‘\(calendarTitle ?? "")’ 일정은 무엇인가요?", "What is ‘\(calendarTitle ?? "")’?")
     }
 
-    /// 일정 질문 두 단계의 표시. 1단계에서 대분류를 고르면 질문을 닫지 않고 2단계로 넘긴다.
-    private func calendarStepBinding(detail: Bool) -> Binding<Bool> {
+    /// 일정 질문 시트. 쓸어 내려 닫으면 「나중에 확인」과 같다(고른 뒤 프로그램이 닫을 때는 불리지 않는다).
+    private var calendarSheetBinding: Binding<Bool> {
         Binding(
-            get: {
-                guard case .calendarTitle = prompt else { return false }
-                return (calendarCategory != nil) == detail
-            },
-            set: { shown in
-                guard !shown else { return }
-                if isReturningToCategories { isReturningToCategories = false; return }
-                // 1단계에서 대분류를 골랐으면 2단계가 이어 뜬다.
-                if !detail, calendarCategory != nil { return }
-                calendarCategory = nil
+            get: { calendarTitle != nil },
+            set: { shown in if !shown, calendarTitle != nil { confirmLater() } }
+        )
+    }
+
+    private var calendarSheetTitle: String { calendarCategory == nil ? calendarDialogTitle : calendarDetailTitle }
+
+    private var calendarSheetMessage: String? {
+        calendarCategory == nil
+            ? language.text("먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.", "Pick a category first. Once set, events with the same title won't be asked again.")
+            : calendarTitle.map { "‘\($0)’" }
+    }
+
+    private func finishCalendar(_ detailID: String?, title: String) {
+        saveCalendar(detailID, title: title)
+        prompt = nil
+    }
+
+    private var calendarOptions: [LaunchChoiceOption] {
+        guard let title = calendarTitle else { return [] }
+        if let categoryID = calendarCategory {
+            let tint = CanonicalCategoryPalette.color(categoryID)
+            let image = CalendarTitleClassification.selectableCategories.first { $0.id == categoryID }?.systemImage
+            var list = calendarDetails.map { detail in
+                LaunchChoiceOption(id: detail.id, title: detail.localizedTitle(language), systemImage: image, tint: tint) { finishCalendar(detail.id, title: title) }
+            }
+            list.append(LaunchChoiceOption(id: "back", title: language.text("뒤로", "Back"), kind: .quiet) { calendarCategory = nil })
+            return list
+        }
+        var list: [LaunchChoiceOption] = []
+        if let rule = calendarRule(for: title) {
+            list.append(LaunchChoiceOption(id: "suggested", title: language.text("추천: \(rule.label)", "Suggested: \(rule.label)"), systemImage: "sparkles", kind: .suggested) {
+                finishCalendar(rule.id, title: title)
+            })
+        }
+        for category in calendarCategories(for: title) {
+            list.append(LaunchChoiceOption(
+                id: category.id, title: category.localizedTitle(language), systemImage: category.systemImage,
+                tint: CanonicalCategoryPalette.color(category.id), showsChevron: category.details.count != 1
+            ) {
+                if category.details.count == 1, let only = category.details.first {
+                    finishCalendar(only.id, title: title)
+                } else {
+                    calendarCategory = category.id
+                }
+            })
+        }
+        list.append(LaunchChoiceOption(id: "none", title: language.text("분류 안 함", "Don't classify"), kind: .quiet) { finishCalendar(nil, title: title) })
+        return list
+    }
+
+    /// 탈것 구간 선택지. 고르면 확정하고 질문을 닫는다.
+    private var rideOptions: [LaunchChoiceOption] {
+        guard let segment = rideSegment else { return [] }
+        var list: [LaunchChoiceOption] = []
+        func add(_ id: String, _ title: String, image: String, kind: LaunchChoiceOption.Kind = .normal, _ action: @escaping () -> Void) {
+            list.append(LaunchChoiceOption(id: id, title: title, systemImage: image, kind: kind) { action(); prompt = nil })
+        }
+        if segment.mode == .subway {
+            for line in SubwayLineChoice.candidates(segment) {
+                add("line-\(line)", line, image: "tram.fill") { model.confirmRideLine(segment.id, line: line) }
+            }
+        } else if segment.mode == .bus || segment.mode == .car {
+            for route in RideConfirmation.routeChoices(segment) {
+                add("route-\(route.number)", language.text("버스 · \(route.number)번", "Bus \(route.number)"), image: "bus.fill") {
+                    model.confirmRide(segment.id, mode: .bus, busRoute: route)
+                }
+            }
+            add("bus-unknown", language.text("버스(노선 모름)", "Bus (route unknown)"), image: "bus") { model.confirmRide(segment.id, mode: .bus, busRoute: nil) }
+        } else {
+            add("yes", language.text("맞아요", "Yes"), image: "checkmark.circle.fill", kind: .suggested) { model.confirmRide(segment.id, mode: segment.mode, busRoute: nil) }
+        }
+        add("car", language.text("자동차(내 차·택시)", "Car (mine or a taxi)"), image: "car.fill") { model.confirmRide(segment.id, mode: .car, busRoute: nil) }
+        if segment.mode == .cycling {
+            add("walking", language.text("걷기", "Walking"), image: "figure.walk") { model.confirmRide(segment.id, mode: .walking, busRoute: nil) }
+        }
+        return list
+    }
+
+    private var frequentPlaceOptions: [LaunchChoiceOption] {
+        var list = FrequentPlaceKind.allCases.map { kind in
+            LaunchChoiceOption(id: "\(kind)", title: placeKindTitle(kind), systemImage: placeKindImage(kind)) {
+                model.registerFrequentPlaceSuggestion(as: kind)
                 prompt = nil
             }
-        )
+        }
+        list.append(LaunchChoiceOption(id: "dismiss", title: language.text("등록 안 함", "Don't register"), kind: .quiet) {
+            model.dismissFrequentPlaceSuggestion()
+            prompt = nil
+        })
+        return list
+    }
+
+    private func placeKindImage(_ kind: FrequentPlaceKind) -> String {
+        switch kind {
+        case .home: "house"
+        case .school: "graduationcap"
+        case .academy: "book"
+        case .company: "briefcase"
+        case .hobby: "sparkles"
+        case .exercise: "dumbbell"
+        case .restaurant: "fork.knife"
+        case .custom: "mappin.and.ellipse"
+        }
     }
 
     private func saveCalendar(_ detailID: String?, title: String) {
