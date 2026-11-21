@@ -22,7 +22,8 @@ final class FlightBriefingTests: XCTestCase {
         let list = FlightBriefingPolicy.briefings(items: [flight()], now: now, language: .korean)
         XCTAssertEqual(list.map(\.kind), [.eve, .fourHours])
         // 전날(03/06) 20:00 KST = 11:00Z
-        XCTAssertEqual(list[0].fireAt.timeIntervalSince1970, 1_804_377_900 - 13 * 3_600 - 5 * 60 + 0)
+        let eveFire: TimeInterval = 1_804_377_900 - TimeInterval(13 * 3_600) - TimeInterval(5 * 60)
+        XCTAssertEqual(list[0].fireAt.timeIntervalSince1970, eveFire)
         XCTAssertEqual(list[1].fireAt, departure.addingTimeInterval(-4 * 3_600))
         XCTAssertTrue(list[0].title.contains("AB123 ICN → BKK"))
         XCTAssertEqual(list[0].body, "공항에 06:05까지 도착하세요.", "국제선은 출발 180분 전")
