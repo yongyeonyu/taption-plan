@@ -207,6 +207,8 @@ extension MapHomeView {
             case .inbox:
                 AITaskPanel(language: language, day: model.selectedDate, section: .inbox)
             case .ai:
+                // AI1121A01: 앱 안 AI 대화(제안은 확인 뒤 반영).
+                AssistantConverseButton(model: model, language: language)
                 AITaskPanel(language: language, day: model.selectedDate, section: .ai)
             case .check:
                 todoCheckRows(showsEmpty: true)

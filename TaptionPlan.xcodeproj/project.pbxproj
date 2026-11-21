@@ -836,6 +836,7 @@
 		A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */; };
 		C1CA1111A010000000000004 /* MapHomeLaunchPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */; };
 		CA1A1111A010000000000004 /* AITaskPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1A1111A010000000000003 /* AITaskPanel.swift */; };
+		A1C11121A010000000000002 /* AssistantConverseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C11121A010000000000001 /* AssistantConverseView.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
@@ -1717,6 +1718,7 @@
 		F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSheet.swift; sourceTree = "<group>"; };
 		C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLaunchPrompts.swift; sourceTree = "<group>"; };
 		CA1A1111A010000000000003 /* AITaskPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITaskPanel.swift; sourceTree = "<group>"; };
+		A1C11121A010000000000001 /* AssistantConverseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConverseView.swift; sourceTree = "<group>"; };
 		F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
 		F10000000000000000000074 /* WatchObjCExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchObjCExceptionCatcher.m; sourceTree = "<group>"; };
@@ -2356,6 +2358,7 @@
 				F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */,
 				C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */,
 				CA1A1111A010000000000003 /* AITaskPanel.swift */,
+				A1C11121A010000000000001 /* AssistantConverseView.swift */,
 				F1L1111R0200000000000001 /* LedgerReviewBand.swift */,
 				F1G1111X0300000000000001 /* MapHomePorcelainMap.swift */,
 				F1G1111X0200000000000001 /* GPXExportCard.swift */,
@@ -3490,6 +3493,7 @@
 				A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */,
 				C1CA1111A010000000000004 /* MapHomeLaunchPrompts.swift in Sources */,
 				CA1A1111A010000000000004 /* AITaskPanel.swift in Sources */,
+				A1C11121A010000000000002 /* AssistantConverseView.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
 				A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */,
