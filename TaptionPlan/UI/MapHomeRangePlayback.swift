@@ -1,5 +1,6 @@
 import CoreLocation
 import Foundation
+import TaptionPlanCore
 
 /// 영상으로 만들 구간(PLR1104A02). `day`는 지금까지의 하루 재생을 그대로 쓴다.
 enum MapHomeRangePreset: String, CaseIterable, Identifiable, Sendable {
@@ -68,6 +69,8 @@ struct MapHomeRangeTripPlan: Sendable {
         var time: TimeInterval
         var latitude: Double
         var longitude: Double
+        /// 센서 원본이 판정한 이동 수단. 예전 캐시에는 없어서 nil이면 평균 속도로 고른다.
+        var mode: TravelMode?
     }
 
     struct Point: Hashable, Sendable {
@@ -175,8 +178,29 @@ struct MapHomeRangeTripPlan: Sendable {
             return Sample(
                 time: reading.timestamp.timeIntervalSinceReferenceDate,
                 latitude: point.latitude,
-                longitude: point.longitude
+                longitude: point.longitude,
+                mode: travelMode(for: reading)
             )
+        }
+    }
+
+    /// 하루 재생과 같은 규칙으로 측정값 하나의 이동 수단을 고른다(철도·버스·선박·움직임 순).
+    static func travelMode(for reading: SensorReading) -> TravelMode? {
+        if reading.matchesRailRoute || (reading.subwayWiFiObservationStreak ?? 0) > 0 {
+            return .subway
+        }
+        if reading.matchesPublicTransitRoute {
+            return .bus
+        }
+        if reading.onWater {
+            return .ship
+        }
+        switch reading.motion {
+        case .walking: return .walking
+        case .running: return .running
+        case .cycling: return .cycling
+        case .automotive: return .car
+        case .stationary, .unknown: return nil
         }
     }
 
@@ -775,7 +799,7 @@ private extension MapHomeRangeTripPlan.Sample {
 enum MapHomeRangeSampleCache {
     static var defaultDirectory: URL {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("PlaybackRangeSamples-v1", isDirectory: true)
+            .appendingPathComponent("PlaybackRangeSamples-v2", isDirectory: true)
     }
 
     /// 오늘과 어제는 아직 기록이 들어올 수 있어 두지 않는다.

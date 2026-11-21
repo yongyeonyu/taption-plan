@@ -1,4 +1,6 @@
+import CoreLocation
 import SwiftUI
+import TaptionPlanStore
 
 /// 하루 재생을 영상으로 만들어 사진 앱에 저장하는 시트(VID1029A01).
 /// 입력은 부모가 `makeRenderer`로 넘긴다. 시트는 진행·취소·결과만 맡는다.
@@ -203,6 +205,19 @@ struct MapHomePlaybackVideoSheet: View {
         hidesPrivatePlaces ? MapHomeRangeTripPlan.hiddenPlaces(from: model.settings.frequentPlaces) : []
     }
 
+    /// 영상에 그릴 등록 지점. 「집·직장 주변 가리기」가 켜져 있으면 집·직장·학교·학원은 그리지 않는다.
+    private var videoPlaces: [MapHomeRangeVideoPlace] {
+        let privateKinds: Set<FrequentPlaceKind> = [.home, .company, .school, .academy]
+        return model.settings.frequentPlaces.compactMap { place in
+            guard let point = place.point else { return nil }
+            if hidesPrivatePlaces, privateKinds.contains(place.kind) { return nil }
+            return MapHomeRangeVideoPlace(
+                coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+                kind: place.kind
+            )
+        }
+    }
+
     /// 여러 날 구간을 영상으로 그린다.
     private func makeRangeRenderer(_ plan: MapHomeRangeTripPlan) -> MapHomePlaybackVideoRenderer? {
         // Apple 지도는 영상으로 그릴 수 없어 하루 영상과 같은 기본 벡터 스타일을 쓴다.
@@ -211,7 +226,10 @@ struct MapHomePlaybackVideoSheet: View {
         return MapHomePlaybackVideoRenderer(
             style: style,
             frames: { plan.frames(fps: $0) },
-            overlay: MapHomeRangeVideoOverlay(plan: plan, language: language, accessoryID: accessoryID)
+            overlay: MapHomeRangeVideoOverlay(
+                plan: plan, language: language, accessoryID: accessoryID,
+                places: videoPlaces, samples: loadedRange?.samples ?? []
+            )
         )
     }
 

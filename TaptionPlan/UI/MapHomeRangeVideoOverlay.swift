@@ -2,6 +2,8 @@ import CoreLocation
 import Foundation
 @preconcurrency import MapLibre
 import SwiftUI
+import TaptionPlanCore
+import TaptionPlanStore
 import UIKit
 
 /// 영상 프레임 위에 그리는 것. 없으면 렌더러는 지금까지처럼 화랑이를 정중앙에 둔다.
@@ -15,6 +17,12 @@ protocol MapHomePlaybackVideoOverlay: AnyObject {
     func drawAboveMarker(atSecond second: Double, size: CGSize)
 }
 
+/// 영상에 그릴 등록 지점 하나. 집·직장처럼 사는 곳을 짐작하게 하는 종류는 호출자가 가리기 설정에 따라 뺀다.
+struct MapHomeRangeVideoPlace: Sendable {
+    let coordinate: CLLocationCoordinate2D
+    let kind: FrequentPlaceKind
+}
+
 /// 여행 영상의 경로선·날짜·거리(PLR1104A01). 타일을 건드리지 않고 프레임마다 지도 위에 직접 그린다.
 @MainActor
 final class MapHomeRangeVideoOverlay: MapHomePlaybackVideoOverlay {
@@ -24,34 +32,87 @@ final class MapHomeRangeVideoOverlay: MapHomePlaybackVideoOverlay {
     private let plan: MapHomeRangeTripPlan
     private let language: MapHomeLanguage
     private let accessoryID: String?
+    private let places: [MapHomeRangeVideoPlace]
+    /// 센서 원본 표본(시간 순). 이동 수단을 시각으로 찾는다.
+    private let samples: [MapHomeRangeTripPlan.Sample]
     private let lineColor = UIColor(Color.tpAccent)
     private let dateFormatter: DateFormatter
     private var cachedDate: (day: Int, text: String)?
+    /// 표본의 이동 수단이 이 간격(초) 안에 있을 때만 쓴다. 멈춘 동안 표본은 5분 간격으로 드문드문하다.
+    private static let modeToleranceSeconds = 120.0
 
-    init(plan: MapHomeRangeTripPlan, language: MapHomeLanguage, accessoryID: String?) {
+    init(
+        plan: MapHomeRangeTripPlan, language: MapHomeLanguage, accessoryID: String?,
+        places: [MapHomeRangeVideoPlace] = [], samples: [MapHomeRangeTripPlan.Sample] = []
+    ) {
         self.plan = plan
         self.language = language
         self.accessoryID = accessoryID
+        self.places = places
+        self.samples = samples
         dateFormatter = DateFormatter()
         dateFormatter.setLocalizedDateFormatFromTemplate("MMMd")
+    }
+
+    /// 등록 지점을 경로선 아래에 그린다. 집은 집 아이콘, 나머지는 작은 점이다.
+    private func drawPlaces(mapView: MLNMapView, context: CGContext) {
+        for place in places {
+            let point = mapView.convert(place.coordinate, toPointTo: mapView)
+            if place.kind == .home {
+                let side: CGFloat = 26
+                let rect = CGRect(x: point.x - side / 2, y: point.y - side / 2, width: side, height: side)
+                UIColor.white.setFill()
+                UIBezierPath(roundedRect: rect, cornerRadius: side / 2).fill()
+                if let icon = UIImage(systemName: "house.fill")?.withTintColor(lineColor, renderingMode: .alwaysOriginal) {
+                    icon.draw(in: rect.insetBy(dx: 6, dy: 6))
+                }
+            } else {
+                let rect = CGRect(x: point.x - 5, y: point.y - 5, width: 10, height: 10)
+                UIColor.white.setFill()
+                UIBezierPath(ovalIn: rect.insetBy(dx: -1.5, dy: -1.5)).fill()
+                lineColor.setFill()
+                UIBezierPath(ovalIn: rect).fill()
+            }
+        }
     }
 
     func stickman(atSecond second: Double) -> MapHomePlaybackVideoStickman? {
         guard let position = plan.position(atSecond: min(second, plan.bodySeconds)) else { return nil }
         return MapHomePlaybackVideoStickman(
-            action: Self.action(position),
+            action: action(position),
             speedMetersPerSecond: position.kind == .stay ? 0 : position.speed,
             equippedAccessoryID: accessoryID
         )
     }
 
-    /// 이동 수단 판정 없이 평균 속도로만 고른다. 원본 기록을 바꾸지 않는 영상용 표시다.
-    static func action(_ position: MapHomeRangeTripPlan.Position) -> MapHomeStickmanAction {
+    /// 움직이는 동안은 센서 원본의 이동 수단을 쓰고, 그 시각에 판정이 없으면 평균 속도로 고른다.
+    private func action(_ position: MapHomeRangeTripPlan.Position) -> MapHomeStickmanAction {
         switch position.kind {
-        case .stay: .restLoaf
-        case .flight: .airplane
-        case .move: position.speed >= 5.5 ? .car : .walking
+        case .stay: return .restLoaf
+        case .flight: return .airplane
+        case .move:
+            if let mode = recordedMode(atTime: position.time) {
+                return MapHomeStickmanActionResolver.action(for: mode)
+            }
+            return position.speed >= 5.5 ? .car : .walking
         }
+    }
+
+    /// 시각에 가장 가까운 판정 표본의 이동 수단. 허용 간격 밖이면 nil.
+    private func recordedMode(atTime time: TimeInterval) -> TravelMode? {
+        var lower = 0, upper = samples.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if samples[middle].time <= time { lower = middle + 1 } else { upper = middle }
+        }
+        var best: (distance: TimeInterval, mode: TravelMode)?
+        for index in [lower - 1, lower] where samples.indices.contains(index) {
+            guard let mode = samples[index].mode else { continue }
+            let distance = abs(samples[index].time - time)
+            guard distance <= Self.modeToleranceSeconds else { continue }
+            if best == nil || distance < best!.distance { best = (distance, mode) }
+        }
+        return best?.mode
     }
 
     func markerCoordinate(atSecond second: Double) -> CLLocationCoordinate2D? {
@@ -89,6 +150,7 @@ final class MapHomeRangeVideoOverlay: MapHomePlaybackVideoOverlay {
         if let current, !recent.isEmpty {
             recent.addLine(to: mapView.convert(current, toPointTo: mapView))
         }
+        drawPlaces(mapView: mapView, context: context)
         context.saveGState()
         context.setLineCap(.round)
         context.setLineJoin(.round)

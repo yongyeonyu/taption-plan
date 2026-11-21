@@ -395,23 +395,7 @@ extension MapHomeView {
     }
 
     func playbackMode(for reading: SensorReading) -> TravelMode? {
-        if reading.matchesRailRoute
-            || (reading.subwayWiFiObservationStreak ?? 0) > 0 {
-            return .subway
-        }
-        if reading.matchesPublicTransitRoute {
-            return .bus
-        }
-        if reading.onWater {
-            return .ship
-        }
-        switch reading.motion {
-        case .walking: return .walking
-        case .running: return .running
-        case .cycling: return .cycling
-        case .automotive: return .car
-        case .stationary, .unknown: return nil
-        }
+        MapHomeRangeTripPlan.travelMode(for: reading)
     }
 
     /// 재생 중이면 **취소**한다. 재생을 시작하기 전 시각으로 되돌리므로

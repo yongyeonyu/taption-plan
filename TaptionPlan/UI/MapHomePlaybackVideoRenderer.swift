@@ -254,7 +254,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
             for (index, frame) in frames.enumerated() {
                 try Task.checkCancellation()
                 try await waitUntilActive()
-                await placeCamera(frame)
+                await placeCamera(frame, videoSeconds: Double(index) / Double(fps))
                 try Task.checkCancellation()
                 let buffer = try writer.makeBuffer()
                 draw(into: buffer, minute: frame.minute, videoSeconds: Double(index) / Double(fps))
@@ -337,8 +337,10 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     }
 
     /// 카메라를 놓고, 바뀌었으면 타일까지 다 그려진 프레임을 기다린다.
-    private func placeCamera(_ frame: MapHomePlaybackTimeline.Frame) async {
-        guard let mapView, let coordinate = frame.coordinate else { return }
+    /// 카메라 중심은 화랑이가 그려지는 좌표와 같아야 한다. 구간 영상은 오버레이의 마커 좌표를 쓴다.
+    private func placeCamera(_ frame: MapHomePlaybackTimeline.Frame, videoSeconds: Double) async {
+        guard let mapView,
+              let coordinate = overlay?.markerCoordinate(atSecond: videoSeconds) ?? frame.coordinate else { return }
         if let lastCamera, Self.isSame(lastCamera, (coordinate, frame.cameraDistance)) { return }
         let timeout = Self.frameTimeout(from: lastCamera, to: (coordinate, frame.cameraDistance), atPlaybackSpeed: capturesAtPlaybackSpeed)
         acceptsPartialFrame = capturesAtPlaybackSpeed && timeout == Self.playbackSpeedFrameTimeout
