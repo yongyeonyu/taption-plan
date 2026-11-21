@@ -1357,9 +1357,14 @@ final class MapHomeStickmanTests: XCTestCase {
             let with = try alpha(red), without = try alpha(nil)
             // 그림은 화면 배율로 그려지므로 실제 화소 폭으로 오른쪽(상대 고양이 쪽 x > 95/146)을 고른다.
             let pixelsWide = Int((Double(with.count) / 4).squareRoot())
-            return stride(from: 0, to: with.count, by: 4).filter { index in
-                Double((index / 4) % pixelsWide) / Double(pixelsWide) > 95.0 / 146 && with[index] != without[index]
-            }.count
+            let threshold: Double = 95.0 / 146
+            var differing = 0
+            for index in stride(from: 0, to: with.count, by: 4) {
+                let column: Double = Double((index / 4) % pixelsWide)
+                let fraction: Double = column / Double(pixelsWide)
+                if fraction > threshold, with[index] != without[index] { differing += 1 }
+            }
+            return differing
         }
         XCTAssertGreaterThan(try rightHalfDiff(look), 20, "시즌 기간에는 상대 고양이도 목도리를 두른다")
         XCTAssertEqual(try rightHalfDiff(nil), 0, "시즌이 아니면 화랑이 소품을 상대에게 입히지 않는다")
