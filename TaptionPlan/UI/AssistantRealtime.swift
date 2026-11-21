@@ -59,6 +59,9 @@ struct AssistantRealtimeCursor: Equatable, Sendable {
     /// 이번 접속에서 서버가 알려 준 마지막 이벤트 번호. `resync`는 전체 확인으로 따라잡으므로 그 번호로 커서를 옮긴다.
     private var helloLatest = 0
 
+    /// private 칸이 있어 자동 멤버 초기화가 CI의 Swift에서 빠지므로 직접 둔다.
+    init(value: Int = 0) { self.value = value }
+
     mutating func beginConnection() { catchUpDone = false }
 
     mutating func apply(_ message: AssistantRealtimeMessage) -> [AssistantRealtimeAction] {
