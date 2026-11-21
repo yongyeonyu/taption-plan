@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { createServer } from "node:http";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { KEYS_FILE, KIND_LABEL, checkCustom, checkMeta, checkValue, knownKey, parseSecretList, publicView, readStore, storeMode, writeStore } from "./keys.mjs";
+import { KEYS_FILE, KIND_LABEL, LEGACY_KEYS_FILE, checkCustom, migrateLegacy, checkMeta, checkValue, knownKey, parseSecretList, publicView, readStore, storeMode, writeStore } from "./keys.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const REPO = resolve(HERE, "../..");
@@ -314,9 +314,12 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
 
   const keysView = () => {
     const mode = storeMode();
+    const { wranglerConfig } = loadConfig();
     return {
       file: shortHome(KEYS_FILE), fileMode: mode === null ? null : `0${mode.toString(8)}`,
-      keys: publicView(readStore(), { now: now(), xcconfigText: appSecretsText(), serverNames: serverSecrets?.names ?? null }),
+      legacyFile: existsSync(LEGACY_KEYS_FILE) && LEGACY_KEYS_FILE !== KEYS_FILE ? shortHome(LEGACY_KEYS_FILE) : null,
+      wranglerConfig,
+      keys: publicView(readStore(), { now: now(), xcconfigText: appSecretsText(), serverNames: serverSecrets?.names ?? null, wranglerConfig }),
       serverCheckedAt: serverSecrets?.at ?? null, kinds: KIND_LABEL,
     };
   };
@@ -536,6 +539,12 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
       log(`${name}: 만료일 ${meta.expiresAt ?? "없음"}${meta.note ? " · 메모 저장" : ""}`);
       return keysView();
     },
+    "POST /api/keys/migrate": async () => {
+      const result = migrateLegacy();
+      if (!result.legacy) return keyError("옮겨 올 옛 파일이 없습니다", 404);
+      log(`옛 키 파일에서 ${result.migrated}칸을 옮겼습니다(이미 있던 이름은 덮지 않음). 확인 뒤 옛 파일(${shortHome(result.legacy)})을 직접 지우세요.`);
+      return { ...keysView(), migrated: result.migrated };
+    },
     "POST /api/keys/custom": async (body) => {
       // 연동 예정 칸 직접 추가·고치기(예: AWS). 이름·공급자·설명만 받는다. 값은 /api/keys/set으로 따로.
       const { errors, name, def } = checkCustom(body);
@@ -649,6 +658,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url) && process.argv.includes(
   const portFlag = process.argv.indexOf("--port");
   const port = portFlag > 0 ? Number(process.argv[portFlag + 1]) : 8742;
   const token = randomBytes(24).toString("base64url");
+  // 처음 판의 저장소 밖 키 파일이 있으면 한 번 옮겨 온다(원문은 출력하지 않음).
+  const moved = migrateLegacy();
+  if (moved.migrated) console.log(`옛 키 파일에서 ${moved.migrated}칸을 ${shortHome(KEYS_FILE)}으로 옮겼습니다. 확인 뒤 옛 파일을 지우세요: ${shortHome(moved.legacy)}`);
   const server = createConsole({ port, token, dryRun });
   server.listen(port, "127.0.0.1", () => {
     const address = `http://127.0.0.1:${port}/?t=${token}`;

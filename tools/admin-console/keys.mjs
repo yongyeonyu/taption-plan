@@ -1,14 +1,29 @@
 // KEY1121A01: 앱(BOKKI Plan)·중계 서버(server/trip-relay)가 쓰는 외부 API 키를 이 맥에서만 모아 둔다.
 //
-// - 값은 저장소 밖 `~/.bokki-admin-console/keys.json`(폴더 700, 파일 600)에만 쓴다. 시험은 ADMIN_CONSOLE_KEYS로 임시 파일을 쓴다.
+// - 값은 `tools/admin-console/secrets.local.json`(git 제외, 파일 600)에만 쓴다. 시험은 ADMIN_CONSOLE_KEYS로 임시 파일을 쓴다.
 // - 화면·API 응답·기록에는 원문을 다시 내보내지 않는다(끝 4자리 마스킹만). 원문을 꺼내는 길은 터미널의 `--print-key` 하나뿐이다.
 // - Cloudflare 시크릿 반영(`wrangler secret put`)·앱 빌드 설정 반영은 하지 않고 명령만 안내한다(배포는 대표 승인 사안).
 // - 사용량은 공급자가 알려 주는 길이 없으면 「확인 불가」와 이유를 쓴다. 한도는 코드·설정에 적힌 값만 쓴다(추측값 없음).
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
-export const KEYS_FILE = process.env.ADMIN_CONSOLE_KEYS ?? join(homedir(), ".bokki-admin-console", "keys.json");
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+/** 작업용 사본(git worktree)이면 원래 저장소 폴더(server.mjs의 mainCheckout과 같은 규칙). 키 파일은 사본마다 따로 두지 않는다. */
+function mainRepo(repo = resolve(HERE, "../..")) {
+  try {
+    const gitdir = /^gitdir:\s*(.+)$/m.exec(readFileSync(join(repo, ".git"), "utf8"))?.[1]?.trim();
+    const marker = gitdir ? gitdir.lastIndexOf(`${sep}.git${sep}worktrees${sep}`) : -1;
+    return marker > 0 ? gitdir.slice(0, marker) : repo;
+  } catch { return repo; }
+}
+
+// 대표 지시(2026-11-21): 키 원문·만료일은 일반 설정(config.local.json)과 나눠 `tools/admin-console/secrets.local.json`(git 제외, 600)에 둔다.
+export const KEYS_FILE = process.env.ADMIN_CONSOLE_KEYS ?? join(mainRepo(), "tools/admin-console/secrets.local.json");
+/** 처음(KEY1121A01 첫 판)에 쓰던 저장소 밖 파일. 있으면 한 번 옮겨 온다. */
+export const LEGACY_KEYS_FILE = process.env.ADMIN_CONSOLE_KEYS_LEGACY ?? join(homedir(), ".bokki-admin-console", "keys.json");
 
 const DATA_GO_KR = "공공데이터포털(data.go.kr) › 마이페이지 › 데이터활용 › 활용신청 현황에서 키별 활용기간·트래픽을 봅니다";
 
@@ -57,9 +72,9 @@ export const KEY_CATALOG = [
     feature: "푸시 알림 — .p8 파일 내용 전체(-----BEGIN PRIVATE KEY----- 포함)", missing: "APNS_KEY_ID·APNS_TEAM_ID와 셋 중 하나라도 없으면 서버가 푸시를 하나도 보내지 않습니다",
     usage: { kind: "unavailable", reason: "서버가 보낸 수를 내보내지 않음", where: "Apple Developer › Certificates, Identifiers & Profiles › Keys" }, expiryHint: "Apple Developer › Keys에서 폐기 여부 확인" },
   { name: "APNS_KEY_ID", kind: "internal", where: "server", provider: "Apple Developer", group: "푸시 알림",
-    feature: "푸시 알림 — APNs 인증 키 ID", missing: "푸시를 보내지 않습니다", usage: { kind: "unavailable", reason: "사용량 개념 없음(식별자)", where: "Apple Developer › Keys" }, expiryHint: "APNS_KEY_P8과 같음" },
+    feature: "푸시 알림 — APNs 인증 키 ID", missing: "푸시를 보내지 않습니다", usage: { kind: "none", reason: "사용량 개념 없음(식별자)", where: "Apple Developer › Keys" }, expiryHint: "APNS_KEY_P8과 같음" },
   { name: "APNS_TEAM_ID", kind: "internal", where: "server", provider: "Apple Developer", group: "푸시 알림",
-    feature: "푸시 알림 — 개발자 팀 ID", missing: "푸시를 보내지 않습니다", usage: { kind: "unavailable", reason: "사용량 개념 없음(식별자)", where: "Apple Developer › Membership" }, expiryHint: "Apple 개발자 멤버십 갱신일" },
+    feature: "푸시 알림 — 개발자 팀 ID", missing: "푸시를 보내지 않습니다", usage: { kind: "none", reason: "사용량 개념 없음(식별자)", where: "Apple Developer › Membership" }, expiryHint: "Apple 개발자 멤버십 갱신일" },
   { name: "KAKAO_NATIVE_APP_KEY", kind: "app", where: "app", provider: "카카오 디벨로퍼스", group: "iOS 앱",
     feature: "카카오 지도(지도 종류 선택) — 앱에 들어가는 네이티브 앱 키", missing: "앱 설정에서 「카카오 지도」를 고를 수 없습니다",
     usage: { kind: "unavailable", reason: "기기에서 바로 부르므로 서버가 셀 수 없음", where: "카카오 디벨로퍼스 › 내 애플리케이션 › 해당 앱 화면" }, expiryHint: "재발급 전까지 쓰는 방식" },
@@ -68,35 +83,54 @@ export const KEY_CATALOG = [
     usage: { kind: "unavailable", reason: "기기에서 바로 올리므로 서버가 셀 수 없음", where: "PostHog › Settings › Billing·Usage" }, expiryHint: "프로젝트 키는 만료가 없고 프로젝트 삭제·재발급 때 바뀜" },
   { name: "APNS_TOPIC", kind: "internal", where: "server", provider: "Apple Developer", group: "푸시 알림", optional: true,
     feature: "푸시 알림 — 번들 ID가 com.taption.plan이 아닐 때만 넣는 토픽", missing: "기본값 com.taption.plan을 씁니다(대부분 비워 둠)",
-    usage: { kind: "unavailable", reason: "사용량 개념 없음(설정값)", where: "Apple Developer › Identifiers" }, expiryHint: "만료 없음(설정값)" },
+    usage: { kind: "none", reason: "사용량 개념 없음(설정값)", where: "Apple Developer › Identifiers" }, expiryHint: "만료 없음(설정값)" },
   { name: "PIN_PEPPER", kind: "internal", where: "server", provider: "우리가 만든 무작위 값", group: "서버 내부", danger: "바꾸거나 잃으면 모든 사용자의 PIN이 맞지 않게 되어 앱에서 PIN을 다시 정해야 합니다. 서버에 이미 있으면 교체하지 마세요.",
     feature: "PIN 확인 — 서버가 PIN 검증값을 만들 때 섞는 비밀(32바이트 이상 무작위)", missing: "PIN 확인이 모두 503(pin_check_unavailable)이 되어 키 연결·OAuth 연결이 막힙니다",
-    usage: { kind: "unavailable", reason: "사용량 개념 없음(내부 비밀)", where: "없음(우리 서버 안에서만 씀)" }, expiryHint: "만료 없음 — 바꾸지 않는 값" },
+    usage: { kind: "none", reason: "사용량 개념 없음(내부 비밀)", where: "없음(우리 서버 안에서만 씀)" }, expiryHint: "만료 없음 — 바꾸지 않는 값" },
   { name: "CLASSIFIER_ADMIN_TOKEN", kind: "internal", where: "server", provider: "우리가 만든 무작위 값", group: "서버 내부",
     feature: "분류 표본 관리 길(/classifier-samples/admin) 읽기용 토큰(32자 이상)", missing: "관리 길이 503이 됩니다(앱 기능에는 영향 없음)",
-    usage: { kind: "unavailable", reason: "사용량 개념 없음(관리 토큰)", where: "없음" }, expiryHint: "만료 없음 — 새어 나갔다고 의심되면 교체" },
+    usage: { kind: "none", reason: "사용량 개념 없음(관리 토큰)", where: "없음" }, expiryHint: "만료 없음 — 새어 나갔다고 의심되면 교체" },
   { name: "SHARED_RULES_ADMIN_TOKEN", kind: "internal", where: "server", provider: "우리가 만든 무작위 값", group: "서버 내부",
     feature: "공통 규칙 묶음 올리기 관리 길(/shared/admin/) 토큰(32자 이상, ~/.bokki-shared-rules/admin.json에도 둠)", missing: "공통 규칙 관리 길이 503이 됩니다",
-    usage: { kind: "unavailable", reason: "사용량 개념 없음(관리 토큰)", where: "없음" }, expiryHint: "만료 없음 — 새어 나갔다고 의심되면 교체" },
+    usage: { kind: "none", reason: "사용량 개념 없음(관리 토큰)", where: "없음" }, expiryHint: "만료 없음 — 새어 나갔다고 의심되면 교체" },
   { name: "SHARED_RULES_PUBLIC_KEY", kind: "internal", where: "server", provider: "우리가 만든 Ed25519 키 쌍", group: "서버 내부", alsoApp: true,
     feature: "공통 규칙 묶음 서명 확인용 공개 키(base64, 비밀 아님). 앱 xcconfig에도 같은 값", missing: "서버 관리 길이 503이 되고 받기는 version 0만, 앱은 공통 규칙을 받지 않습니다",
-    usage: { kind: "unavailable", reason: "사용량 개념 없음(공개 키)", where: "없음" }, expiryHint: "만료 없음 — 서명 키를 바꿀 때 함께 교체" },
-  { name: "ALGOLIA_APP_ID", kind: "planned", where: "server", provider: "Algolia", group: "연동 예정",
-    feature: "도시 팩 검색 색인(ARCH1120A01 2-1단계) — 앱 ID", missing: "아직 코드가 쓰지 않습니다(연동 전)",
-    usage: { kind: "unavailable", reason: "연동 전", where: "Algolia 대시보드 › Settings › API Keys·Usage" }, expiryHint: "공급자 화면에서 확인" },
-  { name: "ALGOLIA_WRITE_KEY", kind: "planned", where: "server", provider: "Algolia", group: "연동 예정",
-    feature: "도시 팩 검색 색인(ARCH1120A01 2-1단계) — 색인 쓰기 키(서버에만)", missing: "아직 코드가 쓰지 않습니다(연동 전)",
-    usage: { kind: "unavailable", reason: "연동 전", where: "Algolia 대시보드 › Settings › API Keys·Usage" }, expiryHint: "공급자 화면에서 확인" },
+    usage: { kind: "none", reason: "사용량 개념 없음(공개 키)", where: "없음" }, expiryHint: "만료 없음 — 서명 키를 바꿀 때 함께 교체" },
+  { name: "ALGOLIA_APP_ID", kind: "ai", where: "server", provider: "Algolia", group: "도시 팩 검색(Algolia)",
+    feature: "도시 팩 검색 색인(SRCH1121A01) — Algolia 앱 ID(비밀 아님, 세 키가 함께 있어야 동작)", missing: "도시 팩 검색이 503(algolia_not_configured)이 되고 앱은 기기 로컬 검색으로 폴백합니다",
+    usage: { kind: "none", reason: "사용량 개념 없음(식별자)", where: "Algolia 대시보드 › Settings › API Keys" }, expiryHint: "만료 없음(식별자)" },
+  { name: "ALGOLIA_WRITE_KEY", kind: "ai", where: "server", provider: "Algolia", group: "도시 팩 검색(Algolia)",
+    feature: "도시 팩 검색 — 색인 쓰기 키(팩 올린 뒤 배치 색인·옛 버전 삭제, 서버에만)", missing: "색인 쓰기가 503이 되어 새 팩이 검색에 오르지 않고, 앱은 기기 로컬 검색으로 폴백합니다",
+    usage: { kind: "unavailable", reason: "서버가 색인 쓰기 수를 내보내지 않음", where: "Algolia 대시보드 › Usage(레코드·요청 수)" }, expiryHint: "Algolia 키는 만료를 걸지 않았다면 없음 — 대시보드 API Keys에서 확인" },
+  { name: "ALGOLIA_SEARCH_KEY", kind: "ai", where: "server", provider: "Algolia", group: "도시 팩 검색(Algolia)",
+    feature: "도시 팩 검색 — 검색 전용 키. 서버가 이 키로 도시·버전 필터와 유효 시간을 건 Secured API Key를 만들어 앱에 줍니다", missing: "앱에 줄 Secured Key를 발급하지 못해(503 algolia_key_missing, 쓰기 키로 대신하지 않음) 앱은 기기 로컬 검색으로 폴백합니다",
+    usage: { kind: "limit", limit: "Secured Key 발급 하루 3,000회(ALGOLIA_KEY_DAILY 기본값, 작업 중 코드 기준)", reason: "오늘 발급 수·검색 수는 서버가 내보내지 않아 확인 불가", where: "Algolia 대시보드 › Usage" }, expiryHint: "Algolia 키는 만료를 걸지 않았다면 없음 — 대시보드 API Keys에서 확인" },
+  { name: "AWS_ACCESS_KEY_ID", kind: "ai", where: "server", provider: "AWS(IAM)", group: "AI 도우미(AWS Bedrock)",
+    feature: "AI 도우미 — Bedrock Converse 호출용 IAM 액세스 키 ID(AI1121A01)", missing: "AWS_SECRET_ACCESS_KEY와 둘 중 하나라도 없으면 Bedrock 호출이 꺼집니다",
+    usage: { kind: "unavailable", reason: "서버가 호출 수·토큰 수를 내보내지 않음", where: "AWS 콘솔 › Billing and Cost Management › 비용 탐색기(서비스: Bedrock), Bedrock › 사용량" }, expiryHint: "IAM 액세스 키는 만료가 없음 — 교체 주기(예: 90일)를 메모" },
+  { name: "AWS_SECRET_ACCESS_KEY", kind: "ai", where: "server", provider: "AWS(IAM)", group: "AI 도우미(AWS Bedrock)",
+    feature: "AI 도우미 — IAM 비밀 액세스 키(SigV4 서명)", missing: "Bedrock 호출이 꺼집니다",
+    usage: { kind: "unavailable", reason: "서버가 호출 수·토큰 수를 내보내지 않음", where: "AWS 콘솔 › Billing and Cost Management › 비용 탐색기" }, expiryHint: "AWS_ACCESS_KEY_ID와 함께 교체" },
+  { name: "AWS_SESSION_TOKEN", kind: "ai", where: "server", provider: "AWS(STS)", group: "AI 도우미(AWS Bedrock)", optional: true,
+    feature: "AI 도우미 — 임시 자격 증명을 쓸 때만 넣는 세션 토큰(선택)", missing: "영구 IAM 키를 쓰면 비워 둡니다",
+    usage: { kind: "none", reason: "사용량 개념 없음(선택 자격 증명)", where: "없음" }, expiryHint: "임시 자격 증명은 몇 시간 안에 만료 — 영구 키 권장" },
+  { name: "AWS_REGION", kind: "ai", where: "server", provider: "AWS", group: "AI 도우미(AWS Bedrock)", optional: true,
+    feature: "AI 도우미 — Bedrock 지역(비밀 아님)", missing: "기본값 us-east-1을 씁니다",
+    usage: { kind: "none", reason: "사용량 개념 없음(설정값)", where: "없음" }, expiryHint: "만료 없음(설정값)" },
+  { name: "AWS_BEDROCK_MODEL_ID", kind: "ai", where: "server", provider: "AWS Bedrock", group: "AI 도우미(AWS Bedrock)", optional: true,
+    feature: "AI 도우미 — 쓸 모델 ID(비밀 아님, 예: Haiku 추론 프로필 ID)", missing: "기본값 us.amazon.nova-lite-v1:0을 씁니다",
+    usage: { kind: "none", reason: "사용량 개념 없음(설정값)", where: "AWS 콘솔 › Bedrock › 모델 액세스" }, expiryHint: "만료 없음(설정값)" },
 ];
 
-export const KIND_LABEL = { external: "서버 외부 API 키", internal: "서버 내부 시크릿", app: "iOS 앱 키", planned: "연동 예정·직접 추가" };
+export const KIND_LABEL = { external: "서버 외부 API", ai: "서버 AI·검색", internal: "서버 내부 시크릿", app: "iOS 앱 키(서버 시크릿 아님)", custom: "직접 추가" };
+export const USAGE_LABEL = { limit: "한도", unavailable: "확인 불가(콘솔 안내)", none: "관리 불필요" };
 
 const BY_NAME = new Map(KEY_CATALOG.map((entry) => [entry.name, entry]));
 export const CUSTOM_NAME = /^[A-Z][A-Z0-9_]{2,63}$/;
 
 /** 직접 추가한 항목(store.custom)을 목록 모양으로. */
 function customEntry(name, def) {
-  return { name, kind: "planned", custom: true, where: def.where === "app" ? "app" : "server", provider: def.provider || "직접 추가", group: "연동 예정",
+  return { name, kind: "custom", custom: true, where: def.where === "app" ? "app" : "server", provider: def.provider || "직접 추가", group: "직접 추가",
     feature: def.feature || "설명 없음(직접 추가한 칸)", missing: "아직 코드가 쓰지 않습니다(연동 전)", multiline: false,
     usage: { kind: "unavailable", reason: "연동 전", where: def.provider ? `${def.provider} 대시보드` : "공급자 대시보드" }, expiryHint: "공급자 화면에서 확인" };
 }
@@ -198,8 +232,15 @@ export function storeMode(file = KEYS_FILE) {
 
 // ---- 화면용 ----
 
-const wranglerPut = (name) => `cd server/trip-relay && npx wrangler secret put ${name} --config wrangler.local.toml`;
-const pipePut = (name) => `node tools/admin-console/server.mjs --print-key ${name} | (cd server/trip-relay && npx wrangler secret put ${name} --config wrangler.local.toml)`;
+/** 셸 큰따옴표 안에 넣을 수 있게 \ " $ ` 를 막는다(경로에 공백이 있어도 됨). */
+export const shQuote = (text) => `"${String(text).replace(/(["\\$`])/g, "\\$1")}"`;
+const CONSOLE_SCRIPT = join(HERE, "server.mjs");
+
+/** 값이 들어가지 않는 `wrangler secret put` 명령. 설정 탭의 wrangler 설정 파일 경로를 그대로 붙인다. */
+export function secretCommands(name, wranglerConfig) {
+  const config = shQuote(wranglerConfig || "server/trip-relay/wrangler.local.toml");
+  return { put: `npx wrangler secret put ${name} --config ${config}`, pipe: `node ${shQuote(CONSOLE_SCRIPT)} --print-key ${name} | npx wrangler secret put ${name} --config ${config}` };
+}
 
 /** 앱 빌드 설정(xcconfig)에 그 이름이 채워져 있는지. 값은 읽어도 내보내지 않고, 저장한 값과 같은지만 알려 준다. */
 export function appBuildValue(xcconfigText, name) {
@@ -211,20 +252,21 @@ export function appBuildValue(xcconfigText, name) {
 }
 
 /** 원문 없이 화면에 보낼 한 줄. serverNames: wrangler secret list로 읽은 이름 집합(없으면 null). */
-export function publicView(store, { now = new Date(), xcconfigText = null, serverNames = null } = {}) {
+export function publicView(store, { now = new Date(), xcconfigText = null, serverNames = null, wranglerConfig = "" } = {}) {
   return allEntries(store).map((entry) => {
     const saved = store.keys[entry.name] ?? {};
     const value = typeof saved.value === "string" && saved.value ? saved.value : null;
     const view = {
       name: entry.name, kind: entry.kind, kindLabel: KIND_LABEL[entry.kind], custom: entry.custom === true, danger: entry.danger ?? null, optional: entry.optional === true,
       where: entry.where, group: entry.group, provider: entry.provider, feature: entry.feature, missing: entry.missing,
-      multiline: entry.multiline === true, usage: entry.usage, expiryHint: entry.expiryHint,
+      multiline: entry.multiline === true, usage: { ...entry.usage, label: USAGE_LABEL[entry.usage.kind] }, expiryHint: entry.expiryHint,
       hasValue: !!value, masked: maskValue(value), savedAt: saved.savedAt ?? null,
       expiresAt: saved.expiresAt ?? null, note: saved.note ?? "", expiry: expiryState(saved.expiresAt, now),
     };
     if (entry.where === "server") {
-      view.apply = { how: entry.kind === "planned" ? "연동 코드가 들어온 뒤 Cloudflare 시크릿으로(대표 승인 뒤 터미널에서)" : "Cloudflare 시크릿(대표 승인 뒤 터미널에서)",
-        commands: [pipePut(entry.name), wranglerPut(entry.name), ...(entry.alsoApp ? [`${entry.name} = <같은 값>   # TaptionPlan/AppSecrets.local.xcconfig, 다시 빌드`] : [])] };
+      const cmd = secretCommands(entry.name, wranglerConfig);
+      view.apply = { how: "Cloudflare 시크릿 — 자동 배포하지 않음(대표 승인 뒤 터미널에서)",
+        commands: [cmd.put, cmd.pipe, ...(entry.alsoApp ? [`${entry.name} = <같은 값>   # TaptionPlan/AppSecrets.local.xcconfig, 다시 빌드`] : [])] };
       view.onServer = serverNames ? serverNames.has(entry.name) : null;
     } else {
       const built = appBuildValue(xcconfigText, entry.name);
@@ -243,4 +285,19 @@ export function parseSecretList(output) {
     const list = JSON.parse(output.slice(start, output.lastIndexOf("]") + 1));
     return Array.isArray(list) ? new Set(list.map((item) => item?.name).filter((name) => typeof name === "string")) : null;
   } catch { return null; }
+}
+
+/**
+ * 옛 저장소 밖 파일(~/.bokki-admin-console/keys.json)에서 한 번 옮겨 온다. 새 파일에 이미 있는 이름은 덮지 않는다.
+ * 옛 파일은 지우지 않는다(대표가 확인 뒤 직접 지움). 돌려주는 값에 원문은 없다.
+ */
+export function migrateLegacy(file = KEYS_FILE, legacy = LEGACY_KEYS_FILE) {
+  if (!existsSync(legacy) || legacy === file) return { migrated: 0, legacy: null };
+  const old = readStore(legacy);
+  const store = readStore(file);
+  let migrated = 0;
+  for (const [name, saved] of Object.entries(old.keys)) if (!store.keys[name]) { store.keys[name] = saved; migrated++; }
+  for (const [name, def] of Object.entries(old.custom)) if (!store.custom[name]) { store.custom[name] = def; migrated++; }
+  if (migrated) writeStore(store, file);
+  return { migrated, legacy };
 }

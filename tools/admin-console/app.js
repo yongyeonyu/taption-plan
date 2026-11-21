@@ -43,7 +43,7 @@ for (const tab of document.querySelectorAll(".tab")) {
     for (const id of ["notices", "packs", "reset", "keys", "settings"]) $(id).hidden = id !== tab.dataset.tab;
     if (tab.dataset.tab === "packs") loadPacks();
     if (tab.dataset.tab === "reset") loadReset();
-    if (tab.dataset.tab === "keys") loadKeys();
+    if (tab.dataset.tab === "keys" || tab.dataset.tab === "settings") loadKeys();
   });
 }
 
@@ -480,8 +480,8 @@ function keyCard(key) {
   } });
 
   const usage = key.usage.kind === "limit"
-    ? [el("div", {}, el("strong", { textContent: "한도 " }), key.usage.limit), el("div", { class: "muted" }, "오늘 쓴 수: 확인 불가 — ", key.usage.reason)]
-    : [el("div", {}, el("strong", { textContent: "확인 불가 " }), el("span", { class: "muted", textContent: `— ${key.usage.reason}` }))];
+    ? [el("div", {}, el("span", { class: "usage limit", textContent: "한도" }), ` ${key.usage.limit}`), el("div", { class: "muted" }, "오늘 쓴 수: 확인 불가 — ", key.usage.reason)]
+    : [el("div", {}, el("span", { class: `usage ${key.usage.kind}`, textContent: key.usage.label }), el("span", { class: "muted", textContent: ` ${key.usage.reason}` }))];
 
   const dropSlot = key.custom ? el("button", { class: "danger mini", textContent: "칸 지우기", onclick: async () => {
     if (!(await confirmDialog(`${key.name}: 직접 추가한 칸과 이 맥에 저장한 값·만료일을 지웁니다. 계속할까요?`, "지우기"))) return;
@@ -515,6 +515,11 @@ function keyCard(key) {
 
 function renderKeys(view) {
   $("keyFile").textContent = `${view.file}${view.fileMode ? ` (${view.fileMode})` : " (아직 없음)"}`;
+  $("legacyBox").hidden = !view.legacyFile;
+  $("legacyText").textContent = view.legacyFile ? `처음 판의 키 파일 ${view.legacyFile}이(가) 남아 있습니다. 옮겨 온 뒤(이미 있는 이름은 덮지 않음) 확인하고 옛 파일은 직접 지우세요.` : "";
+  // 설정 탭: wrangler 경로를 붙인 secret put 명령(값 없음).
+  $("secretCommands").replaceChildren(...view.keys.filter((key) => key.where === "server").map((key) =>
+    el("div", { class: "cmd" }, el("code", { textContent: key.apply.commands[0] }), copyButton(key.apply.commands[0]))));
   const counts = view.keys.reduce((acc, key) => { acc[key.expiry.state] = (acc[key.expiry.state] ?? 0) + 1; return acc; }, {});
   const stored = view.keys.filter((key) => key.hasValue).length;
   $("keySummary").textContent = [`${stored}/${view.keys.length}개 저장`, counts.expired && `만료 ${counts.expired}`, counts.soon7 && `7일 이내 ${counts.soon7}`, counts.soon30 && `30일 이내 ${counts.soon30}`,
@@ -534,6 +539,10 @@ async function loadKeys() {
   catch (error) { $("keyList").replaceChildren(el("p", { class: "bad", textContent: `키 목록을 읽지 못했습니다: ${error.message}` })); }
 }
 $("reloadKeys").addEventListener("click", loadKeys);
+$("migrateKeys").addEventListener("click", async () => {
+  try { const result = await api("POST", "/api/keys/migrate", {}); renderKeys(result); alert(`${result.migrated}칸을 옮겼습니다. 확인 뒤 옛 파일을 직접 지우세요.`); } catch (error) { fail(error); }
+  refreshState();
+});
 $("customForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
@@ -554,9 +563,9 @@ $("configForm").addEventListener("submit", async (event) => {
   const form = event.target;
   try {
     await api("POST", "/api/config", { host: form.host.value, bucket: form.bucket.value, wranglerConfig: form.wranglerConfig.value });
-    await refreshState(); loadNotices();
+    await refreshState(); loadNotices(); loadKeys();
   } catch (error) { $("configErrors").replaceChildren(...error.message.split("\n").map((text) => el("li", { textContent: text }))); }
 });
 
-refreshState().then(loadNotices);
+refreshState().then(() => { loadNotices(); loadKeys(); });
 setInterval(refreshState, 3000);

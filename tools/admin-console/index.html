@@ -14,9 +14,9 @@
   <nav>
     <button data-tab="notices" class="tab on">공지</button>
     <button data-tab="packs" class="tab">시즌 팩</button>
-    <button data-tab="reset" class="tab">초기화</button>
     <button data-tab="keys" class="tab">API 키</button>
     <button data-tab="settings" class="tab">설정</button>
+    <button data-tab="reset" class="tab">초기화</button>
   </nav>
 </header>
 
@@ -114,16 +114,20 @@
         <button id="reloadKeys">새로 읽기</button>
       </div>
     </div>
-    <p class="muted">값은 이 맥의 <code id="keyFile"></code>에만 저장합니다(저장소 밖, 권한 600). 화면에는 끝 4자리만 보이고 원문은 다시 내려오지 않습니다. 서버(Cloudflare)·앱 빌드에는 자동으로 넣지 않습니다 — 각 키의 안내 명령을 대표가 터미널에서 실행합니다(배포는 대표 승인 사안).</p>
+    <p class="muted">키 원문·만료일은 이 맥의 <code id="keyFile"></code>에만 저장합니다(git 제외, 권한 600 — 일반 설정 <code>config.local.json</code>과 따로). 화면에는 끝 4자리만 보이고 원문은 다시 내려오지 않습니다. 서버(Cloudflare)·앱 빌드에는 자동으로 넣지 않습니다 — 각 키의 안내 명령을 대표가 터미널에서 실행합니다(배포는 대표 승인 사안).</p>
+    <div id="legacyBox" class="notice" hidden>
+      <span id="legacyText"></span>
+      <button id="migrateKeys">옛 파일에서 옮겨 오기</button>
+    </div>
     <div class="legend chips">
       <span class="exp expired">만료됨</span><span class="exp soon7">7일 이내</span><span class="exp soon30">30일 이내</span><span class="exp ok">여유</span><span class="exp none">만료일 없음</span>
     </div>
     <div id="keyList" class="keylist"></div>
-    <h3>연동 예정 칸 직접 추가</h3>
-    <p class="muted small">아직 코드가 쓰지 않는 키(예: AWS)를 미리 넣어 둡니다. 이름은 나중에 서버·앱 코드가 읽을 이름과 같게 적으세요.</p>
+    <h3>칸 직접 추가</h3>
+    <p class="muted small">목록에 없는 키를 미리 넣어 둡니다. 이름은 나중에 서버·앱 코드가 읽을 이름과 같게 적으세요.</p>
     <form id="customForm" class="grid">
-      <label>이름(대문자·숫자·_)<input name="name" placeholder="AWS_ACCESS_KEY_ID" pattern="[A-Z][A-Z0-9_]{2,63}" required autocomplete="off"></label>
-      <label>공급자<input name="provider" maxlength="60" placeholder="AWS"></label>
+      <label>이름(대문자·숫자·_)<input name="name" placeholder="NEW_PROVIDER_API_KEY" pattern="[A-Z][A-Z0-9_]{2,63}" required autocomplete="off"></label>
+      <label>공급자<input name="provider" maxlength="60"></label>
       <label>쓰일 곳
         <select name="where"><option value="server">서버 시크릿</option><option value="app">iOS 앱 빌드</option></select>
       </label>
@@ -142,6 +146,10 @@
       <div class="wide row"><button type="submit" class="primary">저장</button></div>
     </form>
     <ul id="configErrors" class="errors"></ul>
+
+    <h2>서버 시크릿 넣기 명령</h2>
+    <p class="muted">위 wrangler 설정 파일 경로를 붙인 명령입니다(값은 들어 있지 않음 — 실행하면 값을 묻습니다). 자동으로 실행·배포하지 않습니다. 시크릿을 넣으면 Worker가 새 버전이 되므로 대표 승인 뒤 터미널에서 실행하세요. iOS 앱 키는 <code>TaptionPlan/AppSecrets.local.xcconfig</code>에 적고 다시 빌드합니다.</p>
+    <div id="secretCommands" class="col"></div>
   </section>
 
   <section class="panel">

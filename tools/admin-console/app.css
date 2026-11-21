@@ -121,3 +121,9 @@ button.mini { padding: 2px 8px; font-size: 12px; }
 @media (max-width: 600px) { .keycard .top { flex-direction: column; } .keycard .right { text-align: left; } }
 .kind-title { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 20px; }
 .keycard .top .mini { margin-left: 6px; }
+details.card > summary .chip { white-space: nowrap; }
+.usage { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 6px; border: 1px solid var(--line); }
+.usage.limit { color: var(--ok); border-color: var(--ok); }
+.usage.unavailable { color: var(--warn); border-color: var(--warn); }
+.usage.none { color: var(--muted); }
+.notice { border: 1px solid var(--warn); border-radius: 10px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--warn); }
