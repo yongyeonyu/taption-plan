@@ -263,6 +263,7 @@ export const EXPENSE_CATEGORIES = ["food", "cafe", "transport", "shopping", "liv
 
 // ASK1112A01: 질문 1~200자, 보기 2~4개(1~60자, 서로 다름). 앱이 「직접 입력」을 늘 덧붙인다.
 export const QUESTION_LIMITS = { question: 200, option: 60, minOptions: 2, maxOptions: 4, text: 200, answers: 20 };
+const DETAIL_ID = /^(none|[a-z][A-Za-z]{0,29}\.[A-Za-z][A-Za-z0-9.]{0,39})$/;
 const lengthIn = (v, max) => typeof v === "string" && codePoints(v.trim()) >= 1 && codePoints(v) <= max;
 const questionText = (v) => lengthIn(v, QUESTION_LIMITS.question);
 const answerOptions = (v) => Array.isArray(v) && v.length >= QUESTION_LIMITS.minOptions && v.length <= QUESTION_LIMITS.maxOptions
@@ -359,6 +360,18 @@ export function cleanCommand(value) {
 // 거절 이유(422 본문의 reason). 지금은 말풍선만 자세히 알려 준다.
 export function commandReason(value) {
   if (!commandID(value?.id)) return "bad_id";
+  // 동작 이름을 못 알아본 이유를 알려 AI가 스스로 고치게 한다: MCP 도구 이름(set_calendar_title_detail)을 동작 이름으로 보낸 경우가 흔하다.
+  if (typeof value?.action !== "string" || !ACTIONS.includes(value.action)) {
+    const camel = typeof value?.action === "string" ? value.action.replace(/_([a-z])/g, (_, c) => c.toUpperCase()) : "";
+    return ACTIONS.includes(camel) ? `unknown_action:use_${camel}` : "unknown_action";
+  }
+  // 일정 제목 분류(HND1112A01): 칸마다 이유를 준다. detailId는 none 또는 「큰분류.상세」(예: work.meeting)다.
+  if (value.action === "setCalendarTitleDetail") {
+    if (!lengthIn(value.title, 200)) return "bad_title";
+    if (typeof value.detailId !== "string") return "bad_detail_id:missing";
+    if (!DETAIL_ID.test(value.detailId)) return "bad_detail_id:use_none_or_category.detail";
+    return undefined;
+  }
   if (value?.action !== "setBubble") return undefined;
   if (!isDate(value.date) || !isTime(value.start) || !isTime(value.end)) return "bad_time";
   if (value.end <= value.start) return "end_before_start";
@@ -511,7 +524,7 @@ export function isCommand(value) {
     case "setCarAudio":
       return lengthIn(v.name, 60) && isBoolean(v.isMyCar);
     case "setCalendarTitleDetail":
-      return lengthIn(v.title, 200) && typeof v.detailId === "string" && /^(none|[a-z][A-Za-z]{0,29}\.[A-Za-z][A-Za-z0-9.]{0,39})$/.test(v.detailId);
+      return lengthIn(v.title, 200) && typeof v.detailId === "string" && DETAIL_ID.test(v.detailId);
     case "requestApproval":
       return Object.hasOwn(APPROVALS, v.request) && APPROVALS[v.request](v.value);
     case "askUser":
