@@ -60,3 +60,5 @@ basis: 대표 직접 지시 (2026-11-21 통화)
 - **대표 확인이 필요한 선택지(객관식, 아침에 묻겠습니다)**:
   1. A만 즉시 수정(추천, 제 회귀·위험 없음) / A+B / A+B+C / 수정하지 않음.
   2. 수정 뒤 TestFlight 360 이후 빌드에 포함할지, 다음 릴리스로 미룰지.
+
+- **후속(대표 지시: SeasonPackKit 두 줄만)**: `SeasonPackTreeEffects.swift` 반환 두 곳을 `CGFloat(side)`로 명시 변환. `swift test`(SeasonPackKit) 113건 통과. `TravelModeView`·`DayStoreV3Tests`는 손대지 않음. CI 재실행 결과 확인 대기.

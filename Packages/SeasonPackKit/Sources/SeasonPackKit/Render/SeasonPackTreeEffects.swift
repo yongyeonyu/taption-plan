@@ -121,10 +121,10 @@ enum SeasonPackSnowSprites {
         let key = "\(config.minSize)-\(config.maxSize)"
         // 크기를 0.5pt 칸으로 묶어 같은 그림을 나눠 쓴다.
         let bucket = Int((flake.size * 2).rounded())
-        if let hit = cache.withLock({ $0[key]?[bucket] }) { return (hit, side) }
+        if let hit = cache.withLock({ $0[key]?[bucket] }) { return (hit, CGFloat(side)) }
         guard let image = render(size: Double(bucket) / 2, side: side) else { return nil }
         cache.withLock { $0[key, default: [:]][bucket] = image }
-        return (image, side)
+        return (image, CGFloat(side))
     }
 
     /// 전과 같은 그림: 푸른 그림자 한 겹 위에 흰 가지, 가운데 흰 점. 투명도는 찍을 때 준다.
