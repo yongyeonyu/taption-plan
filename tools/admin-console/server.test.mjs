@@ -1,7 +1,7 @@
 // ADM1120A01 운영 페이지 시험: node --test tools/admin-console/server.test.mjs
 // 서버 쪽 읽기(공지·카탈로그)는 가짜 fetch로 돌려주고, 올리기는 연습 모드(--dry-run)로 명령만 기록한다.
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,9 +10,12 @@ import { after, before, test } from "node:test";
 const dir = mkdtempSync(join(tmpdir(), "admin-console-"));
 process.env.ADMIN_CONSOLE_CONFIG = join(dir, "config.json");
 process.env.ADMIN_CONSOLE_BUILD_ROOT = join(dir, "build");
+process.env.ADMIN_CONSOLE_KEYS = join(dir, "keys", "keys.json");
 writeFileSync(process.env.ADMIN_CONSOLE_CONFIG, JSON.stringify({ host: "relay.test", bucket: "test-bucket", wranglerConfig: join(dir, "wrangler.local.toml") }));
 
 const { allowedHost, catalogHash, checkSchedule, cleanItem, createConsole, localPacks, mainCheckout, planAnnouncements, planReset, putArgs, resetScopes, resolveResetDir, validateConfig, withSchedule, withoutPack } = await import("./server.mjs");
+
+const KEYS = await import("./keys.mjs");
 
 const remote = {
   announcements: { version: 4, items: [{ id: "old-1", title: "예전", body: "예전 공지", kind: "info" }] },
@@ -283,4 +286,163 @@ test("초기화 라우트도 토큰·Host 검사를 따른다", async () => {
   assert.equal((await call("GET", "/api/reset/state", { token: "x".repeat(32) })).status, 401);
   assert.equal((await call("POST", "/api/reset/apply", { token: null, body: { scopes: ALL } })).status, 401);
   assert.equal((await call("GET", "/api/reset/state", { host: `evil.example:${PORT}` })).status, 421);
+});
+
+// ---- API 키(KEY1121A01). 값은 모두 가짜. ----
+const FAKE = "fake-test-key-0000000000AbCd";
+const FAKE_P8 = "-----BEGIN PRIVATE KEY-----\nZmFrZS1wOC1mb3ItdGVzdHMtb25seQ==\n-----END PRIVATE KEY-----";
+
+test("키 목록: 서버·앱이 쓰는 이름과 기능 설명·없을 때·사용량·만료 안내가 있고, 내부 비밀값은 빠진다", async () => {
+  const res = await call("GET", "/api/keys");
+  assert.equal(res.status, 200);
+  const names = res.json.keys.map((k) => k.name);
+  for (const name of ["ICN_API_KEY", "KAC_API_KEY", "EX_API_KEY", "TAGO_SERVICE_KEY", "KAKAO_REST_API_KEY", "GOOGLE_PLACES_KEY", "POSTHOG_API_KEY", "KAKAO_NATIVE_APP_KEY"]) assert.ok(names.includes(name), name);
+  const kindOf = Object.fromEntries(res.json.keys.map((k) => [k.name, k.kind]));
+  for (const name of ["KAKAO_REST_API_KEY", "EX_API_KEY", "TAGO_SERVICE_KEY", "ICN_API_KEY", "KAC_API_KEY", "TOUR_API_KEY", "GOOGLE_PLACES_KEY", "UNSPLASH_ACCESS_KEY", "PEXELS_API_KEY", "MAPILLARY_TOKEN"]) assert.equal(kindOf[name], "external", name);
+  for (const name of ["APNS_KEY_ID", "APNS_KEY_P8", "APNS_TEAM_ID", "APNS_TOPIC", "PIN_PEPPER", "CLASSIFIER_ADMIN_TOKEN", "SHARED_RULES_ADMIN_TOKEN", "SHARED_RULES_PUBLIC_KEY"]) assert.equal(kindOf[name], "internal", name);
+  assert.equal(kindOf.KAKAO_NATIVE_APP_KEY, "app");
+  assert.equal(kindOf.POSTHOG_API_KEY, "app");
+  assert.equal(kindOf.ALGOLIA_WRITE_KEY, "planned");
+  assert.equal(res.json.keys.filter((k) => k.kind === "external").length, 10);
+  assert.ok(res.json.keys.find((k) => k.name === "PIN_PEPPER").danger);
+  assert.deepEqual(Object.keys(res.json.kinds), ["external", "internal", "app", "planned"]);
+  for (const key of res.json.keys) {
+    assert.ok(key.feature && key.missing && key.expiryHint && key.usage.reason && key.usage.where, key.name);
+    assert.ok(["limit", "unavailable"].includes(key.usage.kind), key.name);
+    assert.equal(key.hasValue, false);
+  }
+});
+
+test("서버 소스에 나오는 비밀값 이름은 모두 목록이나 내부 목록에 있다", () => {
+  const src = ["index.js", "flights.js", "expressway.js", "apns.js", "directions.js", "shared.js", "classifier.js", "keys.js", "crypto.js", "oauth.js"]
+    .map((file) => { try { return readFileSync(new URL(`../../server/trip-relay/src/${file}`, import.meta.url), "utf8"); } catch { return ""; } }).join("\n");
+  const used = new Set([...src.matchAll(/\benv\.([A-Z][A-Z0-9]*_(?:API_KEY|SERVICE_KEY|ACCESS_KEY|TOKEN|KEY|KEY_P8|KEY_ID|TEAM_ID|TOPIC|PEPPER|PUBLIC_KEY))\b/g)].map((m) => m[1]));
+  // flights.js는 env[source.key]로 읽으므로 SOURCES의 key: "…" 문자열도 센다.
+  for (const m of src.matchAll(/\bkey:\s*"([A-Z][A-Z0-9_]+_KEY)"/g)) used.add(m[1]);
+  assert.ok(used.has("ICN_API_KEY") && used.has("KAC_API_KEY") && used.has("APNS_TOPIC"));
+  const covered = new Set(KEYS.KEY_CATALOG.map((k) => k.name));
+  assert.ok(used.size >= 10);
+  for (const name of used) assert.ok(covered.has(name), `${name}이(가) 키 화면에 없습니다`);
+});
+
+test("키 저장: 파일은 600, 응답·기록에는 원문 없이 끝 4자리만", async () => {
+  const res = await call("POST", "/api/keys/set", { body: { name: "ICN_API_KEY", value: `  ${FAKE}  ` } });
+  assert.equal(res.status, 200);
+  assert.ok(!res.text.includes(FAKE));
+  const icn = res.json.keys.find((k) => k.name === "ICN_API_KEY");
+  assert.equal(icn.hasValue, true);
+  assert.equal(icn.masked, "••••AbCd");
+  assert.equal(statSync(process.env.ADMIN_CONSOLE_KEYS).mode & 0o777, 0o600);
+  assert.equal(statSync(join(dir, "keys")).mode & 0o777, 0o700);
+  assert.equal(res.json.fileMode, "0600");
+  assert.equal(JSON.parse(readFileSync(process.env.ADMIN_CONSOLE_KEYS, "utf8")).keys.ICN_API_KEY.value, FAKE); // 앞뒤 공백은 지움
+  const list = await call("GET", "/api/keys");
+  assert.ok(!list.text.includes(FAKE));
+  const state = await call("GET", "/api/state");
+  assert.ok(!state.text.includes(FAKE) && !state.text.includes("AbCd"));
+  assert.ok(state.json.logs.some((line) => line.includes("ICN_API_KEY: 키를 저장했습니다")));
+});
+
+test("키 저장 검사: 목록 밖 이름 404, 공백 섞임·빈 값·너무 긴 값 422, 오류에도 값이 없다", async () => {
+  assert.equal((await call("POST", "/api/keys/set", { body: { name: "NOT_A_KEY", value: FAKE } })).status, 404);
+  const spaced = await call("POST", "/api/keys/set", { body: { name: "EX_API_KEY", value: "fake key\nwith-break" } });
+  assert.equal(spaced.status, 422);
+  assert.ok(!spaced.text.includes("with-break"));
+  assert.equal((await call("POST", "/api/keys/set", { body: { name: "EX_API_KEY", value: "   " } })).status, 422);
+  assert.equal((await call("POST", "/api/keys/set", { body: { name: "EX_API_KEY", value: "x".repeat(KEYS.MAX_VALUE + 1) } })).status, 422);
+  assert.equal((await call("POST", "/api/keys/set", { body: { name: "APNS_KEY_P8", value: "not-a-pem" } })).status, 422);
+  const p8 = await call("POST", "/api/keys/set", { body: { name: "APNS_KEY_P8", value: FAKE_P8.replace(/\n/g, "\r\n") } });
+  assert.equal(p8.status, 200);
+  assert.ok(!p8.text.includes("ZmFrZS1wOC"));
+});
+
+test("마스킹: 12자 미만은 끝 자리도 숨긴다", () => {
+  assert.equal(KEYS.maskValue("ABCDEFGHIJ"), "••••");
+  assert.equal(KEYS.maskValue("fake-abcdefgh-1234"), "••••1234");
+  assert.equal(KEYS.maskValue(""), null);
+});
+
+test("키 삭제: 값만 지우고 만료일·메모는 남긴다, 없는 값은 404", async () => {
+  await call("POST", "/api/keys/set", { body: { name: "KAC_API_KEY", value: FAKE } });
+  assert.equal((await call("POST", "/api/keys/meta", { body: { name: "KAC_API_KEY", expiresAt: "2028-11-20", note: "2년마다 연장" } })).status, 200);
+  const res = await call("POST", "/api/keys/delete", { body: { name: "KAC_API_KEY" } });
+  assert.equal(res.status, 200);
+  const kac = res.json.keys.find((k) => k.name === "KAC_API_KEY");
+  assert.equal(kac.hasValue, false);
+  assert.equal(kac.expiresAt, "2028-11-20");
+  assert.equal(kac.note, "2년마다 연장");
+  assert.equal((await call("POST", "/api/keys/delete", { body: { name: "KAC_API_KEY" } })).status, 404);
+  assert.equal((await call("POST", "/api/keys/delete", { body: { name: "NOT_A_KEY" } })).status, 404);
+});
+
+test("만료일: 형식 검사, 지우기, 만료됨·7일·30일 구분", async () => {
+  assert.equal((await call("POST", "/api/keys/meta", { body: { name: "EX_API_KEY", expiresAt: "2026-02-30" } })).status, 422);
+  assert.equal((await call("POST", "/api/keys/meta", { body: { name: "EX_API_KEY", expiresAt: "내일" } })).status, 422);
+  const cleared = await call("POST", "/api/keys/meta", { body: { name: "EX_API_KEY", expiresAt: null, note: "" } });
+  assert.equal(cleared.json.keys.find((k) => k.name === "EX_API_KEY").expiry.state, "none");
+  const now = new Date(2026, 10, 21, 15, 0);
+  assert.deepEqual(KEYS.expiryState("2026-11-20", now), { state: "expired", days: -1 });
+  assert.deepEqual(KEYS.expiryState("2026-11-21", now), { state: "soon7", days: 0 }); // 그날 끝까지 유효
+  assert.equal(KEYS.expiryState("2026-11-28", now).state, "soon7");
+  assert.equal(KEYS.expiryState("2026-11-29", now).state, "soon30");
+  assert.equal(KEYS.expiryState("2026-12-21", now).state, "soon30");
+  assert.equal(KEYS.expiryState("2026-12-22", now).state, "ok");
+  assert.equal(KEYS.expiryState(null, now).state, "none");
+});
+
+test("반영 안내: 서버 키는 wrangler secret put 명령만, 앱 키는 xcconfig 줄(값 자리 비움)", async () => {
+  const { json } = await call("GET", "/api/keys");
+  const icn = json.keys.find((k) => k.name === "ICN_API_KEY");
+  assert.ok(icn.apply.commands.some((c) => c.includes("npx wrangler secret put ICN_API_KEY --config wrangler.local.toml")));
+  assert.ok(icn.apply.commands.every((c) => !c.includes(FAKE) && !c.includes("deploy")));
+  const posthog = json.keys.find((k) => k.name === "POSTHOG_API_KEY");
+  assert.deepEqual(posthog.apply.commands, ["POSTHOG_API_KEY = <키 값>"]);
+  assert.equal(KEYS.appBuildValue("A = 1\nPOSTHOG_API_KEY = phc_fake // 메모\n", "POSTHOG_API_KEY"), "phc_fake");
+  assert.equal(KEYS.appBuildValue("POSTHOG_API_KEY =\n", "POSTHOG_API_KEY"), null);
+});
+
+test("서버 시크릿 이름 읽기(연습): 명령만 기록하고 값을 넣거나 배포하지 않는다", async () => {
+  const res = await call("POST", "/api/keys/server-list", { body: {} });
+  assert.equal(res.status, 200);
+  const state = await call("GET", "/api/state");
+  const line = state.json.logs.find((l) => l.includes("wrangler secret list"));
+  assert.ok(line && line.includes("[연습]"));
+  assert.ok(!state.json.logs.some((l) => /secret put|wrangler deploy/.test(l)));
+  assert.deepEqual([...KEYS.parseSecretList('⛅️ wrangler\n[{"name":"ICN_API_KEY","type":"secret_text"},{"name":"EX_API_KEY","type":"secret_text"}]')], ["ICN_API_KEY", "EX_API_KEY"]);
+  assert.equal(KEYS.parseSecretList("오류"), null);
+});
+
+test("키 라우트도 토큰·Host·JSON 검사를 따른다", async () => {
+  assert.equal((await call("GET", "/api/keys", { token: null })).status, 401);
+  assert.equal((await call("POST", "/api/keys/set", { body: { name: "EX_API_KEY", value: FAKE }, token: "x".repeat(32) })).status, 401);
+  assert.equal((await call("GET", "/api/keys", { host: `evil.example:${PORT}` })).status, 421);
+  assert.equal((await call("POST", "/api/keys/set", { body: "name=EX_API_KEY", type: "text/plain" })).status, 415);
+});
+
+test("연동 예정 칸 직접 추가: 이름 검사, 값 저장·마스킹, 칸 지우면 값도 지운다", async () => {
+  assert.equal((await call("POST", "/api/keys/custom", { body: { name: "aws_key" } })).status, 422);
+  assert.equal((await call("POST", "/api/keys/custom", { body: { name: "EX_API_KEY" } })).status, 422);
+  assert.equal((await call("POST", "/api/keys/set", { body: { name: "AWS_FAKE_ACCESS_KEY_ID", value: FAKE } })).status, 404);
+  const added = await call("POST", "/api/keys/custom", { body: { name: "AWS_FAKE_ACCESS_KEY_ID", provider: "AWS", feature: "시험용 가짜 칸", where: "server" } });
+  assert.equal(added.status, 200);
+  const slot = added.json.keys.find((k) => k.name === "AWS_FAKE_ACCESS_KEY_ID");
+  assert.equal(slot.kind, "planned");
+  assert.equal(slot.custom, true);
+  assert.equal(slot.usage.reason, "연동 전");
+  const saved = await call("POST", "/api/keys/set", { body: { name: "AWS_FAKE_ACCESS_KEY_ID", value: FAKE } });
+  assert.equal(saved.json.keys.find((k) => k.name === "AWS_FAKE_ACCESS_KEY_ID").masked, "••••AbCd");
+  assert.ok(!saved.text.includes(FAKE));
+  const removed = await call("POST", "/api/keys/custom-remove", { body: { name: "AWS_FAKE_ACCESS_KEY_ID" } });
+  assert.ok(!removed.json.keys.some((k) => k.name === "AWS_FAKE_ACCESS_KEY_ID"));
+  assert.equal(JSON.parse(readFileSync(process.env.ADMIN_CONSOLE_KEYS, "utf8")).keys.AWS_FAKE_ACCESS_KEY_ID, undefined);
+  assert.equal((await call("POST", "/api/keys/custom-remove", { body: { name: "EX_API_KEY" } })).status, 404);
+});
+
+test("키 파일·로그 어디에도 다른 키의 원문이 새지 않고, 저장 파일은 저장소 밖 경로를 기본으로 쓴다", async () => {
+  const state = await call("GET", "/api/state");
+  assert.ok(!state.text.includes(FAKE) && !state.text.includes("ZmFrZS1wOC"));
+  const { KEYS_FILE } = KEYS;
+  assert.equal(KEYS_FILE, process.env.ADMIN_CONSOLE_KEYS); // 시험은 임시 파일
+  const source = readFileSync(new URL("./keys.mjs", import.meta.url), "utf8");
+  assert.match(source, /homedir\(\), "\.bokki-admin-console", "keys\.json"/);
 });

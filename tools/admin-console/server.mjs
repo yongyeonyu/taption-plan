@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { createServer } from "node:http";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { KEYS_FILE, KIND_LABEL, checkCustom, checkMeta, checkValue, knownKey, parseSecretList, publicView, readStore, storeMode, writeStore } from "./keys.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const REPO = resolve(HERE, "../..");
@@ -91,7 +92,7 @@ const currentCatalog = (config) => needHost(config) ?? fetchJSON(`https://${conf
 
 function run(command, args, options) {
   return new Promise((resolvePromise) => {
-    execFile(command, args, { ...options, maxBuffer: 8 * 1024 * 1024, timeout: 10 * 60 * 1000 }, (error, stdout, stderr) => {
+    execFile(command, args, { maxBuffer: 8 * 1024 * 1024, timeout: 10 * 60 * 1000, ...options }, (error, stdout, stderr) => {
       resolvePromise({ ok: !error, code: error?.code ?? 0, output: `${stdout}${stderr}`.trim() });
     });
   });
@@ -260,6 +261,16 @@ export function lastResetDir(root = BUILD_ROOT) {
   return names.at(-1) ?? null;
 }
 
+// ---- API 키(KEY1121A01) ----
+
+/** 앱 빌드 설정 파일 내용(값을 화면에 내보내지 않고 저장한 값과 같은지만 본다). 작업용 사본이면 원래 저장소의 것. */
+function appSecretsText(repo = REPO) {
+  const roots = [...new Set([repo, mainCheckout(repo)])];
+  try { return readFileSync(firstExisting(roots.map((root) => join(root, "TaptionPlan/AppSecrets.local.xcconfig"))), "utf8"); } catch { return null; }
+}
+
+const shortHome = (path) => (process.env.HOME && path.startsWith(process.env.HOME) ? `~${path.slice(process.env.HOME.length)}` : path);
+
 // ---- HTTP ----
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
@@ -299,6 +310,17 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
   const log = (line) => { if (!line) return; for (const part of String(line).split("\n")) logs.push(`${now().toLocaleTimeString("ko-KR", { hour12: false })} ${part}`); while (logs.length > 400) logs.shift(); };
   const builds = new Map();
   let lastReset = null;
+  let serverSecrets = null; // { names: Set, at } — `wrangler secret list`로 읽은 이름만(값은 wrangler도 주지 않는다)
+
+  const keysView = () => {
+    const mode = storeMode();
+    return {
+      file: shortHome(KEYS_FILE), fileMode: mode === null ? null : `0${mode.toString(8)}`,
+      keys: publicView(readStore(), { now: now(), xcconfigText: appSecretsText(), serverNames: serverSecrets?.names ?? null }),
+      serverCheckedAt: serverSecrets?.at ?? null, kinds: KIND_LABEL,
+    };
+  };
+  const keyError = (text, status = 422) => ({ status, body: { errors: [text] } });
 
   async function exclusive(label, work) {
     if (busy) throw Object.assign(new Error(`다른 작업(${busy}) 중입니다`), { status: 409 });
@@ -477,6 +499,78 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
       log(`초기화를 되돌렸습니다(${name}). 공지 version은 백업 때 값으로 돌아갑니다.`);
       return { restored: ["announcements", "catalog"], dir: name, dryRun };
     }),
+    "GET /api/keys": async () => keysView(),
+    "POST /api/keys/set": async (body) => {
+      const name = String(body.name ?? "");
+      const store = readStore();
+      const checked = checkValue(name, body.value, store);
+      if (checked.error) return keyError(checked.error, knownKey(name, store) ? 422 : 404);
+      store.keys[name] = { ...(store.keys[name] ?? {}), value: checked.value, savedAt: now().toISOString() };
+      writeStore(store);
+      log(`${name}: 키를 저장했습니다(이 맥에만). 서버·앱 반영은 안내 명령으로 따로 합니다.`);
+      return keysView();
+    },
+    "POST /api/keys/delete": async (body) => {
+      const name = String(body.name ?? "");
+      const store = readStore();
+      if (!knownKey(name, store)) return keyError("목록에 없는 키 이름입니다", 404);
+      const saved = store.keys[name];
+      if (!saved?.value) return keyError("저장된 값이 없습니다", 404);
+      const { value, savedAt, ...rest } = saved;
+      if (Object.keys(rest).length) store.keys[name] = rest; else delete store.keys[name];
+      writeStore(store);
+      log(`${name}: 이 맥에 저장한 값을 지웠습니다(Cloudflare 시크릿·앱 빌드 설정은 그대로)`);
+      return keysView();
+    },
+    "POST /api/keys/meta": async (body) => {
+      const name = String(body.name ?? "");
+      const store = readStore();
+      if (!knownKey(name, store)) return keyError("목록에 없는 키 이름입니다", 404);
+      const { errors, meta } = checkMeta(body);
+      if (errors.length) return { status: 422, body: { errors } };
+      const next = { ...(store.keys[name] ?? {}) };
+      if (meta.expiresAt) next.expiresAt = meta.expiresAt; else delete next.expiresAt;
+      if (meta.note) next.note = meta.note; else delete next.note;
+      if (Object.keys(next).length) store.keys[name] = next; else delete store.keys[name];
+      writeStore(store);
+      log(`${name}: 만료일 ${meta.expiresAt ?? "없음"}${meta.note ? " · 메모 저장" : ""}`);
+      return keysView();
+    },
+    "POST /api/keys/custom": async (body) => {
+      // 연동 예정 칸 직접 추가·고치기(예: AWS). 이름·공급자·설명만 받는다. 값은 /api/keys/set으로 따로.
+      const { errors, name, def } = checkCustom(body);
+      if (errors.length) return { status: 422, body: { errors } };
+      const store = readStore();
+      if (!store.custom[name] && Object.keys(store.custom).length >= 40) return keyError("직접 추가는 40칸까지");
+      store.custom[name] = def;
+      writeStore(store);
+      log(`${name}: 연동 예정 칸을 저장했습니다`);
+      return keysView();
+    },
+    "POST /api/keys/custom-remove": async (body) => {
+      const name = String(body.name ?? "");
+      const store = readStore();
+      if (!store.custom[name]) return keyError("직접 추가한 칸이 아닙니다", 404);
+      delete store.custom[name];
+      delete store.keys[name]; // 칸을 없애면 그 값·만료일도 함께 지운다
+      writeStore(store);
+      log(`${name}: 직접 추가한 칸과 저장한 값을 지웠습니다`);
+      return keysView();
+    },
+    "POST /api/keys/server-list": () => exclusive("서버 시크릿 이름 읽기", async () => {
+      const config = loadConfig();
+      // 읽기만 한다(`wrangler secret list`: 이름만 나오고 값은 나오지 않음). 넣기·배포는 하지 않는다.
+      const args = ["wrangler", "secret", "list", "--format", "json", "--config", config.wranglerConfig];
+      if (dryRun) { log(`[연습] npx ${args.join(" ")}`); return keysView(); }
+      if (!existsSync(config.wranglerConfig)) throw new Error(`wrangler 설정 파일이 없습니다: ${config.wranglerConfig}`);
+      log(`$ npx ${args.join(" ")}`);
+      const result = await run("npx", args, { cwd: dirname(config.wranglerConfig), timeout: 60 * 1000 });
+      const names = result.ok ? parseSecretList(result.output) : null;
+      if (!names) { log("서버 시크릿 이름을 읽지 못했습니다(wrangler 로그인·설정을 확인하세요)"); throw new Error("서버 시크릿 이름을 읽지 못했습니다"); }
+      serverSecrets = { names, at: now().toISOString() };
+      log(`서버 시크릿 ${names.size}개 이름을 읽었습니다`);
+      return keysView();
+    }),
     "POST /api/packs/withdraw": (body) => exclusive("팩 내리기", async () => {
       const config = loadConfig();
       const catalog = await currentCatalog(config);
@@ -527,7 +621,8 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
     if (req.method === "POST" && !(req.headers["content-type"] ?? "").startsWith("application/json")) return send(res, 415, { error: "JSON만 받습니다" });
     try {
       const body = req.method === "POST" ? await readBody(req) : {};
-      if (req.method === "POST" && !url.pathname.startsWith("/api/config")) {
+      // 설정(호스트·버킷)이 없어도 키 관리는 된다. 서버 시크릿 이름 읽기만 wrangler 설정이 필요하다.
+      if (req.method === "POST" && !url.pathname.startsWith("/api/config") && !(url.pathname.startsWith("/api/keys/") && url.pathname !== "/api/keys/server-list")) {
         const errors = validateConfig(loadConfig());
         if (errors.length) return send(res, 422, { errors: ["먼저 설정을 채우세요", ...errors] });
       }
@@ -541,7 +636,15 @@ export function createConsole({ port, token, dryRun = false, now = () => new Dat
   });
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] === fileURLToPath(import.meta.url) && process.argv.includes("--print-key")) {
+  // 터미널에서 wrangler로 넘길 때만 원문을 꺼낸다: `… --print-key NAME | npx wrangler secret put NAME …`. 줄바꿈 없이 값만.
+  const name = process.argv[process.argv.indexOf("--print-key") + 1];
+  const store = readStore();
+  const value = knownKey(name, store) ? store.keys[name]?.value : null;
+  if (!value) { console.error(knownKey(name, store) ? `${name}: 저장된 값이 없습니다` : "목록에 없는 키 이름입니다"); process.exit(1); }
+  if (process.stdout.isTTY) { console.error("화면에 키를 찍지 않습니다. 파이프(|)로 wrangler에 넘기세요."); process.exit(1); }
+  process.stdout.write(value);
+} else if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const dryRun = process.argv.includes("--dry-run");
   const portFlag = process.argv.indexOf("--port");
   const port = portFlag > 0 ? Number(process.argv[portFlag + 1]) : 8742;

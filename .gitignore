@@ -54,3 +54,6 @@ design/APS1115A01/source/promo-clips/
 
 # Local admin console settings (ADM1120A01)
 tools/admin-console/config.local.json
+# API 키 저장 파일은 ~/.bokki-admin-console/keys.json(저장소 밖). 혹시 저장소 안을 가리켜도 올라가지 않게(KEY1121A01)
+keys.json
+*.keys.json

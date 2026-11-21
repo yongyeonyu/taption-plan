@@ -23,9 +23,10 @@ function el(tag, props = {}, ...children) {
   return node;
 }
 
-function confirmDialog(text) {
+function confirmDialog(text, yesLabel = "올리기") {
   return new Promise((resolve) => {
     $("confirmText").textContent = text;
+    $("confirm").querySelector('button[value="yes"]').textContent = yesLabel;
     const dialog = $("confirm");
     dialog.returnValue = "";
     dialog.addEventListener("close", () => resolve(dialog.returnValue === "yes"), { once: true });
@@ -39,9 +40,10 @@ function fail(error) { alert(error.message); refreshState(); }
 for (const tab of document.querySelectorAll(".tab")) {
   tab.addEventListener("click", () => {
     for (const other of document.querySelectorAll(".tab")) other.classList.toggle("on", other === tab);
-    for (const id of ["notices", "packs", "reset", "settings"]) $(id).hidden = id !== tab.dataset.tab;
+    for (const id of ["notices", "packs", "reset", "keys", "settings"]) $(id).hidden = id !== tab.dataset.tab;
     if (tab.dataset.tab === "packs") loadPacks();
     if (tab.dataset.tab === "reset") loadReset();
+    if (tab.dataset.tab === "keys") loadKeys();
   });
 }
 
@@ -425,6 +427,124 @@ $("restoreReset").addEventListener("click", async () => {
   const ok = await confirmDialog("방금 초기화하기 직전의 공지와 팩 카탈로그를 그대로 다시 올립니다. 그 뒤에 바뀐 서버 내용은 덮어씁니다. 계속할까요?");
   if (!ok) return;
   try { await api("POST", "/api/reset/restore", {}); setTimeout(loadReset, 1500); } catch (error) { fail(error); }
+  refreshState();
+});
+
+// ---- API 키(KEY1121A01) ----
+// 서버는 원문을 주지 않는다(masked만). 입력 칸은 보낸 뒤 바로 비운다.
+const EXPIRY_LABEL = { expired: "만료됨", soon7: "7일 이내", soon30: "30일 이내", ok: "여유", none: "만료일 없음" };
+const expiryText = (key) => {
+  const { state, days } = key.expiry;
+  if (state === "none") return "만료일 없음";
+  if (state === "expired") return `만료됨 · ${key.expiresAt}`;
+  return `${key.expiresAt} · ${days === 0 ? "오늘까지" : `${days}일 남음`}`;
+};
+
+function copyButton(text) {
+  return el("button", { class: "mini", textContent: "복사", onclick: async (event) => {
+    try { await navigator.clipboard.writeText(text); event.target.textContent = "복사됨"; setTimeout(() => (event.target.textContent = "복사"), 1500); }
+    catch { alert("복사하지 못했습니다. 명령을 직접 골라 복사하세요."); }
+  } });
+}
+
+function keyCard(key) {
+  const where = key.where === "server" ? "서버 시크릿" : "앱 빌드";
+  const presence = key.where === "server"
+    ? (key.onServer === null ? "서버: 미확인(위 「서버 시크릿 이름 읽기」)" : key.onServer ? "서버: 들어 있음" : "서버: 없음")
+    : ({ empty: "앱 빌드 설정: 비어 있음", same: "앱 빌드 설정: 저장한 값과 같음", different: "앱 빌드 설정: 저장한 값과 다름", filled: "앱 빌드 설정: 채워져 있음(이 맥에는 미저장)" })[key.inAppBuild];
+  const presenceBad = key.where === "server" ? key.onServer === false : key.inAppBuild === "empty" || key.inAppBuild === "different";
+
+  const input = key.multiline
+    ? el("textarea", { class: "secret-area", rows: 3, placeholder: ".p8 파일 내용 전체", autocomplete: "off", spellcheck: false })
+    : el("input", { type: "password", placeholder: key.hasValue ? "새 값으로 교체" : "키 값 붙여 넣기", autocomplete: "off", spellcheck: false });
+  const save = el("button", { class: "primary", textContent: key.hasValue ? "교체" : "저장", onclick: async () => {
+    const value = input.value;
+    input.value = "";
+    if (!value.trim()) return alert("값을 넣으세요");
+    if (key.danger && !(await confirmDialog(`${key.name}: ${key.danger}\n이 맥에만 저장하고 서버에는 넣지 않습니다. 계속할까요?`, "저장"))) return;
+    try { renderKeys(await api("POST", "/api/keys/set", { name: key.name, value })); } catch (error) { fail(error); }
+    refreshState();
+  } });
+  const remove = el("button", { class: "danger", textContent: "삭제", disabled: !key.hasValue, onclick: async () => {
+    const ok = await confirmDialog(`${key.name}: 이 맥에 저장한 값을 지웁니다.\nCloudflare 시크릿·앱 빌드 설정은 그대로입니다(서버에서 빼려면 wrangler secret delete를 따로). 계속할까요?`, "지우기");
+    if (!ok) return;
+    try { renderKeys(await api("POST", "/api/keys/delete", { name: key.name })); } catch (error) { fail(error); }
+    refreshState();
+  } });
+
+  const date = el("input", { type: "date", value: key.expiresAt ?? "" });
+  const note = el("input", { placeholder: "갱신 주기·메모(예: 2년마다 연장 신청)", maxLength: 200, value: key.note ?? "" });
+  const saveMeta = el("button", { textContent: "만료일 저장", onclick: async () => {
+    try { renderKeys(await api("POST", "/api/keys/meta", { name: key.name, expiresAt: date.value || null, note: note.value })); } catch (error) { fail(error); }
+    refreshState();
+  } });
+
+  const usage = key.usage.kind === "limit"
+    ? [el("div", {}, el("strong", { textContent: "한도 " }), key.usage.limit), el("div", { class: "muted" }, "오늘 쓴 수: 확인 불가 — ", key.usage.reason)]
+    : [el("div", {}, el("strong", { textContent: "확인 불가 " }), el("span", { class: "muted", textContent: `— ${key.usage.reason}` }))];
+
+  const dropSlot = key.custom ? el("button", { class: "danger mini", textContent: "칸 지우기", onclick: async () => {
+    if (!(await confirmDialog(`${key.name}: 직접 추가한 칸과 이 맥에 저장한 값·만료일을 지웁니다. 계속할까요?`, "지우기"))) return;
+    try { renderKeys(await api("POST", "/api/keys/custom-remove", { name: key.name })); } catch (error) { fail(error); }
+    refreshState();
+  } }) : null;
+
+  return el("div", { class: `keycard exp-${key.expiry.state}` },
+    el("div", { class: "row between top" },
+      el("div", {},
+        el("code", { class: "keyname", textContent: key.name }),
+        el("span", { class: `chip where ${key.where}`, textContent: where }),
+        key.optional ? el("span", { class: "chip where", textContent: "선택" }) : null,
+        dropSlot,
+        el("div", { class: "muted small", textContent: `${key.group} · ${key.provider}` })),
+      el("div", { class: "right" },
+        el("div", { class: key.hasValue ? "good" : "muted", textContent: key.hasValue ? `저장됨 ${key.masked}` : "이 맥에 없음" }),
+        key.savedAt ? el("div", { class: "muted small", textContent: new Date(key.savedAt).toLocaleString("ko-KR") }) : null,
+        el("div", { class: presenceBad ? "bad small" : "muted small", textContent: presence }))),
+    el("div", { class: "desc" }, el("div", { textContent: key.feature }), el("div", { class: "muted small", textContent: `없으면: ${key.missing}` }),
+      key.danger ? el("div", { class: "bad small", textContent: `주의: ${key.danger}` }) : null),
+    el("div", { class: "sub" }, el("h4", { textContent: "사용량" }), ...usage, el("div", { class: "muted small", textContent: `확인하는 곳: ${key.usage.where}` })),
+    el("div", { class: "sub" }, el("h4", {}, "만료일 ", el("span", { class: `exp ${key.expiry.state}`, textContent: expiryText(key) })),
+      el("div", { class: "muted small", textContent: `자동으로 알려 주는 공급자 없음 · ${key.expiryHint}` }),
+      el("div", { class: "row" }, date, note, saveMeta)),
+    el("div", { class: "sub" }, el("h4", { textContent: "입력 · 교체 · 삭제" }), el("div", { class: "row" }, input, save, remove)),
+    el("details", { class: "apply" }, el("summary", { textContent: `반영 방법 — ${key.apply.how}` }),
+      ...key.apply.commands.map((command) => el("div", { class: "cmd" }, el("code", { textContent: command }), copyButton(command))),
+      key.where === "server" ? el("div", { class: "muted small", textContent: "첫 줄은 이 맥에 저장한 값을 화면에 찍지 않고 바로 넘깁니다. 둘째 줄은 값을 직접 붙여 넣습니다. 시크릿을 넣으면 Worker가 새 버전으로 바뀝니다." }) : null));
+}
+
+function renderKeys(view) {
+  $("keyFile").textContent = `${view.file}${view.fileMode ? ` (${view.fileMode})` : " (아직 없음)"}`;
+  const counts = view.keys.reduce((acc, key) => { acc[key.expiry.state] = (acc[key.expiry.state] ?? 0) + 1; return acc; }, {});
+  const stored = view.keys.filter((key) => key.hasValue).length;
+  $("keySummary").textContent = [`${stored}/${view.keys.length}개 저장`, counts.expired && `만료 ${counts.expired}`, counts.soon7 && `7일 이내 ${counts.soon7}`, counts.soon30 && `30일 이내 ${counts.soon30}`,
+    view.serverCheckedAt && `서버 확인 ${new Date(view.serverCheckedAt).toLocaleTimeString("ko-KR")}`].filter(Boolean).join(" · ");
+  // 종류(서버 외부 / 서버 내부 / 앱 / 연동 예정)별로 나누고, 그 안은 기능 묶음별로.
+  $("keyList").replaceChildren(...Object.entries(view.kinds).flatMap(([kind, label]) => {
+    const keys = view.keys.filter((key) => key.kind === kind);
+    if (!keys.length) return [];
+    const groups = [...new Set(keys.map((key) => key.group))];
+    return [el("h2", { class: "kind-title", textContent: `${label} (${keys.filter((key) => key.hasValue).length}/${keys.length})` }),
+      ...groups.flatMap((group) => [groups.length > 1 ? el("h3", { textContent: group }) : null, ...keys.filter((key) => key.group === group).map(keyCard)])];
+  }));
+}
+
+async function loadKeys() {
+  try { renderKeys(await api("GET", "/api/keys")); }
+  catch (error) { $("keyList").replaceChildren(el("p", { class: "bad", textContent: `키 목록을 읽지 못했습니다: ${error.message}` })); }
+}
+$("reloadKeys").addEventListener("click", loadKeys);
+$("customForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  try {
+    renderKeys(await api("POST", "/api/keys/custom", { name: form.elements.namedItem("name").value.trim(), provider: form.provider.value, feature: form.feature.value, where: form.where.value }));
+    form.reset();
+  } catch (error) { fail(error); }
+  refreshState();
+});
+$("readServerSecrets").addEventListener("click", async () => {
+  try { renderKeys(await api("POST", "/api/keys/server-list", {})); } catch (error) { fail(error); }
   refreshState();
 });
 

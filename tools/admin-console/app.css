@@ -85,3 +85,39 @@ details.card > summary > div:nth-child(2) { min-width: 0; flex: 1; }
 details.card > summary::after { white-space: nowrap; flex-shrink: 0; }
 details.card > summary .chip { margin-left: 6px; }
 .cards { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+/* API 키(KEY1121A01) */
+.keylist { display: flex; flex-direction: column; gap: 10px; }
+.keylist h3 { font-size: 13px; color: var(--muted); margin: 14px 0 0; }
+.keycard { border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 8px; }
+.keycard.exp-expired, .keycard.exp-soon7 { border-left-color: var(--bad); }
+.keycard.exp-soon30 { border-left-color: var(--warn); }
+.keycard.exp-ok { border-left-color: var(--ok); }
+.keycard .top { margin-top: 0; align-items: flex-start; }
+.keycard .right { text-align: right; }
+.keycard h4 { font-size: 12px; margin: 0 0 2px; color: var(--muted); }
+.keycard .sub { border-top: 1px dashed var(--line); padding-top: 6px; }
+.keycard .row input { flex: 1 1 180px; width: auto; }
+.keycard .row input[type="date"] { flex: 0 0 auto; }
+.keyname { font-size: 14px; font-weight: 600; }
+.small { font-size: 12px; }
+.chip.where { margin-left: 6px; background: var(--line); color: var(--ink); font-weight: 500; }
+.chip.where.app { background: var(--ink); color: var(--bg); }
+.exp { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; }
+.exp.expired { background: var(--bad); color: var(--accent-ink); border-color: var(--bad); }
+.exp.soon7 { color: var(--bad); border-color: var(--bad); }
+.exp.soon30 { color: var(--warn); border-color: var(--warn); }
+.exp.ok { color: var(--ok); border-color: var(--ok); }
+.exp.none { color: var(--muted); font-weight: 500; }
+.legend { margin: 6px 0 4px; }
+.legend span { border: 0; padding: 0; }
+.legend .exp { border: 1px solid; padding: 1px 8px; }
+.secret-area { -webkit-text-security: disc; font: 12px ui-monospace, Menlo, monospace; flex: 1 1 100%; }
+.apply summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.cmd { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.cmd code { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; word-break: break-all; }
+button.mini { padding: 2px 8px; font-size: 12px; }
+.list.small li { justify-content: flex-start; font-size: 13px; padding: 6px 0; }
+@media (max-width: 600px) { .keycard .top { flex-direction: column; } .keycard .right { text-align: left; } }
+.kind-title { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 20px; }
+.keycard .top .mini { margin-left: 6px; }

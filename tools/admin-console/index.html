@@ -15,6 +15,7 @@
     <button data-tab="notices" class="tab on">공지</button>
     <button data-tab="packs" class="tab">시즌 팩</button>
     <button data-tab="reset" class="tab">초기화</button>
+    <button data-tab="keys" class="tab">API 키</button>
     <button data-tab="settings" class="tab">설정</button>
   </nav>
 </header>
@@ -103,6 +104,32 @@
       <button id="restoreReset" disabled>방금 초기화 되돌리기</button>
     </div>
     <p id="resetLast" class="muted"></p>
+  </section>
+
+  <section id="keys" class="panel" hidden>
+    <div class="row between">
+      <h2>API 키 <span id="keySummary" class="muted"></span></h2>
+      <div class="row">
+        <button id="readServerSecrets">서버 시크릿 이름 읽기</button>
+        <button id="reloadKeys">새로 읽기</button>
+      </div>
+    </div>
+    <p class="muted">값은 이 맥의 <code id="keyFile"></code>에만 저장합니다(저장소 밖, 권한 600). 화면에는 끝 4자리만 보이고 원문은 다시 내려오지 않습니다. 서버(Cloudflare)·앱 빌드에는 자동으로 넣지 않습니다 — 각 키의 안내 명령을 대표가 터미널에서 실행합니다(배포는 대표 승인 사안).</p>
+    <div class="legend chips">
+      <span class="exp expired">만료됨</span><span class="exp soon7">7일 이내</span><span class="exp soon30">30일 이내</span><span class="exp ok">여유</span><span class="exp none">만료일 없음</span>
+    </div>
+    <div id="keyList" class="keylist"></div>
+    <h3>연동 예정 칸 직접 추가</h3>
+    <p class="muted small">아직 코드가 쓰지 않는 키(예: AWS)를 미리 넣어 둡니다. 이름은 나중에 서버·앱 코드가 읽을 이름과 같게 적으세요.</p>
+    <form id="customForm" class="grid">
+      <label>이름(대문자·숫자·_)<input name="name" placeholder="AWS_ACCESS_KEY_ID" pattern="[A-Z][A-Z0-9_]{2,63}" required autocomplete="off"></label>
+      <label>공급자<input name="provider" maxlength="60" placeholder="AWS"></label>
+      <label>쓰일 곳
+        <select name="where"><option value="server">서버 시크릿</option><option value="app">iOS 앱 빌드</option></select>
+      </label>
+      <label class="wide">설명(어떤 기능에 쓸지)<input name="feature" maxlength="200"></label>
+      <div class="wide row"><button type="submit">칸 추가</button></div>
+    </form>
   </section>
 
   <section id="settings" class="panel" hidden>
