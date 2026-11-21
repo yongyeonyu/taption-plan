@@ -1,7 +1,7 @@
 ---
 id: 20261121-1409-ci-failure-review
 created_at: 2026-11-21T14:09+09:00
-status: blocked
+status: done
 title: main CI 5회 연속 실패 원인 검토
 from: 비야
 basis: 대표 직접 지시 (2026-11-21 통화)
@@ -62,3 +62,8 @@ basis: 대표 직접 지시 (2026-11-21 통화)
   2. 수정 뒤 TestFlight 360 이후 빌드에 포함할지, 다음 릴리스로 미룰지.
 
 - **후속(대표 지시: SeasonPackKit 두 줄만)**: `SeasonPackTreeEffects.swift` 반환 두 곳을 `CGFloat(side)`로 명시 변환. `swift test`(SeasonPackKit) 113건 통과. `TravelModeView`·`DayStoreV3Tests`는 손대지 않음. CI 재실행 결과 확인 대기.
+
+- **최종(2026-11-21, 대표 지시로 수정 진행)**: CI가 `b82b2a31`에서 **처음으로 전부 성공**했습니다(relay·architecture·app·app-tests·packages).
+  - SeasonPackKit `CGFloat` 변환(`e77cb7f8`), `TravelModeView.addEntry` 지역 변수 이름 충돌(`b71d642b`), `AssistantRealtimeCursor.init(value:)`(`75634c11`), 시험 두 곳의 타입 검사 시간 초과(`d7253df2`·`e4986020`) — 모두 CI의 Swift만 거부하던 컴파일 오류.
+  - 남은 시험 실패는 CI 러너가 UTC·영어·미국 지역이라 생긴 것이어서 코드가 아니라 CI 설정을 고쳤습니다: `-testLanguage ko -testRegion KR`, `TZ`·`TEST_RUNNER_TZ=Asia/Seoul`(`systemsetup`만으로는 시험 프로세스 시간대가 안 바뀜), 지구본 프레임 시험 상한 0.05 → 0.25초(`a1ad9288`·`b82b2a31`).
+  - `DayStoreV3Tests` 간헐 실패는 이번 실행에서 나오지 않았고 제품 쪽 변경은 하지 않았습니다(간헐이라 계속 지켜봄).
